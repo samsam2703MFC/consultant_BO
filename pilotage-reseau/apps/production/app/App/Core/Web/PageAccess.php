@@ -24,8 +24,12 @@ final class PageAccess
         // ekran, bez faktur i kosztów ; dłuższy prefiks wygrywa z « /finances » (keyFor).
         'liquidity' => ['Płynność i gotówka (asystent : saldo, prognoza 4 tygodni, sygnały i decyzje)', 'Analiza', ['/finances/liquidity', '/ajax/finances/liquidity'], false],
         // [255] Magazyn (stan, zapas MTS, prognoza zapasu) i dostawy surowców : pod prawem Produkcja (wcześniej poza katalogiem = dla wszystkich).
+        // [377] Asystent « Partie i kontrola dnia » (Jakość) : page /workshop/traceability/day-check (préfixe /workshop/traceability, comme
+        // la création de NC /purchasing/nc vers laquelle il renvoie), appels ajax sous le même droit.
+        // [380] Asystent « HACCP miesiąca » (Jakość, Kierownik produkcji) : page /production/haccp-month (préfixe /production), appels
+        // ajax sous le même droit (comme le registre NC vers lequel il renvoie).
         'production' => ['Produkcja i magazyn (arkusz, plan tygodnia, plan zespołów, prognoza 13 tygodni, dostawy surowców, magazyn : stan, zapas MTS, prognoza zapasu, ruchy magazynowe ; partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
-            ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock', '/workshop/stock-movements', '/workshop/deliveries', '/workshop/traceability', '/production', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
+            ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock', '/workshop/stock-movements', '/workshop/deliveries', '/workshop/traceability', '/ajax/workshop/traceability/day-check', '/production', '/ajax/production/haccp-month', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
         // Moce produkcyjne [234] : bez tego prawa — tylko stan obecny (tydzień bieżący, do odczytu) ; z nim — pełna wersja.
         'capacity_full' => ['Moce produkcyjne — pełna wersja (co jeszcze zmieszczę, ilość na zmianę, ustawienia maszyn, co jeśli, wartość w €) : administrator, dyrektor zakładu ; bez tego prawa — tylko stan obecny', 'Produkcja',
             ['/production/capacity/full'], false],
@@ -47,16 +51,26 @@ final class PageAccess
         // [256] Premie zespołów (progi, minimum, zakładka « Premia » tabletów) : decyduje administrator, nie kierownik produkcji.
         'team_bonus' => ['Premie zespołów : progi, minimum, zakładka « Premia » na tabletach', 'Administracja', ['/staff/team-bonus'], true],
         'product_cards' => ['Produkty : karty produktów (lista, kategorie, MTO / MTS, stany)', 'Produkt', ['/workshop/products'], false],
-        'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/semi-products', '/compositions'], false],
+        // [384] Asystent « Nowe produkty » (Kierownik produkcji) : page /products/launches-review (préfixe /products : produkty w rozwoju,
+        // receptury — là où naissent les lancements et se font les corrections), appels ajax sous le même droit. Le module Kierownik
+        // produkcji (objectifs de lancement) reste réservé à l'administrateur ; montants : droit « margins » (comme Marża produktów).
+        'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/ajax/products/launches-review', '/semi-products', '/compositions'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
+        // [397] Asystent « PPWR i opakowania » (Kierownik produkcji, co miesiąc) : droit propre (page /ppwr/month — le préfixe le
+        // plus long l'emporte sur « /ppwr » — et appels ajax), donné au Kierownik produkcji par la migration 238.
+        'ppwr_month' => ['PPWR i opakowania — przegląd miesiąca (asystent : braki danych PPWR i BDO opakowań i produktów, zmiany, dowody wysyłek)', 'Produkt', ['/ppwr/month', '/ajax/ppwr/month'], false],
         // [369] Assistant « Zamówienia dnia », [370] « Klienci bez zamówienia », [371] « Domówienia dnia », [375] « Terminowość tygodnia (OTIF) » :
         // pages sous /client-orders, appels ajax sous le même droit.
         'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders', '/ajax/client-orders/day-check', '/ajax/client-orders/missing', '/ajax/client-orders/supplements', '/ajax/client-orders/otif'], false],
-        'clients' => ['Klienci', 'Sprzedaż', ['/clients'], false],
+        // [385] Asystent « Dane klientów » (Administracja) : page /clients/data-check (préfixe /clients : fiche client et cennik client,
+        // là où se font les corrections), appels ajax sous le même droit — aucun droit nouveau.
+        'clients' => ['Klienci', 'Sprzedaż', ['/clients', '/ajax/clients/data-check'], false],
         'price_lists' => ['Cennik ogólny', 'Sprzedaż', ['/price-lists'], false],
-        'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
+        // [379] Asystent « Reklamacje klientów » (Jakość) : page /franchise-complaints/review (préfixe /franchise-complaints, la liste
+        // des réclamations où l'on décide et répond), appels ajax sous le même droit.
+        'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints', '/ajax/franchise-complaints/review'], false],
         'invoices' => ['Proformy i faktury', 'Sprzedaż', ['/proforma-documents', '/invoice-documents'], false],
         'reminders' => ['Przypomnienia płatności (proformy 1–5, dopłaty różnic)', 'Sprzedaż', ['/communication/payment-reminders', '/communication/compose/reminder'], false],
         'payments_day' => ['Płatności dnia (wpłaty proform, potwierdzenia przelewów z e-maila, przypomnienia, różnice dostaw)', 'Sprzedaż', ['/finances/payments-day', '/finances/payment-proofs'], false],
@@ -68,8 +82,17 @@ final class PageAccess
         'sop' => ['Procedury SOP (tworzenie, zatwierdzanie, wykonania)', 'Produkcja', ['/sop', '/ajax/sop'], false],
         'stock_pallets' => ['Stany i palety (magazyn, palety, wysłane, stan ogólny, krótka data ; usunięcie palety)', 'Logistyka i pakowanie', ['/logistics/stock', '/ajax/logistics/stock'], false],
         // [374] Asystent « Opóźnienia dostaw » : page /logistics/delays (préfixe /logistics), appels ajax sous le même droit.
-        'logistics' => ['Logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek ciężarówki, plan 12 tygodni, tydzień, plan dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka i pakowanie', ['/logistics', '/ajax/logistics/delays'], false],
-        'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
+        // [381] Asystent « Palety zwrotne » (Logistyka, Kierowca-dostawca) : page /logistics/pallets-returns (préfixe /logistics, comme
+        // l'écran des confirmations de livraison /logistics/deliveries vers lequel il renvoie), appels ajax sous le même droit.
+        // [382] Asystent « Powiadomienia o dostawie » (Logistyka) : page /logistics/notices-check (préfixe /logistics, comme l'écran
+        // Powiadomienia klientów /logistics/notices où l'on envoie l'avis), appels ajax sous le même droit.
+        'logistics' => ['Logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek ciężarówki, plan 12 tygodni, tydzień, plan dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka i pakowanie', ['/logistics', '/ajax/logistics/delays', '/ajax/logistics/pallets-returns', '/ajax/logistics/notices-check'], false],
+        // [378] Asystent « Faktury i KSeF dnia » (Administracja) : page /shipments/ksef-day (préfixe /shipments, comme l'écran
+        // « Wysyłki i dokumenty » où l'on renvoie la WDT à KSeF), appels ajax sous le même droit.
+        'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/ajax/shipments/ksef-day', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
+        // [398] Asystent « Intrastat miesiąca » (Kierownik produkcji, co miesiąc) : droit propre (page /intrastat/month et appels
+        // ajax), donné au Kierownik produkcji par la migration 239.
+        'intrastat' => ['Intrastat miesiąca (asystent : wywóz z WDT, przywóz z faktur dostawców UE, kody CN, kursy, CSV do PUESC)', 'Logistyka i pakowanie', ['/intrastat', '/ajax/intrastat'], false],
         'archive' => ['Archiwum list kompletacyjnych', 'Logistyka i pakowanie', ['/archive'], false],
         'positions' => ['Funkcje i zadania, protokoły, struktura i obowiązki', 'Administracja', ['/organization', '/task-forms', '/ajax/organization/structure', '/ajax/organization/duties'], false],
         'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, stopki e-maili i tłumacz, KSeF, licznik stron, inne)', 'Administracja',
@@ -85,6 +108,9 @@ final class PageAccess
         'hr' => ['HR (pracownicy : kontakt, staż, umowy, emerytura ; dokumenty ; notatki i podsumowanie miesiąca)', 'Administracja', ['/hr'], false],
         // [277] Lista płac (makieta 41) : wynagrodzenia miesiąca, paski, plik XML do banku ; dane płacowe w karcie HR i szablony umów.
         'payroll' => ['Lista płac (wynagrodzenia, paski, przelewy XML, stawki ZUS / PIT ; wynagrodzenie i rachunek w karcie HR, szablony umów)', 'Administracja', ['/payroll'], false],
+        // [392] Asystent « Poczta od klientów » : droit propre (décision du 23.11.2026), donné à Administracja (migration 235).
+        // Poczta (/mail) reste une page commune ; dans l'assistant, chacun ne voit toujours que la boîte qu'il lit dans Poczta.
+        'customer_mail' => ['Poczta od klientów (asystent : e-maile klientów bez odpowiedzi)', 'Sprzedaż', ['/mail/customer-check', '/ajax/mail/customer-check'], false],
         'mail_admin' => ['Skrzynki pocztowe użytkowników (ustawienia skrzynki za użytkownika, « tylko administrator », wstrzymanie poczty)', 'Administracja', ['/mail/admin'], true],
         'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],
         // [285] Raport stanowisk (makieta 39) : minuty zadań, wypełnienie stanowisk — tylko administrator (i profil CEO).

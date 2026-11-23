@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Dane klientów{% endblock %}
+
+{% block content %}
+{# [385] Assistant « Dane klientów » : App\Services\Organization\Wizards\CustomersDataCheckService — écran dans
+   assets/js/client/customers-data-check.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois
+   d'Administracja se valide seule après « Zakończ ». La fiche client n'est jamais modifiée ici (liens vers la fiche et le
+   cennik du client), aucun envoi. #}
+<section class="section">
+    <div id="dkApp"><p class="at-empty">{{ data is null ? 'Brak dostępu do klientów.' : 'Ładowanie…' }}</p></div>
+</section>
+{% if data is not null %}<script type="application/json" id="dkBoot">{{ data|json_encode|raw }}</script>{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/client/customers-data-check.js?v={{ asset_v() }}"></script>
+{% endblock %}

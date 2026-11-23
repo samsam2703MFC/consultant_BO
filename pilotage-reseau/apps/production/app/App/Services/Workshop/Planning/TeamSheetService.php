@@ -6,6 +6,7 @@ namespace App\Services\Workshop\Planning;
 use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Translator;
+use App\Repositories\Workshop\PlanningRepository;
 use App\Repositories\Workshop\SchedulingRepository;
 use App\Repositories\Workshop\SupplyRepository;
 use App\Services\Purchasing\CostOptimizationService;
@@ -25,6 +26,7 @@ final class TeamSheetService
         private WeekService $weeks,
         private SupplyRepository $supply,
         private SchedulingRepository $scheduling,
+        private PlanningRepository $planning,
     ) {
     }
 
@@ -38,15 +40,53 @@ final class TeamSheetService
         $week = $this->weeks->week($date, $context);
         $recipes = $this->supply->recipes();
         $deliveries = $this->deliveries($week['week_start'], $week['week_end'], $lang);
+        // [386] Ce qui reste « do rozplanowania » est inscrit dans les jours, comme le répartirait « Rozdziel na dni »
+        // (calcul seul : le plan n'est pas modifié).
+        $suggested = $this->weeks->suggested($date, $context);
+        // [388] Ce qui est déjà en stock (cartons en magasin × pièces par carton) : affiché à part, ce n'est pas à produire.
+        $free = $this->planning->stockCartons();
+        $onHand = [];
+        $byProduct = [];
+        $info = [];
+        $mts = [];
+        foreach ($this->planning->items() as $it) {
+            if ($it['item_type'] !== 'product' || (int) $it['ppc'] <= 0 || !$it['id_final_product']) continue;
+            $info[(int) $it['id']] = $it;
+            // [395] Produits faits pour le stock (MTS) : niveaux min. / maks. en vigueur (période exceptionnelle comprise).
+            if ($it['mode'] === 'MTS' && $it['stock_max'] !== null) $mts[(int) $it['id']] = ['min' => $it['stock_min'] !== null ? (float) $it['stock_min'] : null, 'max' => (float) $it['stock_max']];
+            $onHand[(int) $it['id']] = (float) (($free[(int) $it['id_final_product']] ?? 0) * (int) $it['ppc']);
+            $byProduct[(int) $it['id_final_product']] = ['id' => (int) $it['id'], 'ppc' => (int) $it['ppc']];
+        }
+        // [390] Ce qu'il faut envoyer cette semaine : commandes ouvertes (brut, avant le stock), avec le premier départ.
+        $ordered = [];
+        foreach ($this->planning->openOrderLines($week['week_start'], $week['week_end']) as $o) {
+            $m = $byProduct[(int) $o['id_product']] ?? null;
+            if ($m === null) continue;
+            $x = &$ordered[$m['id']];
+            $x ??= ['qty' => 0.0, 'due' => null];
+            $x['qty'] += (float) $o['cartons'] * $m['ppc'];
+            $x['due'] = $x['due'] === null || $o['expected_shipping_date'] < $x['due'] ? $o['expected_shipping_date'] : $x['due'];
+            unset($x);
+        }
         $products = [];
         foreach ($week['products'] as $p) $products[(int) ($p['group_id'] ?? 0)][] = $p;
+        // [390] Comme la Lista produkcyjna : chaque produit commandé est sur la feuille de son équipe, même quand le stock
+        // couvre tout (rien à produire) — sinon on ne voit pas ce qui part du stock.
+        $inWeek = array_flip(array_map(fn($p) => (int) $p['item_id'], $week['products']));
+        foreach ($ordered as $id => $o) {
+            if (isset($inWeek[$id]) || !isset($info[$id])) continue;
+            $it = $info[$id];
+            $products[$it['id_primary_group'] !== null ? (int) $it['id_primary_group'] : 0][] = ['item_id' => $id, 'name' => $it['name'], 'item_type' => 'product',
+                'unit' => $it['base_unit'], 'ppc' => (int) $it['ppc'], 'batch' => null, 'quantity' => 0.0, 'slots' => [], 'unassigned_qty' => 0.0, 'unassigned_h' => 0.0,
+                'direct' => 0.0, 'direct_parts' => []];
+        }
         $lanes = array_column(array_map(fn($g) => $g + ['key' => (int) ($g['id'] ?? 0)], $week['groups']), null, 'key');
         $ids = $groupId !== null ? [$groupId] : array_values(array_filter(array_keys($lanes), fn($id) => !empty($products[$id])));
         $teams = [];
         foreach ($ids as $id) {
             $lane = $lanes[$id] ?? ['id' => $id ?: null, 'name' => null, 'color' => null, 'days' => []];
             $info = $known[$id] ?? ['id' => null, 'name' => null, 'color' => null];
-            $teams[] = $this->team($info, $lane, $products[$id] ?? [], $week, $recipes, $deliveries);
+            $teams[] = $this->team($info, $lane, $products[$id] ?? [], $week, $recipes, $deliveries, $suggested, $onHand, $ordered, $mts);
         }
         return [
             'week_start' => $week['week_start'], 'week_end' => $week['week_end'], 'iso_week' => $week['iso_week'], 'today' => $week['today'],
@@ -191,7 +231,7 @@ final class TeamSheetService
         return substr($iso, 8, 2) . '.' . substr($iso, 5, 2) . '.' . substr($iso, 0, 4);
     }
 
-    private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries): array
+    private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries, array $suggested = [], array $onHand = [], array $ordered = [], array $mts = []): array
     {
         $days = [];
         foreach ($week['days'] as $d) $days[$d['date']] = ['date' => $d['date'], 'weekday' => $d['weekday'], 'today' => $d['today'], 'past' => $d['past'],
@@ -215,6 +255,16 @@ final class TeamSheetService
                     'unit' => $unit['label'], 'factor' => $unit['factor']];
                 $perDay[$s['day']] = ['quantity' => $s['quantity'], 'cartons' => $s['cartons'], 'time' => $s['time']];
             }
+            // [386] Reste à produire : quantité proposée par jour (en italique), en plus de ce qui est déjà au plan.
+            $proposed = 0.0;
+            foreach ($suggested[$p['item_id']] ?? [] as $day => $q) {
+                if (!isset($days[$day]) || $q <= self::EPS) continue;
+                $cur = $perDay[$day] ?? ['quantity' => 0.0, 'cartons' => 0.0, 'time' => null];
+                $perDay[$day] = ['quantity' => round($cur['quantity'] + $q, 3), 'cartons' => $p['ppc'] ? round(($cur['quantity'] + $q) / $p['ppc'], 1) : $cur['cartons'],
+                    'time' => $cur['time'], 'proposed' => round($q, 3)];
+                $proposed += $q;
+            }
+            ksort($perDay);
             $due = array_values(array_filter(array_column($p['direct_parts'], 'due_date')));
             // Do zrobienia = to, co leży na dniach (także 📌 ponad potrzebę tygodnia), plus nierozplanowana reszta.
             $total = array_sum(array_column($p['slots'], 'quantity')) + (float) $p['unassigned_qty'];
@@ -222,7 +272,15 @@ final class TeamSheetService
                 'batch' => $p['batch'], 'quantity' => round($total, 3), 'need' => $p['quantity'], 'cartons' => $p['ppc'] ? round($total / $p['ppc'], 1) : null,
                 'batches' => $p['batch'] ? round($total / $p['batch'], 2) : null, 'hours' => round(array_sum(array_column($p['slots'], 'hours')) + (float) $p['unassigned_h'], 2),
                 // Nadwyżka ponad potrzebę tygodnia idzie na magazyn.
-                'direct' => $p['direct'], 'stock' => round(max(0.0, $total - (float) $p['direct']), 3), 'due_date' => $due ? min($due) : null, 'unassigned_qty' => round((float) $p['unassigned_qty'], 3), 'days' => $perDay];
+                'direct' => $p['direct'], 'stock' => round(max(0.0, $total - (float) $p['direct']), 3), 'due_date' => $due ? min($due) : null,
+                // Reste que la répartition n'a pu poser sur aucun jour (semaine passée) : seul cas encore affiché « nierozplanowane ».
+                'unassigned_qty' => round(max(0.0, (float) $p['unassigned_qty'] - $proposed), 3), 'proposed_qty' => round($proposed, 3), 'days' => $perDay,
+                'on_hand' => isset($onHand[$p['item_id']]) ? round($onHand[$p['item_id']], 3) : null,
+                'ordered' => isset($ordered[$p['item_id']]) ? round($ordered[$p['item_id']]['qty'], 3) : 0.0, 'ordered_due' => $ordered[$p['item_id']]['due'] ?? null,
+                // [395] MTS : pour le stock, on peut produire au plus jusqu'au maks. — ce qui restera après les commandes compte
+                // (jamais sous zéro : le manque pour les commandes est déjà dans « Do produkcji »).
+                'mts' => isset($mts[$p['item_id']]) ? $mts[$p['item_id']] + ['room' => round(max(0.0, $mts[$p['item_id']]['max']
+                    - max(0.0, ($onHand[$p['item_id']] ?? 0.0) - ($ordered[$p['item_id']]['qty'] ?? 0.0))), 3)] : null];
             if ($p['ppc'] && $total > self::EPS && isset($recipes[$p['item_id']])) {
                 foreach ($recipes[$p['item_id']] as $ing) {
                     $need[$ing['material_id']] = ($need[$ing['material_id']] ?? 0.0) + $total / $p['ppc'] * $ing['quantity'];
@@ -244,8 +302,10 @@ final class TeamSheetService
         }
         foreach ($days as &$d) usort($d['blocks'], fn($a, $b) => [$a['time'] ?? '99:99', $a['name']] <=> [$b['time'] ?? '99:99', $b['name']]);
         unset($d);
-        usort($rows, fn($a, $b) => [array_key_first($a['days']) ?? '9', $a['name']] <=> [array_key_first($b['days']) ?? '9', $b['name']]);
+        // [390] Ordre alphabétique, comme la Lista produkcyjna.
+        usort($rows, fn($a, $b) => strcmp(mb_strtolower((string) $a['name']), mb_strtolower((string) $b['name'])));
         return [
+            'proposed' => count(array_filter($rows, fn($r) => $r['proposed_qty'] > self::EPS)),
             'id' => $info['id'], 'name' => $info['name'], 'color' => $info['color'],
             'people' => (int) max([0, ...array_column($days, 'people')]),
             'available_h' => round(array_sum(array_column($days, 'available_h')), 2), 'required_h' => round(array_sum(array_column($days, 'required_h')), 2),
@@ -276,6 +336,8 @@ final class TeamSheetService
     private const HEAD_TODAY = 'background-color:#F8ECEE;color:#8D1D2C;border:0.3px solid #8D1D2C';
     private const CELL = 'border:0.3px solid #DEE2E6';
     private const MUTED = '#6C757D';
+    /** [388] En-tête « Jest na stanie » : gris, pour ne pas le lire comme une quantité à produire. */
+    private const HEAD_STOCK = 'background-color:#6C757D;color:#ffffff;border:0.3px solid #6C757D';
 
     /** Sekcje planu zespołu : [tytuł, html] — kalendarz, produkcja tygodnia, dostawy (gdy są). */
     private function teamSections(array $team, Translator $tr): array
@@ -311,36 +373,56 @@ final class TeamSheetService
         if (!$team['products']) {
             $html = '<p>' . $this->e($tr->text('team_sheet_empty')) . '</p>';
         } else {
-            $productWidth = 100 - 6 * count($team['days']) - 34;
+            // [390] Même présentation que la Lista produkcyjna (référence de l'utilisateur, 23.11.2026) : W magazynie
+            // (kart. / szt.), Zamówienie (kart. / szt.), Do produkcji = plan de la semaine (commandé − en stock, plus le
+            // réassort des produits de stock, qu'on signale en petit), puis les jours.
+            $productWidth = 100 - 6 * count($team['days']) - 44;
+            $sub = fn(string $w, string $t, string $style = self::HEAD) => '<th width="' . $w . '%" align="right" style="' . $style . '">' . $this->e($t) . '</th>';
             $html = '<table cellpadding="2" style="font-size:7.5pt"><thead><tr>'
-                . '<th width="' . $productWidth . '%" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_product')) . '</th>'
-                . '<th width="9%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_total')) . '</th>'
-                . '<th width="5%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_batches')) . '</th>'
-                . '<th width="4%" align="right" style="' . self::HEAD . '">h</th>'
-                . '<th width="9%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_ship')) . '</th>'
-                . '<th width="7%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_stock')) . '</th>'
-                . $dayCols . '</tr></thead><tbody>';
+                . '<th width="' . $productWidth . '%" rowspan="2" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_product')) . '</th>'
+                . '<th width="11%" colspan="2" align="center" style="' . self::HEAD_STOCK . '">' . $this->e($tr->text('team_sheet_col_on_hand')) . '</th>'
+                . '<th width="11%" colspan="2" align="center" style="' . self::HEAD_STOCK . '">' . $this->e($tr->text('team_sheet_col_ordered')) . '</th>'
+                . '<th width="7%" align="center" style="' . self::HEAD . '"><b>' . $this->e($tr->text('team_sheet_col_total')) . '</b></th>'
+                . '<th width="6%" align="center" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_stock')) . '</th>'
+                . '<th width="5%" rowspan="2" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_batches')) . '</th>'
+                . '<th width="4%" rowspan="2" align="right" style="' . self::HEAD . '">h</th>'
+                . str_replace('<th width="6%"', '<th width="6%" rowspan="2"', $dayCols) . '</tr><tr>'
+                . $sub('5', $tr->text('team_sheet_cartons_short'), self::HEAD_STOCK) . $sub('6', $tr->text('team_sheet_pieces_short'), self::HEAD_STOCK)
+                . $sub('5', $tr->text('team_sheet_cartons_short'), self::HEAD_STOCK) . $sub('6', $tr->text('team_sheet_pieces_short'), self::HEAD_STOCK)
+                . $sub('7', $tr->text('team_sheet_pieces_short')) . $sub('6', $tr->text('team_sheet_pieces_short'))
+                . '</tr></thead><tbody>';
             foreach ($team['products'] as $i => $r) {
                 $bg = $i % 2 === 1 ? 'background-color:#F8F9FA;' : '';
                 $cols = '';
                 foreach ($team['days'] as $d) {
                     $x = $r['days'][$d['date']] ?? null;
+                    $q = $x ? $this->e($this->qty($x['quantity'], $r['unit'], $r['factor'], false)) : '';
+                    // [386] Quantité proposée (pas encore au plan) : en italique.
+                    if ($x && !empty($x['proposed'])) $q = '<i>' . $q . '</i>';
                     $cols .= '<td width="6%" align="center" style="' . $bg . self::CELL . '">' . ($x ? ($x['time'] ? '<span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($x['time']) . '</span><br>' : '')
-                        . $this->e($this->qty($x['quantity'], $r['unit'], $r['factor'], false)) : '') . '</td>';
+                        . $q : '') . '</td>';
                 }
+                $cell = fn(string $w, string $v, string $extra = '') => '<td width="' . $w . '%" align="right" style="' . $bg . self::CELL . $extra . '">' . $v . '</td>';
+                $ctn = fn(?float $v) => $v !== null && $v > self::EPS && $r['ppc'] ? $this->n($v / $r['ppc'], ($v / $r['ppc']) == floor($v / $r['ppc']) ? 0 : 1) : '-';
+                $pcs = fn(?float $v) => $v !== null && $v > self::EPS ? $this->e($this->qty($v, $r['unit'], $r['factor'], false)) : '-';
+                // [393] Do produkcji = commandé − en stock (comme l'ancienne Lista produkcyjna) ; le réassort des produits de
+                // stock (min. / max.) est à part, dans « Na zapas ».
+                $make = $r['direct'] > self::EPS ? '<b>' . $this->e($this->qty($r['direct'], $r['unit'], $r['factor'], false)) . '</b>' : '-';
+                $refill = ($r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'], false)) : '-')
+                    . (($r['mts'] ?? null) ? '<br><span style="font-size:6pt">' . $this->e($tr->text('team_sheet_room', ['qty' => $this->qty($r['mts']['room'], $r['unit'], $r['factor'], false)])) . '</span>' : '');
                 $html .= '<tr nobr="true"><td width="' . $productWidth . '%" style="' . $bg . self::CELL . '"><b>' . $this->e($r['name']) . '</b>'
-                    . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '')
-                    . (abs($r['need'] - $r['quantity']) > 0.5 ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_need', ['qty' => $this->qty($r['need'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
-                    . '<td width="9%" align="right" style="' . $bg . self::CELL . '">' . $this->e($this->qty($r['quantity'], $r['unit'], $r['factor']))
-                    . ($r['cartons'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->n($r['cartons'], 1) . ' ' . $this->e($tr->text('team_sheet_cartons')) . '</span>' : '') . '</td>'
-                    . '<td width="5%" align="right" style="' . $bg . self::CELL . '">' . ($r['batches'] ? $this->n($r['batches'], 2) : '—') . '</td>'
-                    . '<td width="4%" align="right" style="' . $bg . self::CELL . '">' . $this->n($r['hours'], 1) . '</td>'
-                    . '<td width="9%" align="right" style="' . $bg . self::CELL . '">' . ($r['direct'] > self::EPS ? $this->e($this->qty($r['direct'], $r['unit'], $r['factor']))
-                        . ($r['due_date'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_due', ['day' => $this->day($r['due_date'])])) . '</span>' : '') : '—') . '</td>'
-                    . '<td width="7%" align="right" style="' . $bg . self::CELL . '">' . ($r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'])) : '—') . '</td>'
+                    . (($r['mts'] ?? null) ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_mts', ['min' => $r['mts']['min'] !== null ? $this->qty($r['mts']['min'], $r['unit'], $r['factor'], false) : '—',
+                        'max' => $this->qty($r['mts']['max'], $r['unit'], $r['factor'], false)])) . '</span>' : '')
+                    . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
+                    . $cell('5', $ctn($r['on_hand']), ';color:' . self::MUTED) . $cell('6', $pcs($r['on_hand']), ';color:' . self::MUTED)
+                    . $cell('5', $ctn($r['ordered'])) . $cell('6', $pcs($r['ordered']) . ($r['ordered'] > self::EPS && $r['ordered_due'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_due', ['day' => $this->day($r['ordered_due'])])) . '</span>' : ''))
+                    . $cell('7', $make) . $cell('6', $refill, ';color:' . self::MUTED)
+                    . $cell('5', $r['batches'] ? $this->n($r['batches'], 2) : '—') . $cell('4', $this->n($r['hours'], 1))
                     . $cols . '</tr>';
             }
             $html .= '</tbody></table>';
+            $html .= '<p style="font-size:6.5pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_columns_note')) . '</p>';
+            if ($team['proposed'] ?? 0) $html .= '<p style="font-size:6.5pt;color:' . self::MUTED . '"><i>' . $this->e($tr->text('team_sheet_proposed_note')) . '</i></p>';
         }
         $sections[] = [$tr->text('team_sheet_production'), $html];
 

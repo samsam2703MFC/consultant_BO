@@ -16,6 +16,8 @@
     const flagged = () => D.orders.filter(o => o.flags.length);
     const canFinish = () => !!D.can_finish;
     const needsNote = (r) => (D.note_required || []).includes(r);
+    // [387] Propositions de l'IA du matin (aiProp, ai-proposals.js) : rien si D.ai est vide.
+    const ai = window.aiProp || null;
     // « 27.11 » : jour et mois sur deux chiffres (texte du SMS).
     const ddmm = (d) => d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '';
     const link = (id) => `<a href="${at.root}/client-orders/${id}/edit" target="_blank" rel="noopener">#${id}</a>`;
@@ -95,7 +97,8 @@
         const date = d.decision === 'new_date' ? `<input type="date" class="form-control form-control-sm" data-dd-date="${o.id}" value="${esc(d.new_date)}" min="${esc(D.today)}" max="${esc(D.new_date_max)}"
             style="min-height:36px;border-radius:9px;max-width:150px" title="Nowy termin wysyłki (tylko zapisany — zamówienie bez zmian)">` : '';
         const prev = o.previous ? `<small>Poprzednio (${esc(o.previous.day_label)}) : ${esc(o.previous.label)}${o.previous.new_label ? ' ' + esc(o.previous.new_label) : ''}${o.previous.note ? ' — ' + esc(o.previous.note) : ''}</small>` : '';
-        return `<div style="display:grid;gap:6px;min-width:470px"><div class="tw-seg" style="justify-self:start">${seg}</div>
+        const aiHint = ai && !o.check && ai.find(D.ai, o.id) && ai.find(D.ai, o.id).decision === 'new_date' ? 'Datę nowego terminu wybierasz w formularzu.' : '';
+        return `<div style="display:grid;gap:6px;min-width:470px">${ai && !o.check ? ai.box(D.ai, o.id, aiHint) : ''}<div class="tw-seg" style="justify-self:start">${seg}</div>
             <div style="display:flex;gap:6px">${date}<input class="form-control form-control-sm" data-dd-note="${o.id}" maxlength="500" value="${esc(d.note)}"
                 placeholder="${ph}" style="min-height:36px;border-radius:9px">
             <button type="button" class="tw-btn ghost sm" data-dd-save="${o.id}" ${!d.decision || !dirty || busy ? 'disabled' : ''}>Zapisz</button></div>${saved}${prev}</div>`;
@@ -109,7 +112,7 @@
             ship(o),
             o.flags.map(f => `<div style="display:flex;gap:6px;align-items:baseline;margin:2px 0"><i class="bi bi-exclamation-circle tw-red"></i><span>${esc(f.reason)}</span></div>`).join(''),
             decisionCell(o)]}));
-        return `<p class="tw-lead">Sygnały automatyczne. Dla każdej dostawy zapisz decyzję : <b>Wyjaśnione — w drodze / OK</b>, <b>Nowy termin</b> (data i notatka) albo <b>Kontakt z klientem</b> (notatka).
+        return `${ai ? ai.banner(D.ai) : ''}<p class="tw-lead">Sygnały automatyczne. Dla każdej dostawy zapisz decyzję : <b>Wyjaśnione — w drodze / OK</b>, <b>Nowy termin</b> (data i notatka) albo <b>Kontakt z klientem</b> (notatka).
                 Klienta możesz powiadomić SMS-em (tekst do przejrzenia, nic nie wychodzi samo). Krok 3 otworzy się, gdy wszystkie mają decyzję.</p>
             ${tw.tiles([{label: 'Do wyjaśnienia', value: String(t.flagged), sub: 'dostawy z sygnałem'}, {label: 'Z decyzją', value: `${t.resolved} z ${t.flagged}`, sub: t.waiting ? `zostało ${t.waiting}` : 'wszystkie wyjaśnione', cls: t.waiting ? 'warn' : 'ok'},
                 {label: 'W drodze / OK', value: String(t.ok), sub: 'wyjaśnione'}, {label: 'Nowy termin / kontakt', value: `${t.new_date} / ${t.contact}`, sub: 'z notatką'}])}
@@ -154,6 +157,16 @@
         btn.disabled = !d.decision || busy || (o.check && o.check.decision === d.decision && (o.check.note || '') === d.note && (o.check.new_date || '') === (d.decision === 'new_date' ? d.new_date : ''));
     };
     tw.bind(app, (n) => { step = n === -1 ? Math.max(1, step - 1) : n; render(); });
+    // « Przyjmij » / « Popraw » : la proposition remplit le brouillon (décision et note) ; « Nowy termin » : la date reste
+    // à choisir (curseur dans le champ date) ; l'enregistrement reste « Zapisz » et la validation de l'assistant.
+    if (ai) ai.bind(app, {ai: () => D.ai, render, apply: (p, edit) => {
+        const id = Number(p.ref), prev = draft[id] || {};
+        draft[id] = {decision: p.decision, new_date: p.decision === 'new_date' ? (prev.new_date || '') : '', note: p.note || ''};
+        render();
+        const dt = app.querySelector(`[data-dd-date="${id}"]`), n = app.querySelector(`[data-dd-note="${id}"]`);
+        if (dt && !draft[id].new_date) dt.focus();
+        else if (n && edit) { n.focus(); n.select(); }
+    }});
     app.addEventListener('input', (e) => {
         const n = e.target.closest('[data-dd-note]'), dt = e.target.closest('[data-dd-date]');
         if (!n && !dt) return;

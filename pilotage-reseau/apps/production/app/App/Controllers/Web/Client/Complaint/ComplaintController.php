@@ -8,6 +8,7 @@ use App\Core\Web\BaseController;
 use App\Services\Client\Complaint\ComplaintCollectorService;
 use App\Services\Client\Complaint\ComplaintService;
 use App\Services\Client\Complaint\DocumentService;
+use App\Services\Organization\PageAccessService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,6 +20,7 @@ class ComplaintController extends BaseController
         private ComplaintService $complaintService,
         private DocumentService $documentService,
         private ComplaintCollectorService $complaintCollectorService,
+        private PageAccessService $access,
     )
     {
 
@@ -182,7 +184,10 @@ class ComplaintController extends BaseController
     public function ajaxDetail($id)
     {
         $d = $this->complaintService->detail((int) $id);
-        return $d === null ? $this->json(['message' => 'Nie znaleziono reklamacji'], 404) : $this->json($d);
+        if ($d === null) return $this->json(['message' => 'Nie znaleziono reklamacji'], 404);
+        // [391] Montants seulement pour Finanse et CEO (règle [312]).
+        $uid = user('id') ? (int) user('id') : null;
+        return $this->json($this->access->seesOrderValues($uid) ? $d + ['values' => true] : ComplaintService::withoutAmounts($d));
     }
 
     public function ajaxGetPresignedUrl($id)

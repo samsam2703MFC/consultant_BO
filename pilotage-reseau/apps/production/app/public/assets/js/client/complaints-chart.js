@@ -457,10 +457,12 @@
         } catch (e) { box.innerHTML = `<p class="rk-empty">${esc(e.message || 'Błąd komunikacji')}</p>`; return; }
         modal.querySelector('.rk-modal-hd h5').textContent = d.non_product ? 'Reklamacja bez produktu' : d.product;
         const state = d.status === 'ACCEPTED' ? 'acc' : (d.status === 'REJECTED' ? 'rej' : 'open');
-        const shipped = d.shipped.length ? `<table class="rk-mtable"><thead><tr><th>Kartony</th><th>szt./kart.</th><th>Sztuki</th><th>Cena kartonu</th><th>Razem</th></tr></thead><tbody>
-                ${d.shipped.map(l => `<tr><td>${fmtQ(l.cartons)}</td><td>${l.ppc ? fmtQ(l.ppc) : '—'}</td><td>${l.pieces !== null ? fmtQ(l.pieces) : '—'}</td><td>${nf(l.price_carton, 2)} €</td><td>${nf(l.total, 2)} €</td></tr>`).join('')}</tbody></table>`
+        // [391] Sans droit aux montants (Finanse / CEO) : pas de prix ni de valeur, seulement cartons et pièces.
+        const money = d.values !== false;
+        const shipped = d.shipped.length ? `<table class="rk-mtable"><thead><tr><th>Kartony</th><th>szt./kart.</th><th>Sztuki</th>${money ? '<th>Cena kartonu</th><th>Razem</th>' : ''}</tr></thead><tbody>
+                ${d.shipped.map(l => `<tr><td>${fmtQ(l.cartons)}</td><td>${l.ppc ? fmtQ(l.ppc) : '—'}</td><td>${l.pieces !== null ? fmtQ(l.pieces) : '—'}</td>${money ? `<td>${nf(l.price_carton, 2)} €</td><td>${nf(l.total, 2)} €</td>` : ''}</tr>`).join('')}</tbody></table>`
             : `<p class="rk-muted">${d.invoice_num ? 'Brak tego produktu na fakturze ' + esc(d.invoice_num) + '.' : 'Brak faktury.'}</p>`;
-        const calc = (q, cartons, v) => `${fmtQ(q)} szt. ÷ ${fmtQ(d.ppc)} szt./kart. → <b>${cartons} ${plural(cartons, 'karton', 'kartony', 'kartonów')}</b> × ${nf(d.carton_price, 2)} € = <b>${nf(v, 2)} €</b>`;
+        const calc = (q, cartons, v) => `${fmtQ(q)} szt. ÷ ${fmtQ(d.ppc)} szt./kart. → <b>${cartons} ${plural(cartons, 'karton', 'kartony', 'kartonów')}</b>` + (money ? ` × ${nf(d.carton_price, 2)} € = <b>${nf(v, 2)} €</b>` : '');
         box.innerHTML = `<div class="rk-mhead"><span class="rk-st ${state}">${esc(d.status_label)}</span><span>${esc(d.customer || '—')}</span>
                 <span class="rk-muted">zgłoszona ${mDay(d.reported_at)}${d.decided_at && state !== 'open' ? ' · decyzja ' + mDay(d.decided_at) : ''}</span></div>
             <section class="rk-msec"><h6><i class="bi bi-shop"></i> Zgłoszenie z magazynu</h6>
@@ -473,7 +475,7 @@
                     `<a href="#" class="rk-photo" data-rk-att="${a.id}" data-rk-img="${a.id}" data-rk-n="${i + 1}"><span>Wczytywanie…</span></a>`).join('')}</div>
                     <div class="rk-zoom" data-rk-zoom hidden></div>` : '<p class="rk-muted">Brak załączników.</p>'}</section>
             ${d.non_product ? '' : `<section class="rk-msec"><h6><i class="bi bi-truck"></i> Co wysłano — faktura ${esc(d.invoice_num || '—')}${d.invoice_date ? ' z ' + mDay(d.invoice_date) : ''}</h6>${shipped}</section>
-            <section class="rk-msec"><h6><i class="bi bi-calculator"></i> Wartość reklamacji (kartony rozpoczęte × cena kartonu)</h6>
+            <section class="rk-msec"><h6><i class="bi bi-calculator"></i> ${money ? 'Wartość reklamacji (kartony rozpoczęte × cena kartonu)' : 'Kartony reklamacji (kwoty : profil Finanse i CEO)'}</h6>
                 <p>Zgłoszone : ${calc(d.quantity, d.cartons, d.value)}</p>
                 ${d.accepted_quantity !== null ? `<p>Przyjęte : ${calc(d.accepted_quantity, d.accepted_cartons || 0, d.accepted_value || 0)}</p>` : ''}</section>`}
             <section class="rk-msec"><h6><i class="bi bi-send"></i> Decyzja i odpowiedź wysłana do magazynu</h6>

@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}HACCP miesiąca{% endblock %}
+
+{% block content %}
+{# [380] Assistant « HACCP miesiąca » : App\Services\Organization\Wizards\HaccpMonthService — écran dans
+   assets/js/production/haccp-month.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois des postes
+   Jakość, Kierownik produkcji, Brygadzista et Kierowca se valide seule après « Zakończ ». Rien n'est changé dans les
+   événements HACCP, les SOP ni les livraisons (liens vers les écrans d'origine et le registre NC), aucune NC créée, aucun envoi. #}
+<section class="section">
+    <div id="hmApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="hmBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/production/haccp-month.js?v={{ asset_v() }}"></script>
+{% endblock %}
