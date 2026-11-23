@@ -272,3 +272,4 @@
 2026-11-23T09:49:11Z [389] plan zamowione minus stan
 2026-11-23T10:09:51Z [390] plan zespolu uklad listy produkcyjnej
 2026-11-23T10:32:32Z [391-396] reklamacje kwoty, poczta, plan zespolu MTS, zakupy KP, zakres KP ; [387] rutyny AI (wylaczone)
+2026-11-23T12:07:16Z [397-399] PPWR miesiaca, Intrastat miesiaca, na zapas do min
