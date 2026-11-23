@@ -23,10 +23,9 @@ module.exports = function (m, p, q) {
   if (p === '/marketing/avis') return { cible: 4.5, magasins: [{ id: '4', note: 4.6, avis: 318 }] };
   if (p === '/soir/revue') return { heure: '18:00', revue: null };
   if (p === '/coffre/magasin') return { documents: [], nouveaux: 0 };
-  if (p === '/formation/continue/magasin') return { reperes: { enRetard: 0, enCours: 0 }, nouveaux: 0, formations: [] };
   if (p === '/helpdesk/magasin') return { demandes: [] };
   if (p === '/ventes/mensuel') return mensuel();
-  // /dashboard/boite (fermée tant qu’on ne l’ouvre pas) et /assistant/magasin/questions : dans 70_boite.js et
-  // 71_assistant.js, avec la forme complète que lisent toutes les vues.
+  // /dashboard/boite (fermée tant qu'on ne l'ouvre pas), /assistant/magasin/questions et /formation/continue/magasin :
+  // dans 70_boite.js, 71_assistant.js et 72_formation.js, avec la forme complète que lisent toutes les vues.
   return undefined;
 };
