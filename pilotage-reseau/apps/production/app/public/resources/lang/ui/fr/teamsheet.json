@@ -43,6 +43,8 @@
   "col_stock": "Pour le stock",
   "col_on_hand": "En stock",
   "col_ordered": "Commande",
+  "mts": "produit de stock · min {min} / max {max}",
+  "room": "max {qty}",
   "cartons_short": "Cart.",
   "pieces_short": "Pcs",
   "incl_stock": "dont pour le stock {qty}",

@@ -71,6 +71,19 @@ $trad = substr($h, strpos($h, 'Baguette Tradition'));
 $trad = substr($trad, 0, strpos($trad, '</tr>'));
 $check(preg_match('/>1 620<.*?<td[^>]*>-<\/td><td[^>]*>3 528<\/td>/s', $trad) === 1, '[393] Tradition : Do produkcji « - » (like the old list), Na zapas 3 528 apart');
 $check(str_contains($h, '<b>36</b>'), '[393] Poivre & Sel : Do produkcji 36 = 216 − 180 (same as the old list)');
+// [395] Produit de stock (MTS) : « na magazyn · min / maks. » et la marge maks. possible = maks. − (stock − commandé).
+$tm = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => null], [], $ref, $week, [], [], [], [1 => 180.0, 2 => 1692.0],
+    [1 => ['qty' => 216.0, 'due' => '2026-11-24'], 2 => ['qty' => 1620.0, 'due' => '2026-11-24']], [2 => ['min' => 1800.0, 'max' => 3600.0]]);
+$rm = array_column($tm['products'], null, 'item_id');
+$check($rm[1]['mts'] === null && $rm[2]['mts'] === ['min' => 1800.0, 'max' => 3600.0, 'room' => 3528.0], 'MTS Tradition : room 3 600 − (1 692 − 1 620) = 3 528 ; MTO Poivre & Sel : none');
+$hm = implode("\n", array_map(fn($s) => $s[1], $sections->invoke($svc, $tm, new Translator('pl'))));
+$tm2 = substr($hm, strpos($hm, 'Baguette Tradition')); $tm2 = substr($tm2, 0, strpos($tm2, '</tr>'));
+$pm = substr($hm, strpos($hm, 'Baguette Poivre')); $pm = substr($pm, 0, strpos($pm, '</tr>'));
+$check(str_contains($tm2, 'na magazyn · min 1 800 / maks. 3 600') && str_contains($tm2, 'maks. 3 528') && !str_contains($pm, 'na magazyn'), 'PDF : Tradition marked « na magazyn · min / maks. » with « maks. 3 528 » under Na zapas ; Poivre & Sel not');
+$over = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => null], [], [$ref[1]], $week, [], [], [], [2 => 4000.0], [2 => ['qty' => 100.0, 'due' => '2026-11-24']], [2 => ['min' => null, 'max' => 3600.0]]);
+$check($over['products'][0]['mts']['room'] === 0.0, 'stock already above max : room 0 (never negative)');
+$short = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => null], [], [$ref[1]], $week, [], [], [], [2 => 1386.0], [2 => ['qty' => 1512.0, 'due' => '2026-11-24']], [2 => ['min' => 840.0, 'max' => 2520.0]]);
+$check($short['products'][0]['mts']['room'] === 2520.0, 'orders above stock (126 short, in Do produkcji) : stock room = max 2 520, the shortage is not counted twice');
 $t2 = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => null], [], [$products[3]], $week, [], [], []);
 $html2 = implode("\n", array_map(fn($s) => $s[1], $sections->invoke($svc, $t2, new Translator('pl'))));
 $check(!str_contains($html2, 'Liczby kursywą'), 'no proposal : no footnote');

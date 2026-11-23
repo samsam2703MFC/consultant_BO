@@ -48,9 +48,12 @@ final class TeamSheetService
         $onHand = [];
         $byProduct = [];
         $info = [];
+        $mts = [];
         foreach ($this->planning->items() as $it) {
             if ($it['item_type'] !== 'product' || (int) $it['ppc'] <= 0 || !$it['id_final_product']) continue;
             $info[(int) $it['id']] = $it;
+            // [395] Produits faits pour le stock (MTS) : niveaux min. / maks. en vigueur (période exceptionnelle comprise).
+            if ($it['mode'] === 'MTS' && $it['stock_max'] !== null) $mts[(int) $it['id']] = ['min' => $it['stock_min'] !== null ? (float) $it['stock_min'] : null, 'max' => (float) $it['stock_max']];
             $onHand[(int) $it['id']] = (float) (($free[(int) $it['id_final_product']] ?? 0) * (int) $it['ppc']);
             $byProduct[(int) $it['id_final_product']] = ['id' => (int) $it['id'], 'ppc' => (int) $it['ppc']];
         }
@@ -83,7 +86,7 @@ final class TeamSheetService
         foreach ($ids as $id) {
             $lane = $lanes[$id] ?? ['id' => $id ?: null, 'name' => null, 'color' => null, 'days' => []];
             $info = $known[$id] ?? ['id' => null, 'name' => null, 'color' => null];
-            $teams[] = $this->team($info, $lane, $products[$id] ?? [], $week, $recipes, $deliveries, $suggested, $onHand, $ordered);
+            $teams[] = $this->team($info, $lane, $products[$id] ?? [], $week, $recipes, $deliveries, $suggested, $onHand, $ordered, $mts);
         }
         return [
             'week_start' => $week['week_start'], 'week_end' => $week['week_end'], 'iso_week' => $week['iso_week'], 'today' => $week['today'],
@@ -228,7 +231,7 @@ final class TeamSheetService
         return substr($iso, 8, 2) . '.' . substr($iso, 5, 2) . '.' . substr($iso, 0, 4);
     }
 
-    private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries, array $suggested = [], array $onHand = [], array $ordered = []): array
+    private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries, array $suggested = [], array $onHand = [], array $ordered = [], array $mts = []): array
     {
         $days = [];
         foreach ($week['days'] as $d) $days[$d['date']] = ['date' => $d['date'], 'weekday' => $d['weekday'], 'today' => $d['today'], 'past' => $d['past'],
@@ -273,7 +276,11 @@ final class TeamSheetService
                 // Reste que la répartition n'a pu poser sur aucun jour (semaine passée) : seul cas encore affiché « nierozplanowane ».
                 'unassigned_qty' => round(max(0.0, (float) $p['unassigned_qty'] - $proposed), 3), 'proposed_qty' => round($proposed, 3), 'days' => $perDay,
                 'on_hand' => isset($onHand[$p['item_id']]) ? round($onHand[$p['item_id']], 3) : null,
-                'ordered' => isset($ordered[$p['item_id']]) ? round($ordered[$p['item_id']]['qty'], 3) : 0.0, 'ordered_due' => $ordered[$p['item_id']]['due'] ?? null];
+                'ordered' => isset($ordered[$p['item_id']]) ? round($ordered[$p['item_id']]['qty'], 3) : 0.0, 'ordered_due' => $ordered[$p['item_id']]['due'] ?? null,
+                // [395] MTS : pour le stock, on peut produire au plus jusqu'au maks. — ce qui restera après les commandes compte
+                // (jamais sous zéro : le manque pour les commandes est déjà dans « Do produkcji »).
+                'mts' => isset($mts[$p['item_id']]) ? $mts[$p['item_id']] + ['room' => round(max(0.0, $mts[$p['item_id']]['max']
+                    - max(0.0, ($onHand[$p['item_id']] ?? 0.0) - ($ordered[$p['item_id']]['qty'] ?? 0.0))), 3)] : null];
             if ($p['ppc'] && $total > self::EPS && isset($recipes[$p['item_id']])) {
                 foreach ($recipes[$p['item_id']] as $ing) {
                     $need[$ing['material_id']] = ($need[$ing['material_id']] ?? 0.0) + $total / $p['ppc'] * $ing['quantity'];
@@ -401,8 +408,11 @@ final class TeamSheetService
                 // [393] Do produkcji = commandé − en stock (comme l'ancienne Lista produkcyjna) ; le réassort des produits de
                 // stock (min. / max.) est à part, dans « Na zapas ».
                 $make = $r['direct'] > self::EPS ? '<b>' . $this->e($this->qty($r['direct'], $r['unit'], $r['factor'], false)) . '</b>' : '-';
-                $refill = $r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'], false)) : '-';
+                $refill = ($r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'], false)) : '-')
+                    . (($r['mts'] ?? null) ? '<br><span style="font-size:6pt">' . $this->e($tr->text('team_sheet_room', ['qty' => $this->qty($r['mts']['room'], $r['unit'], $r['factor'], false)])) . '</span>' : '');
                 $html .= '<tr nobr="true"><td width="' . $productWidth . '%" style="' . $bg . self::CELL . '"><b>' . $this->e($r['name']) . '</b>'
+                    . (($r['mts'] ?? null) ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_mts', ['min' => $r['mts']['min'] !== null ? $this->qty($r['mts']['min'], $r['unit'], $r['factor'], false) : '—',
+                        'max' => $this->qty($r['mts']['max'], $r['unit'], $r['factor'], false)])) . '</span>' : '')
                     . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
                     . $cell('5', $ctn($r['on_hand']), ';color:' . self::MUTED) . $cell('6', $pcs($r['on_hand']), ';color:' . self::MUTED)
                     . $cell('5', $ctn($r['ordered'])) . $cell('6', $pcs($r['ordered']) . ($r['ordered'] > self::EPS && $r['ordered_due'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_due', ['day' => $this->day($r['ordered_due'])])) . '</span>' : ''))

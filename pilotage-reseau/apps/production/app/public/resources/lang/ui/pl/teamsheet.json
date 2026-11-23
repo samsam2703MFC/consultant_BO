@@ -43,6 +43,8 @@
   "col_stock": "Na zapas",
   "col_on_hand": "W magazynie",
   "col_ordered": "Zamówienie",
+  "mts": "na magazyn · min {min} / maks. {max}",
+  "room": "maks. {qty}",
   "cartons_short": "Kart.",
   "pieces_short": "Szt.",
   "incl_stock": "w tym na zapas {qty}",
