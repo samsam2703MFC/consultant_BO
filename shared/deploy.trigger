@@ -283,3 +283,5 @@
 2026-11-23T17:02:38Z Mon équipe : l'assistant de la semaine (reprendre, qui adapter, les heures de trop, créer), le planning imprimé groupé par section
 2026-11-23T17:26:06Z Mon équipe : les options (éteintes par défaut : assistant, tâches dans les temps morts, matrice et shift maker, recopie), les tâches dans les temps morts, retirer quelqu’un de l’horaire de la semaine, badges en rectangles arrondis
 2026-11-23T19:00:24Z Demandes des franchisés : une demande annulée ou résolue quitte la liste tout de suite et ne revient plus au rechargement
+2026-11-23T19:06:40Z [407] plan zespolu klienci zamowienia
+2026-11-23T19:28:06Z [408] gratis w ilosciach produkcji i zaladunku

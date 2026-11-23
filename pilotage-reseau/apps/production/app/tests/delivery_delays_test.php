@@ -134,7 +134,7 @@ $order(309, 1, '2026-11-23', [10 => 8], ['status' => 3, 'since' => '2026-11-23 2
 $order(310, 4, '2026-11-20', [10 => 8], ['status' => 3, 'since' => '2026-11-20 21:00:00', 'wdt' => 84]); // problème à la livraison (tablette)
 $order(311, 5, '2026-11-21', [10 => 5], ['status' => 2, 'wdt' => 85]);  // livrée : absente
 $order(312, 2, '2026-11-18', [10 => 5], ['wdt' => 82]);                 // « Oczekujące » avec WDT, livraison confirmée : absente
-$order(313, 1, '2026-11-24', [10 => 2], ['freebie' => 1]);              // gratis : absente
+$order(313, 1, '2026-11-24', [10 => 2], ['freebie' => 1]);              // gratis : absente de la liste, mais chargée [408]
 $order(314, 1, '2026-11-24', [10 => 2], ['status' => 5]);               // archivée : absente
 $order(315, 3, '2026-11-01', [10 => 5]);                                // hors fenêtre (14 jours) : absente
 $order(316, 1, '2026-11-24', [10 => 40], ['status' => 3, 'since' => '2026-11-24 07:30:00', 'wdt' => 86]); // partie ce matin : listée, sans signal
@@ -213,8 +213,8 @@ $check($flags(308) === ['in_transit_long'] && $flags(310) === ['in_transit_long'
     'flags: too long in transit ; problem reported on the driver tablet');
 $check($flags(301) === [] && $flags(309) === [] && $flags(316) === [], 'no flag: ready with driver, in transit since yesterday, shipped this morning');
 $fleet = array_column(array_filter($d['fleet'], fn($v) => $v['date'] === $today), null, 'label');
-$check(count($fleet) === 3 && $fleet['WX 1234A']['pallets'] === 3 && $fleet['WX 1234A']['customers'] === ['Sklep A', 'Sklep B'] && $fleet['BUS 01']['over'] === true
-    && $fleet['WX 5678B']['driver'] === null && $fleet['WX 1234A']['run']['started'] === '7:30', 'fleet of the day: pallets, customers, overload, driver, run');
+$check(count($fleet) === 3 && $fleet['WX 1234A']['pallets'] === 4 && $fleet['WX 1234A']['customers'] === ['Sklep A', 'Sklep B'] && $fleet['BUS 01']['over'] === true
+    && $fleet['WX 5678B']['driver'] === null && $fleet['WX 1234A']['run']['started'] === '7:30', 'fleet of the day: pallets (the GRATIS 313 of Sklep A is loaded too [408]), customers, overload, driver, run');
 $t = $d['totals'];
 $check($t['orders'] === 11 && $t['today'] === 5 && $t['today_customers'] === 4 && $t['today_shipped'] === 1 && $t['next'] === 2 && $t['overdue'] === 1 && $t['transit'] === 3
     && $t['vehicles'] === 3 && $t['flagged'] === 8 && $t['waiting'] === 8 && $d['can_finish'] === false, 'tiles: 11 deliveries, 5 today, 1 overdue, 3 in transit, 8 to clarify');

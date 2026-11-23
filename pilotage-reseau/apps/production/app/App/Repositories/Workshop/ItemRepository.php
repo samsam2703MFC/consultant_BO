@@ -185,7 +185,7 @@ final class ItemRepository extends WorkshopRepository
              FROM customer_order_product cop
              JOIN customer_order co ON co.id = cop.id_order
              LEFT JOIN customer c ON c.id = co.id_customer
-             WHERE " . OpenOrders::quantitySql('co') . "
+             WHERE " . OpenOrders::demandSql('co') . "
              GROUP BY cop.id_product, co.id, co.reference, co.expected_shipping_date, customer
              HAVING cartons > 0
              ORDER BY co.expected_shipping_date, customer, co.id"
@@ -244,7 +244,7 @@ final class ItemRepository extends WorkshopRepository
                                       GROUP BY sl.id_product) w ON w.id_product = fp.id
                            LEFT JOIN (SELECT id_product, SUM(status = 1) AS cartons, SUM(status = 2) AS palletised FROM carton_stock WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs ON cs.id_product = fp.id
                            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
-                                      WHERE " . OpenOrders::quantitySql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
+                                      WHERE " . OpenOrders::demandSql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
                            LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM n_prod_order WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item) mo ON mo.id_item = i.id
                            WHERE {$where}
                            ORDER BY cp.name IS NULL, cp.name, fp.name, fp.id", $params);
