@@ -32,7 +32,7 @@ $products = [
     $prod(4, 'Ciabatta', [['day' => '2026-11-19', 'quantity' => 45, 'cartons' => 3, 'batches' => null, 'hours' => 1, 'direct_qty' => 45, 'stock_qty' => 0, 'late' => false, 'time' => null]], 0, 45, '2026-11-24'),
 ];
 $suggested = [1 => ['2026-11-23' => 108.0, '2026-11-24' => 108.0], 2 => ['2026-11-23' => 6.0], 99 => ['2026-11-23' => 5.0]];
-$t = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => '#8D1D2C'], [], $products, $week, [], [], $suggested);
+$t = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => '#8D1D2C'], [], $products, $week, [], [], $suggested, [3 => 1800.0, 1 => 0.0]);
 $rows = array_column($t['products'], null, 'item_id');
 
 $check($rows[1]['days']['2026-11-23']['quantity'] === 108.0 && $rows[1]['days']['2026-11-24']['quantity'] === 108.0 && $rows[1]['days']['2026-11-23']['proposed'] === 108.0
@@ -42,6 +42,8 @@ $check($rows[2]['days']['2026-11-23']['quantity'] === 16.0 && $rows[2]['days']['
 $check($rows[3]['unassigned_qty'] === 1650.0 && $rows[3]['days'] === [] && $rows[3]['proposed_qty'] === 0.0, 'nothing could be placed (no suggestion) : the rest stays « nierozplanowane »');
 $check(!isset($rows[4]['days']['2026-11-19']['proposed']) && (float) $rows[4]['days']['2026-11-19']['quantity'] === 45.0, 'already planned only : unchanged, not italic');
 $check($t['proposed'] === 2 && $t['unassigned'] === 1, 'team : 2 products with proposed days, 1 left unplaced');
+// [388] « Jest na stanie » : le stock existant, à part, jamais compté dans « Do zrobienia ».
+$check($rows[3]['on_hand'] === 1800.0 && $rows[3]['quantity'] === 1650.0 && $rows[1]['on_hand'] === 0.0 && $rows[2]['on_hand'] === null, 'on hand : stock shown apart (1 800 szt), to produce unchanged ; unknown stock → null');
 $blocks = array_merge(...array_map(fn($d) => $d['blocks'], $t['days']));
 $check(count($blocks) === 2, 'calendar / day lists (tablets) : only planned blocks, proposals do not create blocks');
 
@@ -49,6 +51,10 @@ $html = implode("\n", array_map(fn($s) => $s[1], $sections->invoke($svc, $t, new
 $check(str_contains($html, '<i>108</i>') && str_contains($html, '<i>16</i>') && str_contains($html, '>45<'), 'PDF : proposed quantities in italics in the day columns, planned ones plain');
 $check(substr_count($html, 'nierozplanowane') === 1 && str_contains($html, 'nierozplanowane : 1'), 'PDF : « nierozplanowane » only for the product that could not be placed');
 $check(str_contains($html, 'Liczby kursywą : do zrobienia'), 'PDF : footnote explains the italics');
+$pos = fn(string $x) => strpos($html, $x);
+$check($pos('Jest na stanie') !== false && $pos('Jest na stanie') < $pos('Na zamówienia') && $pos('Na zamówienia') < $pos('Na zapas') && $pos('Na zapas') < $pos('Do zrobienia</b>')
+    && !str_contains($html, 'Na magazyn') && !str_contains($html, '>Razem<'), 'PDF : columns in reading order — in stock (grey) → for orders → for stock → to produce ; old ambiguous labels gone');
+$check(str_contains($html, '1 800') && str_contains($html, '100 kart.') && str_contains($html, 'Jest na stanie : kartony już na magazynie'), 'PDF : stock in pieces and cartons, legend under the table');
 $t2 = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => null], [], [$products[3]], $week, [], [], []);
 $html2 = implode("\n", array_map(fn($s) => $s[1], $sections->invoke($svc, $t2, new Translator('pl'))));
 $check(!str_contains($html2, 'Liczby kursywą'), 'no proposal : no footnote');

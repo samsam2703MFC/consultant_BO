@@ -6,6 +6,7 @@ namespace App\Services\Workshop\Planning;
 use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Translator;
+use App\Repositories\Workshop\PlanningRepository;
 use App\Repositories\Workshop\SchedulingRepository;
 use App\Repositories\Workshop\SupplyRepository;
 use App\Services\Purchasing\CostOptimizationService;
@@ -25,6 +26,7 @@ final class TeamSheetService
         private WeekService $weeks,
         private SupplyRepository $supply,
         private SchedulingRepository $scheduling,
+        private PlanningRepository $planning,
     ) {
     }
 
@@ -41,6 +43,12 @@ final class TeamSheetService
         // [386] Ce qui reste « do rozplanowania » est inscrit dans les jours, comme le répartirait « Rozdziel na dni »
         // (calcul seul : le plan n'est pas modifié).
         $suggested = $this->weeks->suggested($date, $context);
+        // [388] Ce qui est déjà en stock (cartons en magasin × pièces par carton) : affiché à part, ce n'est pas à produire.
+        $free = $this->planning->stockCartons();
+        $onHand = [];
+        foreach ($this->planning->items() as $it) {
+            if ($it['item_type'] === 'product' && (int) $it['ppc'] > 0 && $it['id_final_product']) $onHand[(int) $it['id']] = (float) (($free[(int) $it['id_final_product']] ?? 0) * (int) $it['ppc']);
+        }
         $products = [];
         foreach ($week['products'] as $p) $products[(int) ($p['group_id'] ?? 0)][] = $p;
         $lanes = array_column(array_map(fn($g) => $g + ['key' => (int) ($g['id'] ?? 0)], $week['groups']), null, 'key');
@@ -49,7 +57,7 @@ final class TeamSheetService
         foreach ($ids as $id) {
             $lane = $lanes[$id] ?? ['id' => $id ?: null, 'name' => null, 'color' => null, 'days' => []];
             $info = $known[$id] ?? ['id' => null, 'name' => null, 'color' => null];
-            $teams[] = $this->team($info, $lane, $products[$id] ?? [], $week, $recipes, $deliveries, $suggested);
+            $teams[] = $this->team($info, $lane, $products[$id] ?? [], $week, $recipes, $deliveries, $suggested, $onHand);
         }
         return [
             'week_start' => $week['week_start'], 'week_end' => $week['week_end'], 'iso_week' => $week['iso_week'], 'today' => $week['today'],
@@ -194,7 +202,7 @@ final class TeamSheetService
         return substr($iso, 8, 2) . '.' . substr($iso, 5, 2) . '.' . substr($iso, 0, 4);
     }
 
-    private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries, array $suggested = []): array
+    private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries, array $suggested = [], array $onHand = []): array
     {
         $days = [];
         foreach ($week['days'] as $d) $days[$d['date']] = ['date' => $d['date'], 'weekday' => $d['weekday'], 'today' => $d['today'], 'past' => $d['past'],
@@ -237,7 +245,8 @@ final class TeamSheetService
                 // Nadwyżka ponad potrzebę tygodnia idzie na magazyn.
                 'direct' => $p['direct'], 'stock' => round(max(0.0, $total - (float) $p['direct']), 3), 'due_date' => $due ? min($due) : null,
                 // Reste que la répartition n'a pu poser sur aucun jour (semaine passée) : seul cas encore affiché « nierozplanowane ».
-                'unassigned_qty' => round(max(0.0, (float) $p['unassigned_qty'] - $proposed), 3), 'proposed_qty' => round($proposed, 3), 'days' => $perDay];
+                'unassigned_qty' => round(max(0.0, (float) $p['unassigned_qty'] - $proposed), 3), 'proposed_qty' => round($proposed, 3), 'days' => $perDay,
+                'on_hand' => isset($onHand[$p['item_id']]) ? round($onHand[$p['item_id']], 3) : null];
             if ($p['ppc'] && $total > self::EPS && isset($recipes[$p['item_id']])) {
                 foreach ($recipes[$p['item_id']] as $ing) {
                     $need[$ing['material_id']] = ($need[$ing['material_id']] ?? 0.0) + $total / $p['ppc'] * $ing['quantity'];
@@ -292,6 +301,8 @@ final class TeamSheetService
     private const HEAD_TODAY = 'background-color:#F8ECEE;color:#8D1D2C;border:0.3px solid #8D1D2C';
     private const CELL = 'border:0.3px solid #DEE2E6';
     private const MUTED = '#6C757D';
+    /** [388] En-tête « Jest na stanie » : gris, pour ne pas le lire comme une quantité à produire. */
+    private const HEAD_STOCK = 'background-color:#6C757D;color:#ffffff;border:0.3px solid #6C757D';
 
     /** Sekcje planu zespołu : [tytuł, html] — kalendarz, produkcja tygodnia, dostawy (gdy są). */
     private function teamSections(array $team, Translator $tr): array
@@ -327,14 +338,16 @@ final class TeamSheetService
         if (!$team['products']) {
             $html = '<p>' . $this->e($tr->text('team_sheet_empty')) . '</p>';
         } else {
-            $productWidth = 100 - 6 * count($team['days']) - 34;
+            // [388] Ordre de lecture : déjà en stock (gris, pas à produire) → pour les commandes + pour le stock = à produire.
+            $productWidth = 100 - 6 * count($team['days']) - 43;
             $html = '<table cellpadding="2" style="font-size:7.5pt"><thead><tr>'
                 . '<th width="' . $productWidth . '%" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_product')) . '</th>'
-                . '<th width="9%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_total')) . '</th>'
+                . '<th width="8%" align="right" style="' . self::HEAD_STOCK . '">' . $this->e($tr->text('team_sheet_col_on_hand')) . '</th>'
+                . '<th width="9%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_ship')) . '</th>'
+                . '<th width="8%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_stock')) . '</th>'
+                . '<th width="9%" align="right" style="' . self::HEAD . '"><b>' . $this->e($tr->text('team_sheet_col_total')) . '</b></th>'
                 . '<th width="5%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_batches')) . '</th>'
                 . '<th width="4%" align="right" style="' . self::HEAD . '">h</th>'
-                . '<th width="9%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_ship')) . '</th>'
-                . '<th width="7%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_stock')) . '</th>'
                 . $dayCols . '</tr></thead><tbody>';
             foreach ($team['products'] as $i => $r) {
                 $bg = $i % 2 === 1 ? 'background-color:#F8F9FA;' : '';
@@ -350,16 +363,20 @@ final class TeamSheetService
                 $html .= '<tr nobr="true"><td width="' . $productWidth . '%" style="' . $bg . self::CELL . '"><b>' . $this->e($r['name']) . '</b>'
                     . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '')
                     . (abs($r['need'] - $r['quantity']) > 0.5 ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_need', ['qty' => $this->qty($r['need'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
-                    . '<td width="9%" align="right" style="' . $bg . self::CELL . '">' . $this->e($this->qty($r['quantity'], $r['unit'], $r['factor']))
+                    . '<td width="8%" align="right" style="' . $bg . self::CELL . ';color:' . self::MUTED . '">' . ($r['on_hand'] !== null && $r['on_hand'] > self::EPS
+                        ? $this->e($this->qty($r['on_hand'], $r['unit'], $r['factor'])) . ($r['ppc'] ? '<br><span style="font-size:6pt">' . $this->n($r['on_hand'] / $r['ppc'], 0) . ' ' . $this->e($tr->text('team_sheet_cartons')) . '</span>' : '')
+                        : ($r['on_hand'] === null ? '' : '0')) . '</td>'
+                    . '<td width="9%" align="right" style="' . $bg . self::CELL . '">' . ($r['direct'] > self::EPS ? $this->e($this->qty($r['direct'], $r['unit'], $r['factor']))
+                        . ($r['due_date'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_due', ['day' => $this->day($r['due_date'])])) . '</span>' : '') : '—') . '</td>'
+                    . '<td width="8%" align="right" style="' . $bg . self::CELL . '">' . ($r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'])) : '—') . '</td>'
+                    . '<td width="9%" align="right" style="' . $bg . self::CELL . '"><b>' . $this->e($this->qty($r['quantity'], $r['unit'], $r['factor'])) . '</b>'
                     . ($r['cartons'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->n($r['cartons'], 1) . ' ' . $this->e($tr->text('team_sheet_cartons')) . '</span>' : '') . '</td>'
                     . '<td width="5%" align="right" style="' . $bg . self::CELL . '">' . ($r['batches'] ? $this->n($r['batches'], 2) : '—') . '</td>'
                     . '<td width="4%" align="right" style="' . $bg . self::CELL . '">' . $this->n($r['hours'], 1) . '</td>'
-                    . '<td width="9%" align="right" style="' . $bg . self::CELL . '">' . ($r['direct'] > self::EPS ? $this->e($this->qty($r['direct'], $r['unit'], $r['factor']))
-                        . ($r['due_date'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_due', ['day' => $this->day($r['due_date'])])) . '</span>' : '') : '—') . '</td>'
-                    . '<td width="7%" align="right" style="' . $bg . self::CELL . '">' . ($r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'])) : '—') . '</td>'
                     . $cols . '</tr>';
             }
             $html .= '</tbody></table>';
+            $html .= '<p style="font-size:6.5pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_columns_note')) . '</p>';
             if ($team['proposed'] ?? 0) $html .= '<p style="font-size:6.5pt;color:' . self::MUTED . '"><i>' . $this->e($tr->text('team_sheet_proposed_note')) . '</i></p>';
         }
         $sections[] = [$tr->text('team_sheet_production'), $html];
