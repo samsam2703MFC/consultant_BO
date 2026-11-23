@@ -162,9 +162,11 @@ Chaque étape est mise en ligne séparément, après accord.
 Le cockpit lit et écrit des tables `mar_` dans ~40 000 lignes : une ancienne copie de l'API du
 module (`public/api/marketing/`, retirée le 21/11/2026), la mesure des campagnes (`src/mesure.php`), le contrôle des posts
 (`src/brand_guard.php`, `src/fbcontrole.php`), les posts sociaux (`src/social_publication.php`), la
-newsletter clients (`src/newsletter*.php`), les objectifs produits, le brief (`src/mkt_brief.php`) et
-des lectures dans `src/endpoints.php` / `src/writes.php` (les écritures du fonds et des types de campagne passent
-par l'API du module depuis le 21/11/2026). Chaque bloc passe dans le Marketing (écran +
+newsletter clients (`src/newsletter*.php`), les objectifs produits (`mar_campagne_objectif_produit`,
+`mar_campagne_produit`) et des lectures dans `src/endpoints.php` / `src/writes.php` (avis, objectifs, Social). Ce
+sont les tables reprises du cockpit par la migration 045 : celles propres au module (campagnes, types, leviers,
+boutiques, fonds, agences) ne se lisent ni ne s'écrivent plus en SQL depuis le 21/11/2026, elles passent par l'API du
+module (lots 1 à 5b), et la note de campagne (`src/mkt_brief.php`) n'en lit plus aucune. Chaque bloc passe dans le Marketing (écran +
 API) ; le cockpit garde, au besoin, une lecture par `/api/v1/integration/marketing/…`. Jusque-là, le
 cockpit ne crée plus ces tables : c'est la migration 045 du Marketing qui les définit.
 

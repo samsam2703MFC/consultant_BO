@@ -27,15 +27,18 @@ opératoire » de la tablette). Publication ensuite, aussi sur demande (« publi
 - Le consultant relit chaque photo : conforme ou à refaire. Un jour sans photo, ou une photo refusée, **ajoute un
   jour**. Une photo refusée le jour même peut encore être refaite ce jour-là. Les formations « connaissance » n’ont
   pas de photo.
-- Recoupé avec `formation/src/formation_continue.php` (arbre de travail du 22/11/2026, pas encore commité). Il faut
-  14 photos conformes (`fcPhotosGrille`), et la photo du jour se remplace tant qu’elle n’est pas conforme
-  (`fcGarderPhoto`). Les jours de photo valent 14 d’office pour un nouveau produit et 0 sinon ; ils se règlent sur la
-  fiche pour une technique reliée à un produit (`fcPhotosDefaut`, `photosJours`). Les 14 jours comptent à partir de
-  la première photo envoyée ; les articles disent « à partir de la mise en vente », le jour où la première photo est
-  attendue.
+- Recoupé avec `formation/src/formation_continue.php` (fusionné par la PR #236). Il faut 14 photos conformes
+  (`fcPhotosGrille`), et la photo du jour se remplace tant qu’elle n’est pas conforme (`fcGarderPhoto`). Les jours de
+  photo valent 14 d’office pour un nouveau produit et 0 sinon ; le siège les règle sur la fiche (0 à 30), par exemple
+  pour une technique reliée à un produit (`fcPhotosDefaut`, `photosJours`). Les jours comptent à partir de la date
+  « Photos à partir du (mise en vente) » choisie à la diffusion, sinon du jour de la diffusion (`wr_fc_diffuser`) ;
+  la première photo envoyée ne fixe le départ que si aucune date n’a été posée. Les articles disent « à partir de la
+  mise en vente ».
 - À la validation, le nom du consultant et la date sont enregistrés. L’archive (les 14 photos, qui, quand) entre dans
   le **document de formation** du franchisé, rangé dans son **coffre-fort**, onglet Formation.
-- Le franchisé accède à tout cela par le bouton abricot « Mon dossier de formation ». Le Professeur répond à partir
+- Le franchisé accède à tout cela par le bouton abricot « Mon dossier de formation », qui ouvre « Formations et
+  suivi » ; depuis la PR #238, la page s’ouvre sur l’accueil de la formation et le dossier est à un clic (tuile « Mon
+  dossier de formation … Ouvrir › »). Le Professeur répond à partir
   des formations du magasin, adaptations comprises, puis du Manuel.
 
 ## Le classement

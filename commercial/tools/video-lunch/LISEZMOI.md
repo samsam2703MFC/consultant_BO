@@ -10,5 +10,6 @@ node commercial/tools/video-lunch/rendre.cjs                  # fr, 9:16 et 4:5
 node commercial/tools/video-lunch/rendre.cjs --langue nl      # la version néerlandaise, celle de Halle (rendue le 20/11/2026)
 ```
 
-Le portail montre la vidéo et le texte du post (Leads Meta, « La publicité ») : `smPubLunch` dans
+Le portail montre la vidéo et le texte du post (Leads Meta, carte « Campagne « Lunch au bureau » », onglets FR · tous les
+magasins et NL · Halle, sous les étapes du formulaire et l'action qui le fait avancer) : `smPubLunch` dans
 `commercial/src/commercial_meta.php`. Changer un texte de la vidéo : `TEXTES` dans `video.html`, puis rendre à nouveau.

@@ -468,7 +468,7 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   P&L du jour, de la semaine et du mois se lit hors TVA. Le CA encaissé (TTC) en tête, la TVA des tickets retirée
   (lue ticket par ticket dans la liste du jour, sinon la caisse gravée `con_verif_ca`, sinon le taux habituel du
   magasin, sinon 6 %), puis tout se rapporte au CA hors TVA ; les frais généraux sans leur TVA, d'après l'onglet
-  **Frais** du rail (groupe « Les chiffres ») : les frais du mois au panel, et pour chaque poste « TVA comprise ? » et
+  **Frais** de la Trésorerie (groupe « Les chiffres » du rail ; un onglet à part entière jusqu'au 22/11/2026) : les frais du mois au panel, et pour chaque poste « TVA comprise ? » et
   le taux (table `panel_frais_tva`). Restent TTC : le CA des tuiles, l'objectif, le panier, la valeur du magasin.
   « Ventes par catégorie » (Liste, Treemap) aussi : CA, marge, taux et coefficient hors TVA, au taux de TVA de chaque
   produit du catalogue.
