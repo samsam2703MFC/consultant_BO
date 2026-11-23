@@ -66,6 +66,27 @@
       ],
       "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "offres",
+      "genre": "tuto",
+      "titre": "Les offres de prix",
+      "resume": "Lire ses offres, la marge d’une offre, préparer un devis dans TF Buddy et le convertir en commande ; l’onglet Newsletter.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-offres.mp4",
+      "affiche": "13-offres.jpg",
+      "duree": "2 min 53",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/public/dashboard/offres.css",
+        "marketing/public/assets/js/newsletter.js",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
