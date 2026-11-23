@@ -1401,6 +1401,11 @@ final class PositionTaskService
             'block_tolerance' => (int) ($task['block_tolerance'] ?? 0),
             'block_label' => TaskLockService::blockLabel($task),
             'wizard_steps' => json_decode((string) ($task['wizard_steps'] ?? ''), true) ?: [],
+            // [422] karta stanowiska : jak to zrobić (zadanie ręczne) i « Problem ? »
+            'how_pl' => (string) ($task['how_pl'] ?? ''),
+            'how_fr' => (string) ($task['how_fr'] ?? ''),
+            'problem_pl' => (string) ($task['problem_pl'] ?? ''),
+            'problem_fr' => (string) ($task['problem_fr'] ?? ''),
             'sort_order' => (int) ($task['sort_order'] ?? 0),
             // wykonania w 4 tygodniach (podział czasu rzeczywistego)
             'per_4w' => $period === 'week' ? 4 * count($days) : ($period === 'monthly' ? 1 : 1 / 3),
@@ -1514,6 +1519,7 @@ final class PositionTaskService
                     throw new CustomException("Wiersz {$n} : " . $e->getMessage(), 'errors', 422);
                 }
             }
+            $extra += self::howFields($row, $n);
             $plan[] = ['id' => $id, 'data' => ['title_pl' => $title, 'id_category' => $category, 'minutes' => $minutes, 'link_path' => $link, 'auto_code' => $auto] + $schedule + $extra];
         }
         $removed = array_values(array_unique(array_map('intval', is_array($input['removed'] ?? null) ? $input['removed'] : [])));
@@ -1546,6 +1552,30 @@ final class PositionTaskService
             throw $e;
         }
         return count($plan);
+    }
+
+    /** Kroki « Jak » zadania : jedna linia = jeden krok (bez numerów i wypunktowań), najwyżej 2000 znaków. */
+    public const HOW_MAX = 2000;
+    public const PROBLEM_MAX = 300;
+
+    /**
+     * [422] Karta stanowiska : « Jak » (kroki, PL / FR) i « Problem ? » (PL / FR). Brak pola = bez zmian ; puste = NULL.
+     * @return array<string, ?string>
+     */
+    public static function howFields(array $row, int $n): array
+    {
+        $out = [];
+        foreach (['how_pl' => self::HOW_MAX, 'how_fr' => self::HOW_MAX, 'problem_pl' => self::PROBLEM_MAX, 'problem_fr' => self::PROBLEM_MAX] as $field => $max) {
+            if (!array_key_exists($field, $row)) continue;
+            $value = $row[$field];
+            if ($value !== null && !is_string($value)) throw new CustomException("Wiersz {$n} : nieprawidłowy tekst karty stanowiska.", 'errors', 422);
+            $value = str_starts_with($field, 'how_') ? implode("\n", PositionSheetService::lines((string) $value)) : trim(preg_replace('/\s+/u', ' ', (string) $value));
+            if (mb_strlen($value) > $max) {
+                throw new CustomException("Wiersz {$n} : " . (str_starts_with($field, 'how_') ? 'kroki « Jak »' : '« Problem ? »') . " — najwyżej {$max} znaków.", 'errors', 422);
+            }
+            $out[$field] = $value === '' ? null : $value;
+        }
+        return $out;
     }
 
     /**
@@ -1625,7 +1655,7 @@ final class PositionTaskService
         foreach ($this->positions->tasks($sourceId, true) as $t) {
             if (in_array(mb_strtolower(trim($t['title_pl'])), $have, true)) continue;
             $this->positions->insertTask(['id_position' => $positionId] + array_intersect_key($t, array_flip(['id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'due_time', 'month_day', 'remind_time', 'escalate_days',
-                'link_path', 'extra_links', 'form_code', 'auto_code', 'sort_order'])) + ['active' => 1]);
+                'link_path', 'extra_links', 'form_code', 'auto_code', 'sort_order', 'how_pl', 'how_fr', 'problem_pl', 'problem_fr'])) + ['active' => 1]);
             $n++;
         }
         return $n;

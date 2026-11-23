@@ -11,6 +11,11 @@
         <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-outline-primary" href="{{ root }}/today#zadania"><i class="bi bi-check2-square"></i> Moje zadania</a>
             <a class="btn btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
+            {# [422] Wszystkie karty aktywnych stanowisk w jednym PDF : jedno stanowisko = jedna grupa stron. #}
+            <div class="btn-group" role="group" aria-label="Wszystkie karty stanowisk (PDF)">
+                <a class="btn btn-outline-primary" href="{{ root }}/organization/positions/sheets.pdf?lang=pl" target="_blank" rel="noopener" title="Karty wszystkich aktywnych stanowisk, z zadaniami i jak je wykonać"><i class="bi bi-printer"></i> Wszystkie karty (PDF)</a>
+                <a class="btn btn-outline-primary" href="{{ root }}/organization/positions/sheets.pdf?lang=fr" target="_blank" rel="noopener" title="Toutes les fiches de poste actives, en français">FR</a>
+            </div>
             <a href="#positionNew" class="btn btn-primary" data-bs-toggle="collapse" role="button" aria-expanded="false"><i class="bi bi-plus"></i> Stanowisko</a>
         </div>
     </div>
