@@ -108,6 +108,26 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "reseaux",
+      "genre": "tuto",
+      "titre": "Réseaux sociaux",
+      "resume": "L’entrée de l’espace boutique du Marketing dans le dashboard : la barre d’onglets et le cadre où s’ouvrent ses pages.",
+      "vues": [
+        "social"
+      ],
+      "fichier": "17-reseaux-sociaux.mp4",
+      "affiche": "17-reseaux-sociaux.jpg",
+      "duree": "1 min",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/reseaux.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
