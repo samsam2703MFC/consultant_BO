@@ -128,6 +128,27 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "tresorerie",
+      "genre": "tuto",
+      "titre": "Le plan de trésorerie",
+      "resume": "La routine du dimanche soir : le solde réel, l’écart, les quatre semaines à venir ; le plan semaine par semaine, les fournisseurs, les paiements et le budget.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-tresorerie.mp4",
+      "affiche": "09-tresorerie.jpg",
+      "duree": "3 min",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/public/dashboard/tresorerie.css",
+        "panel/src/tresorerie.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
