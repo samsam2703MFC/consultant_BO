@@ -578,6 +578,8 @@ function eqpPdfCss(): string
         . '.pl .nm{font-size:10px}.pl .po{display:block;font-size:8px;color:#7a736a}'
         . '.pl .sv{display:block;white-space:nowrap}.pl .vide{color:#B8B2A8}'
         . '.pl tr.tot td{background:#F8F4EE;font-size:8.5px;color:#5c5852}'
+        . '.pl tr.sec td{padding:9px 5px 4px;border-bottom:1.5px solid #8D1D2C;font-size:10.5px;font-weight:600;color:#1c1a17;letter-spacing:.02em}'
+        . '.pl tr.sec td span{font-weight:400;font-size:8.5px;color:#7a736a}'
         . '.pl-t{margin:0 0 8px;font-size:12px}.pl-t span{color:#7a736a;font-size:9.5px}'
         . '.pl-page{page-break-after:always}.pl-page:last-child{page-break-after:auto}';
 }
@@ -606,36 +608,51 @@ function eqpPlanningPdfHtml(array $P, string $presentation, string $magasin): st
         $parEmp = [];
         foreach ($sem as $J) { foreach ((array) $J['services'] as $s) { $parEmp[(int) $s['employe']][$J['date']][] = $s; } }
         $gens = array_values(array_filter((array) ($P['employes'] ?? []), static fn ($p) => !empty($p['actif']) || isset($parEmp[(int) $p['id']])));
-        $lots = $presentation === 'departements' ? [] : ['' => $gens];
-        if ($presentation === 'departements') { foreach ($gens as $p) { $lots[$groupe($p)][] = $p; } ksort($lots, SORT_NATURAL | SORT_FLAG_CASE); }
+        // Les sections (23/11/2026, Sam : « impression planning générale, groupé par section ») : les secteurs dans leur
+        // ordre, puis le comptoir, les autres postes, « Sans poste » à la fin — l'ordre de l'écran.
+        $sections = [];
+        foreach ($gens as $p) { $sections[$groupe($p)][] = $p; }
+        $ordreS = array_values($secteurs);
+        uksort($sections, static function ($x, $y) use ($ordreS): int {
+            $r = static fn ($g) => $g === 'Sans poste' ? [3, 0, ''] : (($i = array_search($g, $ordreS, true)) !== false ? [0, $i, ''] : ($g === 'Comptoir' ? [1, 0, ''] : [2, 0, (string) $g]));
+            return $r((string) $x) <=> $r((string) $y) ?: strnatcasecmp((string) $x, (string) $y);
+        });
+        // « departements » : une page par section ; sinon toute l'équipe sur la page, une ligne de titre par section.
+        $lots = $presentation === 'departements' ? array_map(static fn ($L) => [$L], $sections) : ['' => $sections];
         $d0 = $dates[0]; $d1 = end($dates);
         $titreSem = 'Semaine du ' . (int) substr($d0, 8, 2) . (substr($d0, 5, 2) !== substr($d1, 5, 2) ? ' ' . $mois[(int) substr($d0, 5, 2)] : '') . ' au ' . (int) substr($d1, 8, 2) . ' ' . $mois[(int) substr($d1, 5, 2)] . ' ' . substr($d1, 0, 4);
-        foreach ($lots as $dep => $L) {
+        $fh = static fn (float $h) => str_replace('.', ',', (string) round($h, 1)) . ' h';
+        foreach ($lots as $dep => $groupes) {
             $th = '<tr><th class="n">Employé</th>';
             foreach ($dates as $d) { $th .= '<th>' . $jn[(int) date('N', strtotime($d)) - 1] . ' ' . (int) substr($d, 8, 2) . '</th>'; }
             $th .= '<th class="h">Heures</th></tr>';
-            $rows = ''; $parJour = array_fill_keys($dates, [0, 0.0]); $tot = 0.0;
-            foreach ($L as $p) {
-                $id = (int) $p['id']; $h = 0.0;
-                $rows .= '<tr><td class="n"><span class="nm">' . $e($p['nom']) . '</span><span class="po">' . $e(implode(', ', array_map(static fn ($w) => (string) $w['nom'], (array) ($p['postes'] ?? []))) ?: 'aucun poste') . '</span></td>';
-                foreach ($dates as $d) {
-                    $sv = $parEmp[$id][$d] ?? [];
-                    $c = '';
-                    foreach ($sv as $s) {
-                        $m = (eqpMinutes($s['a']) - eqpMinutes($s['de'])) / 60; $h += $m;
-                        $parJour[$d][0]++; $parJour[$d][1] += $m;
-                        $c .= '<span class="sv">' . $e($s['de']) . '–' . $e($s['a']) . '</span>';
+            $rows = ''; $parJour = array_fill_keys($dates, [0, 0.0]); $tot = 0.0; $n = 0;
+            foreach ($groupes as $nomSec => $L) {
+                $rs = ''; $hs = 0.0;
+                foreach ($L as $p) {
+                    $id = (int) $p['id']; $h = 0.0; $n++;
+                    $rs .= '<tr><td class="n"><span class="nm">' . $e($p['nom']) . '</span><span class="po">' . $e(implode(', ', array_map(static fn ($w) => (string) $w['nom'], (array) ($p['postes'] ?? []))) ?: 'aucun poste') . '</span></td>';
+                    foreach ($dates as $d) {
+                        $c = '';
+                        foreach ($parEmp[$id][$d] ?? [] as $s) {
+                            $m = (eqpMinutes($s['a']) - eqpMinutes($s['de'])) / 60; $h += $m;
+                            $parJour[$d][0]++; $parJour[$d][1] += $m;
+                            $c .= '<span class="sv">' . $e($s['de']) . '–' . $e($s['a']) . '</span>';
+                        }
+                        $rs .= '<td>' . ($c !== '' ? $c : '<span class="vide">—</span>') . '</td>';
                     }
-                    $rows .= '<td>' . ($c !== '' ? $c : '<span class="vide">—</span>') . '</td>';
+                    $hs += $h;
+                    $rs .= '<td class="h">' . ($h > 0 ? $fh($h) : '—') . '</td></tr>';
                 }
-                $tot += $h;
-                $rows .= '<td class="h">' . ($h > 0 ? str_replace('.', ',', (string) round($h, 1)) . ' h' : '—') . '</td></tr>';
+                $tot += $hs;
+                $rows .= ($dep === '' ? '<tr class="sec"><td colspan="' . (count($dates) + 2) . '">' . $e($nomSec) . ' <span>· ' . count($L) . ' personne' . (count($L) > 1 ? 's' : '') . ' · ' . $fh($hs) . '</span></td></tr>' : '') . $rs;
             }
             $rows .= '<tr class="tot"><td class="n">Par jour</td>';
-            foreach ($dates as $d) { $rows .= '<td>' . $parJour[$d][0] . ' serv. · ' . str_replace('.', ',', (string) round($parJour[$d][1], 1)) . ' h</td>'; }
-            $rows .= '<td class="h">' . str_replace('.', ',', (string) round($tot, 1)) . ' h</td></tr>';
+            foreach ($dates as $d) { $rows .= '<td>' . $parJour[$d][0] . ' serv. · ' . $fh($parJour[$d][1]) . '</td>'; }
+            $rows .= '<td class="h">' . $fh($tot) . '</td></tr>';
+            $L = array_merge(...array_values($groupes));
             $entete = function_exists('docEntete') ? docEntete('Planning de l’équipe', $magasin . ' · ' . $titreSem) : '<h2>Planning de l’équipe · ' . $e($magasin . ' · ' . $titreSem) . '</h2>';
-            $pages[] = '<div class="pl-page">' . $entete . ($dep !== '' ? '<p class="pl-t">' . $e($dep) . ' <span>· ' . count($L) . ' personne' . (count($L) > 1 ? 's' : '') . '</span></p>' : '')
+            $pages[] = '<div class="pl-page">' . $entete . ($dep !== '' ? '<p class="pl-t">' . $e((string) $dep) . ' <span>· ' . count($L) . ' personne' . (count($L) > 1 ? 's' : '') . '</span></p>' : '')
                 . '<table class="pl">' . $th . $rows . '</table></div>';
         }
     }

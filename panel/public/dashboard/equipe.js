@@ -248,7 +248,7 @@
     return `<section class="card eqp-pdf" aria-label="Imprimer le planning"><strong>Imprimer le planning</strong>
       <label class="eqp-f">À partir du <input type="date" value="${esc(p.du)}" data-eqp-pdfdu="1"></label>
       <label class="eqp-f">Période <select data-eqp-pdfjours="1"><option value="7"${p.jours === 7 ? ' selected' : ''}>Une semaine</option><option value="14"${p.jours === 14 ? ' selected' : ''}>Deux semaines</option></select></label>
-      <label class="eqp-f">Présentation <select data-eqp-pdfpres="1"><option value="magasin"${p.pres === 'magasin' ? ' selected' : ''}>Tout le magasin</option><option value="departements"${p.pres === 'departements' ? ' selected' : ''}>Par département</option></select></label>
+      <label class="eqp-f">Présentation <select data-eqp-pdfpres="1"><option value="magasin"${p.pres === 'magasin' ? ' selected' : ''}>Tout le magasin, groupé par section</option><option value="departements"${p.pres === 'departements' ? ' selected' : ''}>Une page par section</option></select></label>
       <span class="eqp-sp"></span><span class="eqp-note" style="margin:0">A4 paysage · le PDF du panel</span>
       <button type="button" class="btn btn--sm${p.occupe ? ' is-busy' : ''}" data-eqp-pdfok="1"${p.occupe ? ' disabled' : ''}>${p.occupe ? 'Préparation…' : 'Télécharger le PDF'}</button>${p.err ? `<p class="error" style="flex-basis:100%">${esc(p.err)}</p>` : ''}</section>`;
   }

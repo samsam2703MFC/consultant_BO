@@ -422,6 +422,8 @@ verifie('la ligne par jour : 3 services, 16 h le lundi', str_contains($h, '3 ser
 verifie('un inactif sans service n’est pas imprimé', !str_contains($h, 'Ancien'));
 verifie('les noms sont échappés', str_contains($h, 'Caissière &lt;b&gt;') && !str_contains($h, 'Caissière <b>'));
 verifie('le titre de la semaine', str_contains($h, 'Semaine du 23 au 29 novembre 2026') && str_contains($h, 'Semaine du 30 novembre au 6 décembre 2026'), $h);
+verifie('tout le magasin, groupé par section : Boulangerie puis Comptoir, un titre par section', substr_count($h, 'class="sec"') === 4 && strpos($h, 'Boulangerie') < strpos($h, 'Anna Lambert') && strpos($h, 'Anna Lambert') < strpos($h, '>Comptoir') && strpos($h, '>Comptoir') < strpos($h, 'Caissière'), $h);
+verifie('le titre d’une section dit ses personnes et ses heures', str_contains($h, 'Boulangerie <span>· 1 personne · 8 h</span>') && str_contains($h, 'Comptoir <span>· 1 personne · 8 h</span>'));
 $hd = eqpPlanningPdfHtml($Ppdf, 'departements', 'Sombreffe');
 verifie('par département : une page par secteur ou poste et par semaine (Boulangerie, Comptoir)', substr_count($hd, 'class="pl-page"') === 4 && str_contains($hd, 'Boulangerie') && str_contains($hd, 'Comptoir'), (string) substr_count($hd, 'class="pl-page"'));
 
