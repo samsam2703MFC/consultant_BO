@@ -22,7 +22,10 @@ const CSS = fs.readFileSync(path.join(__dirname, 'maquette.css'), 'utf8'), JS = 
   await p.goto('http://127.0.0.1:8098/dashboard/?shop=5&vue=formation&date=2026-11-23', { waitUntil: 'domcontentloaded' });
   await p.waitForSelector('#db-rail [data-vue="morts"]', { timeout: 90000 }); await p.waitForTimeout(12000);
   await p.addStyleTag({ content: CSS }); await p.addScriptTag({ content: JS });
-  for (const [v, nom] of [['resp', '01-responsabilites'], ['modale', '02-modifier-les-affectations'], ['planning', '03-planning'], ['employes', '04-employes']]) {
+  const ETATS = [['resp', '01-responsabilites'], ['modale', '02-modifier-les-affectations'], ['planning', '03-planning'], ['employes', '04-employes'], ['plano-jour', '05-planogramme-jour'], ['plano-semaine', '06-planogramme-semaine'], ['plano-edition', '07-planogramme-modifier-un-service']];
+  // node capturer.cjs <sortie> [état…] : seulement ces états (resp, modale, planning, employes, plano-jour, plano-semaine).
+  const choix = process.argv.slice(3);
+  for (const [v, nom] of ETATS.filter(([v]) => !choix.length || choix.includes(v))) {
     await p.setViewportSize({ width: 1440, height: 940 });
     console.log(nom, await p.evaluate(x => window.EQ.monter(x), v));
     // La page entière : la fenêtre prend la hauteur du contenu de la maquette.
