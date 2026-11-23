@@ -190,6 +190,12 @@ check($r['qty'] === 2400.0 && $r['reason'] === 'below_min', 'refill: below the m
 check(DemandCalculator::refill(1800, 1800, 3600)['qty'] === 0.0 && DemandCalculator::refill(2500, 1800, 3600)['qty'] === 0.0, 'refill: nothing at or above the minimum');
 check(DemandCalculator::refill(-500, 1800, 3600)['qty'] === 4100.0, 'refill: orders above stock (negative available) included');
 check(DemandCalculator::refill(100, null, 300)['qty'] === 200.0 && DemandCalculator::refill(300, null, 300)['qty'] === 0.0, 'refill without a minimum: threshold = maximum');
+// [389] MTO : à produire = commandé − en stock, le stock servant d'abord le départ le plus proche.
+$ns = DemandCalculator::netStock(['b' => ['due_date' => '2026-11-26', 'qty' => 100.0], 'a' => ['due_date' => '2026-11-24', 'qty' => 216.0]], 250.0);
+check($ns === ['a' => 216.0, 'b' => 34.0], 'net stock: 250 in stock covers 216 (24.11) then 34 of 100 (26.11) — earliest departure first');
+check(DemandCalculator::netStock(['a' => ['due_date' => '2026-11-24', 'qty' => 16.0]], 32.0) === ['a' => 16.0], 'net stock: more stock than ordered → nothing to produce, surplus stays');
+check(DemandCalculator::netStock(['a' => ['due_date' => '2026-11-24', 'qty' => 1512.0]], 1386.0) === ['a' => 1386.0], 'net stock: 1 512 ordered − 1 386 in stock → 126 to produce');
+check(DemandCalculator::netStock(['a' => ['due_date' => '2026-11-24', 'qty' => 45.0]], 0.0) === [] && DemandCalculator::netStock([], 50.0) === [], 'net stock: no stock or no order → nothing taken');
 check(DemandCalculator::roundBatch(2400, null, 240) / 240 === 10.0, 'refill 2400 with batches of 240 = 10 batches');
 $cap = DemandCalculator::capFreezer([['key' => 'a', 'qty' => 600, 'ppc' => 60, 'multiple' => 60], ['key' => 'b', 'qty' => 240, 'ppc' => 24, 'multiple' => 24]], 1010, 1000);
 check($cap['limited'] && ($cap['lines']['a'] / 60 + $cap['lines']['b'] / 24) <= 10, 'freezer: proposed cartons fit the free space');

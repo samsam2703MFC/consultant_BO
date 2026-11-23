@@ -31,6 +31,26 @@ final class DemandCalculator
     }
 
     /**
+     * [389] Commandes MTO servies d'abord par le stock libre : à produire = commandé − en stock (décision du 23.11.2026).
+     * Le stock va aux commandes les plus proches (date de départ croissante).
+     * @param array<string|int, array{due_date:string, qty:float}> $lines commandes du produit par date
+     * @return array<string|int, float> clé => quantité prise sur le stock
+     */
+    public static function netStock(array $lines, float $stock): array
+    {
+        uasort($lines, fn($a, $b) => strcmp($a['due_date'], $b['due_date']));
+        $used = [];
+        foreach ($lines as $key => $l) {
+            if ($stock <= 0) break;
+            $take = min($stock, max(0.0, (float) $l['qty']));
+            if ($take <= 0) continue;
+            $used[$key] = $take;
+            $stock -= $take;
+        }
+        return $used;
+    }
+
+    /**
      * Plafond du surgélateur : si l'occupation actuelle plus les cartons MTS proposés dépassent la
      * capacité, les quantités MTS sont réduites (au prorata, arrondies au multiple de lot inférieur).
      * @param list<array{key:string|int, qty:float, ppc:int, multiple:?float}> $lines
