@@ -246,6 +246,24 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_customers_data_check WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
     }
 
+    /** [404] Badania i szkolenia : décisions enregistrées pour le mois du contrôle (premier jour, n_staff_deadline_review). */
+    public function staffDeadlineReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_staff_deadline_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [405] Serwisy i przeglądy maszyn : décisions enregistrées pour le mois du contrôle (premier jour, n_maintenance_review). */
+    public function maintenanceReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_maintenance_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [406] Teczka do audytu i kontroli : décisions enregistrées pour le trimestre (premier jour, n_audit_folder_review). */
+    public function auditFolderReviews(string $quarterStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_audit_folder_review WHERE quarter_start = ?', [$quarterStart])[0]['n'] ?? 0);
+    }
+
     /** [397] PPWR i opakowania : décisions enregistrées pour le mois du contrôle (premier jour, n_ppwr_month_review). */
     public function ppwrMonthReviews(string $monthStart): int
     {

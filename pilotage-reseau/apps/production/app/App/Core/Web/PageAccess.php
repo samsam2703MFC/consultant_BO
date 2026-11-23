@@ -57,6 +57,9 @@ final class PageAccess
         'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/ajax/products/launches-review', '/semi-products', '/compositions'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
+        // [406] Asystent « Teczka do audytu i kontroli » (Kierownik produkcji, co kwartał) : droit propre (page /audit-folder, PDF et
+        // appels ajax), donné au Kierownik produkcji par la migration 246.
+        'audit_folder' => ['Teczka do audytu i kontroli (asystent : asystenci kontroli i otwarte sprawy w ERP, dokumenty do teczki, teczka PDF)', 'Produkt', ['/audit-folder', '/ajax/audit-folder'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
         // [397] Asystent « PPWR i opakowania » (Kierownik produkcji, co miesiąc) : droit propre (page /ppwr/month — le préfixe le
         // plus long l'emporte sur « /ppwr » — et appels ajax), donné au Kierownik produkcji par la migration 238.
@@ -80,6 +83,9 @@ final class PageAccess
         // [335] Stany i palety : osobne prawo (CEO, finanse, produkcja, jakość — bez całej logistyki) ; usunięcie palety (AJAX) pod tym samym prawem.
         // [353] Procedury SOP : lista, asystent tworzenia, zatwierdzenie (procedura asystowana /procedure : każdy zalogowany).
         'sop' => ['Procedury SOP (tworzenie, zatwierdzanie, wykonania)', 'Produkcja', ['/sop', '/ajax/sop'], false],
+        // [405] Asystent « Serwisy i przeglądy maszyn » (Kierownik produkcji, co miesiąc i w każdej chwili) : droit propre (page
+        // /maintenance et appels ajax : rejestry urządzeń, przeglądów, zgłoszeń), donné au Kierownik produkcji par la migration 245.
+        'maintenance' => ['Serwisy i przeglądy maszyn (asystent : rejestr urządzeń, przeglądy i pomiary z terminem, zgłoszenia awarii i serwisów, awarie z tabletów)', 'Produkcja', ['/maintenance', '/ajax/maintenance'], false],
         'stock_pallets' => ['Stany i palety (magazyn, palety, wysłane, stan ogólny, krótka data ; usunięcie palety)', 'Logistyka i pakowanie', ['/logistics/stock', '/ajax/logistics/stock'], false],
         // [374] Asystent « Opóźnienia dostaw » : page /logistics/delays (préfixe /logistics), appels ajax sous le même droit.
         // [381] Asystent « Palety zwrotne » (Logistyka, Kierowca-dostawca) : page /logistics/pallets-returns (préfixe /logistics, comme
@@ -106,6 +112,10 @@ final class PageAccess
         'panel_api' => ['API cen w sklepach (konto panelu franczyzy)', 'Administracja', ['/settings/panel-api'], true],
         // [271] HR : pracownicy, dokumenty, notatki — administrator, kierownik produkcji, administracja i fakturowanie.
         'hr' => ['HR (pracownicy : kontakt, staż, umowy, emerytura ; dokumenty ; notatki i podsumowanie miesiąca)', 'Administracja', ['/hr'], false],
+        // [404] Asystent « Badania i szkolenia » (Kierownik produkcji, co miesiąc) : droit propre (page /hr/deadlines — le préfixe le
+        // plus long l'emporte sur « /hr » — et appels ajax), donné au Kierownik produkcji par la migration 244 ; l'assistant exige
+        // aussi le droit « hr » (dates de badania du tableau HR).
+        'staff_deadlines' => ['Badania i szkolenia — przegląd terminów (asystent : badania lekarskie z HR, rejestr szkoleń BHP i innych, umówione terminy)', 'Administracja', ['/hr/deadlines', '/ajax/hr/deadlines'], false],
         // [277] Lista płac (makieta 41) : wynagrodzenia miesiąca, paski, plik XML do banku ; dane płacowe w karcie HR i szablony umów.
         'payroll' => ['Lista płac (wynagrodzenia, paski, przelewy XML, stawki ZUS / PIT ; wynagrodzenie i rachunek w karcie HR, szablony umów)', 'Administracja', ['/payroll'], false],
         // [392] Asystent « Poczta od klientów » : droit propre (décision du 23.11.2026), donné à Administracja (migration 235).
