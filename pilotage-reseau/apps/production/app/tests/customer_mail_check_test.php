@@ -132,6 +132,10 @@ $sum = fn() => implode('/', array_map(fn($t) => $pdo->query("SELECT CONCAT(COUNT
 $pdo->exec("INSERT INTO n_prod_user_role (id_user, role_code, id_group) VALUES (1, 'prod_admin', NULL)");
 $pdo->exec('INSERT INTO n_user_position VALUES (2, 1), (3, 2), (4, 3)');
 $pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (1, 'orders'), (1, 'invoices'), (2, 'logistics'), (3, 'production')");
+// [392] Droit propre « customer_mail » : migration 235 (rejouée deux fois) — Administracja seulement.
+foreach ([1, 2] as $k) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/235_customer_mail_access.sql')) as $sql) $pdo->exec($sql);
+$check((int) $pdo->query("SELECT COUNT(*) FROM n_page_access WHERE page_key = 'customer_mail'")->fetchColumn() === 1
+    && (int) $pdo->query("SELECT id_position FROM n_page_access WHERE page_key = 'customer_mail'")->fetchColumn() === 1, 'migration 235 (twice) : « customer_mail » for Administracja only');
 $make = fn() => new CustomerMailCheckService(new CustomerMailCheckRepository($pdo), new UserMailRepository($pdo), new PageAccessService(new PageAccessRepository($pdo)),
     new LightWizardRepository($pdo), new ParamRepository($pdo));
 $svc = $make();
@@ -321,10 +325,10 @@ $check($p2 === 200 && $wiz2 !== [] && array_diff($wiz2, $ids2) === [] && !in_arr
     'Ewa: every mail of the assistant is in her Poczta list (MailController::messages really called), none of Adam\'s');
 [$c3, $b3] = $call(3, 'data');
 [$p3, $ids3] = $poczta(3);
-$check($c3 === 200 && array_column($b3['data']['items'], 'id') === [301] && $ids3 === [301], 'Adam: assistant and Poczta both show only his mailbox');
+$check($c3 === 403 && $ids3 === [301], '[392] Adam (Logistyka, no « customer_mail »): assistant refused, his own Poczta unchanged');
 [$c4, $b4] = $call(4, 'data');
 [$p4] = $poczta(4);
-$check($c4 === 200 && $b4['data']['items'] === [] && $b4['data']['mailbox']['sync']['code'] === 'none' && $p4 === 409, 'Piekarz without mailbox: assistant shows nothing (200), Poczta shows nothing (409)');
+$check($c4 === 403 && $p4 === 409, '[392] Piekarz: assistant refused (no right), Poczta shows nothing (409)');
 $_SESSION[ViewSession::KEY] = 1;
 [$c1, $b1] = $call(1, 'data');
 [$p1, $ids1] = $poczta(1);
@@ -339,8 +343,9 @@ $check($c1b === 200 && $b1b['data']['items'] === [] && $p1b === 409, 'administra
 [$cAF] = $call(null, 'finish');
 $check($cA === 403 && $bA['message'] === 'Brak dostępu do poczty (asystent « Poczta od klientów »).' && $cAD === 403 && $cAF === 403, 'not logged in → 403 for data(), decision() and finish()');
 $pa = new PageAccessService(new PageAccessRepository($pdo));
-$check(array_map(fn($u) => $pa->canSee($u, CustomerMailCheckService::PATH), [1, 2, 3, 4]) === array_map(fn($u) => $pa->canSee($u, '/mail'), [1, 2, 3, 4]),
-    'page guard = the Poczta rule for every user (canSee on the assistant = canSee on /mail)');
+$check(array_map(fn($u) => $pa->canSee($u, CustomerMailCheckService::PATH), [1, 2, 3, 4]) === [true, true, false, false]
+    && array_map(fn($u) => $pa->canSee($u, '/mail'), [1, 2, 3, 4]) === [true, true, true, true],
+    '[392] page guard : administrator and Administracja only ; Poczta (/mail) still open to everyone');
 [$cDe, $bDe] = $call(2, 'decision');
 $check($cDe === 422 && str_starts_with((string) $bDe['message'], 'Wybierz decyzję'), 'controller decision() really called : empty body → 422');
 [$cF2, $bF2] = $call(2, 'finish');
@@ -368,9 +373,9 @@ $check(!preg_match('/INSERT\s+INTO\s+(n_user_mail|customer|n_wizard)|UPDATE\s+(n
 $check(TaskWizards::info('customer_mail_checked')['link'] === '/mail/customer-check' && TaskWizards::byLink('/mail/customer-check') === 'customer_mail_checked'
     && isset(TaskWizards::AUTO['customer_mail_checked']) && PositionTaskService::LINK_AUTO['/mail/customer-check'] === 'customer_mail_checked', 'catalog, auto description and position-task link');
 $check(TaskWizards::CATALOG['customer_mail_checked'][0] === 'Poczta od klientów (bez odpowiedzi)' && TaskWizards::CATALOG['customer_mail_checked'][0] !== 'Poczta od klientów', 'catalog label distinct from the proposed name in the matrix (224)');
-$check(PageAccess::keyFor('/mail/customer-check') === null && PageAccess::keyFor('/mail') === null && PageAccess::keyFor('/ajax/mail/customer-check/finish') === null
-    && PageAccess::keyFor('/mail/admin') === 'mail_admin', 'page and ajax outside the catalog, like Poczta (/mail) ; /mail/admin unchanged');
-$check(count(PageAccess::PAGES) === 53 && !isset(PageAccess::PAGES['mail']) && !isset(PageAccess::PAGES['customer_mail']), 'no new right (53 catalog entries, as before)');
+$check(PageAccess::keyFor('/mail/customer-check') === 'customer_mail' && PageAccess::keyFor('/mail') === null && PageAccess::keyFor('/ajax/mail/customer-check/finish') === 'customer_mail'
+    && PageAccess::keyFor('/mail/admin') === 'mail_admin', '[392] own right « customer_mail » (page and ajax) ; Poczta (/mail) and /mail/admin unchanged');
+$check(!isset(PageAccess::PAGES['mail']) && isset(PageAccess::PAGES['customer_mail']) && !PageAccess::adminOnly('customer_mail'), '[392] Poczta stays outside the catalog ; « customer_mail » is a grantable right');
 $check(str_contains((string) file_get_contents(__DIR__ . '/../App/Services/Organization/TeamTasksService.php'), "'customer_mail_checked' =>")
     && str_contains((string) file_get_contents(__DIR__ . '/../App/Views/page_components/sidebar.twig'), '/mail/customer-check'), 'team tasks hint and menu entry');
 $dispatcher = FastRoute\simpleDispatcher(require __DIR__ . '/../App/Core/Routes/Mail/CustomerMailCheckRoutes.php');
