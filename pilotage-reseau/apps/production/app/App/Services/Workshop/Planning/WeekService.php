@@ -877,6 +877,13 @@ final class WeekService
         return StandardTime::routing($routings[$itemId] ?? [], $qty)['totals']['labour_s'] / 3600;
     }
 
+    /** [407] Granice tygodnia produkcji zawierającego datę (pierwszy dzień + 6 dni), bez liczenia planu. */
+    public function bounds(string $date): array
+    {
+        $start = $this->weekStart($date);
+        return ['start' => $start, 'end' => date('Y-m-d', strtotime($start . ' +6 days'))];
+    }
+
     /** Pierwszy dzień tygodnia produkcji (week.start_day) zawierającego datę. */
     private function weekStart(?string $date): string
     {

@@ -5542,7 +5542,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Une ligne par fiche : produits avec une quantité dans la semaine et produits « sur stock » (toujours). À produire = commandes + réassort (disponible < stock min. → jusqu'au stock max.) + lots fixes, arrondi aux lots entiers de la semaine du produit (surplus pour le stock). Lots = à produire ÷ pièces par lot. Groupes : heures disponibles et personnes (ETP = heures ÷ fte_hours).",
+                "description": "Une ligne par fiche : produits avec une quantité dans la semaine et produits « sur stock » (toujours). À produire = commandes + réassort (disponible < stock min. → jusqu'au stock min.) + lots fixes, arrondi aux lots entiers de la semaine du produit (surplus pour le stock). Lots = à produire ÷ pièces par lot. Groupes : heures disponibles et personnes (ETP = heures ÷ fte_hours).",
                 "parameters": [
                     {
                         "name": "date",
@@ -5720,6 +5720,91 @@
                         "required": false,
                         "schema": {
                             "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            }
+        },
+        "/planning/team-sheet/orders": {
+            "get": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Zamówienia produktu w tygodniu / Commandes du produit dans la semaine",
+                "operationId": "getTeamSheetOrders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TeamSheetOrders"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Fenêtre « Zamówienie » de la feuille d'équipe : une ligne par commande ouverte (hors gratuits) du produit avec départ dans la semaine — client, départ, cartons, pièces (cartons × pièces par carton). Lecture seule.",
+                "parameters": [
+                    {
+                        "name": "item_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "article (produit fini) de la feuille, obligatoire"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "un jour de la semaine (défaut : aujourd'hui)"
                         }
                     },
                     {
@@ -25576,6 +25661,67 @@
                     },
                     "generated_at": {
                         "type": "string"
+                    }
+                }
+            },
+            "TeamSheetOrders": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "ppc": {
+                        "type": "integer"
+                    },
+                    "week_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "week_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "order_id": {
+                                    "type": "integer"
+                                },
+                                "customer_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "customer": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "due": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "cartons": {
+                                    "type": "number"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "total_cartons": {
+                        "type": "number"
+                    },
+                    "total_quantity": {
+                        "type": "number"
+                    },
+                    "customers": {
+                        "type": "integer"
                     }
                 }
             },
