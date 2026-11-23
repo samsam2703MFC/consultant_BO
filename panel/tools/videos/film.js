@@ -422,12 +422,18 @@ class Film {
     return this.monter();
   }
   monter() {
-    const imgs = this.images;
+    // Sous charge, le screencast livre des images dans le désordre : on les remet dans l'ordre de leur horodatage
+    // (sinon des durées négatives, ramenées au minimum, allongent la vidéo).
+    const imgs = this.images.slice().sort((a, b) => a.t - b.t);
     if (!imgs.length) { throw new Error('aucune image filmée'); }
     const fin = (Date.now() - this.debut) / 1000; // garde-fou : la dernière image dure jusqu'à la fin
     const lignes = ['ffconcat version 1.0'];
+    // L'horloge des images ne recule jamais : sous une forte charge, l'horodatage du screencast peut revenir de quelques
+    // centièmes en arrière ; additionner les seuls pas en avant allongeait la vidéo (jusqu'à un cinquième de plus).
+    let tMax = imgs[0].t;
+    const T = imgs.map(x => (tMax = Math.max(tMax, x.t)));
     for (let i = 0; i < imgs.length; i++) {
-      const d = i + 1 < imgs.length ? imgs[i + 1].t - imgs[i].t : Math.max(0.5, Math.min(15, (this.tFin || imgs[i].t + 1) - imgs[i].t));
+      const d = i + 1 < imgs.length ? T[i + 1] - T[i] : Math.max(0.5, Math.min(15, (this.tFin || T[i] + 1) - T[i]));
       lignes.push("file '" + path.basename(imgs[i].fichier) + "'", 'duration ' + Math.max(0.001, d).toFixed(4));
     }
     lignes.push("file '" + path.basename(imgs[imgs.length - 1].fichier) + "'");

@@ -2,6 +2,30 @@
   "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). sources : les fichiers dont l'écran est filmé ; tourne_sur / tourne_le : le commit et le jour du tournage (écrits par tourner.js). node panel/tools/videos/a_refaire.js dit quelles vidéos refaire. Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
   "videos": [
     {
+      "id": "decouvrir",
+      "genre": "tuto",
+      "titre": "Découvrir le dashboard",
+      "resume": "Le rail, la barre du haut et la journée en cours : où trouver quoi.",
+      "vues": [
+        "ops",
+        "jour"
+      ],
+      "fichier": "01-decouvrir.mp4",
+      "affiche": "01-decouvrir.jpg",
+      "duree": "2 min 36",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/public/dashboard/index.html",
+        "panel/public/dashboard/tutos.js",
+        "panel/public/dashboard/tutos.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "8977a6a93cfe5f08e074315a76154706c797f470",
+      "tourne_le": "2026-11-23"
+    },
+    {
       "id": "equipe-horaires",
       "genre": "nouveau",
       "titre": "Mon équipe : faire ses horaires",
@@ -20,29 +44,6 @@
         "shared/public/assets/ds/global.css"
       ],
       "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
-      "tourne_le": "2026-11-23"
-    },
-    {
-      "id": "decouvrir",
-      "genre": "tuto",
-      "titre": "Découvrir le dashboard",
-      "resume": "Le rail, la barre du haut et la journée en cours : où trouver quoi.",
-      "vues": [
-        "ops"
-      ],
-      "fichier": "01-decouvrir.mp4",
-      "affiche": "01-decouvrir.jpg",
-      "duree": "2 min 36",
-      "depuis": "2026-11-23",
-      "sources": [
-        "panel/public/dashboard/dashboard.js",
-        "panel/public/dashboard/dashboard.css",
-        "panel/public/dashboard/index.html",
-        "panel/public/dashboard/tutos.js",
-        "panel/public/dashboard/tutos.css",
-        "shared/public/assets/ds/global.css"
-      ],
-      "tourne_sur": "8977a6a93cfe5f08e074315a76154706c797f470",
       "tourne_le": "2026-11-23"
     },
     {
@@ -65,6 +66,449 @@
         "shared/public/assets/ds/global.css"
       ],
       "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "taches",
+      "genre": "tuto",
+      "titre": "Les tâches du magasin",
+      "resume": "La semaine des tâches, les codes des checklists, ce qui reste à faire aujourd’hui et le contrôle en photo.",
+      "vues": [
+        "taches"
+      ],
+      "fichier": "04-taches.mp4",
+      "affiche": "04-taches.jpg",
+      "duree": "2 min 46",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "temps-morts",
+      "genre": "tuto",
+      "titre": "Les temps morts",
+      "resume": "Le comptoir sans client : la journée minute par minute, la semaine face à l’habitude, et le seuil de 5, 10 ou 15 minutes.",
+      "vues": [
+        "morts"
+      ],
+      "fichier": "05-temps-morts.mp4",
+      "affiche": "05-temps-morts.jpg",
+      "duree": "2 min 23",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/temps_morts.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "semaine",
+      "genre": "tuto",
+      "titre": "La page Semaine",
+      "resume": "Choisir sa semaine, le chiffre face à l’attendu, les jours, du chiffre d’affaires au résultat, les heures et les douze dernières semaines.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-semaine.mp4",
+      "affiche": "06-semaine.jpg",
+      "duree": "2 min 42",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "mois",
+      "genre": "tuto",
+      "titre": "La page Mois",
+      "resume": "Les mois de l’année, le chiffre du mois face à l’attendu, les jours, le résultat, les douze derniers mois et les six leviers.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-mois.mp4",
+      "affiche": "07-mois.jpg",
+      "duree": "2 min 40",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/public/assets/js/cartes-magasin.js",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "annee",
+      "genre": "tuto",
+      "titre": "La page Année et ses trimestres",
+      "resume": "L’objectif de l’année, les quatre trimestres et le détail d’un trimestre, les douze mois face à l’an passé, le trafic et le long terme.",
+      "vues": [
+        "annee",
+        "trimestre"
+      ],
+      "fichier": "08-annee.mp4",
+      "affiche": "08-annee.jpg",
+      "duree": "2 min 36",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/public/assets/js/cartes-magasin.js",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "tresorerie",
+      "genre": "tuto",
+      "titre": "Le plan de trésorerie",
+      "resume": "La routine du dimanche soir : le solde réel, l’écart, les quatre semaines à venir ; le plan semaine par semaine, les fournisseurs, les paiements et le budget.",
+      "vues": [
+        "tresorerie",
+        "frais"
+      ],
+      "fichier": "09-tresorerie.mp4",
+      "affiche": "09-tresorerie.jpg",
+      "duree": "3 min",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/public/dashboard/tresorerie.css",
+        "panel/src/tresorerie.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "analyse",
+      "genre": "tuto",
+      "titre": "Analyse : lire ses ventes",
+      "resume": "Choisir la période, lire l’essentiel, la fiche d’un produit en sept questions et la page d’une famille.",
+      "vues": [
+        "analyse"
+      ],
+      "fichier": "10-analyse.mp4",
+      "affiche": "10-analyse.jpg",
+      "duree": "2 min 57",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/analyse.js",
+        "panel/public/dashboard/analyse.css",
+        "panel/src/dashboard_analyse.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "produits",
+      "genre": "tuto",
+      "titre": "Produits : est-ce que ça se développe ?",
+      "resume": "Les 6 dernières semaines face aux 6 d’avant, les catégories en tuiles, les produits d’une catégorie et la fiche d’un produit, jusqu’au nouveau prix de vente.",
+      "vues": [
+        "produits"
+      ],
+      "fichier": "11-produits.mp4",
+      "affiche": "11-produits.jpg",
+      "duree": "2 min 58",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/analyse_produits.php",
+        "panel/src/prix_produit.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "promotions",
+      "genre": "tuto",
+      "titre": "Promotions : un bundle qui monte la marge",
+      "resume": "Où les promotions sont utilisées, puis le Coach Vente : la marge de base, les couples, le prix et la fiche du bundle, prête à lancer.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-promotions.mp4",
+      "affiche": "12-promotions.jpg",
+      "duree": "2 min 55",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "offres",
+      "genre": "tuto",
+      "titre": "Les offres de prix",
+      "resume": "Lire ses offres, la marge d’une offre, préparer un devis dans TF Buddy et le convertir en commande ; l’onglet Newsletter.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-offres.mp4",
+      "affiche": "13-offres.jpg",
+      "duree": "2 min 53",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/public/dashboard/offres.css",
+        "marketing/public/assets/js/newsletter.js",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "primes",
+      "genre": "tuto",
+      "titre": "Les primes de l’équipe",
+      "resume": "Où en sont tes vendeuses : les primes d’équipe, le tableau prime par prime, le mois, l’année et les filtres.",
+      "vues": [
+        "primes"
+      ],
+      "fichier": "14-primes.mp4",
+      "affiche": "14-primes.jpg",
+      "duree": "2 min 11",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "1e40cb22ca3b07b8628beeb88ba0863339628ba6",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "concurrence",
+      "genre": "tuto",
+      "titre": "Nos prix face à la concurrence",
+      "resume": "Le top 10 du réseau face aux concurrents du magasin, un produit en détail, un relevé terrain, les concurrents par code postal.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-concurrence.mp4",
+      "affiche": "15-concurrence.jpg",
+      "duree": "2 min 42",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "d50e8cdedf99f7305989f9bfc2282a5cb8248c12",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "marketing",
+      "genre": "tuto",
+      "titre": "Mon marketing",
+      "resume": "Le calendrier de l’année (les campagnes du magasin, les saisons des produits et leurs ventes de l’an dernier), puis chaque campagne en cours : ce qu’elle vise, l’objectif du magasin, son calendrier, sa communication.",
+      "vues": [
+        "marketing"
+      ],
+      "fichier": "16-mon-marketing.mp4",
+      "affiche": "16-mon-marketing.jpg",
+      "duree": "1 min 40",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/marketing.js",
+        "panel/public/dashboard/marketing.css",
+        "panel/src/dashboard_marketing.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "reseaux",
+      "genre": "tuto",
+      "titre": "Réseaux sociaux",
+      "resume": "L’entrée de l’espace boutique du Marketing dans le dashboard : la barre d’onglets et le cadre où s’ouvrent ses pages.",
+      "vues": [
+        "social"
+      ],
+      "fichier": "17-reseaux-sociaux.mp4",
+      "affiche": "17-reseaux-sociaux.jpg",
+      "duree": "1 min",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/reseaux.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "fidelite",
+      "genre": "tuto",
+      "titre": "Fidélité",
+      "resume": "La part des tickets scannés, les six profils des clients et leurs radars, la fiche d’un client, puis les cartes de fidélité : du client reconnu à la récompense.",
+      "vues": [
+        "fidelite"
+      ],
+      "fichier": "18-fidelite.mp4",
+      "affiche": "18-fidelite.jpg",
+      "duree": "2 min 29",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "catalogue",
+      "genre": "tuto",
+      "titre": "Éditer mon catalogue",
+      "resume": "L’assistant de Mon catalogue en entier : choisir le catalogue (reçu de la marque, le mien, un nouveau), les gammes et les produits, la présentation catégorie par catégorie, la validation, puis l’export PDF et sa diffusion (QR, PDF léger, affiche).",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-mon-catalogue.mp4",
+      "affiche": "19-mon-catalogue.jpg",
+      "duree": "3 min 48",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css",
+        "panel/src/catalogues_magasin.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "boite-mail",
+      "genre": "tuto",
+      "titre": "La boîte mail du magasin",
+      "resume": "Ouvrir la boîte, lire et répondre avec un modèle, puis les modes IA : le briefing des non-lus, le pilote et ses garde-fous, le radar des demandes.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-boite-mail.mp4",
+      "affiche": "20-boite-mail.jpg",
+      "duree": "2 min 55",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/public/dashboard/boite.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "0cb9607019b96852c3d0fc8118bfca91b59987da",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "assistant-ia",
+      "genre": "tuto",
+      "titre": "L’Assistant IA",
+      "resume": "Choisir son assistant, poser une question et lire la réponse — chiffres, graphique, priorités —, creuser en conversation, le Coach Vente et le Professeur.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-assistant-ia.mp4",
+      "affiche": "21-assistant-ia.jpg",
+      "duree": "2 min 25",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "47ee70cda0ce5a08701b41899d16264f364a52e1",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "se-former",
+      "genre": "tuto",
+      "titre": "Formations et suivi",
+      "resume": "L’accueil de la formation, la méga-barre qui cherche dans tout le catalogue, le dossier de formation du magasin et une formation pas à pas, avec la photo du jour.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-se-former.mp4",
+      "affiche": "22-se-former.jpg",
+      "duree": "2 min 19",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "panel/public/dashboard/formation.css",
+        "panel/public/dashboard/seformer.js",
+        "panel/public/dashboard/seformer.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "24028fad00ac4daeb93221b46d2fb2e9ad25caec",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "coffre-fort",
+      "genre": "tuto",
+      "titre": "Mon coffre-fort",
+      "resume": "L’état du coffre, les dossiers et leurs pièces attendues, l’aperçu d’un document, et le dépôt avec l’assistant qui relève les grandes dates.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-coffre-fort.mp4",
+      "affiche": "23-coffre-fort.jpg",
+      "duree": "2 min 42",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "panel/public/dashboard/dashboard.js",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "mails-automatisations",
+      "genre": "tuto",
+      "titre": "Mails et automatisations",
+      "resume": "La roue des paramètres, les envois automatiques du magasin, le rappel la veille du retrait et l’équipe qui reçoit les fiches des promotions.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-parametres.mp4",
+      "affiche": "24-parametres.jpg",
+      "duree": "2 min 29",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/automatisations.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "062ad4f3fd4a087e35086e1bca334243c1fc99e9",
       "tourne_le": "2026-11-23"
     }
   ]

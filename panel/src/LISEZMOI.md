@@ -69,10 +69,14 @@ autre) », « une vidéo type formative, à utiliser en formation », les pages 
 - **Le registre** : `panel/public/dashboard/videos/videos.json` — `id`, `genre` (`nouveau` : nouvelle fonction ; `tuto` :
   mode d'emploi ; `formation` : module à suivre en session), `titre`, `resume`, `vues` (valeurs de `?vue=`, `ops` pour
   Opérationnel, `*` partout), `fichier` (MP4), `affiche` (JPG), `duree`, `depuis`. Les fichiers sont à côté.
-- **Les vidéos** : `01-decouvrir` (le rail, la barre du haut, la journée, Semaine et Mois), `02-mon-equipe` (nouvelle
-  fonction : lire la semaine, le budget d'heures, corriger un trou au comptoir, revenir sous la barre),
-  `03-formation-planning` (module de formation : objectifs, démonstration, deux mises en pratique, trois questions,
-  récapitulatif). 1920 × 1080, H.264, muettes et sous-titrées dans l'image.
+- **Les vidéos** (24, une par entrée du rail au moins) : `01-decouvrir` (le rail, la barre du haut, la journée, Semaine
+  et Mois), `02-mon-equipe` (nouvelle fonction : faire ses horaires), `03-formation-planning` (module de formation :
+  objectifs, démonstration, mises en pratique, quiz, récapitulatif), puis un mode d'emploi par page : `04-taches`,
+  `05-temps-morts`, `06-semaine`, `07-mois`, `08-annee`, `09-tresorerie`, `10-analyse`, `11-produits`, `12-promotions`,
+  `13-offres`, `14-primes`, `15-concurrence`, `16-mon-marketing`, `17-reseaux-sociaux`, `18-fidelite`,
+  `19-mon-catalogue` (« Éditer mon catalogue » : l'assistant en entier), `20-boite-mail`, `21-assistant-ia`,
+  `22-se-former`, `23-coffre-fort`, `24-parametres`. 1920 × 1080, H.264, muettes et sous-titrées dans l'image, environ
+  170 Mo en tout.
 - **Les tourner** : `panel/tools/videos/` (son `LISEZMOI.md`) — le vrai dashboard dans Chromium, sur une fausse API à
   données **fictives** (magasin « Magasin démo », prénoms inventés), l'horloge figée au jeudi 19/11/2026 à 15 h 40. Un
   écran change : on relance le scénario de sa vidéo. Couvertures, intercalaires, objectifs, « À vous » et quiz suivent
