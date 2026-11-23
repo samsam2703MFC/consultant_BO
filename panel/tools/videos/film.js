@@ -19,7 +19,9 @@ const { chromium } = require('playwright');
 const { DEMO, nouveauContexte } = require('./mock');
 
 const W = 1440, H = 810, DSF = 4 / 3;            // 1920 × 1080 en sortie
-const BASE = 'http://127.0.0.1:8099';
+// Le port du site servi en local (FILM_PORT, 8099 par défaut) : plusieurs tournages peuvent tourner en même temps.
+const PORT = +(process.env.FILM_PORT || 8099);
+const BASE = 'http://127.0.0.1:' + PORT;
 const attendre = ms => new Promise(r => setTimeout(r, ms));
 
 /* Le calque : injecté avant chaque chargement de page. */

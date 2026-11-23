@@ -241,3 +241,28 @@ html, body { background: var(--paper, #faf7f2); }
 .pg .ck-c, .pg .chip-av, .pg .ft-g, .pg .ft-s, .pg .po-qui, .pg .po-bloq, .pg .po-ouv, .pg .ft-n {
   font-family: 'GothamPage', 'Gotham', Helvetica, Arial, sans-serif; font-weight: 500; border-radius: 1.2mm; }
 .pg .ft-al b, .pg .ft-comp b, .pg .ft-faits b, .pg .ft-i b, .pg .ft-stats b, .pg .cp b, .pg .po-qr b, .pg .ck-ex-t b { font-weight: 300; }
+
+/* ── La vidéothèque (#/videos, 23/11/2026) : les vidéos d'instruction du dashboard magasin ─────────────────────── */
+.ct-couv-vid { background: #fff; color: #8D1D2C; border: 2px solid #8D1D2C; }
+.ct-couv-vid::after { background: rgba(141, 29, 44, .12); }
+.ct-vt-h { font-size: 15px; font-weight: 400; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
+.ct-vt-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.ct-vt { display: flex; flex-direction: column; gap: 6px; text-align: left; background: #fff; border: 1px solid var(--line, #e6e0d8); border-radius: 12px;
+  padding: 10px 10px 14px; cursor: pointer; font: inherit; color: var(--ink, #1c1a17); }
+.ct-vt:hover { border-color: var(--muted-2, #5c5852); }
+.ct-vt:focus-visible { outline: 2px solid var(--accent, #8D1D2C); outline-offset: 2px; }
+.ct-vt-aff { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: var(--paper, #faf7f2); border: 1px solid var(--line, #e6e0d8); }
+.ct-vt-aff img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ct-vt-lire { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: var(--accent, #8D1D2C); color: #fff;
+  display: flex; align-items: center; justify-content: center; }
+.ct-vt-lire svg { width: 22px; height: 22px; margin-left: 2px; }
+.ct-vt:hover .ct-vt-lire { background: #6f1622; }
+.ct-vt-d { position: absolute; right: 6px; bottom: 6px; background: rgba(28, 26, 23, .82); color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+.ct-vt-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #7a736a); margin-top: 4px; }
+.ct-vt-t { font-size: 14px; }
+.ct-vt-r { font-size: 12.5px; line-height: 1.45; color: var(--muted, #7a736a); }
+.ct-fenetre.ct-vt-fen { width: min(1040px, 94vw); text-align: left; padding: 16px 18px 18px; }
+.ct-vt-fh { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 2px solid var(--accent, #8D1D2C); }
+.ct-vt-fh h3 { margin: 2px 0 0; font-size: 16px; font-weight: 400; }
+.ct-vt-fen video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--ink, #1c1a17); border-radius: 8px; }
+.ct-vt-fen p { font-size: 13px; color: var(--muted-2, #5c5852); margin: 10px 0 0; line-height: 1.5; }

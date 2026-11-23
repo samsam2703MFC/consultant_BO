@@ -56,10 +56,16 @@ autre) », « une vidéo type formative, à utiliser en formation », les pages 
   place (`railTuto()`, `.db-tu-slot`), `DashTutos.carre()` la remplit. Abricot au repos, Ruby avec le nombre de vidéos
   « nouveau » pas encore vues. Un clic ouvre le lecteur : la vidéo de la page, sinon la nouveauté, sinon le mode
   d'emploi ; le lecteur liste les autres vidéos. Une nouvelle fonction pas encore vue (60 jours) s'annonce dans une
-  bulle accrochée au carré (« Voir la vidéo », « Plus tard »). « Vu » et « plus tard » restent sur l'appareil
+  bulle accrochée au carré (« Voir la vidéo » ; « Plus tard » ou × la range pour la journée : elle revient le
+  lendemain tant que la vidéo n'est pas vue). « Vu » et « plus tard » restent sur l'appareil
   (localStorage `db.videos.vues`, `db.videos.plusTard`) : aucune route, aucune table. Au téléphone, pas de rail : ni
   carré ni annonce (décision du 23/11/2026). La page ouverte vient de `?vue=` puis de l'évènement `dashboard:vue`
   (`urlMaj`). Rien en mode incorporé (`?embed=`). `window.DashTutos.ouvrir(id)` ouvre une vidéo.
+- **La vidéothèque** (« la liste des vidéos doit aussi être dans la vidéothèque, dans le catalogue de formation ») : le
+  catalogue des manuels du module Formation (`formation/public/formation/catalogue/`, carte « Vidéothèque », page
+  `#/videos`) lit le même registre, à l'adresse du dashboard du cockpit : toutes les vidéos par genre (modules de
+  formation, nouvelles fonctions, modes d'emploi), avec leur lecteur, en FR et NL (les vidéos restent en français). Le
+  lecteur du dashboard y mène (« Toute la vidéothèque ↗ »).
 - **Le registre** : `panel/public/dashboard/videos/videos.json` — `id`, `genre` (`nouveau` : nouvelle fonction ; `tuto` :
   mode d'emploi ; `formation` : module à suivre en session), `titre`, `resume`, `vues` (valeurs de `?vue=`, `ops` pour
   Opérationnel, `*` partout), `fichier` (MP4), `affiche` (JPG), `duree`, `depuis`. Les fichiers sont à côté.

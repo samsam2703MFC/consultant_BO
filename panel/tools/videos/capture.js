@@ -15,7 +15,7 @@ const { DEMO, nouveauContexte } = require('./mock');
   const p = await ctx.newPage();
   p.on('pageerror', e => console.log('ERREUR JS', e.message));
   p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) console.log('CONSOLE', m.text()); });
-  await p.goto('http://127.0.0.1:8099/dashboard/?shop=' + DEMO.shop + (vue ? '&vue=' + vue : ''));
+  await p.goto('http://127.0.0.1:' + (process.env.FILM_PORT || 8099) + '/dashboard/?shop=' + DEMO.shop + (vue ? '&vue=' + vue : ''));
   await p.waitForTimeout(2000);
   for (const c of clics) { await p.getByText(c, { exact: false }).first().click(); await p.waitForTimeout(1200); }
   await p.screenshot({ path: sortie, fullPage: plein });

@@ -288,3 +288,4 @@
 2026-11-23T19:29:19Z Dashboard magasin : vidéos d'instruction ouvertes par une bulle (« Nouveau » pour une nouvelle fonction, « Vidéo » sinon) — Découvrir le dashboard, Mon équipe : faire ses horaires, et le module de formation « Construire le planning de la semaine »
 2026-11-23T19:30:33Z [400-406] 7 asystentow Kierownika produkcji
 2026-11-23T20:01:05Z Dashboard magasin : le bouton des vidéos devient un petit carré à côté d'Assistant IA (Ruby avec le nombre de nouveautés, annonce dans une bulle accrochée au carré), plus rien en bas à droite ; vidéo « Découvrir le dashboard » retournée
+2026-11-23T20:36:49Z Vidéothèque dans le catalogue de formation (toutes les vidéos d'instruction par genre, avec lecteur) ; « Plus tard » sur l'annonce d'une nouvelle vidéo la range pour la journée
