@@ -99,6 +99,9 @@ final class ParamRules
         // [398] Intrastat miesiąca : seuils annuels (milliers de zł) saisis d'après la réglementation de l'année ; 0 = non défini
         'intrastat.threshold_dispatch_kpln' => [0, 1000000, false],
         'intrastat.threshold_arrival_kpln' => [0, 1000000, false],
+        // [403] Stany magazynowe na koniec miesiąca : écart de valeur début → fin signalé au-delà des deux seuils (% et zł)
+        'stock_month.variance_pct' => [1, 1000, true],
+        'stock_month.variance_min_pln' => [0, 1000000, true],
         // [387] Rutyny poranne AI : interrupteur général et par assistant (0/1), budget mensuel (zł), taux USD → PLN du coût affiché
         'ai.routines_enabled' => [0, 1, true],
         'ai.routines_budget_pln' => [0, 10000, false],

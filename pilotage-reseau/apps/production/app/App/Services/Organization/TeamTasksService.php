@@ -209,6 +209,10 @@ final class TeamTasksService
             'audit_folder_reviewed' => 'stan ERP i dokumenty do teczki → decyzja → teczka PDF',
             'ppwr_month_reviewed' => 'braki PPWR i BDO, zmiany, dowody wysyłek → decyzja → zakończ',
             'intrastat_month_reviewed' => 'wywóz i przywóz UE, kody CN, kursy → deklaracje → zakończ',
+            'recipes_month_reviewed' => 'produkty bez receptury, receptury i dane z brakami → decyzja → zakończ',
+            'materials_month_reviewed' => 'karty surowców z brakami, nowe surowce → decyzja → zakończ',
+            'shipping_docs_reviewed' => 'WZ, CMR, WDT, różnice i potwierdzenia wysyłek miesiąca → decyzja → zakończ',
+            'stock_month_reported' => 'stany na koniec miesiąca → PDF / CSV → przekazane do księgowości → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

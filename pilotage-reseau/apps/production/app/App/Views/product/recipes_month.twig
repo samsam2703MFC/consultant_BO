@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Receptury i dane produktów{% endblock %}
+
+{% block content %}
+{# [400] Assistant « Receptury i dane produktów » : App\Services\Organization\Wizards\RecipesMonthService — écran dans
+   assets/js/recipes_month/recipes-month.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois du
+   Kierownik produkcji se valide seule après « Zakończ ». Aucune recette ni fiche produit n'est changée ici (liens vers
+   les écrans existants). #}
+<section class="section">
+    <div id="rmApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="rmBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/recipes_month/recipes-month.js?v={{ asset_v() }}"></script>
+{% endblock %}

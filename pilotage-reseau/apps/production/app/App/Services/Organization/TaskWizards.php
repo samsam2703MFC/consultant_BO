@@ -96,6 +96,18 @@ final class TaskWizards
         // [398] Intrastat miesiąca (Kierownik produkcji — co miesiąc) : wywóz (WDT) i przywóz (faktury dostawców UE) poprzedniego miesiąca, kody CN, kursy, CSV, decyzja dla deklaracji.
         // Libellé distinct du nom proposé dans la matrice (« Intrastat miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
         'intrastat_month_reviewed' => ['Intrastat miesiąca (deklaracje)', '/intrastat/month', 'dane Intrastat poprzedniego miesiąca kompletne, każda deklaracja zgłoszona albo poniżej progu', 3],
+        // [400] Receptury i dane produktów (Kierownik produkcji — co miesiąc) : aktywne produkty bez receptury, z niepełną recepturą albo danymi, decyzja dla produktu.
+        // Libellé distinct du nom proposé dans la matrice (« Receptury i dane produktów ») : les UPDATE des migrations ne prennent que celui-ci.
+        'recipes_month_reviewed' => ['Receptury i dane produktów (przegląd miesiąca)', '/recipes/month', 'receptury i dane aktywnych produktów sprawdzone, decyzja dla każdego z brakami', 3],
+        // [401] Kartoteka surowców (Kierownik produkcji — co miesiąc) : surowce aktywnych receptur z brakami w karcie i nowe surowce, decyzja dla surowca.
+        // Libellé distinct du nom proposé dans la matrice (« Kartoteka surowców (kompletność) ») : les UPDATE des migrations ne prennent que celui-ci.
+        'materials_month_reviewed' => ['Kartoteka surowców (przegląd miesiąca)', '/materials/month', 'karty surowców aktywnych receptur i nowe surowce sprawdzone, decyzja dla każdego z brakami', 3],
+        // [402] Dokumenty wysyłek (Kierownik produkcji — co miesiąc) : wysyłki poprzedniego miesiąca z brakami w WZ, CMR, WDT, rozliczeniu różnic, potwierdzeniu odbioru, decyzja dla wysyłki.
+        // Libellé distinct du nom proposé dans la matrice (« Dokumenty wysyłek miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
+        'shipping_docs_reviewed' => ['Dokumenty wysyłek (przegląd miesiąca)', '/shipments/documents-month', 'dokumenty wysyłek poprzedniego miesiąca sprawdzone, decyzja dla każdej z brakami', 3],
+        // [403] Stany magazynowe (Kierownik produkcji — co miesiąc) : zestawienie stanów produktów i surowców na koniec poprzedniego miesiąca (PDF, CSV), decyzje, przekazanie do księgowości.
+        // Libellé distinct du nom proposé dans la matrice (« Stany magazynowe na koniec miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
+        'stock_month_reported' => ['Stany magazynowe — zestawienie miesiąca', '/stock/month-end', 'zestawienie stanów na koniec poprzedniego miesiąca zapisane, sprawdzone i przekazane do księgowości', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -155,6 +167,10 @@ final class TaskWizards
         'audit_folder_reviewed' => 'gdy każdy element z sygnałem — asystent kontroli (HACCP, PPWR, niezgodności, reklamacje, partie, próbki, badania i szkolenia, serwisy) bez « Zakończ » w swoim rytmie + audit_folder.grace_days dni, otwarte sprawy w ERP (łańcuch chłodniczy, NC, reklamacje, profile PPWR opakowań), SOP po terminie przeglądu, dokument do teczki niesprawdzony, do sprawdzenia w ciągu audit_folder.alert_days dni, bez osoby albo miejsca — ma decyzję (gotowe — w teczce, do uzupełnienia z terminem, nie dotyczy) — asystent « Teczka do audytu i kontroli », krok 3',
         'ppwr_month_reviewed' => 'gdy każdy element z sygnałem — opakowanie używane w aktywnym produkcie z brakiem w Rejestrze PPWR (numer, masa, poziom, rodzaj, materiał, recyklat, recykling, minimalizacja, wymiary) albo w danych BDO, aktywny produkt bez kartonu sprzedażowego, PPC albo poprawnej masy, opakowanie lub produkt zmienione od ostatniego przeglądu, wysyłka poprzedniego miesiąca bez kompletnego dowodu opakowań — ma decyzję (uzupełnione — sprawdzone, zapytanie do dostawcy wysłane, nie dotyczy) — asystent « PPWR i opakowania », krok 3',
         'intrastat_month_reviewed' => 'gdy każdy sygnał poprzedniego miesiąca — produkt z WDT albo surowiec z faktury dostawcy z UE bez kodu CN lub masy netto, waluta bez kursu na miesiąc, odbiorca WDT bez VAT UE, faktura bez surowca albo w walucie obcej bez VAT UE sprzedawcy — ma decyzję (uzupełnione, nie dotyczy), a każda deklaracja (firma × wywóz / przywóz) jest zgłoszona w PUESC z numerem albo poniżej progu z uzasadnieniem — asystent « Intrastat miesiąca », krok 3',
+        'recipes_month_reviewed' => 'gdy każdy aktywny produkt z brakiem — bez receptury, receptura nieistniejąca, bez składników albo bez kosztu kartonu, surowce receptury bez ceny, receptura na 1 sztukę zamiast kartonu, brak poprawnej masy, sztuk w kartonie, danych palety, przydatności, kategorii albo działu — ma decyzję (uzupełnione — sprawdzone, przekazane do uzupełnienia, nie dotyczy) — asystent « Receptury i dane produktów », krok 3',
+        'materials_month_reviewed' => 'gdy każdy surowiec z sygnałem — używany w aktywnej recepturze z brakiem w karcie (kategoria, jednostka bazowa, aktualna cena, wielkość opakowania, dostawca albo dostawca nieaktywny, wartości odżywcze surowca spożywczego) albo nowy od ostatniego przeglądu — ma decyzję (uzupełnione — sprawdzone, zapytanie do dostawcy wysłane, nie dotyczy) — asystent « Kartoteka surowców », krok 3',
+        'shipping_docs_reviewed' => 'gdy każda wysyłka poprzedniego miesiąca z brakiem — brak WZ, CMR albo WDT, dokument bez pozycji, CMR bez przewoźnika, numeru rejestracyjnego albo listy opakowań, różne ilości WZ i WDT, różnica albo problem dostawy nierozliczony, brak potwierdzenia odbioru albo podpisu odbiorcy w dniu z tabletem kierowcy — ma decyzję (uzupełnione — sprawdzone, dokument papierowy kompletny, nie dotyczy) — asystent « Dokumenty wysyłek miesiąca », krok 3',
+        'stock_month_reported' => 'gdy zestawienie stanów produktów gotowych i surowców na koniec poprzedniego miesiąca jest zapisane, każda pozycja z sygnałem — stan ujemny, bez inwentaryzacji, bez ceny albo kosztu, kartony po dacie ważności, produkt nieaktywny ze stanem, duża zmiana wartości — ma decyzję (sprawdzone — stan poprawny, do korekty) i zestawienie jest przekazane do księgowości — asystent « Stany magazynowe na koniec miesiąca », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -382,6 +398,34 @@ final class TaskWizards
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->intrastatMonthReviews(\App\Services\Organization\Wizards\IntrastatMonthService::reviewedMonth(substr($from, 0, 10)))) > 0) {
                     $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element z decyzją', 'elementy z decyzją', 'elementów z decyzją')] + $out;
+                }
+                break;
+            case 'recipes_month_reviewed':
+                // [400] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->recipesMonthReviews(\App\Services\Organization\Wizards\RecipesMonthService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'produkt z decyzją', 'produkty z decyzją', 'produktów z decyzją')] + $out;
+                }
+                break;
+            case 'materials_month_reviewed':
+                // [401] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->materialsMonthReviews(\App\Services\Organization\Wizards\MaterialsMonthService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'surowiec z decyzją', 'surowce z decyzją', 'surowców z decyzją')] + $out;
+                }
+                break;
+            case 'shipping_docs_reviewed':
+                // [402] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego miesiąca (poprzedni miesiąc).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->shippingDocsReviews(\App\Services\Organization\Wizards\ShippingDocsMonthService::reviewedMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'wysyłka z decyzją', 'wysyłki z decyzją', 'wysyłek z decyzją')] + $out;
+                }
+                break;
+            case 'stock_month_reported':
+                // [403] Co miesiąc : zakończenie w okresie zadania ; w toku = zestawienie poprzedniego miesiąca zapisane.
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($p = $this->repo->stockMonthProgress(\App\Services\Organization\Wizards\StockMonthService::reviewedMonth(substr($from, 0, 10))))['snapshot']) {
+                    $out = ['step' => 2, 'step_label' => 'zestawienie zapisane · ' . $p['decisions'] . ' ' . self::pl($p['decisions'], 'decyzja', 'decyzje', 'decyzji')] + $out;
                 }
                 break;
             case 'customers_data_checked':

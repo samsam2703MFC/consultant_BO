@@ -55,7 +55,13 @@ final class PageAccess
         // receptury — là où naissent les lancements et se font les corrections), appels ajax sous le même droit. Le module Kierownik
         // produkcji (objectifs de lancement) reste réservé à l'administrateur ; montants : droit « margins » (comme Marża produktów).
         'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/ajax/products/launches-review', '/semi-products', '/compositions'], false],
+        // [400] Asystent « Receptury i dane produktów » (Kierownik produkcji, co miesiąc) : droit propre (page /recipes/month — le préfixe le
+        // plus long l'emporte sur « /recipes » — et appels ajax), donné au Kierownik produkcji par la migration 240.
+        'recipes_month' => ['Receptury i dane produktów — przegląd miesiąca (asystent : produkty bez receptury, receptury i dane produktów z brakami)', 'Produkt', ['/recipes/month', '/ajax/recipes/month'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
+        // [401] Asystent « Kartoteka surowców » (Kierownik produkcji, co miesiąc) : droit propre (page /materials/month — le préfixe le
+        // plus long l'emporte sur « /materials » — et appels ajax), donné au Kierownik produkcji par la migration 241.
+        'materials_month' => ['Kartoteka surowców — przegląd miesiąca (asystent : surowce aktywnych receptur z brakami w karcie, nowe surowce)', 'Produkt', ['/materials/month', '/ajax/materials/month'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         // [406] Asystent « Teczka do audytu i kontroli » (Kierownik produkcji, co kwartał) : droit propre (page /audit-folder, PDF et
         // appels ajax), donné au Kierownik produkcji par la migration 246.
@@ -86,6 +92,9 @@ final class PageAccess
         // [405] Asystent « Serwisy i przeglądy maszyn » (Kierownik produkcji, co miesiąc i w każdej chwili) : droit propre (page
         // /maintenance et appels ajax : rejestry urządzeń, przeglądów, zgłoszeń), donné au Kierownik produkcji par la migration 245.
         'maintenance' => ['Serwisy i przeglądy maszyn (asystent : rejestr urządzeń, przeglądy i pomiary z terminem, zgłoszenia awarii i serwisów, awarie z tabletów)', 'Produkcja', ['/maintenance', '/ajax/maintenance'], false],
+        // [403] Asystent « Stany magazynowe na koniec miesiąca » (Kierownik produkcji, co miesiąc) : droit propre (page /stock/month-end —
+        // le préfixe le plus long l'emporte sur « /stock » — appels ajax, PDF et CSV), donné au Kierownik produkcji par la migration 243.
+        'stock_month' => ['Stany magazynowe — zestawienie miesiąca (asystent : stany produktów i surowców na koniec miesiąca, PDF i CSV dla księgowości)', 'Logistyka i pakowanie', ['/stock/month-end', '/ajax/stock/month-end'], false],
         'stock_pallets' => ['Stany i palety (magazyn, palety, wysłane, stan ogólny, krótka data ; usunięcie palety)', 'Logistyka i pakowanie', ['/logistics/stock', '/ajax/logistics/stock'], false],
         // [374] Asystent « Opóźnienia dostaw » : page /logistics/delays (préfixe /logistics), appels ajax sous le même droit.
         // [381] Asystent « Palety zwrotne » (Logistyka, Kierowca-dostawca) : page /logistics/pallets-returns (préfixe /logistics, comme
@@ -96,6 +105,9 @@ final class PageAccess
         // [378] Asystent « Faktury i KSeF dnia » (Administracja) : page /shipments/ksef-day (préfixe /shipments, comme l'écran
         // « Wysyłki i dokumenty » où l'on renvoie la WDT à KSeF), appels ajax sous le même droit.
         'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/ajax/shipments/ksef-day', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
+        // [402] Asystent « Dokumenty wysyłek miesiąca » (Kierownik produkcji, co miesiąc) : droit propre (page /shipments/documents-month —
+        // le préfixe le plus long l'emporte sur « /shipments » — et appels ajax), donné au Kierownik produkcji par la migration 242.
+        'shipping_docs_month' => ['Dokumenty wysyłek — przegląd miesiąca (asystent : WZ, CMR, WDT, różnice i potwierdzenia odbioru wysyłek poprzedniego miesiąca)', 'Logistyka i pakowanie', ['/shipments/documents-month', '/ajax/shipments/documents-month'], false],
         // [398] Asystent « Intrastat miesiąca » (Kierownik produkcji, co miesiąc) : droit propre (page /intrastat/month et appels
         // ajax), donné au Kierownik produkcji par la migration 239.
         'intrastat' => ['Intrastat miesiąca (asystent : wywóz z WDT, przywóz z faktur dostawców UE, kody CN, kursy, CSV do PUESC)', 'Logistyka i pakowanie', ['/intrastat', '/ajax/intrastat'], false],

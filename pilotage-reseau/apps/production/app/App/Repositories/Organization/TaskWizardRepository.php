@@ -270,6 +270,31 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_ppwr_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
     }
 
+    /** [400] Receptury i dane produktów : décisions enregistrées pour le mois du contrôle (premier jour, n_recipes_month_review). */
+    public function recipesMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_recipes_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [401] Kartoteka surowców : décisions enregistrées pour le mois du contrôle (premier jour, n_materials_month_review). */
+    public function materialsMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_materials_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [402] Dokumenty wysyłek : décisions enregistrées pour le mois examiné (premier jour, n_shipping_docs_review). */
+    public function shippingDocsReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_shipping_docs_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [403] Stany magazynowe : instantané enregistré et décisions pour le mois examiné (premier jour, n_stock_month_*). */
+    public function stockMonthProgress(string $monthStart): array
+    {
+        return ['snapshot' => (bool) $this->all('SELECT 1 AS x FROM n_stock_month_statement WHERE month_start = ?', [$monthStart]),
+            'decisions' => (int) ($this->all('SELECT COUNT(*) AS n FROM n_stock_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0)];
+    }
+
     /** [398] Intrastat miesiąca : décisions enregistrées pour le mois examiné (premier jour, n_intrastat_review). */
     public function intrastatMonthReviews(string $monthStart): int
     {
