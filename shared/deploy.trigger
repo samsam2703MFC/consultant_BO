@@ -266,3 +266,4 @@
 2026-11-22T18:59:17Z Dashboard : les paramètres dans une roue à gauche de Mon coffre-fort (fenêtre qui monte : recherche, boîte mail, rappel la veille du retrait, équipe, alertes de stock, ton de l'assistant) ; le groupe Paramètres quitte le rail
 2026-11-22T19:27:41Z [376] matryca wszystkich stanowisk + [377] partie i kontrola dnia
 2026-11-22T19:34:33Z [378] faktury i ksef dnia
+2026-11-23T06:28:46Z [379]-[385] asystenci: reklamacje, haccp, palety, powiadomienia, poczta, nowe produkty, dane klientow
