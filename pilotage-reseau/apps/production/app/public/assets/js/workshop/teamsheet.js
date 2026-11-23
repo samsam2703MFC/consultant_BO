@@ -239,16 +239,17 @@
         // [390] Même présentation que la Lista produkcyjna : W magazynie (kart. / szt.), Zamówienie (kart. / szt.), Do produkcji.
         const ctn = (r, v) => v > 0 && r.ppc ? esc(n(v / r.ppc, v % r.ppc ? 1 : 0)) : '-';
         const pcs = (r, v) => v > 0 ? esc(n(v / (r.factor || 1), r.factor > 1 ? 2 : 0)) : '-';
-        const make = (r) => r.quantity > 0 ? `<strong>${esc(qty(r.quantity, r.unit, r.factor))}</strong>` + (r.stock > 0 && r.direct > 0 ? `<div class="small text-muted">${esc(t('incl_stock', {qty: n(r.stock / (r.factor || 1), 0)}))}</div>` : (r.stock > 0 ? `<div class="small text-muted">${esc(t('for_stock'))}</div>` : '')) : '-';
+        // [393] Do produkcji = zamówienie − w magazynie (jak dawna Lista produkcyjna) ; uzupełnienie stanu osobno (« Na zapas »).
+        const make = (r) => r.direct > 0 ? `<strong>${esc(qty(r.direct, r.unit, r.factor))}</strong>` : '-';
         const products = tm.products.length ? `<div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-team-table">
                 <thead><tr><th rowspan="2">${esc(t('col_product'))}</th><th colspan="2" class="text-center text-muted">${esc(t('col_on_hand'))}</th><th colspan="2" class="text-center">${esc(t('col_ordered'))}</th>
-                    <th class="text-center">${esc(t('col_total'))}</th><th rowspan="2" class="text-end">${esc(t('batches'))}</th><th rowspan="2" class="text-end">h</th>
+                    <th class="text-center">${esc(t('col_total'))}</th><th class="text-center text-muted">${esc(t('col_stock'))}</th><th rowspan="2" class="text-end">${esc(t('batches'))}</th><th rowspan="2" class="text-end">h</th>
                     ${tm.days.map(d => `<th rowspan="2" class="text-center ${d.today ? 'is-today' : ''}">${esc(t('weekday_' + d.weekday))}<div class="small">${esc(day(d.date))}</div></th>`).join('')}</tr>
-                    <tr><th class="text-end text-muted">${esc(t('cartons_short'))}</th><th class="text-end text-muted">${esc(t('pieces_short'))}</th><th class="text-end">${esc(t('cartons_short'))}</th><th class="text-end">${esc(t('pieces_short'))}</th><th class="text-end">${esc(t('pieces_short'))}</th></tr></thead>
+                    <tr><th class="text-end text-muted">${esc(t('cartons_short'))}</th><th class="text-end text-muted">${esc(t('pieces_short'))}</th><th class="text-end">${esc(t('cartons_short'))}</th><th class="text-end">${esc(t('pieces_short'))}</th><th class="text-end">${esc(t('pieces_short'))}</th><th class="text-end text-muted">${esc(t('pieces_short'))}</th></tr></thead>
                 <tbody>${tm.products.map(r => `<tr><td><strong>${esc(r.name)}</strong>${r.unassigned_qty > 0 ? `<div class="small text-danger">${esc(t('waiting', {qty: qty(r.unassigned_qty, r.unit, r.factor)}))}</div>` : ''}</td>
                     <td class="text-end text-muted">${ctn(r, r.on_hand)}</td><td class="text-end text-muted">${pcs(r, r.on_hand)}</td>
                     <td class="text-end">${ctn(r, r.ordered)}</td><td class="text-end text-nowrap">${pcs(r, r.ordered)}${r.ordered > 0 && r.ordered_due ? `<div class="small text-muted">${esc(t('due', {day: day(r.ordered_due)}))}</div>` : ''}</td>
-                    <td class="text-end text-nowrap">${make(r)}</td>
+                    <td class="text-end text-nowrap">${make(r)}</td><td class="text-end text-nowrap text-muted">${r.stock > 0 ? esc(qty(r.stock, r.unit, r.factor)) : '-'}</td>
                     <td class="text-end">${r.batches ? esc(n(r.batches, 2)) : '—'}</td><td class="text-end">${esc(n(r.hours, 1))}</td>
                     ${tm.days.map(d => { const x = r.days[d.date]; const v = x ? esc(n(x.quantity / (r.factor || 1), r.factor > 1 ? 2 : 1)) : ''; return `<td class="text-center text-nowrap ${d.today ? 'is-today' : ''}">${x ? (x.time ? `<div class="small text-muted">${esc(x.time)}</div>` : '') + (x.proposed ? `<em title="${esc(t('proposed_title'))}">${v}</em>` : v) : ''}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div><p class="small text-muted mb-0 mt-1">${esc(t('columns_note'))}</p>${tm.proposed ? `<p class="small text-muted fst-italic mb-0 mt-1">${esc(t('proposed_note'))}</p>` : ''}`
             : `<p class="text-muted mb-0">${esc(t('empty_team'))}</p>`;

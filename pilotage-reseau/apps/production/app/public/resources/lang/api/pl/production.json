@@ -624,7 +624,7 @@
     "team_sheet_incl_stock": "w tym na zapas {qty}",
     "team_sheet_for_stock": "na zapas (stan min. / maks.)",
     "team_sheet_from_stock": "wszystko ze stanu",
-    "team_sheet_columns_note": "Do produkcji = zamówienie − w magazynie (ta sama liczba co na Liście produkcyjnej) ; dla produktów magazynowych dochodzi uzupełnienie stanu do min. / maks. (« na zapas »).",
+    "team_sheet_columns_note": "Do produkcji = zamówienie − w magazynie (jak dawna Lista produkcyjna). Na zapas : osobno, uzupełnienie stanu produktów magazynowych do min. / maks. Dni : wszystko, co jest do zrobienia (do produkcji + na zapas).",
     "team_sheet_due": "wyjazd {day}",
     "team_sheet_waiting": "nierozplanowane : {qty}",
     "team_sheet_proposed_note": "Liczby kursywą : do zrobienia, jeszcze nie zapisane w planie tygodnia — rozłożone na dni jak « Rozdziel na dni » (od dziś, w wolnych godzinach zespołu, wysyłki przed wyjazdem).",

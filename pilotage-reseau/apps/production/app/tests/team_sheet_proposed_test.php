@@ -53,11 +53,13 @@ $check(substr_count($html, 'nierozplanowane') === 1 && str_contains($html, 'nier
 $check(str_contains($html, 'Liczby kursywą : do zrobienia'), 'PDF : footnote explains the italics');
 // [390] Présentation de la Lista produkcyjna : W magazynie / Zamówienie (kart. + szt.), Do produkcji.
 $pos = fn(string $x) => strpos($html, $x);
-$check($pos('W magazynie') !== false && $pos('W magazynie') < $pos('Zamówienie') && $pos('Zamówienie') < $pos('Do produkcji') && substr_count($html, '>Kart.<') === 2 && substr_count($html, '>Szt.<') === 3
+$check($pos('W magazynie') !== false && $pos('W magazynie') < $pos('Zamówienie') && $pos('Zamówienie') < $pos('Do produkcji') && substr_count($html, '>Kart.<') === 2 && substr_count($html, '>Szt.<') === 4
     && !str_contains($html, 'Na magazyn') && !str_contains($html, 'Na zamówienia') && !str_contains($html, '>Razem<'), 'PDF : columns as the production list — W magazynie (kart./szt.) → Zamówienie (kart./szt.) → Do produkcji (szt.)');
 $check(str_contains($html, '1 800') && str_contains($html, '>100<') && str_contains($html, 'Do produkcji = zamówienie − w magazynie'), 'PDF : stock in cartons and pieces, legend under the table');
 // Cas de la référence (23.11.2026) : Poivre & Sel 10 kart. / 180 szt. en stock, 12 kart. / 216 szt. commandés → 36 à produire.
-$ref = [$prod(1, 'Baguette Poivre & Sel', [], 36, 36, '2026-11-24'), $prod(2, 'Baguette Tradition 500 g.', [], 0, 0, null)];
+// [393] Tradition (produit de stock) : les 1 620 commandés partent des 1 692 en stock ; il reste 72 < min → réassort 3 528
+// (max 3 600). Do produkcji = « - » comme l'ancienne liste ; le réassort est à part, dans « Na zapas ».
+$ref = [$prod(1, 'Baguette Poivre & Sel', [], 36, 36, '2026-11-24'), $prod(2, 'Baguette Tradition 500 g.', [], 3528, 0, null)];
 $ref[0]['ppc'] = 18; $ref[1]['ppc'] = 18;
 $tr = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => null], [], $ref, $week, [], [], [], [1 => 180.0, 2 => 1692.0], [1 => ['qty' => 216.0, 'due' => '2026-11-24'], 2 => ['qty' => 1620.0, 'due' => '2026-11-24']]);
 $rr = array_column($tr['products'], null, 'item_id');
@@ -65,6 +67,10 @@ $check($rr[1]['ordered'] === 216.0 && $rr[1]['on_hand'] === 180.0 && $rr[1]['qua
 $h = implode("\n", array_map(fn($s) => $s[1], $sections->invoke($svc, $tr, new Translator('pl'))));
 $check(str_contains($h, '>10<') && str_contains($h, '>180<') && str_contains($h, '>12<') && str_contains($h, '>216<') && str_contains($h, '<b>36</b>'), 'reference PDF : 10 / 180 | 12 / 216 | 36');
 $check(str_contains($h, '>94<') && str_contains($h, '>1 692<') && str_contains($h, '>90<') && str_contains($h, '>1 620<'), 'reference PDF : Baguette Tradition 94 / 1 692 | 90 / 1 620 | nothing to produce');
+$trad = substr($h, strpos($h, 'Baguette Tradition'));
+$trad = substr($trad, 0, strpos($trad, '</tr>'));
+$check(preg_match('/>1 620<.*?<td[^>]*>-<\/td><td[^>]*>3 528<\/td>/s', $trad) === 1, '[393] Tradition : Do produkcji « - » (like the old list), Na zapas 3 528 apart');
+$check(str_contains($h, '<b>36</b>'), '[393] Poivre & Sel : Do produkcji 36 = 216 − 180 (same as the old list)');
 $t2 = $team->invoke($svc, ['id' => 7, 'name' => 'Piekarnia', 'color' => null], [], [$products[3]], $week, [], [], []);
 $html2 = implode("\n", array_map(fn($s) => $s[1], $sections->invoke($svc, $t2, new Translator('pl'))));
 $check(!str_contains($html2, 'Liczby kursywą'), 'no proposal : no footnote');
