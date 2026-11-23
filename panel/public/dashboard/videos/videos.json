@@ -66,6 +66,93 @@
       ],
       "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "taches",
+      "genre": "tuto",
+      "titre": "Les tâches du magasin",
+      "resume": "La semaine des tâches, les codes des checklists, ce qui reste à faire aujourd’hui et le contrôle en photo.",
+      "vues": [
+        "taches"
+      ],
+      "fichier": "04-taches.mp4",
+      "affiche": "04-taches.jpg",
+      "duree": "2 min 46",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "temps-morts",
+      "genre": "tuto",
+      "titre": "Les temps morts",
+      "resume": "Le comptoir sans client : la journée minute par minute, la semaine face à l’habitude, et le seuil de 5, 10 ou 15 minutes.",
+      "vues": [
+        "morts"
+      ],
+      "fichier": "05-temps-morts.mp4",
+      "affiche": "05-temps-morts.jpg",
+      "duree": "2 min 23",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/temps_morts.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "coffre-fort",
+      "genre": "tuto",
+      "titre": "Mon coffre-fort",
+      "resume": "L’état du coffre, les dossiers et leurs pièces attendues, l’aperçu d’un document, et le dépôt avec l’assistant qui relève les grandes dates.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-coffre-fort.mp4",
+      "affiche": "23-coffre-fort.jpg",
+      "duree": "2 min 42",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "panel/public/dashboard/dashboard.js",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "mails-automatisations",
+      "genre": "tuto",
+      "titre": "Mails et automatisations",
+      "resume": "La roue des paramètres, les envois automatiques du magasin, le rappel la veille du retrait et l’équipe qui reçoit les fiches des promotions.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-parametres.mp4",
+      "affiche": "24-parametres.jpg",
+      "duree": "2 min 45",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/automatisations.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }

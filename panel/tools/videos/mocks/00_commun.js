@@ -22,11 +22,12 @@ module.exports = function (m, p, q) {
   if (p === '/meta') return { seuils: { food: 32, labour: 17, overhead: 13.5, royalties: 3, financieres: 2.2 } };
   if (p === '/marketing/avis') return { cible: 4.5, magasins: [{ id: '4', note: 4.6, avis: 318 }] };
   if (p === '/soir/revue') return { heure: '18:00', revue: null };
-  if (p === '/coffre/magasin') return { documents: [], nouveaux: 0 };
+  // /coffre/magasin : le coffre du magasin de démo, mocks/23_coffre.js (le rail y lit le nombre de nouveaux).
   if (p === '/formation/continue/magasin') return { reperes: { enRetard: 0, enCours: 0 }, nouveaux: 0, formations: [] };
   if (p === '/assistant/magasin/questions') return { actif: true, tuiles: [], groupes: [] };
   if (p === '/helpdesk/magasin') return { demandes: [] };
-  if (p === '/dashboard/boite') return { reliee: true, ouverte: false, adresse: 'magasin.demo@exemple.be' };
+  // Ouverte sur cet appareil : Paramètres › Mails et automatisations se règlent boîte ouverte (mocks/24_parametres.js).
+  if (p === '/dashboard/boite') return { reliee: true, ouverte: true, adresse: 'magasin.demo@exemple.be' };
   if (p === '/ventes/mensuel') return mensuel();
   return undefined;
 };
