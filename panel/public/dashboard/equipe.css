@@ -296,3 +296,41 @@
 .eqp-mat-t tr.tot td,.eqp-mat-t tr.tot th{background:var(--total-line)}
 .eqp-rec-sans{margin:0 0 10px;padding:8px 10px;border-radius:8px;background:var(--prize-soft);color:var(--prize-ink);font-size:12px;line-height:1.5}
 .eqp .qui b{font-weight:700;color:var(--ink)}
+/* Le tableau de la semaine : un clic sur une case (23/11/2026) */
+.eqp-tab td.eqp-c{padding:6px 5px;vertical-align:top;min-width:94px}
+.eqp-tab td.cliquable{cursor:pointer}
+.eqp-tab td.cliquable:hover{background:rgba(141,29,44,.035)}
+.eqp-tab td.on{box-shadow:inset 0 0 0 2px var(--accent)}
+.eqp-tab th .sub{color:var(--accent)}
+button.eqp-sv{display:block;width:100%;margin:2px 0;padding:5px 7px;border:1px solid transparent;border-radius:6px;background:var(--chip);font:inherit;font-size:11.5px;line-height:1.3;color:var(--ink);text-align:left;cursor:pointer;font-variant-numeric:tabular-nums}
+button.eqp-sv small{display:block;font-size:10px;color:var(--muted)}
+button.eqp-sv:hover{border-color:var(--muted-2)}
+button.eqp-sv.on{border:2px solid var(--accent);background:#fff;padding:4px 6px}
+.eqp-plus{display:none;padding:5px 7px;border:1px dashed rgba(141,29,44,.45);border-radius:6px;color:var(--accent);font-size:11.5px;text-align:center;background:rgba(141,29,44,.04)}
+.eqp-tab td.cliquable:hover .eqp-plus{display:block}
+.eqp-tab td.cliquable:hover .eqp-plus+*,.eqp-tab td.cliquable:hover>.eqp-tiret{display:none}
+.eqp-tab tr.tot .tag-warn{margin:1px 0}
+.eqp-stl.cliquable{cursor:pointer}
+.eqp-stl.cliquable:hover{background:rgba(141,29,44,.04)}
+/* « Préparer la semaine » : un menu */
+.eqp-menu{position:relative}
+.eqp-menu>summary{list-style:none}
+.eqp-menu>summary::-webkit-details-marker{display:none}
+.eqp-menu-l{position:absolute;right:0;top:calc(100% + 6px);z-index:20;display:grid;gap:6px;min-width:250px;padding:10px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(28,26,23,.12)}
+.eqp-menu-l .btn{justify-content:flex-start}
+/* La fenêtre du service */
+.eqp-ed{width:min(460px,100%);font-size:12.5px}
+.eqp-ed-ch{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0}
+.eqp-crens{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.eqp-cren{padding:4px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;font:inherit;font-size:11.5px;color:var(--muted-2);cursor:pointer}
+.eqp-cren.on{border-color:var(--accent);color:var(--accent);background:rgba(141,29,44,.05)}
+.eqp-pop-e .mu,.eqp-shift .mu{color:var(--muted);font-size:11.5px}
+.eqp-shift{margin-top:12px;padding-top:4px;border-top:1px solid var(--row-line)}
+.eqp-shift-l{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--row-line)}
+.eqp-shift-l b{font-weight:400}
+.eqp-shift-aj{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.eqp-shift-aj select{flex:1 1 200px;padding:6px 9px;font:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.eqp-shift-ef{margin-top:6px}
+.eqp-pop{width:380px}
+.eqp-tab tr.tot .tag-warn{white-space:normal;text-align:left}
+.eqp-tab tr.tot td:first-child{min-width:150px}

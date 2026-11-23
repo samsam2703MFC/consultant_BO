@@ -6,7 +6,8 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   const b = await chromium.launch({ args: ['--proxy-bypass-list=127.0.0.1;localhost'] });
   const ctx = await b.newContext({ viewport: { width: 1440, height: 940 }, deviceScaleFactor: 2, locale: 'fr-BE' });
   const p = await ctx.newPage(); const err = []; const ecrits = [];
-  p.on('pageerror', e => err.push(e.message)); p.on('console', m => { if (m.type() === 'error') err.push('console: ' + m.text()); });
+  p.on('pageerror', e => err.push(e.message));
+  p.on('dialog', d => d.accept());   // les confirmations (retirer quelqu'un du shift) p.on('console', m => { if (m.type() === 'error') err.push('console: ' + m.text()); });
   await p.route('**/api/cockpit/**', async r => {
     const u = new URL(r.request().url()), pa = u.pathname.replace(/^.*\/api\/cockpit/, ''), m = r.request().method();
     if (pa.startsWith('/dashboard/equipe')) {
@@ -43,6 +44,25 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   console.log('flash', await p.textContent('.eqp-flash').catch(() => '—'));
   // Le planning, jour.
   await p.click('[data-eqp-onglet="planning"]');
+  // La semaine en tableau (vue par défaut) : un clic sur un service, ajouter quelqu'un au shift, retirer quelqu'un,
+  // puis un clic sur une case vide.
+  await p.waitForSelector('.eqp-tab', { timeout: 20000 });
+  await shot('e11-semaine-tableau', true);
+  await p.click('tr:has-text("Laura Claes") td[data-eqp-cell="2026-11-23"] [data-eqp-svc] >> nth=0');
+  await p.waitForSelector('.eqp-ed');
+  await p.selectOption('[data-eqp-ajout-sel]', '26');
+  await shot('e12-clic-sur-un-service', false);
+  await p.click('[data-eqp-ajout-ok]'); await p.waitForTimeout(900);
+  console.log('ajout', await p.textContent('.eqp-flash').catch(() => '—'), '| fenêtre rouverte :', !!(await p.$('.eqp-ed')));
+  await p.click('.eqp-shift-l [data-eqp-retirer] >> nth=0'); await p.waitForTimeout(900);
+  console.log('retrait', await p.textContent('.eqp-flash').catch(() => '—'), '| fenêtre rouverte :', !!(await p.$('.eqp-ed')));
+  await p.click('.eqp-ed [data-eqp-annuler]');
+  await p.click('tr:has-text("Jonas Willems") td[data-eqp-cell="2026-11-24"]');
+  await p.waitForSelector('.eqp-ed');
+  await shot('e13-clic-sur-une-case-vide', false);
+  await p.click('.eqp-ed [data-eqp-ok]'); await p.waitForTimeout(900);
+  console.log('nouveau', await p.textContent('.eqp-flash').catch(() => '—'));
+  await p.click('[data-eqp-vue="jour"]');
   await p.waitForSelector('.eqp-pg', { timeout: 20000 });
   await shot('e3-planning-jour', true);
   // Modifier : étirer la fin du premier service de Laura jusqu'à 12:30.
@@ -66,6 +86,7 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   // Recopier la semaine précédente : la semaine suivante, vide ; l'aperçu ; décocher un service ; recopier.
   await p.click('[data-eqp-vue="semaine"]'); await p.waitForSelector('.eqp-sem7');
   await p.click('[data-eqp-pas="7"]'); await p.waitForSelector('.eqp-vide7');
+  await p.click('.eqp-menu > summary');
   await p.click('[data-eqp-recopier]'); await p.waitForSelector('.eqp-rec-liste');
   await p.click('.eqp-rec-l:has-text("Jonas Willems") input');
   await shot('e7-recopier-la-semaine', false);
@@ -73,10 +94,12 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   console.log('flash', await p.textContent('.eqp-flash').catch(() => '—'));
   // Le shift maker (test) sur la même semaine vide, puis la matrice A B C D.
   await p.click('[data-eqp-fermer]').catch(() => {});
+  await p.click('.eqp-menu > summary');
   await p.click('[data-eqp-generer]'); await p.waitForSelector('.eqp-rec-liste');
   await shot('e8-shift-maker', false);
   await p.click('[data-eqp-rec-ok]'); await p.waitForTimeout(600);
   console.log('flash', await p.textContent('.eqp-flash').catch(() => '—'));
+  await p.click('.eqp-menu > summary');
   await p.click('[data-eqp-matrice]'); await p.waitForSelector('.eqp-mat');
   await shot('e9-matrice', false);
   await p.click('.eqp-mat [data-eqp-fermer].btn');
