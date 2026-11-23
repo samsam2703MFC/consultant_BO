@@ -52,7 +52,7 @@
 
   const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, onglet: 'resp',
     R: null, Rerr: null, sel: null, q: '', secteur: '', tousProduits: false, mod: null,
-    PJ: null, PS: null, PM: null, Perr: null, vue: 'tableau', ouvrir: null, jour: AUJ, lundi: lundiDe(AUJ), mois: moisDe(AUJ), edit: null, edSection: null, glisse: null,
+    PJ: null, PS: null, PM: null, Perr: null, vue: 'tableau', ouvrir: null, jour: AUJ, lundi: lundiDe(AUJ), mois: moisDe(AUJ), edit: null, edSection: null, as: null, glisse: null,
     pdf: null, rec: null, M: null, mat: null, flash: null, occupe: false };
 
   /* ── L'API ──────────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -131,7 +131,7 @@
     const garde = st.el.querySelector('.eqp-pg-defil'), x = garde ? garde.scrollLeft : 0;
     const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
     st.el.innerHTML = `<nav class="page-tabs" aria-label="Mon équipe">${tabs}</nav>${st.flash ? `<div class="eqp-flash ${st.flash[0]}" role="status">${esc(st.flash[1])}</div>` : ''}`
-      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal();
+      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal() + rendAssistant();
     const g2 = st.el.querySelector('.eqp-pg-defil'); if (g2) { g2.scrollLeft = x; }
     brancher();
   }
@@ -234,7 +234,7 @@
       : `<button type="button" class="btn btn--icon" data-eqp-pas="-7" aria-label="Semaine précédente">‹</button><span>Semaine du ${dt(st.lundi).getDate()} au ${esc(long(plus(st.lundi, 6)).replace(/^\S+ /, ''))}</span><button type="button" class="btn btn--icon" data-eqp-pas="7" aria-label="Semaine suivante">›</button>${st.lundi !== lundiDe(AUJ) ? '<button type="button" class="btn btn--sm btn--ghost" data-eqp-auj="1">Cette semaine</button>' : ''}`;
     const barre = `<div class="eqp-pbar"><span class="eqp-nav">${nav}</span><span class="eqp-sp"></span>
       <div class="seg" role="group" aria-label="Affichage">${[['jour', 'Jour'], ['tableau', 'Semaine'], ['mois', 'Mois']].map(([k, l]) => `<button type="button" class="${st.vue === k ? 'is-on' : ''}" data-eqp-vue="${k}">${l}</button>`).join('')}</div>
-      ${st.vue === 'tableau' ? `<details class="eqp-menu"><summary class="btn">Préparer la semaine ▾</summary><div class="eqp-menu-l"><button type="button" class="btn btn--sm" data-eqp-recopier="1">Recopier la semaine précédente</button><button type="button" class="btn btn--sm" data-eqp-generer="1">Shift maker <span class="tag-warn">test</span></button><button type="button" class="btn btn--sm" data-eqp-matrice="1"${st.M ? '' : ' disabled'}>Matrice A B C D</button></div></details>` : ''}
+      ${st.vue === 'tableau' ? `<details class="eqp-menu"><summary class="btn">Préparer la semaine ▾</summary><div class="eqp-menu-l"><button type="button" class="btn btn--sm btn--primary" data-eqp-assistant="1">Assistant de la semaine</button><button type="button" class="btn btn--sm" data-eqp-recopier="1">Recopier la semaine précédente</button><button type="button" class="btn btn--sm" data-eqp-generer="1">Shift maker <span class="tag-warn">test</span></button><button type="button" class="btn btn--sm" data-eqp-matrice="1"${st.M ? '' : ' disabled'}>Matrice A B C D</button></div></details>` : ''}
       <button type="button" class="btn btn--primary" data-eqp-ajouter="1">Ajouter un service</button>
       <button type="button" class="btn" data-eqp-pdf="1" aria-expanded="${st.pdf ? 'true' : 'false'}">Imprimer le planning</button></div>${rendPdf()}`;
     if (st.Perr && !P) { return barre + `<div class="eqp-err">Impossible de lire le planning : ${esc(st.Perr)}. <button type="button" class="linklike" data-eqp-relire="1">Réessayer</button></div>`; }
@@ -248,7 +248,7 @@
     return `<section class="card eqp-pdf" aria-label="Imprimer le planning"><strong>Imprimer le planning</strong>
       <label class="eqp-f">À partir du <input type="date" value="${esc(p.du)}" data-eqp-pdfdu="1"></label>
       <label class="eqp-f">Période <select data-eqp-pdfjours="1"><option value="7"${p.jours === 7 ? ' selected' : ''}>Une semaine</option><option value="14"${p.jours === 14 ? ' selected' : ''}>Deux semaines</option></select></label>
-      <label class="eqp-f">Présentation <select data-eqp-pdfpres="1"><option value="magasin"${p.pres === 'magasin' ? ' selected' : ''}>Tout le magasin</option><option value="departements"${p.pres === 'departements' ? ' selected' : ''}>Par département</option></select></label>
+      <label class="eqp-f">Présentation <select data-eqp-pdfpres="1"><option value="magasin"${p.pres === 'magasin' ? ' selected' : ''}>Tout le magasin, groupé par section</option><option value="departements"${p.pres === 'departements' ? ' selected' : ''}>Une page par section</option></select></label>
       <span class="eqp-sp"></span><span class="eqp-note" style="margin:0">A4 paysage · le PDF du panel</span>
       <button type="button" class="btn btn--sm${p.occupe ? ' is-busy' : ''}" data-eqp-pdfok="1"${p.occupe ? ' disabled' : ''}>${p.occupe ? 'Préparation…' : 'Télécharger le PDF'}</button>${p.err ? `<p class="error" style="flex-basis:100%">${esc(p.err)}</p>` : ''}</section>`;
   }
@@ -418,7 +418,7 @@
         return `<td class="${J.date === P.aujourdhui ? 'auj' : ''}"><span class="eqp-mini l">${ouv(i)}${x.cv.map(([a, b]) => `<span class="eqp-cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}${x.vide ? '<span class="eqp-trou" style="left:0;width:100%"></span>' : ''}${x.trous.map(([a, b]) => `<span class="eqp-trou" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)}"></span>`).join('')}</span>${x.vide ? '<span class="eqp-tr">personne</span>' : x.trous.length ? `<span class="eqp-tr">${x.trous.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ')}</span>` : ''}</td>`; }).join('')}<td></td><td></td></tr>`).join('') : '';
     const vide = nSv ? '' : (() => {
       const taux = (P.employes || []).filter(e => e.actif && e.taux > 0).map(e => e.taux), moy = taux.length ? taux.reduce((a, b) => a + b, 0) / taux.length : 0, bud = ca ? P.budget.cible / 100 * ca : 0;
-      return `<div class="eqp-vide7"><b>Aucun service au planning cette semaine.</b> Cliquez une case pour ajouter un service, ou partez de la semaine précédente (« Préparer la semaine »).${bud ? `<div class="eqp-vide7-b">Budget de la semaine à ${String(P.budget.cible).replace('.', ',')} % : <b>${fE(bud)}</b> de personnel pour ${fE(ca)} de CA prévu${moy ? `, soit environ <b>${fH(bud / moy)}</b> au taux moyen de l’équipe (${fEh(moy)})` : ''}.</div>` : ''}</div>`;
+      return `<div class="eqp-vide7"><b>Aucun service au planning cette semaine.</b> <button type="button" class="btn btn--sm btn--primary" data-eqp-assistant="1">Lancer l’assistant de la semaine</button> Il part de la semaine passée (ou de la matrice) et l’ajuste au chiffre prévu ; ou cliquez une case pour ajouter un service.${bud ? `<div class="eqp-vide7-b">Budget de la semaine à ${String(P.budget.cible).replace('.', ',')} % : <b>${fE(bud)}</b> de personnel pour ${fE(ca)} de CA prévu${moy ? `, soit environ <b>${fH(bud / moy)}</b> au taux moyen de l’équipe (${fEh(moy)})` : ''}.</div>` : ''}</div>`;
     })();
     return vide + kpis + (nSv ? jauge(P, 'Budget d’heures de la semaine', hCa || h, coutCa, ca) : '') + `<section class="card eqp-tab"><div class="eqp-table"><table><thead><tr><th>Employé</th>${P.jours.map(J => `<th class="${J.date === P.aujourdhui ? 'auj' : ''}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le planogramme du jour">${esc(court(J.date))}</button>${J.date === P.aujourdhui ? '<span class="sub">aujourd’hui</span>' : ''}</th>`).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr></thead><tbody>${lignes}${tot}${pistes}</tbody></table></div></section>
       <p class="eqp-note">Un clic sur un service l’ouvre : adapter ses heures, ajouter une personne sur le même shift, retirer une personne du shift. Un clic sur une case vide ajoute un service à cette personne ce jour-là ; un clic sur un jour l’ouvre en grand, où l’on trace les services à la souris. Paliers du budget : jusqu’à ${String(P.budget.cible).replace('.', ',')} %, la cible du réseau ; orange au-dessus ; rouge au-dessus de ${String(P.budget.rouge).replace('.', ',')} % ; noir au-dessus de ${String(P.budget.noir).replace('.', ',')} %. Le coût suit le taux horaire du panel.</p>`;
@@ -697,6 +697,212 @@
       .catch(e => { ed.occupe = false; ed.err = 'Rien n’est enregistré : ' + e.message + (e.j && e.j.detail ? ' (' + e.j.detail + ')' : '') + '.'; rendre(); });
   }
 
+  /* ── L'assistant de la semaine (23/11/2026, Sam : « en faire un assistant pour les horaires de la semaine (reprendre
+   * semaine passée oui ou non), qui adapter ?, le chiffre d'affaires planifié est de … euros, tu as xxx heures de trop » ;
+   * maquette panel/docs/maquettes/equipe-gestion/assistant/). Quatre étapes : partir de quoi (la semaine passée, la
+   * matrice A B C D, rien) ; qui adapter (comme proposé, absent, à revoir) ; le chiffre (le CA planifié, le budget à la
+   * cible, les heures de trop, des propositions chiffrées à cocher) ; vérifier et créer (POST …/semaine/creer). Rien n'est
+   * écrit au panel avant « Créer ». Les propositions ne touchent que ce que l'assistant crée, jamais ce qui est déjà au
+   * planning ; chacune garde la section tenue (quelqu'un de la même section sur les heures retirées ; au comptoir, pendant
+   * l'ouverture) et un service d'au moins la durée minimale. ────────────────────────────────────────────────────────── */
+  const AS_ETAPES = [['Partir de quoi ?', 'la semaine passée, la matrice, rien'], ['Qui adapter ?', 'absents, à revoir'], ['Le chiffre', 'le CA planifié, les heures de trop'], ['Vérifier et créer', 'le comptoir, les durées, le panel']];
+  const fHn = x => { const r = Math.round(x * 2) / 2; return (Number.isInteger(r) ? String(r) : r.toFixed(1).replace('.', ',')); };
+  function ouvrirAssistant() {
+    const du = st.lundi, A = { du, etape: 1, max: 1, base: null, R: null, G: null, Rerr: null, Gerr: null, chargement: true, etats: {}, props: null, coches: new Set(), sig: '', occupe: false, err: null, res: null };
+    st.as = A;
+    if (!st.PS || st.PS.du !== du) { st.PS = null; lirePlanning('semaine'); }
+    Promise.all([
+      lire('/dashboard/equipe/semaine/recopie', { du }).then(r => { A.R = r; }).catch(e => { A.Rerr = e.message; }),
+      lire('/dashboard/equipe/semaine/generer', { du }).then(r => { A.G = r; }).catch(e => { A.Gerr = e.message; }),
+    ]).then(() => {
+      if (st.as !== A) { return; }
+      A.chargement = false;
+      A.base = A.R && A.R.propositions.length ? 'recopie' : A.G && A.G.propositions.length ? 'matrice' : 'vide';
+      rendre();
+    });
+    rendre();
+  }
+  /** Les services que la base propose : {k, employe, date, de, a} (minutes). */
+  function asBase(A) {
+    if (A.base === 'recopie' && A.R) { return A.R.propositions.map(p => ({ k: 'r' + p.source, employe: p.employe, date: p.date, de: mn(p.de), a: mn(p.a) })); }
+    if (A.base === 'matrice' && A.G) { return A.G.propositions.map(p => ({ k: String(p.cle), employe: p.employe, date: p.date, de: mn(p.de), a: mn(p.a) })); }
+    return [];
+  }
+  /** Ce que l'assistant crée après « qui adapter » : la base sans les absents ni les « à revoir ». */
+  const asRetenus = A => asBase(A).filter(p => (A.etats[p.employe] || 'c') === 'c');
+  /** Les propositions cochées appliquées : chaque service raccourci ou retiré. */
+  function asAppliquer(L, props, coches) {
+    const ch = new Map(); (props || []).forEach((x, i) => { if (coches.has(i)) { ch.set(x.k, x); } });
+    return L.map(p => { const x = ch.get(p.k); return x ? Object.assign({}, p, x.suppr ? { a: p.de } : { de: x.de1, a: x.a1 }) : p; }).filter(p => p.a > p.de);
+  }
+  /** Un jour du planning lu, avec les services de l'assistant en plus. */
+  const asJour = (J, L) => Object.assign({}, J, { services: [...(J.services || []), ...L.filter(p => p.date === J.date).map(p => ({ id: 'as' + p.k, employe: p.employe, de: hh(p.de), a: hh(p.a) }))] });
+  /** Le bilan de la semaine : heures, coût, CA (la base des % de chaque jour), budget à la cible, heures de trop. */
+  function asBilan(P, L) {
+    const CJ = P.jours.map(J => calculJour(P, asJour(J, L), null)), S = f => CJ.reduce((x, c) => x + f(c), 0);
+    const h = S(c => c.h), cout = S(c => c.cout), ca = S(c => c.objectif || 0), coutCa = S(c => c.objectif ? c.cout : 0), hCa = S(c => c.objectif ? c.h : 0);
+    const moy = hCa ? coutCa / hCa : (h ? cout / h : 0), budget = ca ? P.budget.cible / 100 * ca : null, budgetH = budget && moy ? budget / moy : null;
+    return { CJ, h, cout, ca, coutCa, hCa, moy, pct: ca ? coutCa / ca * 100 : null, budget, budgetH, trop: budgetH != null ? hCa - budgetH : null };
+  }
+  /**
+   * Les propositions (pur) : tant qu'il y a des heures de trop, sur le jour le plus au-dessus de la cible, le service de
+   * l'assistant qui rend le plus d'euros sans découvrir sa section : le retirer si quelqu'un de sa section est là sur
+   * toutes ses heures, sinon finir plus tôt ou commencer plus tard sur les heures que d'autres tiennent (au quart d'heure,
+   * une heure au moins, jamais sous la durée minimale). Chaque proposition est calculée avec les précédentes appliquées :
+   * en décocher une ne découvre jamais une section.
+   */
+  function asPropositions(P, L0) {
+    const eq = equipeDe(P), sec = new Map(); groupes(P, eq).forEach(([g, Ls]) => Ls.forEach(e => sec.set(e.id, g)));
+    const D = DUREES(P), cible = P.budget.cible, props = [];
+    let L = L0.map(p => Object.assign({}, p));
+    for (let n = 0; n < 14; n++) {
+      const B = asBilan(P, L); if (B.trop == null || B.trop <= 0.25) { break; }
+      const jours = B.CJ.map((C, i) => [P.jours[i], C]).filter(([, C]) => C.pct != null && C.pct > cible).sort((x, y) => y[1].pct - x[1].pct);
+      let best = null;
+      for (const [J, C] of jours) {
+        const ouv = (P.ouvertures || {})[wd(J.date)] || null, jc = court(J.date);
+        for (const p of L.filter(x => x.date === J.date)) {
+          const e = eq.get(p.employe) || {}, g = sec.get(p.employe) || 'Sans poste', cpt = comptoir(e), taux = e.taux || 0;
+          if (!taux) { continue; }
+          const autresSec = C.sv.filter(s => s.employe !== p.employe && sec.get(s.employe) === g), autresCpt = C.sv.filter(s => s.employe !== p.employe && comptoir(eq.get(s.employe) || {}));
+          const secReq = !cpt || g !== 'Comptoir', hors = t => !ouv || t + 15 <= ouv[0] || t >= ouv[1];
+          const couvert = t => (!cpt || hors(t) || autresCpt.some(s => s.de <= t && s.a >= t + 15)) && (!secReq || autresSec.some(s => s.de <= t && s.a >= t + 15));
+          const qui = (a, b) => [...new Set([...(cpt ? autresCpt : []), ...(secReq ? autresSec : [])].filter(s => s.de < b && s.a > a).map(s => ((eq.get(s.employe) || {}).nom || '').split(' ')[0]).filter(Boolean))];
+          const lieu = cpt && !secReq ? 'le comptoir' : (cpt ? 'le comptoir et « ' + g + ' »' : '« ' + g + ' »');
+          const pr = ((e.nom || '').split(' ')[0]) || 'Employé ' + p.employe;
+          let c = null, t;
+          let tout = true; for (t = p.de; t < p.a; t += 15) { if (!couvert(t)) { tout = false; break; } }
+          if (tout) {
+            const q = qui(p.de, p.a);
+            c = { k: p.k, employe: p.employe, date: p.date, de: p.de, a: p.a, suppr: true, dh: (p.a - p.de) / 60, t: `${jc} : retirer le service de ${pr} (${hh(p.de)}–${hh(p.a)})`, d: q.length ? `${q.join(', ')} ${q.length > 1 ? 'tiennent' : 'tient'} ${lieu} sur ces heures.` : `Hors de l’ouverture : ${lieu} n’en a pas besoin.` };
+          } else if (p.a - p.de > D.min * 60) {
+            let fin = p.a; while (fin - 15 >= p.de + D.min * 60 && couvert(fin - 15)) { fin -= 15; }
+            let deb = p.de; while (deb + 15 <= p.a - D.min * 60 && couvert(deb)) { deb += 15; }
+            const gF = p.a - fin, gD = deb - p.de;
+            if (Math.max(gF, gD) >= 60) {
+              if (gF >= gD) { const q = qui(fin, p.a); c = { k: p.k, employe: p.employe, date: p.date, de: p.de, a: p.a, de1: p.de, a1: fin, dh: gF / 60, t: `${pr} : finir à ${hh(fin)} au lieu de ${hh(p.a)} (${jc})`, d: (q.length ? `${q.join(', ')} ${q.length > 1 ? 'tiennent' : 'tient'} ${lieu} de ${hh(fin)} à ${hh(p.a)}` : `${lieu} n’est plus ouvert après ${hh(fin)}`) + `. Reste ${fH((fin - p.de) / 60)}.` }; }
+              else { const q = qui(p.de, deb); c = { k: p.k, employe: p.employe, date: p.date, de: p.de, a: p.a, de1: deb, a1: p.a, dh: gD / 60, t: `${pr} : commencer à ${hh(deb)} au lieu de ${hh(p.de)} (${jc})`, d: (q.length ? `${q.join(', ')} ${q.length > 1 ? 'tiennent' : 'tient'} ${lieu} de ${hh(p.de)} à ${hh(deb)}` : `${lieu} n’ouvre pas avant ${hh(deb)}`) + `. Reste ${fH((p.a - deb) / 60)}.` }; }
+            }
+          }
+          if (c) { c.euros = c.dh * taux; if (!best || c.euros > best.euros) { best = c; } }
+        }
+        if (best) { break; }
+      }
+      if (!best) { break; }
+      props.push(best);
+      L = asAppliquer(L, [best], new Set([0]));
+    }
+    return props;
+  }
+  function rendAssistant() {
+    const A = st.as; if (!A) { return ''; }
+    const P = st.PS && st.PS.du === A.du ? st.PS : null;
+    const rail = `<aside class="eqp-as-rail"><h2>Assistant de la semaine</h2><span class="sub">du ${dt(A.du).getDate()} ${MOIS[dt(A.du).getMonth()]} au ${esc(long(plus(A.du, 6)).replace(/^\S+ /, '').replace(/ \d{4}$/, ''))}</span>${AS_ETAPES.map(([t, s], i) => {
+      const n = i + 1, cl = n < A.etape ? 'fait' : n === A.etape ? 'ici' : 'apres';
+      return `<${n <= A.max && n !== A.etape ? 'button type="button" data-eqp-as-etape="' + n + '"' : 'div'} class="eqp-as-et ${cl}"><i>${n < A.etape ? '✓' : n}</i><b>${t}</b><small>${s}</small></${n <= A.max && n !== A.etape ? 'button' : 'div'}>`;
+    }).join('')}</aside>`;
+    let corps = '', res = '', suite = 'Continuer ›', suiteOff = false;
+    if (A.chargement || !P) { corps = '<div class="eqp-attente">Lecture de la semaine passée, de la matrice et du planning…</div>'; suiteOff = true; }
+    else if (A.etape === 1) { [corps, res] = asUne(A, P); }
+    else if (A.etape === 2) { [corps, res] = asDeux(A, P); }
+    else if (A.etape === 3) { [corps, res] = asTrois(A, P); suite = 'Vérifier ›'; }
+    else { [corps, res, suite, suiteOff] = asQuatre(A, P); }
+    const pied = `<div class="eqp-as-pied"><span class="res">${res}</span>${A.err ? `<span class="error" role="alert">${esc(A.err)}</span>` : ''}${A.etape > 1 ? '<button type="button" class="btn btn--ghost" data-eqp-as-retour="1"' + (A.occupe ? ' disabled' : '') + '>Retour</button>' : '<button type="button" class="btn btn--ghost" data-eqp-as-fermer="1">Fermer</button>'}<button type="button" class="btn btn--primary${A.occupe ? ' is-busy' : ''}" data-eqp-as-${A.etape === 4 ? 'creer' : 'suite'}="1"${suiteOff || A.occupe ? ' disabled' : ''}>${A.occupe ? 'Création au panel…' : suite}</button></div>`;
+    return `<div class="eqp-voile eqp-as-voile"><div class="eqp-as" role="dialog" aria-modal="true" aria-label="Assistant de la semaine" data-eqp-garde="1">${rail}<div class="eqp-as-main"><button type="button" class="eqp-fo-x eqp-as-x" data-eqp-as-fermer="1" aria-label="Fermer"${A.occupe ? ' disabled' : ''}>×</button>${corps}</div>${pied}</div></div>`;
+  }
+  /** 1 — Partir de quoi ? */
+  function asUne(A, P) {
+    const deja = P.jours.reduce((x, J) => x + (J.services || []).length, 0);
+    const jours = L => { const B = asBilan(P, L); return `<span class="eqp-as-jours">${B.CJ.map((C, i) => `<span>${esc(court(P.jours[i].date))}<b>${fH(C.h)}</b>${C.pct != null && C.h ? marq(P, C.pct) : '<span class="eqp-tiret">—</span>'}</span>`).join('')}</span>`; };
+    const hL = L => fHn(L.reduce((x, p) => x + (p.a - p.de) / 60, 0));
+    const R = A.R, G = A.G, LR = R ? asBase(Object.assign({}, A, { base: 'recopie' })) : [], LG = G ? asBase(Object.assign({}, A, { base: 'matrice' })) : [];
+    const carte = (k, t, k2, d, extra, off) => `<button type="button" class="eqp-as-c${A.base === k ? ' on' : ''}" data-eqp-as-base="${k}"${off ? ' disabled' : ''}><span class="eqp-as-r"></span><span class="t">${t}</span><span class="k">${k2}</span><span class="d">${d}</span>${extra || ''}</button>`;
+    const corps = `<p class="eqp-as-q">Reprendre la semaine passée ?</p><p class="eqp-as-qs">${deja ? `La semaine porte déjà ${deja} service${deja > 1 ? 's' : ''} : ils restent tels quels ; l’assistant ajoute ce qui manque.` : 'La semaine est vide.'} L’assistant part d’une base, puis vous aide à l’ajuster au chiffre prévu. Rien n’est écrit au panel avant la dernière étape.</p>
+      <div class="eqp-as-choix">
+        ${carte('recopie', R ? `Oui, reprendre la semaine du ${dt(R.source.du).getDate()} au ${esc(long(R.source.au).replace(/^\S+ /, '').replace(/ \d{4}$/, ''))}` : 'Oui, reprendre la semaine passée', R ? `${LR.length} service${LR.length > 1 ? 's' : ''} · ${hL(LR)} h · ${new Set(LR.map(p => p.employe)).size} personnes` : '—',
+          R ? `Chacun garde ses jours et ses heures, sept jours plus tard.${R.ecartes.length ? ' ' + R.ecartes.length + ' écarté' + (R.ecartes.length > 1 ? 's' : '') + ' (déjà au planning, chevauche, plus dans l’équipe).' : ''}` : 'Impossible de lire la semaine passée : ' + esc(A.Rerr || '—'), R && LR.length ? jours(LR) : '', !R || !LR.length)}
+        ${carte('matrice', 'Non, partir de la matrice A B C D', G ? `${LG.length} service${LG.length > 1 ? 's' : ''} · ${hL(LG)} h` : '—', G ? `Le shift maker : la semaine ${G.cycle || ''} du roulement, matin ou après-midi selon la lettre de chacun.${(G.sansLettre || []).length ? ' Sans lettre, à placer ensuite : ' + esc(G.sansLettre.map(x => x.nom.split(' ')[0]).join(', ')) + '.' : ''}` : 'La matrice n’est pas lisible : ' + esc(A.Gerr || '—'), '', !G || !LG.length)}
+        ${carte('vide', 'Non, partir d’une semaine vide', '0 service', 'Vous placez chacun vous-même, jour par jour, personne par personne, en tirant sa ligne.', '', false)}
+      </div>`;
+    const ca = asBilan(P, []).ca;
+    return [corps, ca ? `Le CA planifié de la semaine : <b>${fE(ca)}</b> (comptoir + B2B)` : 'Pas de CA planifié pour cette semaine : le budget ne se calculera pas.'];
+  }
+  /** 2 — Qui adapter ? */
+  function asDeux(A, P) {
+    const L = asBase(A), eq = equipeDe(P);
+    const gens = (P.employes || []).filter(e => e.actif !== false || L.some(p => p.employe === e.id));
+    const ligne = e => {
+      const s = A.etats[e.id] || 'c', mes = L.filter(p => p.employe === e.id), h = mes.reduce((x, p) => x + (p.a - p.de) / 60, 0);
+      const deja = P.jours.map(J => (J.services || []).filter(x => x.employe === e.id));
+      const cases = P.jours.map((J, i) => { const p = mes.find(x => x.date === J.date), d0 = deja[i][0]; return p ? `<span class="${p.de < 12 * 60 ? 'm' : 'a'}" title="${hh(p.de)}–${hh(p.a)}">${fHn((p.a - p.de) / 60)} h</span>` : d0 ? `<span class="deja" title="Déjà au planning : ${esc(d0.de)}–${esc(d0.a)}">✓</span>` : '<span>—</span>'; }).join('');
+      return `<div class="eqp-as-p${s === 'a' ? ' abs' : ''}"><span class="eqp-av">${esc(ini(e.nom))}</span><span class="nm"><b>${esc(e.nom)}</b>${lettreChip(e)}<small>${esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste')} · ${mes.length ? fHn(h) + ' h proposées' : 'rien de proposé'}</small></span><div class="eqp-as-sem">${cases}</div>
+        <span class="eqp-as-seg">${[['c', mes.length ? 'Comme proposé' : 'Rien', ''], ['a', 'Absent·e', 'abs'], ['r', 'À revoir', 'rev']].map(([v, l, cl]) => `<button type="button" class="${s === v ? 'on ' + cl : ''}" data-eqp-as-etat="${v}" data-emp="${e.id}">${l}</button>`).join('')}</span></div>`;
+    };
+    const abs = gens.filter(e => A.etats[e.id] === 'a'), rev = gens.filter(e => A.etats[e.id] === 'r'), Lr = asRetenus(A);
+    const corps = `<p class="eqp-as-q">Qui adapter ?</p><p class="eqp-as-qs">La semaine proposée, personne par personne. Un absent (congé, maladie) n’est pas créé ; « à revoir » non plus : sa fenêtre s’ouvre après la création, pour placer ses jours à la main.</p>
+      <div class="eqp-as-pers"><div class="eqp-as-tete"><span></span><span>Personne</span><span class="j">${P.jours.map(J => `<span>${esc(court(J.date))}</span>`).join('')}</span><span>Cette semaine</span></div>${gens.map(ligne).join('')}</div>
+      <p class="eqp-note" style="margin-top:10px">Beige : le matin ; rose : l’après-midi ; ✓ : déjà au planning (gardé tel quel).</p>`;
+    return [corps, [abs.length ? abs.map(e => '<b>' + esc(e.nom.split(' ')[0]) + '</b>').join(', ') + ' absent' + (abs.length > 1 ? 's' : '') : '', rev.length ? rev.map(e => '<b>' + esc(e.nom.split(' ')[0]) + '</b>').join(', ') + ' à revoir' : '', `${Lr.length} service${Lr.length > 1 ? 's' : ''} · ${fHn(Lr.reduce((x, p) => x + (p.a - p.de) / 60, 0))} h à créer`].filter(Boolean).join(' · ')];
+  }
+  /** 3 — Le chiffre : le budget, les heures de trop, les propositions. */
+  function asTrois(A, P) {
+    const L = asRetenus(A), B0 = asBilan(P, L), L1 = asAppliquer(L, A.props, A.coches), B1 = asBilan(P, L1), c = String(P.budget.cible).replace('.', ',');
+    let msg;
+    if (!B0.ca) { msg = `<div class="eqp-as-msg calme"><span class="big">—<small>pas de CA</small></span><p>Pas de CA planifié pour cette semaine : le budget d’heures ne se calcule pas. Vérifiez l’objectif du mois au Résultat.</p></div>`; }
+    else if (B0.trop > 0.25) { msg = `<div class="eqp-as-msg"><span class="big">${fHn(B0.trop)} h<small>de trop</small></span><p>Le chiffre d’affaires planifié est de <b>${fE(B0.ca)}</b> (comptoir + B2B). À ${c} %, le personnel peut coûter <b>${fE(B0.budget)}</b>, soit <b>${fHn(B0.budgetH)} h</b> au coût moyen de l’équipe (${fEh(B0.moy)}). La semaine en compte <b>${fHn(B0.hCa)} h</b> pour ${fE(B0.coutCa)} : ${marq(P, B0.pct)} — il y a <b>${fHn(B0.trop)} h de trop</b>.</p></div>`; }
+    else { msg = `<div class="eqp-as-msg ok"><span class="big">${fHn(-B0.trop)} h<small>encore possibles</small></span><p>Le chiffre d’affaires planifié est de <b>${fE(B0.ca)}</b> (comptoir + B2B). À ${c} %, le personnel peut coûter <b>${fE(B0.budget)}</b>, soit <b>${fHn(B0.budgetH)} h</b> au coût moyen de l’équipe (${fEh(B0.moy)}). La semaine en compte <b>${fHn(B0.hCa)} h</b> : ${marq(P, B0.pct)} — dans la cible.</p></div>`; }
+    const props = A.props || [];
+    const liste = props.length ? props.map((x, i) => `<button type="button" class="eqp-as-prop${A.coches.has(i) ? ' on' : ''}" data-eqp-as-prop="${i}" aria-pressed="${A.coches.has(i)}"><span class="eqp-as-cb"></span><span class="t">${esc(x.t)}</span><span class="g">−${fHn(x.dh)} h<small>−${fE(x.euros)}</small></span><span class="d">${esc(x.d)}</span></button>`).join('')
+      : `<p class="eqp-note">${B0.trop > 0.25 ? 'Aucune proposition sûre : chaque service restant est seul à tenir sa section sur ses heures. Ajustez à la main après la création, dans la fenêtre d’un service.' : 'Rien à retirer.'}</p>`;
+    const nC = props.filter((_, i) => A.coches.has(i)), dh = nC.reduce((x, p) => x + p.dh, 0), de = nC.reduce((x, p) => x + p.euros, 0);
+    const bilan = props.length ? `<div class="eqp-as-bilan">Avec ${nC.length} proposition${nC.length > 1 ? 's' : ''} cochée${nC.length > 1 ? 's' : ''} : <b>−${fHn(dh)} h</b> · <b>−${fE(de)}</b> → ${B1.pct != null ? marq(P, B1.pct) : '—'} · ${B1.trop > 0.25 ? 'il reste <b>' + fHn(B1.trop) + ' h</b> de trop' : '<b>dans la cible</b>'}</div>` : '';
+    const max = Math.max(1, ...B0.CJ.map(C => C.h), ...B1.CJ.map(C => C.objectif && B1.moy ? P.budget.cible / 100 * C.objectif / B1.moy : 0)) * 1.05, w = v => (v / max * 100).toFixed(1) + '%';
+    const jours = B1.CJ.map((C, i) => { const bh = C.objectif && B1.moy ? P.budget.cible / 100 * C.objectif / B1.moy : null, ec = bh != null ? C.h - bh : null;
+      return `<div class="eqp-as-jl"><span>${esc(court(P.jours[i].date))}</span><span class="barre"><i style="width:${w(C.h)}"></i>${bh != null ? `<em style="left:${w(bh)}" title="budget ${fHn(bh)} h"></em>` : ''}</span><span class="v${ec != null && ec > 1 ? ' trop' : ' bon'}">${ec != null ? (ec > 0 ? '+' : '−') + fHn(Math.abs(ec)) + ' h' : '—'}<small>${fHn(C.h)}${bh != null ? ' / ' + fHn(bh) : ''} h</small></span></div>`; }).join('');
+    const corps = `${msg}<div class="eqp-as-cols"><div><p class="eqp-as-h">Où les retirer · des propositions, à cocher</p>${liste}${bilan}</div>
+      <div><p class="eqp-as-h">Jour par jour · heures et budget à ${c} %</p><div class="eqp-as-jt">${jours}</div><p class="eqp-note" style="margin-top:8px">La barre : les heures avec les propositions cochées ; le trait vert : le budget du jour. Les propositions ne touchent que ce que l’assistant crée, jamais ce qui est déjà au planning.</p></div></div>`;
+    return [corps, `${fHn(B0.hCa || B0.h)} h → <b>${fHn(B1.hCa || B1.h)} h</b>${B0.pct != null ? ` · ${fP(B0.pct)} → <b>${fP(B1.pct)}</b>` : ''}`];
+  }
+  /** 4 — Vérifier et créer. */
+  function asQuatre(A, P) {
+    const L = asAppliquer(asRetenus(A), A.props, A.coches), B = asBilan(P, L), eq = equipeDe(P);
+    const longs = L.filter(p => horsDuree(P, p.de, p.a));
+    const abs = Object.keys(A.etats).filter(k => A.etats[k] === 'a').map(k => (eq.get(+k) || {}).nom).filter(Boolean), rev = Object.keys(A.etats).filter(k => A.etats[k] === 'r').map(k => (eq.get(+k) || {}).nom).filter(Boolean);
+    const lignes = B.CJ.map((C, i) => { const cpt = C.lin.find(l => l.comptoir), vides = C.lin.filter(l => !l.comptoir && l.vide && C.sv.length);
+      return `<tr><td>${esc(court(P.jours[i].date))}</td><td class="num">${C.presents}</td><td class="num">${fH(C.h)}</td><td>${C.pct != null && C.h ? marq(P, C.pct) : '—'}</td><td>${cpt && cpt.trous.length ? cpt.trous.map(([a, b]) => `<span class="tag-warn">${hc(a)}–${hc(b)}</span>`).join(' ') : (C.sv.length ? '<span class="eqp-as-ok">✓</span>' : '—')}</td><td>${vides.length ? vides.map(l => `<span class="tag-warn">${esc(l.nom)}</span>`).join(' ') : (C.sv.length ? '<span class="eqp-as-ok">✓</span>' : '—')}</td></tr>`; }).join('');
+    const R = A.res;
+    const corps = `<p class="eqp-as-q">Vérifier et créer</p><p class="eqp-as-qs">La semaine telle qu’elle sera au panel : ce qui y est déjà, et les ${L.length} service${L.length > 1 ? 's' : ''} que l’assistant va créer.</p>
+      <div class="eqp-as-verif"><div class="eqp-as-kpi"><span>Budget de la semaine</span><b>${B.pct != null ? marq(P, B.pct) : '—'}</b><em>${fE(B.coutCa)} pour ${fE(B.ca)} de CA</em></div><div class="eqp-as-kpi"><span>Heures</span><b>${fH(B.h)}</b><em>${B.trop != null ? (B.trop > 0.25 ? fHn(B.trop) + ' h au-dessus du budget' : 'dans le budget') : '—'}</em></div>
+        <div class="eqp-as-kpi"><span>Durées</span><b>${longs.length ? longs.length + ' hors de ' + fHn(DUREES(P).min) + '–' + fHn(DUREES(P).max) + ' h' : '<span class="eqp-as-ok">✓</span> toutes'}</b><em>${longs.length ? esc(longs.slice(0, 3).map(p => ((eq.get(p.employe) || {}).nom || '').split(' ')[0] + ' ' + court(p.date)).join(', ')) : 'entre ' + fHn(DUREES(P).min) + ' et ' + fHn(DUREES(P).max) + ' h'}</em></div></div>
+      <table class="eqp-as-tab"><thead><tr><th>Jour</th><th class="num">Pers.</th><th class="num">Heures</th><th>Budget</th><th>Comptoir</th><th>Secteurs</th></tr></thead><tbody>${lignes}</tbody></table>
+      ${abs.length || rev.length ? `<p class="eqp-note" style="margin-top:10px">${abs.length ? 'Absents, rien n’est créé : ' + esc(abs.join(', ')) + '. ' : ''}${rev.length ? 'À revoir : la fenêtre de ' + esc(rev[0].split(' ')[0]) + ' s’ouvre après la création, pour placer ses jours à la main' + (rev.length > 1 ? ', puis les autres (' + esc(rev.slice(1).map(x => x.split(' ')[0]).join(', ')) + ')' : '') + '.' : ''}</p>` : ''}
+      ${R && R.echecs && R.echecs.length ? `<div class="eqp-err">${R.crees} créé${R.crees > 1 ? 's' : ''} ; refusés par le panel : ${esc(R.echecs.map(x => x.nom.split(' ')[0] + ' ' + x.date.slice(5) + ' ' + x.de + '–' + x.a + ' (' + x.motif + ')').join(' ; '))}${R.arret ? ' — ' + esc(R.arret) : ''}</div>` : ''}`;
+    return [corps, `<b>${L.length}</b> service${L.length > 1 ? 's' : ''} à créer · ${fHn(L.reduce((x, p) => x + (p.a - p.de) / 60, 0))} h`, L.length ? `Créer ${L.length} service${L.length > 1 ? 's' : ''} au panel` : (rev.length ? 'Placer ' + rev[0].split(' ')[0] + ' ›' : 'Rien à créer'), !L.length && !rev.length];
+  }
+  /** Passer d'une étape à l'autre ; en entrant au chiffre, les propositions se recalculent si la base ou les états ont changé. */
+  function asAller(n) {
+    const A = st.as; if (!A || A.occupe) { return; }
+    const P = st.PS && st.PS.du === A.du ? st.PS : null; if (!P) { return; }
+    if (n >= 3) { const sig = A.base + '|' + JSON.stringify(A.etats); if (sig !== A.sig || !A.props) { A.props = asPropositions(P, asRetenus(A)); A.coches = new Set(A.props.map((_, i) => i)); A.sig = sig; } }
+    A.etape = n; A.max = Math.max(A.max, n); A.err = null; rendre();
+  }
+  function asCreer() {
+    const A = st.as; if (!A || A.occupe) { return; }
+    const P = st.PS && st.PS.du === A.du ? st.PS : null; if (!P) { return; }
+    const L = asAppliquer(asRetenus(A), A.props, A.coches).sort((x, y) => x.date.localeCompare(y.date) || x.de - y.de);
+    const rev = Object.keys(A.etats).filter(k => A.etats[k] === 'r').map(Number);
+    const ouvrirRev = () => { if (rev.length) { const J = P.jours.find(x => x.objectif) || P.jours[0]; st.edSection = null; st.ouvrir = { mode: 'modal', employe: rev[0], date: J.date, suivre: true }; } };
+    if (!L.length) { st.as = null; ouvrirRev(); rouvrirSi(); rendre(); return; }
+    A.occupe = true; A.err = null; rendre();
+    envoyer('POST', '/dashboard/equipe/semaine/creer', { du: A.du, services: L.map(p => ({ employe: p.employe, date: p.date, de: hh(p.de), a: hh(p.a) })) })
+      .then(r => {
+        if (r.echecs && r.echecs.length) { A.occupe = false; A.res = r; st.PS = null; lirePlanning('semaine'); return; }
+        st.as = null; st.PS = null; st.PJ = null; st.PM = null; ouvrirRev(); lirePlanning('semaine');
+        flash('ok', r.crees + ' service' + (r.crees > 1 ? 's' : '') + ' créé' + (r.crees > 1 ? 's' : '') + ' au panel par l’assistant.' + (rev.length ? ' Placez maintenant ' + ((equipeDe(P).get(rev[0]) || {}).nom || '').split(' ')[0] + '.' : ''));
+      })
+      .catch(e => { A.occupe = false; A.err = 'Rien n’est créé : ' + e.message + (e.j && e.j.detail ? ' (' + e.j.detail + ')' : '') + '.'; rendre(); });
+  }
+
   /* ── Préparer la semaine : recopier la semaine précédente, ou le shift maker (test, la matrice A B C D) ──────────
    * (23/11/2026 : « le plus important est que ça aide le franchisé à faire ses horaires »). Les deux passent par le
    * même aperçu : ce qui sera créé, jour par jour, à cocher ; ce qui est écarté et pourquoi ; le budget de la semaine
@@ -890,6 +1096,15 @@
     on('[data-eqp-ajout-ok]', 'click', () => { const ed = st.edit; if (!ed.ajout) { return; } const n = ((equipeDe(ctxEdition(ed)[0]).get(ed.ajout) || {}).nom || '').split(' ')[0];
       ecrireShift('POST', { employe: ed.ajout, date: ed.date, de: hh(ed.de), a: hh(ed.a) }, n + ' est ajouté(e) au shift ' + hh(ed.de) + '–' + hh(ed.a) + '.', true); });
     on('[data-eqp-ok]', 'click', () => enregistrerService(false));
+    on('[data-eqp-assistant]', 'click', e => { const d = e.currentTarget.closest('details'); if (d) { d.open = false; } ouvrirAssistant(); });
+    on('[data-eqp-as-fermer]', 'click', () => { if (st.as && st.as.occupe) { return; } if (st.as && st.as.etape > 1 && !window.confirm('Fermer l’assistant ? Ce qui est préparé est perdu ; rien n’a été écrit au panel.')) { return; } st.as = null; rendre(); });
+    on('[data-eqp-as-base]', 'click', e => { st.as.base = e.currentTarget.dataset.eqpAsBase; st.as.max = 1; rendre(); });
+    on('[data-eqp-as-etat]', 'click', e => { const b = e.currentTarget; st.as.etats[+b.dataset.emp] = b.dataset.eqpAsEtat; st.as.max = 2; rendre(); });
+    on('[data-eqp-as-prop]', 'click', e => { const i = +e.currentTarget.dataset.eqpAsProp, C = st.as.coches; if (C.has(i)) { C.delete(i); } else { C.add(i); } rendre(); });
+    on('[data-eqp-as-suite]', 'click', () => asAller(st.as.etape + 1));
+    on('[data-eqp-as-retour]', 'click', () => asAller(st.as.etape - 1));
+    on('[data-eqp-as-etape]', 'click', e => asAller(+e.currentTarget.dataset.eqpAsEtape));
+    on('[data-eqp-as-creer]', 'click', asCreer);
     on('[data-eqp-ok-suivant]', 'click', e => enregistrerService(false, +e.currentTarget.dataset.eqpOkSuivant));
     on('[data-eqp-fo-aller]', 'click', e => allerPersonne(+e.currentTarget.dataset.eqpFoAller));
     on('[data-eqp-fo-section]', 'click', e => {

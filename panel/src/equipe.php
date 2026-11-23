@@ -38,6 +38,9 @@ declare(strict_types=1);
  *
  * Les écritures partent avec le compte du cockpit (PanelApi) : si le panel refuse (403), la réponse le dit telle quelle.
  * La route des employés rend aussi des secrets (hachages, jetons) : rien n'en sort que les champs listés ici.
+ * - L'ASSISTANT DE LA SEMAINE (23/11/2026, « en faire un assistant pour les horaires de la semaine ») : l'écran prépare la
+ *   semaine (la semaine passée ou la matrice, qui adapter, les heures de trop et des propositions) ; POST
+ *   /dashboard/equipe/semaine/creer {shop, du, services: [{employe, date, de, a}]} crée ce qu'il a préparé, vérifié ici.
  */
 
 const EQP_POSTES_MAX = 300;          // le plafond du panel pour une liste de postes
@@ -63,6 +66,7 @@ function eqpRoute(string $method, string $path): ?array
         if ($method === 'GET') { return ep_equipe_recopie(); }
         if ($method === 'POST') { return wr_equipe_recopie(); }
     }
+    if ($method === 'POST' && $path === '/dashboard/equipe/semaine/creer') { return wr_equipe_semaine_creer(); }
     if ($path === '/dashboard/equipe/service') {
         if ($method === 'POST') { return wr_equipe_service_creer(); }
         if ($method === 'PATCH') { return wr_equipe_service_modifier(); }
@@ -578,6 +582,8 @@ function eqpPdfCss(): string
         . '.pl .nm{font-size:10px}.pl .po{display:block;font-size:8px;color:#7a736a}'
         . '.pl .sv{display:block;white-space:nowrap}.pl .vide{color:#B8B2A8}'
         . '.pl tr.tot td{background:#F8F4EE;font-size:8.5px;color:#5c5852}'
+        . '.pl tr.sec td{padding:9px 5px 4px;border-bottom:1.5px solid #8D1D2C;font-size:10.5px;font-weight:600;color:#1c1a17;letter-spacing:.02em}'
+        . '.pl tr.sec td span{font-weight:400;font-size:8.5px;color:#7a736a}'
         . '.pl-t{margin:0 0 8px;font-size:12px}.pl-t span{color:#7a736a;font-size:9.5px}'
         . '.pl-page{page-break-after:always}.pl-page:last-child{page-break-after:auto}';
 }
@@ -606,36 +612,51 @@ function eqpPlanningPdfHtml(array $P, string $presentation, string $magasin): st
         $parEmp = [];
         foreach ($sem as $J) { foreach ((array) $J['services'] as $s) { $parEmp[(int) $s['employe']][$J['date']][] = $s; } }
         $gens = array_values(array_filter((array) ($P['employes'] ?? []), static fn ($p) => !empty($p['actif']) || isset($parEmp[(int) $p['id']])));
-        $lots = $presentation === 'departements' ? [] : ['' => $gens];
-        if ($presentation === 'departements') { foreach ($gens as $p) { $lots[$groupe($p)][] = $p; } ksort($lots, SORT_NATURAL | SORT_FLAG_CASE); }
+        // Les sections (23/11/2026, Sam : « impression planning générale, groupé par section ») : les secteurs dans leur
+        // ordre, puis le comptoir, les autres postes, « Sans poste » à la fin — l'ordre de l'écran.
+        $sections = [];
+        foreach ($gens as $p) { $sections[$groupe($p)][] = $p; }
+        $ordreS = array_values($secteurs);
+        uksort($sections, static function ($x, $y) use ($ordreS): int {
+            $r = static fn ($g) => $g === 'Sans poste' ? [3, 0, ''] : (($i = array_search($g, $ordreS, true)) !== false ? [0, $i, ''] : ($g === 'Comptoir' ? [1, 0, ''] : [2, 0, (string) $g]));
+            return $r((string) $x) <=> $r((string) $y) ?: strnatcasecmp((string) $x, (string) $y);
+        });
+        // « departements » : une page par section ; sinon toute l'équipe sur la page, une ligne de titre par section.
+        $lots = $presentation === 'departements' ? array_map(static fn ($L) => [$L], $sections) : ['' => $sections];
         $d0 = $dates[0]; $d1 = end($dates);
         $titreSem = 'Semaine du ' . (int) substr($d0, 8, 2) . (substr($d0, 5, 2) !== substr($d1, 5, 2) ? ' ' . $mois[(int) substr($d0, 5, 2)] : '') . ' au ' . (int) substr($d1, 8, 2) . ' ' . $mois[(int) substr($d1, 5, 2)] . ' ' . substr($d1, 0, 4);
-        foreach ($lots as $dep => $L) {
+        $fh = static fn (float $h) => str_replace('.', ',', (string) round($h, 1)) . ' h';
+        foreach ($lots as $dep => $groupes) {
             $th = '<tr><th class="n">Employé</th>';
             foreach ($dates as $d) { $th .= '<th>' . $jn[(int) date('N', strtotime($d)) - 1] . ' ' . (int) substr($d, 8, 2) . '</th>'; }
             $th .= '<th class="h">Heures</th></tr>';
-            $rows = ''; $parJour = array_fill_keys($dates, [0, 0.0]); $tot = 0.0;
-            foreach ($L as $p) {
-                $id = (int) $p['id']; $h = 0.0;
-                $rows .= '<tr><td class="n"><span class="nm">' . $e($p['nom']) . '</span><span class="po">' . $e(implode(', ', array_map(static fn ($w) => (string) $w['nom'], (array) ($p['postes'] ?? []))) ?: 'aucun poste') . '</span></td>';
-                foreach ($dates as $d) {
-                    $sv = $parEmp[$id][$d] ?? [];
-                    $c = '';
-                    foreach ($sv as $s) {
-                        $m = (eqpMinutes($s['a']) - eqpMinutes($s['de'])) / 60; $h += $m;
-                        $parJour[$d][0]++; $parJour[$d][1] += $m;
-                        $c .= '<span class="sv">' . $e($s['de']) . '–' . $e($s['a']) . '</span>';
+            $rows = ''; $parJour = array_fill_keys($dates, [0, 0.0]); $tot = 0.0; $n = 0;
+            foreach ($groupes as $nomSec => $L) {
+                $rs = ''; $hs = 0.0;
+                foreach ($L as $p) {
+                    $id = (int) $p['id']; $h = 0.0; $n++;
+                    $rs .= '<tr><td class="n"><span class="nm">' . $e($p['nom']) . '</span><span class="po">' . $e(implode(', ', array_map(static fn ($w) => (string) $w['nom'], (array) ($p['postes'] ?? []))) ?: 'aucun poste') . '</span></td>';
+                    foreach ($dates as $d) {
+                        $c = '';
+                        foreach ($parEmp[$id][$d] ?? [] as $s) {
+                            $m = (eqpMinutes($s['a']) - eqpMinutes($s['de'])) / 60; $h += $m;
+                            $parJour[$d][0]++; $parJour[$d][1] += $m;
+                            $c .= '<span class="sv">' . $e($s['de']) . '–' . $e($s['a']) . '</span>';
+                        }
+                        $rs .= '<td>' . ($c !== '' ? $c : '<span class="vide">—</span>') . '</td>';
                     }
-                    $rows .= '<td>' . ($c !== '' ? $c : '<span class="vide">—</span>') . '</td>';
+                    $hs += $h;
+                    $rs .= '<td class="h">' . ($h > 0 ? $fh($h) : '—') . '</td></tr>';
                 }
-                $tot += $h;
-                $rows .= '<td class="h">' . ($h > 0 ? str_replace('.', ',', (string) round($h, 1)) . ' h' : '—') . '</td></tr>';
+                $tot += $hs;
+                $rows .= ($dep === '' ? '<tr class="sec"><td colspan="' . (count($dates) + 2) . '">' . $e($nomSec) . ' <span>· ' . count($L) . ' personne' . (count($L) > 1 ? 's' : '') . ' · ' . $fh($hs) . '</span></td></tr>' : '') . $rs;
             }
             $rows .= '<tr class="tot"><td class="n">Par jour</td>';
-            foreach ($dates as $d) { $rows .= '<td>' . $parJour[$d][0] . ' serv. · ' . str_replace('.', ',', (string) round($parJour[$d][1], 1)) . ' h</td>'; }
-            $rows .= '<td class="h">' . str_replace('.', ',', (string) round($tot, 1)) . ' h</td></tr>';
+            foreach ($dates as $d) { $rows .= '<td>' . $parJour[$d][0] . ' serv. · ' . $fh($parJour[$d][1]) . '</td>'; }
+            $rows .= '<td class="h">' . $fh($tot) . '</td></tr>';
+            $L = array_merge(...array_values($groupes));
             $entete = function_exists('docEntete') ? docEntete('Planning de l’équipe', $magasin . ' · ' . $titreSem) : '<h2>Planning de l’équipe · ' . $e($magasin . ' · ' . $titreSem) . '</h2>';
-            $pages[] = '<div class="pl-page">' . $entete . ($dep !== '' ? '<p class="pl-t">' . $e($dep) . ' <span>· ' . count($L) . ' personne' . (count($L) > 1 ? 's' : '') . '</span></p>' : '')
+            $pages[] = '<div class="pl-page">' . $entete . ($dep !== '' ? '<p class="pl-t">' . $e((string) $dep) . ' <span>· ' . count($L) . ' personne' . (count($L) > 1 ? 's' : '') . '</span></p>' : '')
                 . '<table class="pl">' . $th . $rows . '</table></div>';
         }
     }
@@ -830,6 +851,57 @@ function wr_equipe_recopie(): array
     $a = array_values(array_filter($c['propositions'], static fn ($p) => isset($voulus[$p['source']])));
     if ($a === []) { return eqpErreur(422, 'aucun des services cochés n’est encore à recopier : relisez l’aperçu'); }
     return eqpCreerServices($shop, $a, static fn (int $n) => 'Semaine du ' . $c['du'] . ' : ' . $n . ' service' . ($n > 1 ? 's' : '') . ' recopié' . ($n > 1 ? 's' : '') . ' de la semaine du ' . $c['source']['du'], $c['du']);
+}
+
+/**
+ * POST /dashboard/equipe/semaine/creer {shop, du, services: [{employe, date, de, a}…]} — l'assistant de la semaine
+ * (23/11/2026, Sam : « en faire un assistant pour les horaires de la semaine ») crée au panel ce qu'il a préparé : la
+ * semaine reprise, tirée de la matrice, puis ajustée au budget. Rien n'est cru sur parole : la personne est du magasin
+ * et active, le jour est dans la semaine, les heures sont des HH:MM, la fin vient après le début (16 h au plus), et le
+ * service ne chevauche ni ce qui est déjà au planning de la personne ce jour-là, ni un autre service de la liste.
+ * Le planning des sept jours est relu d'abord : sans lui, rien n'est créé.
+ */
+function wr_equipe_semaine_creer(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    $du = is_string($b['du'] ?? null) ? $b['du'] : '';
+    $L = $b['services'] ?? null;
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || strtotime($du) === false) { return eqpErreur(422, 'du : AAAA-MM-JJ'); }
+    $ecart = (strtotime($du) - strtotime(date('Y-m-d'))) / 86400;
+    if ($ecart < -31 || $ecart > 120) { return eqpErreur(422, 'semaine : d’un mois avant à quatre mois après aujourd’hui'); }
+    if (!is_array($L) || !array_is_list($L) || $L === [] || count($L) > EQP_RECOPIE_MAX) { return eqpErreur(422, 'services : la liste des services à créer'); }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return eqpErreur(503, 'compte du panel non configuré'); }
+    $jours = array_map(static fn ($i) => date('Y-m-d', strtotime($du . ' +' . $i . ' days')), range(0, 6));
+    $chemins = ['emp' => '/shops/' . $shop . '/employees'];
+    foreach ($jours as $d) { $chemins['sch' . $d] = '/shops/' . $shop . '/schedule?date=' . $d; }
+    $res = eqpGetParallele($chemins, 6);
+    if (!is_array($res['emp'] ?? null)) { return eqpErreur(502, 'le panel n’a pas rendu les employés : rien n’est créé'); }
+    $C = [];
+    foreach ($jours as $d) {
+        if (!is_array($res['sch' . $d] ?? null)) { return eqpErreur(502, 'le panel n’a pas rendu le planning du ' . $d . ' : rien n’est créé'); }
+        $C[$d] = eqpServices($res['sch' . $d], $shop, $d);
+    }
+    $equipe = [];
+    foreach (analyseListe($res['emp']) as $r) { if (is_array($r)) { $e = eqpPersonne($r); if ($e['shop'] === $shop || $e['shop'] === 0) { $equipe[$e['id']] = $e; } } }
+    $hh = '/^([01]\d|2[0-3]):[0-5]\d$/';
+    $a = [];
+    foreach ($L as $i => $x) {
+        $n = 'service ' . ($i + 1);
+        if (!is_array($x)) { return eqpErreur(422, $n . ' : {employe, date, de, a}'); }
+        $emp = $x['employe'] ?? null; $d = $x['date'] ?? null; $de = $x['de'] ?? null; $fin = $x['a'] ?? null;
+        if (!is_int($emp) || !isset($equipe[$emp]) || empty($equipe[$emp]['actif'])) { return eqpErreur(422, $n . ' : la personne n’est pas de l’équipe active du magasin'); }
+        if (!is_string($d) || !in_array($d, $jours, true)) { return eqpErreur(422, $n . ' : le jour n’est pas dans la semaine du ' . $du); }
+        if (!is_string($de) || !is_string($fin) || !preg_match($hh, $de) || !preg_match($hh, $fin)) { return eqpErreur(422, $n . ' : des heures HH:MM'); }
+        $m0 = eqpMinutes($de); $m1 = eqpMinutes($fin);
+        if ($m1 <= $m0 || $m1 - $m0 > 16 * 60) { return eqpErreur(422, $n . ' : la fin vient après le début, 16 h au plus'); }
+        $ch = eqpChevauche($C[$d], $emp, $m0, $m1);
+        if ($ch !== null) { return eqpErreur(409, $n . ' : ' . $equipe[$emp]['nom'] . ' est déjà au planning le ' . $d . ' de ' . $ch['de'] . ' à ' . $ch['a'], ['motif' => 'chevauche']); }
+        $C[$d][] = ['id' => 0, 'employe' => $emp, 'de' => $de, 'a' => $fin, 'nom' => $equipe[$emp]['nom']];
+        $a[] = ['employe' => $emp, 'date' => $d, 'de' => $de, 'a' => $fin, 'nom' => $equipe[$emp]['nom']];
+    }
+    return eqpCreerServices($shop, $a, static fn (int $k) => 'Semaine du ' . $du . ' : ' . $k . ' service' . ($k > 1 ? 's' : '') . ' créé' . ($k > 1 ? 's' : '') . ' par l’assistant de la semaine', $du);
 }
 
 /**

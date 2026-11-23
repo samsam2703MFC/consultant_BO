@@ -114,7 +114,7 @@ la cible du réseau, 20 % et 22 %, réglables dans le réglage `personnelPaliers
 | `ecran-11-clic-sur-une-case-vide.png` | un clic sur une case vide : un nouveau service, au créneau de sa lettre (ou le matin), avec l'effet sur le budget |
 | `ecran-12-tracer-une-ligne.png` | au jour, tirer une ligne à la souris sur la ligne d'une personne au repos : la trace dit ses heures pendant le geste |
 | `ecran-13-ligne-tracee.png` | la ligne lâchée : la fenêtre du nouveau service (14:00–18:00) et son effet sur le budget du jour, avant « Ajouter le service » |
-| `ecran-14-planning-imprime.png` | le planning imprimé, fait par le cockpit (le panel ne sert pas de PDF du planning) : une page A4 paysage par semaine, les heures de chacun, le total par jour |
+| `ecran-14-planning-imprime.png` | le planning imprimé, fait par le cockpit (le panel ne sert pas de PDF du planning) : une page A4 paysage par semaine, toute l'équipe groupée par section (« impression planning générale, groupé par section », 23/11/2026 : une ligne de titre par section, ses personnes et ses heures), les heures de chacun, le total par jour |
 | `ecran-15-fenetre-ligne-verte.png` | la fenêtre d'un service construite (la 2 bis, 23/11/2026) : la ligne tirée de 09:00 à 15:00, verte (6 h) |
 | `ecran-16-fenetre-ligne-rouge.png` | la même, le bord tiré jusqu'à 18:00 : rouge, « 9 h · plus de 8 h », marqué aussi en bas ; l'ajout reste possible |
 | `ecran-17-parcourir-le-jour.png` | parcourir le jour dans la fenêtre : les sections (Comptoir 1/2…), chacun avec ses heures, « Ajouter et suivant : Laura › » |
@@ -168,3 +168,30 @@ node formulaire/capturer.cjs <données> <sortie>`.
 | `formulaire/form-2b-ligne-ok.png` | 07:00–13:30, 6,5 h : verte ; le trou du comptoir comblé, mercredi 28,4 %, +103 € |
 | `formulaire/form-2b-ligne-long.png` | 06:00–15:30, 9,5 h : rouge, « plus de 8 h » (et commence 1 h avant l'ouverture) |
 | `formulaire/form-2b-ligne-court.png` | 07:00–10:00, 3 h : rouge, « moins de 4 h » |
+
+## L'assistant de la semaine (maquette, 23/11/2026)
+
+Sam : « en faire un assistant pour les horaires de la semaine (reprendre semaine passée oui ou non), qui adapter ?, le
+chiffre d'affaires planifié est de … euros, tu as xxx heures de trop ». Dossier `assistant/` (`assistant.js`,
+`assistant.css`, `capturer.cjs`), posé sur le vrai écran ; données illustratives : la semaine du 23 novembre reprise
+pour celle du 30, 24 663 € de CA planifié. Quatre étapes : partir de quoi, qui adapter, le chiffre, vérifier et créer.
+
+| Capture | L'étape |
+|---|---|
+| `assistant/assistant-1-reprendre-la-semaine.png` | reprendre la semaine passée ? oui (41 services, 301,5 h, le budget de chaque jour), non : la matrice A B C D, non : une semaine vide |
+| `assistant/assistant-2-qui-adapter.png` | chacun avec sa semaine reprise : comme la semaine passée, absent·e (pas recopié), à revoir (à placer à la main) |
+| `assistant/assistant-3-le-chiffre.png` | « Le chiffre d'affaires planifié est de 24 663 € … il y a 45 h de trop » ; des propositions chiffrées à cocher (heures, euros), le jour par jour face au budget à 17 %, le bilan |
+
+**Construit le 23/11/2026** (« go construit l'assistant et mets en ligne ») : « Préparer la semaine › Assistant de la
+semaine », et le bouton de la semaine vide. Les propositions sont calculées : sur le jour le plus au-dessus de la cible,
+le service que l'assistant crée qui rend le plus d'euros sans découvrir sa section (quelqu'un de la même section sur les
+heures retirées ; au comptoir, pendant l'ouverture), jamais sous la durée minimale ; chacune avec les précédentes
+appliquées, si bien qu'en décocher une ne découvre rien. Elles ne touchent jamais ce qui est déjà au planning.
+
+| Capture | L'étape (l'écran construit, données illustratives) |
+|---|---|
+| `ecran-18-assistant-1-partir-de-quoi.png` | reprendre la semaine passée (42 services, 301,5 h), la matrice, ou rien |
+| `ecran-19-assistant-2-qui-adapter.png` | Jonas absent, Chloé à revoir : 34 services, 246,5 h à créer |
+| `ecran-20-assistant-3-le-chiffre.png` | « 17,5 h de trop » (18,3 %) ; cinq propositions qui gardent chaque section tenue ; cochées : 16,8 % |
+| `ecran-21-assistant-4-verifier.png` | le budget, les heures, les durées, jour par jour le comptoir et les secteurs ; « Créer 34 services au panel » ; la fenêtre de Chloé s'ouvre ensuite |
+

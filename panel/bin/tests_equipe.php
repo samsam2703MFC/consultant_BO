@@ -422,6 +422,8 @@ verifie('la ligne par jour : 3 services, 16 h le lundi', str_contains($h, '3 ser
 verifie('un inactif sans service n’est pas imprimé', !str_contains($h, 'Ancien'));
 verifie('les noms sont échappés', str_contains($h, 'Caissière &lt;b&gt;') && !str_contains($h, 'Caissière <b>'));
 verifie('le titre de la semaine', str_contains($h, 'Semaine du 23 au 29 novembre 2026') && str_contains($h, 'Semaine du 30 novembre au 6 décembre 2026'), $h);
+verifie('tout le magasin, groupé par section : Boulangerie puis Comptoir, un titre par section', substr_count($h, 'class="sec"') === 4 && strpos($h, 'Boulangerie') < strpos($h, 'Anna Lambert') && strpos($h, 'Anna Lambert') < strpos($h, '>Comptoir') && strpos($h, '>Comptoir') < strpos($h, 'Caissière'), $h);
+verifie('le titre d’une section dit ses personnes et ses heures', str_contains($h, 'Boulangerie <span>· 1 personne · 8 h</span>') && str_contains($h, 'Comptoir <span>· 1 personne · 8 h</span>'));
 $hd = eqpPlanningPdfHtml($Ppdf, 'departements', 'Sombreffe');
 verifie('par département : une page par secteur ou poste et par semaine (Boulangerie, Comptoir)', substr_count($hd, 'class="pl-page"') === 4 && str_contains($hd, 'Boulangerie') && str_contains($hd, 'Comptoir'), (string) substr_count($hd, 'class="pl-page"'));
 
@@ -445,6 +447,37 @@ verifie('aujourd’hui : la projection de fin de journée du Résultat du jour',
 $REGLAGES['exJour:' . $auj]['le'] = time() - 7200;
 verifie('une projection de plus d’une heure ne sert plus', eqpCaDuJour(1, $auj, $auj, 2247.0, 1510.68) === [2247.0, 'encours']);
 unset($REGLAGES['exJour:' . $auj]);
+
+echo "L'assistant de la semaine : créer ce qu'il a préparé\n";
+$lunA = date('Y-m-d', strtotime('monday next week')); $marA = date('Y-m-d', strtotime($lunA . ' +1 day'));
+PanelApi::$reponses = ['/shops/1/employees' => $employes];
+for ($i = 0; $i < 7; $i++) { PanelApi::$reponses['/shops/1/schedule?date=' . date('Y-m-d', strtotime($lunA . ' +' . $i . ' days'))] = []; }
+PanelApi::$reponses['/shops/1/schedule?date=' . $marA] = [['id_schedule' => 801, 'id_employee' => 13, 'work_date' => $marA, 'start_hour' => '07:00:00', 'end_hour' => '11:00:00', 'id_shop' => 1]];
+PanelApi::$ecrits = []; PanelApi::$code = 201;
+$CORPS = ['shop' => 1, 'du' => $lunA, 'services' => [['employe' => 10, 'date' => $lunA, 'de' => '04:00', 'a' => '12:00'], ['employe' => 13, 'date' => $marA, 'de' => '12:30', 'a' => '18:30']]];
+$r = wr_equipe_semaine_creer();
+verifie('les services préparés sont créés tels quels', ($r['crees'] ?? 0) === 2 && PanelApi::$ecrits === [['POST', '/schedule', ['id_employee' => 10, 'work_date' => $lunA, 'start_hour' => '04:00:00', 'end_hour' => '12:00:00']], ['POST', '/schedule', ['id_employee' => 13, 'work_date' => $marA, 'start_hour' => '12:30:00', 'end_hour' => '18:30:00']]], json_encode([$r, PanelApi::$ecrits]));
+$refus = static function (array $services) use ($lunA): array { global $CORPS; PanelApi::$ecrits = []; $CORPS = ['shop' => 1, 'du' => $lunA, 'services' => $services]; $r = wr_equipe_semaine_creer(); return [isset($r['error']) && PanelApi::$ecrits === [], $r]; };
+[$x, $r] = $refus([['employe' => 13, 'date' => $marA, 'de' => '10:00', 'a' => '14:00']]);
+verifie('chevauche ce qui est déjà au planning : rien n’est créé', $x && str_contains($r['error'], 'déjà au planning'), json_encode($r));
+[$x] = $refus([['employe' => 10, 'date' => $lunA, 'de' => '04:00', 'a' => '12:00'], ['employe' => 10, 'date' => $lunA, 'de' => '11:00', 'a' => '15:00']]);
+verifie('deux services de la liste qui se chevauchent : rien n’est créé', $x);
+[$x] = $refus([['employe' => 12, 'date' => $lunA, 'de' => '08:00', 'a' => '12:00']]);
+verifie('une personne d’un autre magasin : refusée', $x);
+[$x] = $refus([['employe' => 11, 'date' => $lunA, 'de' => '08:00', 'a' => '12:00']]);
+verifie('une personne désactivée : refusée', $x);
+[$x] = $refus([['employe' => 10, 'date' => date('Y-m-d', strtotime($lunA . ' +7 days')), 'de' => '08:00', 'a' => '12:00']]);
+verifie('un jour hors de la semaine : refusé', $x);
+[$x] = $refus([['employe' => 10, 'date' => $lunA, 'de' => '12:00', 'a' => '08:00']]);
+verifie('la fin avant le début : refusée', $x);
+[$x] = $refus([['employe' => 10, 'date' => $lunA, 'de' => '8:00', 'a' => '12:00']]);
+verifie('une heure mal écrite : refusée', $x);
+[$x] = $refus([['employe' => '10', 'date' => $lunA, 'de' => '08:00', 'a' => '12:00']]);
+verifie('un numéro en texte : refusé', $x);
+PanelApi::$reponses['/shops/1/schedule?date=' . $lunA] = null;
+[$x, $r] = $refus([['employe' => 10, 'date' => $marA, 'de' => '13:00', 'a' => '17:00']]);
+verifie('un jour de la semaine muet : rien n’est créé à l’aveugle', $x && str_contains($r['error'], 'rien n’est créé'), json_encode($r));
+PanelApi::$code = 204;
 
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);
