@@ -205,6 +205,7 @@ final class TeamTasksService
             'launches_reviewed' => 'nowe produkty : cele vs wynik → decyzja → zakończ',
             'customers_data_checked' => 'braki w kartach aktywnych klientów → decyzja → zakończ',
             'staff_deadlines_reviewed' => 'badania lekarskie i szkolenia : terminy → decyzja → zakończ',
+            'maintenance_reviewed' => 'przeglądy, zgłoszenia i awarie maszyn → decyzja → zakończ',
             'ppwr_month_reviewed' => 'braki PPWR i BDO, zmiany, dowody wysyłek → decyzja → zakończ',
             'intrastat_month_reviewed' => 'wywóz i przywóz UE, kody CN, kursy → deklaracje → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',

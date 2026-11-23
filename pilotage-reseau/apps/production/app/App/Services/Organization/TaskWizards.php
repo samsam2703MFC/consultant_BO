@@ -84,6 +84,9 @@ final class TaskWizards
         // [404] Badania i szkolenia (Kierownik produkcji — co miesiąc) : badania lekarskie (data z HR) i szkolenia (rejestr asystenta) po terminie, wkrótce albo bez daty, decyzja dla terminu.
         // Libellé distinct du nom proposé dans la matrice (« Badania i szkolenia (terminy) ») : les UPDATE des migrations ne prennent que celui-ci.
         'staff_deadlines_reviewed' => ['Badania i szkolenia (przegląd terminów)', '/hr/deadlines', 'terminy badań lekarskich i szkoleń sprawdzone, decyzja dla każdego z sygnałem', 3],
+        // [405] Serwisy i przeglądy maszyn (Kierownik produkcji — co miesiąc, w każdej chwili) : rejestry urządzeń, przeglądów i zgłoszeń, awarie z tabletów, decyzja dla elementu.
+        // Libellé distinct du nom proposé dans la matrice (« Serwisy i przeglądy maszyn ») : les UPDATE des migrations ne prennent que celui-ci.
+        'maintenance_reviewed' => ['Serwisy i przeglądy maszyn (przegląd miesiąca)', '/maintenance', 'przeglądy, serwisy i zgłoszenia w terminie albo z decyzją, każda awaria z tabletu zgłoszona', 3],
         // [397] PPWR i opakowania (Kierownik produkcji — co miesiąc) : braki PPWR / BDO opakowań i produktów, zmiany, dowody opakowań wysyłek, decyzja dla elementu.
         // Libellé distinct du nom proposé dans la matrice (« PPWR i opakowania (kompletność) ») : les UPDATE des migrations ne prennent que celui-ci.
         'ppwr_month_reviewed' => ['PPWR i opakowania (przegląd miesiąca)', '/ppwr/month', 'dane PPWR i BDO opakowań i produktów sprawdzone, decyzja dla każdego braku', 3],
@@ -145,6 +148,7 @@ final class TaskWizards
         'customers_data_checked' => 'gdy każdy aktywny klient (zamówienie w ostatnich customers_data.active_months miesiącach) z brakiem w karcie — brak e-maila albo e-mail błędny lub z błędem wysyłki, brak lub nieczytelny telefon, brak języka komunikacji, brak terminu płatności, brak NIP albo VAT UE bez prefiksu kraju przy WDT, niepełny adres, brak cennika albo produkt zamówiony bez ceny klienta — ma decyzję (poprawione — karta już bez braków, brak danych od klienta, nie dotyczy) — asystent « Dane klientów », krok 3',
         'launches_reviewed' => 'gdy każdy nowy produkt (wprowadzony albo utworzony w ERP w ostatnich launches_review.months miesiącach) poza celem — koszt surowców powyżej celu, cena poniżej celu, marża poniżej minimum, sprzedaż na sklep / tydzień poniżej oczekiwanej albo brak sprzedaży — albo bez decyzji w module Kierownik produkcji ma decyzję (zostaje, korekta, wycofać) — asystent « Nowe produkty », krok 3',
         'staff_deadlines_reviewed' => 'gdy każdy termin aktywnego pracownika z sygnałem — badania lekarskie po terminie, bez daty w HR albo kończące się w ciągu hr.alert_days dni, szkolenie z rejestru po terminie albo kończące się wkrótce, brak szkolenia BHP (staff_deadlines.bhp_required) — ma decyzję (umówione z datą, aktualne — sprawdzone, nie dotyczy) — asystent « Badania i szkolenia », krok 3',
+        'maintenance_reviewed' => 'gdy każdy element z sygnałem — przegląd, serwis lub pomiar po terminie, kończący się w ciągu maintenance.alert_days dni albo bez terminu, zgłoszenie awarii lub serwisu po terminie realizacji albo bez terminu, awaria z tabletu (co najmniej maintenance.breakdown_min_minutes min) bez zgłoszenia, aktywna maszyna bez wpisu w rejestrze — ma decyzję (umówione — termin, załatwione, nie dotyczy) — asystent « Serwisy i przeglądy maszyn », krok 3',
         'ppwr_month_reviewed' => 'gdy każdy element z sygnałem — opakowanie używane w aktywnym produkcie z brakiem w Rejestrze PPWR (numer, masa, poziom, rodzaj, materiał, recyklat, recykling, minimalizacja, wymiary) albo w danych BDO, aktywny produkt bez kartonu sprzedażowego, PPC albo poprawnej masy, opakowanie lub produkt zmienione od ostatniego przeglądu, wysyłka poprzedniego miesiąca bez kompletnego dowodu opakowań — ma decyzję (uzupełnione — sprawdzone, zapytanie do dostawcy wysłane, nie dotyczy) — asystent « PPWR i opakowania », krok 3',
         'intrastat_month_reviewed' => 'gdy każdy sygnał poprzedniego miesiąca — produkt z WDT albo surowiec z faktury dostawcy z UE bez kodu CN lub masy netto, waluta bez kursu na miesiąc, odbiorca WDT bez VAT UE, faktura bez surowca albo w walucie obcej bez VAT UE sprzedawcy — ma decyzję (uzupełnione, nie dotyczy), a każda deklaracja (firma × wywóz / przywóz) jest zgłoszona w PUESC z numerem albo poniżej progu z uzasadnieniem — asystent « Intrastat miesiąca », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
@@ -346,6 +350,13 @@ final class TaskWizards
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->staffDeadlineReviews(\App\Services\Organization\Wizards\StaffDeadlinesService::reviewMonth(substr($from, 0, 10)))) > 0) {
                     $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'termin z decyzją', 'terminy z decyzją', 'terminów z decyzją')] + $out;
+                }
+                break;
+            case 'maintenance_reviewed':
+                // [405] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->maintenanceReviews(\App\Services\Organization\Wizards\MaintenanceService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element z decyzją', 'elementy z decyzją', 'elementów z decyzją')] + $out;
                 }
                 break;
             case 'ppwr_month_reviewed':

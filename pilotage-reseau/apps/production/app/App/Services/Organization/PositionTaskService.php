@@ -112,6 +112,7 @@ final class PositionTaskService
         '/products/launches-review' => 'launches_reviewed',
         '/clients/data-check' => 'customers_data_checked',
         '/hr/deadlines' => 'staff_deadlines_reviewed',
+        '/maintenance' => 'maintenance_reviewed',
         '/ppwr/month' => 'ppwr_month_reviewed',
         '/intrastat/month' => 'intrastat_month_reviewed',
         '/sop' => 'sop_daily',

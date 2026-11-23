@@ -80,6 +80,9 @@ final class PageAccess
         // [335] Stany i palety : osobne prawo (CEO, finanse, produkcja, jakość — bez całej logistyki) ; usunięcie palety (AJAX) pod tym samym prawem.
         // [353] Procedury SOP : lista, asystent tworzenia, zatwierdzenie (procedura asystowana /procedure : każdy zalogowany).
         'sop' => ['Procedury SOP (tworzenie, zatwierdzanie, wykonania)', 'Produkcja', ['/sop', '/ajax/sop'], false],
+        // [405] Asystent « Serwisy i przeglądy maszyn » (Kierownik produkcji, co miesiąc i w każdej chwili) : droit propre (page
+        // /maintenance et appels ajax : rejestry urządzeń, przeglądów, zgłoszeń), donné au Kierownik produkcji par la migration 245.
+        'maintenance' => ['Serwisy i przeglądy maszyn (asystent : rejestr urządzeń, przeglądy i pomiary z terminem, zgłoszenia awarii i serwisów, awarie z tabletów)', 'Produkcja', ['/maintenance', '/ajax/maintenance'], false],
         'stock_pallets' => ['Stany i palety (magazyn, palety, wysłane, stan ogólny, krótka data ; usunięcie palety)', 'Logistyka i pakowanie', ['/logistics/stock', '/ajax/logistics/stock'], false],
         // [374] Asystent « Opóźnienia dostaw » : page /logistics/delays (préfixe /logistics), appels ajax sous le même droit.
         // [381] Asystent « Palety zwrotne » (Logistyka, Kierowca-dostawca) : page /logistics/pallets-returns (préfixe /logistics, comme

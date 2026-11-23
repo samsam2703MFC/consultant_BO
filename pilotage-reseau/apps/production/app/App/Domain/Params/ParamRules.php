@@ -108,6 +108,9 @@ final class ParamRules
         'ai.routines_on.invoices_ksef_checked' => [0, 1, true],
         // [404] Badania i szkolenia : 1 = « brak szkolenia BHP » signalé pour chaque salarié actif (délai d'alerte : hr.alert_days)
         'staff_deadlines.bhp_required' => [0, 1, true],
+        // [405] Serwisy i przeglądy maszyn : jours avant le terme d'un przegląd, minutes d'un arrêt « awaria » qui demandent un zgłoszenie
+        'maintenance.alert_days' => [1, 180, true],
+        'maintenance.breakdown_min_minutes' => [0, 600, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
