@@ -19436,6 +19436,9 @@
                     "403": {
                         "$ref": "#/components/responses/Error403"
                     },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
                     "422": {
                         "$ref": "#/components/responses/Error422"
                     },
@@ -19443,7 +19446,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "loaded = true : la palette est à sa place ; false : annulé. Seulement les places du plan envoyé (DRIVER_LOAD_SLOT_UNKNOWN). Un nouvel envoi du plan annule les places dont le contenu a changé.",
+                "description": "loaded = true : la palette est à sa place ; false : annulé. Seulement les places du plan envoyé (DRIVER_LOAD_SLOT_UNKNOWN). Un nouvel envoi du plan annule les places dont le contenu a changé. [416] Palette portant des cartons d'un lot bloqué par la qualité (tablette qualité) : 409 LOT_HELD_ON_PALLET.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -19749,6 +19752,9 @@
                     "403": {
                         "$ref": "#/components/responses/Error403"
                     },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
                     "422": {
                         "$ref": "#/components/responses/Error422"
                     },
@@ -19756,7 +19762,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "cartons 1–999 ; produit commandé par ce client ce jour (sinon PALLET_PRODUCT_NOT_ORDERED) ; employee_id = opérateur choisi (personne active). Réponse : la vue du client.",
+                "description": "cartons 1–999 ; produit commandé par ce client ce jour (sinon PALLET_PRODUCT_NOT_ORDERED) ; employee_id = opérateur choisi (personne active). Réponse : la vue du client. [416] Produit avec un lot bloqué par la qualité (cartons au magasin ou sur palette) : 409 PALLET_PRODUCT_HELD, sauf held_confirmed = true (l'opérateur confirme des cartons d'autres jours d'étiquette).",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -28121,6 +28127,10 @@
                     "vehicle_id": {
                         "type": "integer",
                         "nullable": true
+                    },
+                    "held_confirmed": {
+                        "type": "boolean",
+                        "description": "[416] cartons hors du lot bloqué (confirmé par l'opérateur)"
                     }
                 }
             },
@@ -28157,6 +28167,19 @@
                     },
                     "over": {
                         "type": "integer"
+                    },
+                    "held": {
+                        "type": "object",
+                        "nullable": true,
+                        "description": "[416] lot bloqué par la qualité : jours d'étiquette, cartons au magasin / sur palette",
+                        "properties": {
+                            "days": {
+                                "type": "string"
+                            },
+                            "cartons": {
+                                "type": "integer"
+                            }
+                        }
                     }
                 }
             },
