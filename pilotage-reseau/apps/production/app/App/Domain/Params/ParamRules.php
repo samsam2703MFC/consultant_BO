@@ -96,6 +96,13 @@ final class ParamRules
         // [385] Dane klientów : mois sans commande au-delà desquels un client n'est plus « actif » (fenêtre des e-mails en erreur et
         // des produits commandés sans prix)
         'customers_data.active_months' => [1, 24, true],
+        // [387] Rutyny poranne AI : interrupteur général et par assistant (0/1), budget mensuel (zł), taux USD → PLN du coût affiché
+        'ai.routines_enabled' => [0, 1, true],
+        'ai.routines_budget_pln' => [0, 10000, false],
+        'ai.routines_usd_pln' => [1, 10, false],
+        'ai.routines_on.orders_day_checked' => [0, 1, true],
+        'ai.routines_on.deliveries_delays_checked' => [0, 1, true],
+        'ai.routines_on.invoices_ksef_checked' => [0, 1, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
