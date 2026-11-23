@@ -1533,3 +1533,31 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
 - **À savoir** : l'éditeur du Manuel exige le néerlandais pour publier une nouvelle version ; une FC créée par le
   formulaire du siège démarre avec une étape « À rédiger » à compléter dans l'éditeur (FR et NL).
 - Tests : `php formation/bin/tests_formation_continue.php` (37 points).
+
+
+## « Formations et suivi » v2 : l'accueil de la formation et la méga-barre (22/11/2026)
+
+Sam : « tomber sur l'accueil de la formation, sans le rail, et une méga search bar qui reprend tout le catalogue et son
+contenu ». Maquettes et captures : `formation/docs/maquettes/formations-et-suivi-v2/`. Code :
+`panel/public/dashboard/seformer.js` (`window.DashSeFormer`), `formation/src/formation_recherche.php`.
+
+- **L'accueil** (dashboard, « Formations et suivi ») : en tête, la tuile « 🎓 Mon dossier de formation » (nouveautés
+  pas encore ouvertes, en retard, en cours, à valider, validées, « Ouvrir › ») et « 🎩 Demander au Professeur » ; puis
+  la méga-barre ; puis la phrase et le tableau Formations · Manuel opératoire · SOP · Checklists de l'accueil du module
+  (sans le rail), les nombres lus dans l'index.
+- **La méga-barre** (« Chercher dans toute la formation… ») : cherche, sans tenir compte des accents ni des capitales,
+  dans les titres, codes, objectifs et le texte des étapes et des points critiques de tout le catalogue : formations
+  FO-xx, manuel opératoire (articles), standards (SOP, mémos, fiches), checklists, manuel du réseau (domaines et
+  sous-catégories), formation continue. Chaque résultat porte l'étiquette de son catalogue (couleur de sa couverture),
+  le mot trouvé surligné, la photo s'il y en a ; les catalogues à gauche (filtre), l'aperçu à droite ; « Le plus
+  pertinent » puis « Les autres résultats », 60 au plus ; flèches, Entrée, Échap. Un document réservé au franchisé et
+  au responsable porte un 🔒. Rien ne répond : « Posez la question au Professeur ».
+- **Ce qui est cherché** : les documents du Manuel publiés et à valider (jamais les brouillons) et les formations
+  continues validées (`GET /formation/recherche`, dans `ACCES_FRANCHISE`, lu une fois par la page).
+- **Ouvrir** : un document s'ouvre en tiroir dans la page (étapes, photos, points critiques, vidéo ; route publique de
+  la tablette `GET /formation/sop/tablette/sop/{id}`), avec « 📖 Feuilleter dans le catalogue ↗ » ; une formation FO
+  mène au module Formation (« Ouvrir dans le module Formation ↗ ») ; un domaine, au manuel du réseau ; une formation
+  continue que le magasin a dans son dossier s'ouvre dans le dossier.
+- **Les couleurs de l'accueil du module** (`#/accueil`, `portail.js`, même jour) : celles des couvertures du catalogue
+  des manuels — manuel opératoire en Ruby, SOP en Noir, checklists en brun, formations en contour Ruby.
+- Tests : `php formation/bin/tests_formation_recherche.php`.
