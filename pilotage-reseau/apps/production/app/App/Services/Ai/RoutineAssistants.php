@@ -178,11 +178,12 @@ final class RoutineAssistants
                 'kierowca_wyjechal' => $v['run']['started'] ?? null],
             'w_transporcie' => !empty($o['in_transit']) ? ['od' => substr((string) $o['transit_since'], 0, 16), 'dni' => (int) $o['transit_days']] : null,
             // Problem z tabletu kierowcy : tylko powód ze słownika, bez notatki kierowcy.
-            'dostawa' => $stop ? ['status' => (string) $stop['status'], 'powod' => $stop['reason'], 'notatka_kierowcy' => $stop['note'] !== null] : null,
+            'dostawa' => $stop ? ['status' => (string) $stop['status'], 'powod' => $stop['reason'] !== null ? $a->scrub((string) $stop['reason'], 60) : null,
+                'notatka_kierowcy' => $stop['note'] !== null] : null,
             'zmiany_daty' => ['liczba' => (int) ($o['date_changes']['count'] ?? 0), 'ostatnia' => $a->scrub((string) ($o['date_changes']['last'] ?? ''), 80) ?: null],
             'poprzednia_decyzja' => $prev ? ['dzien' => (string) $prev['day_label'], 'decyzja' => (string) $prev['label'], 'nowy_termin' => $prev['new_label']] : null,
             'sygnaly' => array_map(fn($f) => ['kod' => (string) $f['code'],
-                'opis' => $f['code'] === 'delivery_problem' ? (DeliveryDelaysService::FLAGS['delivery_problem'] . ($stop && $stop['reason'] ? ' : ' . $stop['reason'] : ''))
+                'opis' => $f['code'] === 'delivery_problem' ? (DeliveryDelaysService::FLAGS['delivery_problem'] . ($stop && $stop['reason'] ? ' : ' . $a->scrub((string) $stop['reason'], 60) : ''))
                     : $a->scrub((string) $f['reason'], 200)], $o['flags'])];
     }
 

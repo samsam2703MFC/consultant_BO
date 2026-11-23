@@ -25,10 +25,12 @@ use App\Services\Organization\PageAccessService;
  * ai.routines_on.<kod>, budżet miesiąca ai.routines_budget_pln (suma kosztów ≥ budżet → skipped_budget). Do API idzie
  * tylko ładunek zanonimizowany (RoutineAssistants::payload, Anonymizer). Wywołanie : oficjalny SDK PHP (klient
  * AiSettings), Messages API w przestrzeni beta jak CardGenerator — wysiłek « low » (krótka klasyfikacja), bez parametru
- * thinking (myślenie adaptacyjne domyślnie), odpowiedź w formacie JSON wymuszonym schematem (structured outputs),
- * odmowa → przebieg « refused », zapasowy model po stronie serwera (fallbacks « default », beta
- * server-side-fallback-2026-07-01). Odpowiedź sprawdzana : ref z ładunku, decyzja z listy asystenta, notatki ≤ 500 znaków —
- * reszta odrzucona i policzona.
+ * thinking (Opus 5.5 : myślenie zawsze włączone, « disabled » i budżet tokenów = 400), bez temperatury, odpowiedź w
+ * formacie JSON wymuszonym schematem (structured outputs), odmowa → przebieg « refused », zapasowy model po stronie
+ * serwera (fallbacks « default », beta server-side-fallback-2026-07-01), bez strumienia (max_tokens 16 000). Bez
+ * cache_control : jedno zapytanie na asystenta dziennie, zapis do cache (1,25 × wejście) nigdy by się nie zwrócił.
+ * Odpowiedź sprawdzana : ref z ładunku, decyzja z listy asystenta, notatki ≤ 500 znaków, notatka wymagana przez
+ * asystenta niepusta — reszta odrzucona i policzona. Budżet : koszt miesiąca + szacunek tego przebiegu ≤ budżet.
  */
 final class MorningRoutineService
 {
@@ -46,8 +48,6 @@ final class MorningRoutineService
     public const MAX_TOKENS = 16000;
     public const EFFORT = 'low';
     public const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
-    /** Najkrótszy prefiks zapisywany w cache dla Opus 5.5 / Sonnet 5.5 (shared/prompt-caching.md) ; krótszy — bez cache_control. */
-    public const CACHE_MIN_TOKENS = 512;
     public const NOTE_MAX = 500;
     public const SUMMARY_MAX = 500;
     public const STATUSES = ['ok' => 'propozycje gotowe', 'error' => 'błąd', 'refused' => 'AI odmówiło', 'skipped_budget' => 'pominięte — budżet wyczerpany',
@@ -125,15 +125,26 @@ final class MorningRoutineService
         $model = $this->model();
         $run = ['code' => $code, 'day' => $today, 'trigger_kind' => $trigger === 'manual' ? 'manual' : 'cron', 'started_at' => date('Y-m-d H:i:s'),
             'model' => $model, 'id_user' => $userId];
+        // Wyłączniki i budżet PRZED czymkolwiek innym (bez odczytu danych, bez API).
         if (!$this->enabled() || !$this->assistantOn($code)) return $this->store($run + ['status' => 'skipped_off'], [], false);
-        if ($this->month($today)['pln'] >= $this->budget()) return $this->store($run + ['status' => 'skipped_budget'], [], false);
+        $spent = $this->month($today)['pln'];
+        if ($spent >= $this->budget()) return $this->store($run + ['status' => 'skipped_budget'], [], false);
 
-        $data = $this->assistants->data($code, $today);
-        $anon = new Anonymizer();
-        $payload = RoutineAssistants::payload($code, $data, $anon);
+        try {
+            $data = $this->assistants->data($code, $today);
+            $anon = new Anonymizer();
+            $payload = RoutineAssistants::payload($code, $data, $anon);
+        } catch (\Throwable $e) {
+            // Odczyt asystenta nieudany : przebieg « error » (cron ponowi najwyżej raz), bez treści błędu (mogłaby cytować dane).
+            return $this->store($run + ['status' => 'error', 'error' => 'Odczyt danych asystenta : ' . (new \ReflectionClass($e))->getShortName() . '.'], [], false);
+        }
         $run['signals'] = count($payload['items']);
         if (!$payload['items']) return $this->store($run + ['status' => 'no_signals'], [], true);
         $run['codes_json'] = json_encode($anon->codes(), JSON_UNESCAPED_UNICODE);
+        // Szacunek kosztu tego przebiegu (bez API) : budżet nie może zostać przekroczony przez jedno zapytanie.
+        if ($spent + $this->estimate($code, $payload, $model)['pln'] > $this->budget()) {
+            return $this->store($run + ['status' => 'skipped_budget', 'error' => 'Szacowany koszt przebiegu przekracza resztę budżetu.'], [], false);
+        }
         if (!$this->ai->configured()) return $this->store($run + ['status' => 'error', 'error' => 'Brak klucza Anthropic (erp_cles : anthropic_api_key).'], [], false);
 
         try {
@@ -161,18 +172,17 @@ final class MorningRoutineService
         return $this->store($run + ['status' => 'ok', 'summary' => $v['summary'], 'rejected' => array_sum($v['rejected'])], $v['proposals'], true);
     }
 
-    /** Zapytanie Messages API (beta : fallbacks) ; prompt systemowy stały najpierw, dane dnia po nim. */
+    /**
+     * Zapytanie Messages API (SDK : $client->beta->messages->create, argumenty nazwane jak w CardGenerator) ; prompt
+     * systemowy stały najpierw, dane dnia po nim.
+     */
     private function request(string $code, string $model, array $payload): BetaMessage
     {
-        $system = RoutineAssistants::system($code);
-        $block = ['type' => 'text', 'text' => $system];
-        // Cache promptu tylko, gdy prefiks (prompt systemowy) przekracza minimum modelu — krótszy i tak się nie zapisze.
-        if (self::estimateTokens($system) >= self::CACHE_MIN_TOKENS) $block['cacheControl'] = ['type' => 'ephemeral'];
         return $this->ai->client()->beta->messages->create(
             maxTokens: self::MAX_TOKENS,
             messages: [['role' => 'user', 'content' => self::userText($code, $payload)]],
             model: $model,
-            system: [$block],
+            system: RoutineAssistants::system($code),
             outputConfig: ['effort' => self::EFFORT, 'format' => ['type' => 'json_schema', 'schema' => RoutineAssistants::schema($code)]],
             fallbacks: 'default',
             betas: [self::FALLBACK_BETA],
@@ -192,6 +202,20 @@ final class MorningRoutineService
     public static function estimateTokens(string $text): int
     {
         return (int) ceil(mb_strlen($text) / 3);
+    }
+
+    /**
+     * Szacunek przebiegu bez API : wejście = prompt + dane (+ schemat), wyjście = myślenie przy wysiłku « low » i
+     * ~110 tokenów na propozycję (zawyżone celowo : górna granica do kontroli budżetu).
+     * @return array{input:int, output:int, usd:float, pln:float}
+     */
+    public function estimate(string $code, array $payload, ?string $model = null): array
+    {
+        $in = self::estimateTokens(RoutineAssistants::system($code)) + self::estimateTokens(self::userText($code, $payload))
+            + self::estimateTokens((string) json_encode(RoutineAssistants::schema($code))) + 30;
+        $out = 400 + 110 * count($payload['items']);
+        $usd = self::costUsd($model ?? $this->model(), $in, $out);
+        return ['input' => $in, 'output' => $out, 'usd' => round($usd, 5), 'pln' => round($usd * $this->usdPln(), 4)];
     }
 
     /** Tokeny i koszt : suma iteracji (fallback, każda po cenie swojego modelu), inaczej usage główne. */
@@ -235,7 +259,8 @@ final class MorningRoutineService
      */
     public static function validate(string $code, mixed $json, array $rows): array
     {
-        $rej = ['format' => 0, 'unknown_ref' => 0, 'duplicate' => 0, 'decision' => 0, 'confidence' => 0, 'too_long' => 0, 'not_applicable' => 0];
+        $rej = ['format' => 0, 'unknown_ref' => 0, 'duplicate' => 0, 'decision' => 0, 'confidence' => 0, 'too_long' => 0, 'note_missing' => 0, 'not_applicable' => 0];
+        $required = RoutineAssistants::noteRequired($code);
         if (!is_array($json) || !is_array($json['proposals'] ?? null)) return ['summary' => '', 'proposals' => [], 'rejected' => ['format' => 1] + $rej];
         $decisions = RoutineAssistants::decisions($code);
         $out = [];
@@ -252,6 +277,7 @@ final class MorningRoutineService
             elseif (!isset($decisions[$dec])) $rej['decision']++;
             elseif (!isset(self::CONFIDENCE[$conf])) $rej['confidence']++;
             elseif ($note === null || $reason === null || mb_strlen($note) > self::NOTE_MAX || mb_strlen($reason) > self::NOTE_MAX) $rej['too_long']++;
+            elseif (in_array($dec, $required, true) && mb_strlen($note) < 3) $rej['note_missing']++;
             elseif (!RoutineAssistants::applicable($code, $rows[$ref], $dec)) $rej['not_applicable']++;
             else {
                 $seen[$ref] = true;
@@ -326,16 +352,14 @@ final class MorningRoutineService
         if (!RoutineAssistants::exists($code)) throw new CustomException('Asystent spoza pilota rutyn AI.', 'errors', 422);
         $today ??= date('Y-m-d');
         $p = RoutineAssistants::payload($code, $this->assistants->data($code, $today), new Anonymizer());
-        $system = RoutineAssistants::system($code);
-        $user = self::userText($code, $p);
-        $in = self::estimateTokens($system) + self::estimateTokens($user) + 30;
-        $outTok = 60 + 110 * count($p['items']);
+        $e = $this->estimate($code, $p);
         $est = [];
-        foreach (array_keys(self::PRICES) as $m) $est[$m] = round(self::costUsd($m, $in, $outTok) * $this->usdPln(), 4);
+        foreach (array_keys(self::PRICES) as $m) $est[$m] = round(self::costUsd($m, $e['input'], $e['output']) * $this->usdPln(), 4);
         return ['code' => $code, 'label' => RoutineAssistants::PILOT[$code][0], 'day' => $today, 'items' => count($p['items']),
             'payload' => json_encode(['kontekst' => $p['context'], 'pozycje' => $p['items']], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'system_chars' => mb_strlen($system), 'user_chars' => mb_strlen($user), 'est_input_tokens' => $in, 'est_output_tokens' => $outTok,
-            'est_cost_pln' => $est, 'model' => $this->model(), 'cache' => self::estimateTokens($system) >= self::CACHE_MIN_TOKENS];
+            'system_chars' => mb_strlen(RoutineAssistants::system($code)), 'user_chars' => mb_strlen(self::userText($code, $p)),
+            'est_input_tokens' => $e['input'], 'est_output_tokens' => $e['output'], 'est_cost_pln' => $est, 'est_cost_label' => self::zl($est[$this->model()]),
+            'model' => $this->model(), 'model_label' => self::modelLabel($this->model())];
     }
 
     // --- Propozycje na stronie asystenta -----------------------------------------------------------------------
