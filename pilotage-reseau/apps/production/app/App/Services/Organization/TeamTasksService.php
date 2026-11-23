@@ -206,6 +206,7 @@ final class TeamTasksService
             'customers_data_checked' => 'braki w kartach aktywnych klientów → decyzja → zakończ',
             'ppwr_month_reviewed' => 'braki PPWR i BDO, zmiany, dowody wysyłek → decyzja → zakończ',
             'intrastat_month_reviewed' => 'wywóz i przywóz UE, kody CN, kursy → deklaracje → zakończ',
+            'recipes_month_reviewed' => 'produkty bez receptury, receptury i dane z brakami → decyzja → zakończ',
             'suppliers_reviewed' => 'oceny A / B / C, surowce, zapytanie ofertowe',
             default => $it['wizard'],
         };

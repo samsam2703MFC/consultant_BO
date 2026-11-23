@@ -113,6 +113,7 @@ final class PositionTaskService
         '/clients/data-check' => 'customers_data_checked',
         '/ppwr/month' => 'ppwr_month_reviewed',
         '/intrastat/month' => 'intrastat_month_reviewed',
+        '/recipes/month' => 'recipes_month_reviewed',
         '/sop' => 'sop_daily',
         '/time' => 'time_day_validated',
         '/time/month' => 'time_month_closed',

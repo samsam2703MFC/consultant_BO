@@ -55,6 +55,9 @@ final class PageAccess
         // receptury — là où naissent les lancements et se font les corrections), appels ajax sous le même droit. Le module Kierownik
         // produkcji (objectifs de lancement) reste réservé à l'administrateur ; montants : droit « margins » (comme Marża produktów).
         'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/ajax/products/launches-review', '/semi-products', '/compositions'], false],
+        // [400] Asystent « Receptury i dane produktów » (Kierownik produkcji, co miesiąc) : droit propre (page /recipes/month — le préfixe le
+        // plus long l'emporte sur « /recipes » — et appels ajax), donné au Kierownik produkcji par la migration 240.
+        'recipes_month' => ['Receptury i dane produktów — przegląd miesiąca (asystent : produkty bez receptury, receptury i dane produktów z brakami)', 'Produkt', ['/recipes/month', '/ajax/recipes/month'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
