@@ -619,6 +619,8 @@
     "team_sheet_col_stock": "Pour le stock",
     "team_sheet_col_on_hand": "En stock",
     "team_sheet_col_ordered": "Commande",
+    "team_sheet_mts": "produit de stock · min {min} / max {max}",
+    "team_sheet_room": "max {qty}",
     "team_sheet_cartons_short": "Cart.",
     "team_sheet_pieces_short": "Pcs",
     "team_sheet_incl_stock": "dont pour le stock {qty}",

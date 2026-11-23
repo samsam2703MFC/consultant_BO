@@ -619,6 +619,8 @@
     "team_sheet_col_stock": "Na zapas",
     "team_sheet_col_on_hand": "W magazynie",
     "team_sheet_col_ordered": "Zamówienie",
+    "team_sheet_mts": "na magazyn · min {min} / maks. {max}",
+    "team_sheet_room": "maks. {qty}",
     "team_sheet_cartons_short": "Kart.",
     "team_sheet_pieces_short": "Szt.",
     "team_sheet_incl_stock": "w tym na zapas {qty}",
