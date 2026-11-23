@@ -261,7 +261,7 @@ final class MorningRoutineService
     {
         $rej = ['format' => 0, 'unknown_ref' => 0, 'duplicate' => 0, 'decision' => 0, 'confidence' => 0, 'too_long' => 0, 'note_missing' => 0, 'not_applicable' => 0];
         $required = RoutineAssistants::noteRequired($code);
-        if (!is_array($json) || !is_array($json['proposals'] ?? null)) return ['summary' => '', 'proposals' => [], 'rejected' => ['format' => 1] + $rej];
+        if (!is_array($json) || !is_array($json['proposals'] ?? null)) return ['summary' => '', 'proposals' => [], 'rejected' => ['format' => 1]];
         $decisions = RoutineAssistants::decisions($code);
         $out = [];
         $seen = [];

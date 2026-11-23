@@ -259,11 +259,14 @@ $fakeSms = new class($smsSent) implements SmsTransport {
 $b = new DI\ContainerBuilder();
 $b->addDefinitions([PDO::class => fn() => new PDO($dsn . ';dbname=erp_ai_routines_test;charset=utf8mb4', $dbUser, $dbPass, $opts),
     WorkshopConfig::class => new WorkshopConfig(['PRODUCTION_JWT_SECRET' => str_repeat('s', 48), 'API_BASE_URL' => 'https://erp.test']),
-    SmsTransport::class => $fakeSms]);
+    SmsTransport::class => $fakeSms,
+    // Comme delivery_delays_test : plan logistique sans le catalogue des cartons (tables n_carton… hors de ce test).
+    App\Services\Logistics\LogisticsService::class => DI\autowire()->constructorParameter('cartons', null)]);
 $di = $b->build();
 $params = $di->get(ParamRepository::class);
 $body = '';
-Request::setFactory(fn($q = [], $r = [], $a = [], $c = [], $f = [], $s = [], $content = null) => new Request($q, $r, $a, $c, $f, $s, $body));
+// Corps JSON des appels ajax (php://input est vide en CLI) : la fabrique de Symfony reçoit le corps courant.
+Request::setFactory(function ($q = [], $r = [], $a = [], $c = [], $f = [], $s = [], $content = null) use (&$body) { return new Request($q, $r, $a, $c, $f, $s, $body); });
 $call = function (object $ctl, int $user, string $method, array $args = [], ?array $json = null) use (&$body) {
     $_SESSION['USER'] = ['id' => $user, 'login' => 'u' . $user];
     $body = $json !== null ? json_encode($json) : '';
@@ -312,7 +315,7 @@ $ai->forget();
 $check($ai->keyInfo()['source'] === 'env', '.env first');
 putenv('ANTHROPIC_API_KEY');
 $ai->forget();
-$check(!str_contains(json_encode($ai->state(1)), 'sk-ant-'), 'settings state never contains the key');
+$check(!str_contains(json_encode($ai->keyInfo()), 'sk-ant-') && $ai->keyInfo()['hint'] === 'ERPC', 'key info : source and last 4 characters only');
 
 // --- Anonymiseur
 $a = new Anonymizer();
@@ -329,7 +332,7 @@ $check(Anonymizer::namesFor(['K7' => 'customer:12', 'K8' => 'customer:99'], $a->
 // --- Charge de chaque assistant : seulement les lignes signalées sans résultat, aucune donnée personnelle.
 $assistants = $di->get(RoutineAssistants::class);
 $payloads = [];
-foreach ([OD => [501, 502, 503], DD => [601, 602, 603], IK => [701, 702]] as $c => $refs) {
+foreach ([OD => [501, 502, 503], DD => [502, 601, 602, 603], IK => [701, 702]] as $c => $refs) {
     $data = $assistants->data($c, $T);
     $pl = RoutineAssistants::payload($c, $data, new Anonymizer());
     $payloads[$c] = $pl;
@@ -338,6 +341,10 @@ foreach ([OD => [501, 502, 503], DD => [601, 602, 603], IK => [701, 702]] as $c 
     $text = json_encode($pl, JSON_UNESCAPED_UNICODE) . RoutineAssistants::system($c) . MorningRoutineService::userText($c, $pl);
     $check($leaks($text) === [], "payload {$c} : no personal value of the test tables (" . implode(', ', $leaks($text)) . ')');
 }
+// Le scan n'est pas vide de sens : les données brutes des assistants contiennent bien ces valeurs.
+$raw = $leaks(json_encode([$assistants->data(OD, $T), $assistants->data(DD, $T), $assistants->data(IK, $T)], JSON_UNESCAPED_UNICODE));
+$check(count(array_intersect(['Piekarnia Kowalczyk i Synowie', 'WX 4471K', 'Marek', 'Katarzyna Wiśniewska', 'Trasa Oleśnica-Brzeg', 'PO-ZK-7781', '#5851234567'], $raw)) === 7,
+    'scan sanity : the raw assistant data does contain customers, plate, driver, user, tour, reference, NIP');
 $o501 = array_column($payloads[OD]['items'], null, 'ref')['501'];
 $o502 = array_column($payloads[OD]['items'], null, 'ref')['502'];
 $check(preg_match('/^K\d+$/', $o501['klient']) === 1 && $o501['ma_referencje_klienta'] === true && $o501['ma_opis'] === true && !isset($o501['referencja']), 'orders : customer as code, reference / description only as booleans');
@@ -459,8 +466,8 @@ $mode = 'fallback';
 $x = $svc->run(DD, 'manual', 1, $T);
 $run = $pdo->query("SELECT * FROM n_ai_routine_run WHERE id = {$x['id']}")->fetch();
 $expect = (1000 * 4 + 0 * 20) / 1e6 + (3000 * 2 + 800 * 10 + 200 * 0.10) / 1e6;
-$check($x['status'] === 'ok' && $x['proposals'] === 3 && $run['model_served'] === 'claude-sonnet-5-5' && abs((float) $run['cost_usd'] - round($expect, 5)) < 1e-9
-    && (int) $run['input_tokens'] === 4000 && (int) $run['cache_read_tokens'] === 200, 'fallback iterations : tokens summed, each priced with its own model');
+$check($x['status'] === 'ok' && $x['proposals'] === 4 && $run['model_served'] === 'claude-sonnet-5-5' && abs((float) $run['cost_usd'] - round($expect, 5)) < 1e-9
+    && (int) $run['input_tokens'] === 4000 && (int) $run['cache_read_tokens'] === 200, 'fallback iterations : tokens summed, each priced with its own model — ' . json_encode([$x['status'], $x['error'], $run['cost_usd'] ?? null, $run['input_tokens'] ?? null, $run['cache_read_tokens'] ?? null, round($expect, 5)]));
 $mode = 'echo';
 $x = $svc->run(IK, 'manual', 1, $T);
 $check($x['status'] === 'ok' && $x['proposals'] === 2 && $leaks(end($history)['raw']) === [], 'run « Faktury i KSeF dnia » : 2 proposals, no personal value sent');
@@ -472,12 +479,13 @@ foreach ([OD => $od, DD => $dd, IK => $ik] as $c => $ctl) {
     [$code, $res] = $call($ctl, 3, 'data');
     $pages[$c] = $res['data'];
     $aiv = $res['data']['ai'] ?? null;
-    $check($code === 200 && is_array($aiv) && count($aiv['proposals']) === ($c === IK ? 2 : 3) && $aiv['today'] === true && $aiv['model_label'] !== '', "page {$c} : data() 200 with ai proposals");
+    $check($code === 200 && is_array($aiv) && count($aiv['proposals']) === count($payloads[$c]['refs']) && $aiv['today'] === true && $aiv['model_label'] !== '', "page {$c} : data() 200 with ai proposals");
 }
 $p501 = array_column($pages[OD]['ai']['proposals'], null, 'ref')['501'];
 $check(str_contains($p501['note'], 'Piekarnia Kowalczyk i Synowie') && !preg_match('/\bK\d+\b/', $p501['note']) && $p501['label'] === 'Kontakt z klientem'
     && $p501['confidence_label'] !== '' && is_int($p501['id']), 'page : codes revealed to the real names (display only), labels of the assistant');
 $check(str_contains($pages[DD]['ai']['summary'], ' ') && !preg_match('/\b[KDPVT]\d+\b/', $pages[DD]['ai']['summary']), 'page : summary revealed');
+$previewShot = $call($rt, 1, 'preview', [DD])[1]['data'] ?? null; // aperçu (AI_JSON_OUT) : charge du jour avant les décisions
 $check($sum() === $erp0, 'page display : no write');
 
 // --- Statuts : Przyjmij (identique) → accepted, Popraw (modifiée) → edited, Odrzuć → rejected.
@@ -485,7 +493,7 @@ $id502 = (int) array_column($pages[OD]['ai']['proposals'], null, 'ref')['502']['
 $id503 = (int) array_column($pages[OD]['ai']['proposals'], null, 'ref')['503']['id'];
 [$code, $res] = $call($od, 3, 'result', [], ['id_order' => 501, 'result' => $p501['decision'], 'note' => $p501['note']]);
 $st = fn(int $id) => $pdo->query("SELECT status, final_decision, decided_by FROM n_ai_routine_proposal WHERE id = {$id}")->fetch();
-$check($code === 200 && $st($p501['id'])['status'] === 'accepted' && $st($p501['id'])['final_decision'] === 'contact' && (int) $st($p501['id'])['decided_by'] === 3, 'Przyjmij + Zapisz (same decision and note) → accepted');
+$check($code === 200 && $st($p501['id'])['status'] === 'accepted' && $st($p501['id'])['final_decision'] === 'contact' && (int) $st($p501['id'])['decided_by'] === 3, 'Przyjmij + Zapisz (same decision and note) → accepted — ' . $code . ' ' . ($res['message'] ?? '') . ' ' . json_encode($st($p501['id'])));
 $check(!in_array('501', array_column($res['data']['ai']['proposals'] ?? [], 'ref'), true), 'saved row : proposal gone from the page');
 [$code] = $call($od, 3, 'result', [], ['id_order' => 502, 'result' => 'changed', 'note' => 'Data poprawiona w ERP.']);
 $check($code === 200 && $st($id502)['status'] === 'edited' && $st($id502)['final_decision'] === 'changed', 'Popraw + Zapisz (other decision / note) → edited');
@@ -528,7 +536,7 @@ $check($code === 403 && $params->get('ai.routines_enabled', '') === '0', 'save b
 $erp1 = $sum();
 $n = count($history);
 [$code, $res] = $call($rt, 1, 'preview', [DD]);
-$check($code === 200 && $res['data']['items'] === 2 && count($history) === $n && $leaks($res['data']['payload']) === [] && $res['data']['est_cost_pln']['claude-sonnet-5-5'] > 0,
+$check($code === 200 && $res['data']['items'] === 3 && count($history) === $n && $leaks($res['data']['payload']) === [] && $res['data']['est_cost_pln']['claude-sonnet-5-5'] > 0,
     'preview of the day payload : admin 200, anonymized, cost estimate, no API call');
 [$code] = $call($rt, 3, 'preview', [DD]);
 $check($code === 403, 'preview : non-admin 403');
@@ -570,8 +578,12 @@ $check($found('GET', '/ajax/settings/ai/routines') === AiRoutinesController::cla
     && $found('GET', '/ajax/settings/ai/routines/deliveries_delays_checked/preview') === AiRoutinesController::class . '::preview'
     && $found('POST', '/ajax/ai/proposals/12') === AiRoutinesController::class . '::mark' && str_ends_with((string) $found('GET', '/settings/ai'), '::settings'), 'routes (glob */*Routes.php)');
 $deploy = (string) file_get_contents(__DIR__ . '/../../deploy/server.sh');
-$check(preg_match('~cat > /etc/cron\.d/production-erp-mail <<CRON\n(?:(?!\nCRON\n).)*\n\*/10 \* \* \* \* \$\{CRON_RUN\} Bin/ai_routines\.php >> /var/log/production-erp-mail\.log 2>&1\n(?:(?!\nCRON\n).)*\nCRON\n~s', $deploy) === 1
-    && substr_count($deploy, 'Bin/ai_routines.php') === 1, 'deploy : one cron line every 10 minutes inside the cron.d file rewritten at each deployment (idempotent)');
+// Bloc écrit en entier à chaque déploiement (cat > … <<CRON … CRON) : la ligne y est une fois, jamais ajoutée en double.
+$from = strpos($deploy, "cat > /etc/cron.d/production-erp-mail <<CRON\n");
+$to = $from === false ? false : strpos($deploy, "\nCRON\n", $from);
+$block = $from !== false && $to !== false ? substr($deploy, $from, $to - $from) : '';
+$check(str_contains($block, "\n*/10 * * * * \${CRON_RUN} Bin/ai_routines.php >> /var/log/production-erp-mail.log 2>&1") && substr_count($deploy, 'Bin/ai_routines.php') === 1
+    && str_contains($deploy, 'CRON_RUN="www-data cd '), 'deploy : one cron line every 10 minutes (www-data) inside the cron.d file rewritten at each deployment (idempotent)');
 $strip = fn(string $f) => str_ends_with($f, '.php')
     ? implode('', array_map(fn($t) => is_array($t) ? (in_array($t[0], [T_COMMENT, T_DOC_COMMENT], true) ? '' : $t[1]) : $t, token_get_all((string) file_get_contents(__DIR__ . '/../' . $f))))
     : preg_replace(['~/\*.*?\*/~s', '~^\s*//.*$~m'], '', (string) file_get_contents(__DIR__ . '/../' . $f));
@@ -592,7 +604,7 @@ $tw = (string) file_get_contents(__DIR__ . '/../App/Views/settings/ai.twig');
 $check(str_contains($tw, 'aiRoutinesBoot') && str_contains($tw, 'ai-routines.js') && str_contains($tw, "'erp_cles'"), 'settings view : routines section (admin) and erp_cles key source');
 
 if (getenv('AI_JSON_OUT')) {
-    file_put_contents((string) getenv('AI_JSON_OUT'), json_encode(['pages' => $pages, 'settings' => $call($rt, 1, 'state')[1]['data'], 'preview' => $call($rt, 1, 'preview', [OD])[1]['data']], JSON_UNESCAPED_UNICODE));
+    file_put_contents((string) getenv('AI_JSON_OUT'), json_encode(['pages' => $pages, 'settings' => $call($rt, 1, 'state')[1]['data'], 'preview' => $previewShot], JSON_UNESCAPED_UNICODE));
 }
 AiSettings::$clientFactory = null;
 Request::setFactory(null);
