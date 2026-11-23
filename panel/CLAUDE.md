@@ -15,4 +15,9 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
 - **Accès** : une session de magasin n'ouvre que les préfixes de `ACCES_FRANCHISE` (`shared/src/acces.php`) et son
   propre magasin. Les autres portails : par leur API (`mar_api_url`, `erp_jeton_service` d'`erp_cles`).
 - **Crons** : `panel/bin/boite_cron.sh` (10 min), `panel/bin/historique_moisson.php`.
+- **Mon équipe** (`src/equipe.php`, `public/dashboard/equipe.js`, 23/11/2026) — **le but premier : aider le franchisé à
+  faire ses horaires.** Sam : « le plus important est que ça aide le franchisé à faire ses horaires ». Chaque ajout s'y
+  mesure : le planogramme, les linéaires (qui est là, quand ; le comptoir ; les secteurs), les temps morts et le budget
+  d'heures (17 %, orange, rouge au-dessus de 20 %, noir au-dessus de 22 %) servent à construire et corriger le planning,
+  pas à le commenter. Ce qui n'aide pas à faire les horaires passe après.
 - **Tests** : `php panel/bin/tests_*.php` (assistant, bundles, boîte mail, trésorerie, primes, profil…).
