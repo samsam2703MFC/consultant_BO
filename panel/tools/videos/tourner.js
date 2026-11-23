@@ -19,14 +19,15 @@ const ICI = __dirname;
 const DEPOT = path.resolve(ICI, '../../..');
 const VIDEOS = path.join(DEPOT, 'panel/public/dashboard/videos');
 const attendre = ms => new Promise(r => setTimeout(r, ms));
+const PORT = +(process.env.FILM_PORT || 8099);   // FILM_PORT=8101 node tourner.js … : un autre port, pour tourner en parallèle
 
 async function serveur(site) {
-  const php = spawn('php', ['-S', '127.0.0.1:8099', '-t', site], { stdio: 'ignore' });
+  const php = spawn('php', ['-S', '127.0.0.1:' + PORT, '-t', site], { stdio: 'ignore' });
   for (let i = 0; i < 40; i++) {
-    try { const r = await fetch('http://127.0.0.1:8099/dashboard/index.html'); if (r.ok) { return php; } } catch (e) { /* pas encore */ }
+    try { const r = await fetch('http://127.0.0.1:' + PORT + '/dashboard/index.html'); if (r.ok) { return php; } } catch (e) { /* pas encore */ }
     await attendre(250);
   }
-  php.kill(); throw new Error('le serveur local ne répond pas sur 127.0.0.1:8099 (port déjà pris ?)');
+  php.kill(); throw new Error('le serveur local ne répond pas sur 127.0.0.1:' + PORT + ' (port déjà pris ?)');
 }
 
 function dureeLisible(mp4) {

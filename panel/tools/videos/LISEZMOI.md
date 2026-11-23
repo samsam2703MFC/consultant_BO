@@ -15,7 +15,7 @@ node panel/tools/videos/tourner.js
 node panel/tools/videos/tourner.js 02-mon-equipe
 ```
 
-Le script assemble le site public dans un dossier temporaire, le sert sur `127.0.0.1:8099`, lance les scénarios, puis
+Le script assemble le site public dans un dossier temporaire, le sert sur `127.0.0.1:8099` (`FILM_PORT=8101` pour un autre port : plusieurs tournages en parallèle), lance les scénarios, puis
 range `NN-nom.mp4` et son affiche `NN-nom.jpg` dans `panel/public/dashboard/videos/` et écrit la durée dans
 `videos.json`. Ensuite : `php panel/bin/tests_videos.php`.
 
