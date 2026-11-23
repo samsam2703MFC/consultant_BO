@@ -130,6 +130,29 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "mails-automatisations",
+      "genre": "tuto",
+      "titre": "Mails et automatisations",
+      "resume": "La roue des paramètres, les envois automatiques du magasin, le rappel la veille du retrait et l’équipe qui reçoit les fiches des promotions.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-parametres.mp4",
+      "affiche": "24-parametres.jpg",
+      "duree": "2 min 45",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/automatisations.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
