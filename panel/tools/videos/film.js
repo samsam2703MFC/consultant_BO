@@ -422,7 +422,9 @@ class Film {
     return this.monter();
   }
   monter() {
-    const imgs = this.images;
+    // Sous charge, le screencast livre des images dans le désordre : on les remet dans l'ordre de leur horodatage
+    // (sinon des durées négatives, ramenées au minimum, allongent la vidéo).
+    const imgs = this.images.slice().sort((a, b) => a.t - b.t);
     if (!imgs.length) { throw new Error('aucune image filmée'); }
     const fin = (Date.now() - this.debut) / 1000; // garde-fou : la dernière image dure jusqu'à la fin
     const lignes = ['ffconcat version 1.0'];
