@@ -1,6 +1,6 @@
 # Les vidéos d'instruction du dashboard magasin — le tournage
 
-Les vidéos que la bulle du dashboard ouvre (`panel/public/dashboard/tutos.js`, registre
+Les vidéos que le carré du rail ouvre, à côté d'Assistant IA (`panel/public/dashboard/tutos.js`, registre
 `panel/public/dashboard/videos/videos.json`) se tournent ici, sur le **vrai** dashboard, dans Chromium. Seule l'API est
 fausse : `mocks/` rend des données **fictives** (« Magasin démo », prénoms inventés, chiffres générés), l'horloge est
 figée au jeudi 19/11/2026 à 15 h 40. Aucune donnée réelle n'entre dans une vidéo.

@@ -61,6 +61,9 @@ $v('aucun fichier orphelin dans videos/', $orphelins === [], implode(', ', $orph
 $html = (string) file_get_contents("$dash/index.html");
 $v('la page charge la bulle', str_contains($html, '<script src="tutos.js"></script>') && str_contains($html, 'href="tutos.css"'));
 $v('dashboard.js dit la page ouverte (dashboard:vue)', str_contains($js, "new CustomEvent('dashboard:vue'"));
+$v('le rail pose la place du carré, à côté d’Assistant IA ou de la Boîte mail', substr_count($js, 'railTuto()') >= 2 && str_contains($js, 'db-tu-slot') && str_contains($js, 'db-rail-ia db-rail-tu'));
+$tu = (string) file_get_contents("$dash/tutos.js");
+$v('tutos.js rend le carré et son annonce (plus de bulle en bas à droite)', str_contains($tu, 'carre()') && str_contains($tu, 'tu-annonce') && !str_contains($tu, 'tu-bulle'));
 $css = (string) file_get_contents("$dash/tutos.css");
 $v('tutos.css : aucune pilule', !preg_match('/border-radius:\s*(999|9999)px/', $css));
 $v('tutos.css : ni 500 ni 600', !preg_match('/font-weight:\s*[56]00|font:\s*[56]00/', $css));
