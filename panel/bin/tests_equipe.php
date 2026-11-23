@@ -409,5 +409,21 @@ $c = ep_equipe_carte();
 verifie('la carte se lit quand seul l’admin rend les employés', ($c['resume']['employes'] ?? 0) === 3, json_encode($c['resume'] ?? $c));
 ErpApi::$actif = false;
 
+echo "Le planning imprimé\n";
+$Ppdf = ['secteurs' => [['id' => 7, 'nom' => 'Boulangerie']], 'employes' => [
+        ['id' => 10, 'nom' => 'Anna Lambert', 'actif' => true, 'postes' => [['id' => 1, 'nom' => 'Four', 'secteur' => 7]], 'secteurs' => [7]],
+        ['id' => 13, 'nom' => 'Caissière <b>', 'actif' => true, 'postes' => [['id' => 3, 'nom' => 'Vente', 'secteur' => null]], 'secteurs' => []],
+        ['id' => 14, 'nom' => 'Ancien', 'actif' => false, 'postes' => [], 'secteurs' => []]],
+    'jours' => array_map(static fn ($i) => ['date' => date('Y-m-d', strtotime('2026-11-23 +' . $i . ' days')), 'services' => $i === 0 ? [['id' => 1, 'employe' => 10, 'de' => '04:00', 'a' => '12:00'], ['id' => 2, 'employe' => 13, 'de' => '07:00', 'a' => '11:00'], ['id' => 3, 'employe' => 13, 'de' => '14:30', 'a' => '18:30']] : []], range(0, 13))];
+$h = eqpPlanningPdfHtml($Ppdf, 'magasin', 'Sombreffe');
+verifie('deux semaines : deux pages', substr_count($h, 'class="pl-page"') === 2, (string) substr_count($h, 'class="pl-page"'));
+verifie('les heures de chacun', str_contains($h, '04:00–12:00') && str_contains($h, '14:30–18:30') && str_contains($h, '8 h'));
+verifie('la ligne par jour : 3 services, 16 h le lundi', str_contains($h, '3 serv. · 16 h'), $h);
+verifie('un inactif sans service n’est pas imprimé', !str_contains($h, 'Ancien'));
+verifie('les noms sont échappés', str_contains($h, 'Caissière &lt;b&gt;') && !str_contains($h, 'Caissière <b>'));
+verifie('le titre de la semaine', str_contains($h, 'Semaine du 23 au 29 novembre 2026') && str_contains($h, 'Semaine du 30 novembre au 6 décembre 2026'), $h);
+$hd = eqpPlanningPdfHtml($Ppdf, 'departements', 'Sombreffe');
+verifie('par département : une page par secteur ou poste et par semaine (Boulangerie, Comptoir)', substr_count($hd, 'class="pl-page"') === 4 && str_contains($hd, 'Boulangerie') && str_contains($hd, 'Comptoir'), (string) substr_count($hd, 'class="pl-page"'));
+
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);

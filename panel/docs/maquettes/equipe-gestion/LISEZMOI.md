@@ -101,17 +101,20 @@ la cible du réseau, 20 % et 22 %, réglables dans le réglage `personnelPaliers
 
 | Capture | Ce que c'est |
 |---|---|
-| `ecran-1-responsabilites.png` | l'onglet Responsabilités du module livré |
+| `ecran-1-responsabilites.png` | l'onglet Responsabilités du module livré (sans le bloc « À compléter », retiré le 23/11/2026) |
 | `ecran-2-planning-jour.png` | le planogramme du jour : présence, tickets habituels, temps morts habituels et du jour, linéaires, constats |
-| `ecran-3-modifier-un-service.png` | « Modifier les horaires » : un service étiré à la souris, la fenêtre de son effet |
-| `ecran-4-planning-semaine.png` | la semaine, les marqueurs du budget jour par jour, la jauge |
+| `ecran-3-modifier-un-service.png` | un service étiré à la souris (sans mode à ouvrir), la fenêtre de son effet |
+| `ecran-4-planning-mois.png` | le mois (23/11/2026, « rajouter mois ») : les heures de chaque service jour par jour (matin, après-midi), le week-end grisé, par jour les heures et le point du budget, par semaine les heures et le budget, la jauge du mois |
 | `ecran-5-recopier-la-semaine.png` | « Recopier la semaine précédente » sur une semaine vide : l'aperçu jour par jour, un service décoché, le budget de la semaine après la recopie (20,9 %, rouge) et les heures à retirer pour revenir à 17 % |
 | `ecran-6-shift-maker.png` | le shift maker (test) sur une semaine vide : la semaine 2 du roulement tirée de la matrice, chacun avec sa lettre et son créneau ; ceux qui n'ont pas de lettre (la production) sont nommés et ne sont pas générés ; le budget après (9,0 %) |
 | `ecran-7-matrice-abcd.png` | la matrice A B C D : les deux créneaux, la semaine de référence, les deux semaines case par case (un clic : matin → après-midi → repos), qui porte quelle lettre, et la couverture matin · après-midi de chaque jour |
 | `ecran-8-fiche-roulement.png` | la fiche d'une personne : sa lettre (A B C D ou aucun), et ce qu'elle donne cette semaine et la suivante |
-| `ecran-9-semaine-tableau.png` | la semaine en tableau (la maquette 03, devenue la vue par défaut du Planning) : une ligne par personne, une case par jour, les heures et le coût, par jour les personnes, les heures et le budget, et les trous (secteurs, comptoir) |
+| `ecran-9-semaine-tableau.png` | la semaine (le tableau et le planogramme de la semaine fondus le 23/11/2026) : une ligne par personne, une case par jour, chaque service avec sa petite barre sur la journée, les heures et le coût ; la jauge du budget ; par jour les personnes, les heures et le budget ; dessous, les linéaires (comptoir, secteurs, trous) |
 | `ecran-10-clic-sur-un-service.png` | un clic sur un service : adapter ses heures (ou un créneau de la matrice), le retirer du shift, voir qui est sur le même shift (ouvrir, retirer), ajouter une personne sur ce shift avec l'effet sur le budget du jour |
 | `ecran-11-clic-sur-une-case-vide.png` | un clic sur une case vide : un nouveau service, au créneau de sa lettre (ou le matin), avec l'effet sur le budget |
+| `ecran-12-tracer-une-ligne.png` | au jour, tirer une ligne à la souris sur la ligne d'une personne au repos : la trace dit ses heures pendant le geste |
+| `ecran-13-ligne-tracee.png` | la ligne lâchée : la fenêtre du nouveau service (14:00–18:00) et son effet sur le budget du jour, avant « Ajouter le service » |
+| `ecran-14-planning-imprime.png` | le planning imprimé, fait par le cockpit (le panel ne sert pas de PDF du planning) : une page A4 paysage par semaine, les heures de chacun, le total par jour |
 
 **Comment elles sont faites.** Le vrai dashboard servi en local ; les routes `/dashboard/equipe/*` répondent avec ce que le
 vrai code de `panel/src/equipe.php` calcule sur un panel de doublure (`ecran/panel_illustratif.php`, l'équipe et les tickets

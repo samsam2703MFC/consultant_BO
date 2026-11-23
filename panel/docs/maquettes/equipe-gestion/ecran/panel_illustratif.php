@@ -67,14 +67,20 @@ require $R . '/shared/src/cibles_reseau.php';
 require $R . '/shared/src/resultat.php';
 require $R . '/panel/src/temps_morts.php';
 require $R . '/panel/src/equipe.php';
-$out = __DIR__;
+require $R . '/shared/src/doc.php';
+$out = $argv[1] ?? __DIR__;
 $_GET = ['shop' => '5']; file_put_contents("$out/carte.json", json_encode(ep_equipe_carte(), JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5', 'du' => '2026-11-23', 'jours' => '1']; $j = ep_equipe_planning(); $j['aujourdhui'] = '2026-11-23'; $j['maintenant'] = '10:20'; file_put_contents("$out/jour.json", json_encode($j, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5', 'du' => '2026-11-23', 'jours' => '7']; $s = ep_equipe_planning(); $s['aujourdhui'] = '2026-11-23'; file_put_contents("$out/semaine.json", json_encode($s, JSON_UNESCAPED_UNICODE));
 // Recopier la semaine précédente : la semaine du 30/11, vide, et l'aperçu de la recopie du 23 au 29.
 $_GET = ['shop' => '5', 'du' => '2026-11-30', 'jours' => '7']; $s2 = ep_equipe_planning(); $s2['aujourdhui'] = '2026-11-23'; file_put_contents("$out/semaine2.json", json_encode($s2, JSON_UNESCAPED_UNICODE));
+// Le mois de novembre (la vue Mois).
+$_GET = ['shop' => '5', 'du' => '2026-11-01', 'jours' => '30']; $mo = ep_equipe_planning(); $mo['aujourdhui'] = '2026-11-23'; file_put_contents("$out/mois.json", json_encode($mo, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5', 'du' => '2026-11-30']; file_put_contents("$out/recopie.json", json_encode(ep_equipe_recopie(), JSON_UNESCAPED_UNICODE));
 // La matrice A B C D (celle de départ, semaine 1 = la semaine du 23/11) et le shift maker sur la semaine du 30/11.
 $_GET = ['shop' => '5']; $mx = ep_equipe_matrice(); $mx['matrice']['reference'] = '2026-11-23'; file_put_contents("$out/matrice.json", json_encode($mx, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '5', 'du' => '2026-11-30']; file_put_contents("$out/generer.json", json_encode(ep_equipe_generer(), JSON_UNESCAPED_UNICODE));
+// Le planning imprimé (le PDF de « Imprimer ») : le même HTML que ep_equipe_planning_pdf, avant Chromium.
+$P = eqpPlanningDonnees(5, '2026-11-23', 7);
+file_put_contents("$out/planning-imprime.html", '<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>' . docCss() . eqpPdfCss() . '</style></head><body>' . eqpPlanningPdfHtml($P, 'magasin', 'Sombreffe') . '</body></html>');
 echo "ok\n";

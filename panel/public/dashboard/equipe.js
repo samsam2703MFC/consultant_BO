@@ -3,14 +3,16 @@
  * La gestion de l'équipe du panel TF Buddy, reprise pour le cockpit (le paquet panel-team-files : la carte des
  * responsabilités et le planning). Deux onglets :
  *   - RESPONSABILITÉS : qui a quel poste, et les produits qui en dépendent (le secteur du poste) ; la fiche de la personne
- *     choisie ; « Modifier les affectations » (ce que le changement donne avant d'enregistrer) ; ce qui reste à compléter ;
+ *     choisie ; « Modifier les affectations » (ce que le changement donne avant d'enregistrer) ;
  *   - PLANNING : le planogramme des horaires — vue Jour (une ligne par personne, ses services en barres ; dessous, les
  *     linéaires : la présence quart d'heure par quart d'heure face aux tickets habituels, les temps morts, une ligne par
- *     secteur et le comptoir), vue Semaine (les mêmes lignes, un petit axe par jour), vue Tableau (la grille des heures) ;
+ *     secteur et le comptoir), vue Semaine (la grille des heures, une petite barre par service, les linéaires
+ *     de chaque jour dessous), vue Mois (les heures de chacun jour par jour, chaque jour et chaque semaine face au budget) ;
  *     le BUDGET D'HEURES : les frais de personnel du planning face au CA prévu (l'objectif du magasin), cible du réseau
  *     17 %, orange au-dessus, rouge au-dessus de 20 %, noir au-dessus de 22 % (personnelPaliers, réglables), et ce qu'il
- *     faut retirer pour revenir à la cible ; « Modifier les horaires » rend les barres déplaçables (glisser, étirer,
- *     ajouter, supprimer), la fenêtre montre l'effet sur le comptoir, les secteurs et le budget avant d'enregistrer.
+ *     faut retirer pour revenir à la cible ; au jour, la souris suffit : tirer une ligne sur celle d'une personne lui
+ *     crée un service, glisser ou étirer une barre le change ; la fenêtre montre l'effet sur le comptoir, les secteurs et
+ *     le budget avant d'enregistrer.
  * Routes (panel/src/equipe.php) : GET /dashboard/equipe/carte, POST …/postes, GET …/planning, GET …/planning/pdf,
  * POST|PATCH|DELETE …/service.
  *
@@ -39,13 +41,17 @@
   const court = s => { const d = dt(s); return JOURS[d.getDay()].slice(0, 3).replace(/^./, c => c.toUpperCase()) + ' ' + d.getDate(); };
   const wd = s => { const g = dt(s).getDay(); return String(g === 0 ? 7 : g); };
   const AUJ = ymd(new Date());
+  const moisDe = s => s.slice(0, 8) + '01';
+  const moisPlus = (s, n) => { const d = dt(moisDe(s)); d.setMonth(d.getMonth() + n); return ymd(d).slice(0, 8) + '01'; };
+  const nbJours = s => { const d = dt(moisDe(s)); return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); };
+  const LETTRE = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   // Un poste de comptoir : un poste général dont le nom dit la vente (fr, nl, pl, en).
   const COMPTOIR = /vente|vendeu|comptoir|caisse|verkoop|kassa|sprzeda|kasa|sales|counter/i;
   const SVG = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
   const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, onglet: 'resp',
     R: null, Rerr: null, sel: null, q: '', secteur: '', tousProduits: false, mod: null,
-    PJ: null, PS: null, Perr: null, vue: 'tableau', ouvrir: null, jour: AUJ, lundi: lundiDe(AUJ), editer: false, edit: null, glisse: null,
+    PJ: null, PS: null, PM: null, Perr: null, vue: 'tableau', ouvrir: null, jour: AUJ, lundi: lundiDe(AUJ), mois: moisDe(AUJ), edit: null, glisse: null,
     pdf: null, rec: null, M: null, mat: null, flash: null, occupe: false };
 
   /* ── L'API ──────────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -62,12 +68,14 @@
   }
   function lirePlanning(quoi) {
     st.Perr = null;
-    const jour = quoi === 'jour';
-    return lire('/dashboard/equipe/planning', jour ? { du: st.jour, jours: 1 } : { du: st.lundi, jours: 7 })
-      .then(r => { if (jour) { st.PJ = r; } else { st.PS = r; } rouvrirSi(); })
+    const prm = quoi === 'jour' ? { du: st.jour, jours: 1 } : quoi === 'mois' ? { du: st.mois, jours: nbJours(st.mois) } : { du: st.lundi, jours: 7 };
+    return lire('/dashboard/equipe/planning', prm)
+      .then(r => { if (quoi === 'jour') { st.PJ = r; } else if (quoi === 'mois') { st.PM = r; } else { st.PS = r; } rouvrirSi(); })
       .catch(e => { st.Perr = e.message; }).finally(rendre);
   }
-  function relireTout() { lireCarte(); lireMatrice(); lirePlanning('semaine'); if (st.onglet === 'planning' && st.vue === 'jour') { lirePlanning('jour'); } }
+  function relireTout() { lireCarte(); lireMatrice(); lirePlanning('semaine'); if (st.onglet === 'planning' && (st.vue === 'jour' || st.vue === 'mois')) { lirePlanning(st.vue); } }
+  /** Le planning affiché : le jour, le mois, sinon la semaine. */
+  const planVue = () => st.vue === 'jour' ? st.PJ : st.vue === 'mois' ? st.PM : st.PS;
 
   /* ── Le calcul d'un jour : services (avec la modification en cours), coût, présence, linéaires ──────────────── */
   function equipeDe(P) { const m = new Map(); (P.employes || []).forEach(e => m.set(e.id, e)); return m; }
@@ -141,12 +149,9 @@
       return `<tr class="eqp-ligne${e.id === st.sel ? ' is-sel' : ''}" data-eqp-sel="${e.id}"><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.fonctions || []).join(', ') || '—')}${e.postes.length ? '' : ' · <span class="eqp-vide">aucun poste</span>'}</span></span></div></td>${cols.map(cell).join('')}<td>${e.autres.length ? e.autres.map(n => `<span class="chip chip--draft">${esc(n)}</span>`).join('') : '<span class="eqp-tiret">—</span>'}</td></tr>`;
     }).join('') || `<tr><td colspan="${cols.length + 2}" class="eqp-vide-l">${R.employes.length ? 'Aucun résultat pour ces filtres.' : 'Aucun employé actif dans ce magasin.'}</td></tr>`;
     const th = cols.map(s => `<th class="${s.employes.length ? '' : 'eqp-gap'}">${esc(s.nom)}<span class="sub">${s.produits.length} produits${s.employes.length ? '' : ' · vide'}</span></th>`).join('');
-    const ac = R.secteursVides.map(id => sec.get(id)).filter(Boolean);
-    const alerte = ac.length || R.produitsSansSecteur.length || R.postesSansSecteur.length ? `<section class="eqp-alerte" aria-labelledby="eqp-ac"><h2 id="eqp-ac">À compléter</h2><div class="eqp-alerte-l">
-      ${ac.map(s => `<div><span class="t">${esc(s.nom)} · ${s.produits.length} produits, personne d’affecté</span>Aucun employé actif n’a de poste de ce secteur.<span class="ex">${s.produits.slice(0, 5).map(p => esc(p.nom)).join(', ')}${s.produits.length > 5 ? '…' : ''}</span><button type="button" class="linklike" data-eqp-postes="${st.sel || ''}">Affecter quelqu’un</button></div>`).join('')}
-      ${R.produitsSansSecteur.length ? `<div><span class="t">${R.produitsSansSecteur.length} produit${R.produitsSansSecteur.length > 1 ? 's' : ''} sans secteur</span>Le secteur d’un produit se règle au panel : sans lui, personne n’en a la charge.<span class="ex">${R.produitsSansSecteur.slice(0, 6).map(p => esc(p.nom)).join(', ')}${R.produitsSansSecteur.length > 6 ? '…' : ''}</span>${st.bureau ? '<button type="button" class="linklike" data-eqp-bureau="1">Demander au bureau</button>' : ''}</div>` : ''}
-      ${R.postesSansSecteur.length ? `<div class="calme"><span class="t">Postes sans secteur : ${R.postesSansSecteur.map(p => esc(p.nom)).join(', ')}</span>Normal pour les postes généraux (vente, gestion) : ils ne donnent pas de produits. Un poste de production doit être lié à son secteur au panel.</div>` : ''}
-    </div></section>` : (r.produits ? '<div class="eqp-ok">Tous les produits de l’assortiment ont un employé actif affecté. Cela ne dit pas encore qu’ils sont tenus à chaque service : voyez le planning.</div>' : '<div class="eqp-err">Aucun produit dans l’assortiment actif du magasin : la carte ne peut rien dire.</div>');
+    // Le bloc « À compléter » (secteurs sans personne, produits et postes sans secteur) est retiré le 23/11/2026, à la
+    // demande de Sam : il ne servait pas à faire les horaires. Reste l'assortiment vide, sans quoi la carte ne dit rien.
+    const alerte = r.produits ? '' : '<div class="eqp-err">Aucun produit dans l’assortiment actif du magasin : la carte ne peut rien dire.</div>';
     return `<p class="eqp-sous">Qui s’occupe de quoi : les postes de chacun et les produits qui en dépendent, dans l’assortiment actif du magasin.</p>${kpis}
       <div class="eqp-grille"><section class="card" aria-label="Responsabilités de l’équipe">
         <div class="toolbar"><input type="search" placeholder="Rechercher un employé, un poste ou un produit…" aria-label="Rechercher" value="${esc(st.q)}" data-eqp-q="1"><select aria-label="Secteur" data-eqp-secteur="1"><option value="">Tous les secteurs</option>${R.secteurs.map(s => `<option value="${s.id}"${String(s.id) === st.secteur ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select><span class="eqp-sp"></span><button type="button" class="btn btn--primary" data-eqp-postes="${st.sel || ''}"${st.sel ? '' : ' disabled'}>Modifier les affectations</button></div>
@@ -213,20 +218,21 @@
 
   /* ── Le planning ─────────────────────────────────────────────────────────────────────────────────────────────── */
   function rendPlanning() {
-    const P = st.vue === 'jour' ? st.PJ : st.PS;
-    const nav = st.vue === 'jour'
+    const P = planVue();
+    const nav = st.vue === 'mois'
+      ? `<button type="button" class="btn btn--icon" data-eqp-pas="-1" aria-label="Mois précédent">‹</button><span>${MOIS[dt(st.mois).getMonth()].replace(/^./, c => c.toUpperCase())} ${dt(st.mois).getFullYear()}</span><button type="button" class="btn btn--icon" data-eqp-pas="1" aria-label="Mois suivant">›</button>${st.mois !== moisDe(AUJ) ? '<button type="button" class="btn btn--sm btn--ghost" data-eqp-auj="1">Ce mois</button>' : ''}`
+      : st.vue === 'jour'
       ? `<button type="button" class="btn btn--icon" data-eqp-pas="-1" aria-label="Jour précédent">‹</button><span>${esc(long(st.jour))}</span><button type="button" class="btn btn--icon" data-eqp-pas="1" aria-label="Jour suivant">›</button>${st.jour !== AUJ ? '<button type="button" class="btn btn--sm btn--ghost" data-eqp-auj="1">Aujourd’hui</button>' : ''}`
       : `<button type="button" class="btn btn--icon" data-eqp-pas="-7" aria-label="Semaine précédente">‹</button><span>Semaine du ${dt(st.lundi).getDate()} au ${esc(long(plus(st.lundi, 6)).replace(/^\S+ /, ''))}</span><button type="button" class="btn btn--icon" data-eqp-pas="7" aria-label="Semaine suivante">›</button>${st.lundi !== lundiDe(AUJ) ? '<button type="button" class="btn btn--sm btn--ghost" data-eqp-auj="1">Cette semaine</button>' : ''}`;
     const barre = `<div class="eqp-pbar"><span class="eqp-nav">${nav}</span><span class="eqp-sp"></span>
-      <div class="seg" role="group" aria-label="Affichage">${[['tableau', 'Semaine'], ['jour', 'Jour'], ['semaine', 'Planogramme']].map(([k, l]) => `<button type="button" class="${st.vue === k ? 'is-on' : ''}" data-eqp-vue="${k}">${l}</button>`).join('')}</div>
-      ${st.vue === 'jour' ? (st.editer ? `<button type="button" class="btn" data-eqp-editer="0">Terminer</button>` : `<button type="button" class="btn" data-eqp-editer="1" title="Déplacer et étirer les barres à la souris">Glisser les horaires</button>`) : ''}
-      ${st.vue !== 'jour' ? `<details class="eqp-menu"><summary class="btn">Préparer la semaine ▾</summary><div class="eqp-menu-l"><button type="button" class="btn btn--sm" data-eqp-recopier="1">Recopier la semaine précédente</button><button type="button" class="btn btn--sm" data-eqp-generer="1">Shift maker <span class="tag-warn">test</span></button><button type="button" class="btn btn--sm" data-eqp-matrice="1"${st.M ? '' : ' disabled'}>Matrice A B C D</button></div></details>` : ''}
+      <div class="seg" role="group" aria-label="Affichage">${[['jour', 'Jour'], ['tableau', 'Semaine'], ['mois', 'Mois']].map(([k, l]) => `<button type="button" class="${st.vue === k ? 'is-on' : ''}" data-eqp-vue="${k}">${l}</button>`).join('')}</div>
+      ${st.vue === 'tableau' ? `<details class="eqp-menu"><summary class="btn">Préparer la semaine ▾</summary><div class="eqp-menu-l"><button type="button" class="btn btn--sm" data-eqp-recopier="1">Recopier la semaine précédente</button><button type="button" class="btn btn--sm" data-eqp-generer="1">Shift maker <span class="tag-warn">test</span></button><button type="button" class="btn btn--sm" data-eqp-matrice="1"${st.M ? '' : ' disabled'}>Matrice A B C D</button></div></details>` : ''}
       <button type="button" class="btn btn--primary" data-eqp-ajouter="1">Ajouter un service</button>
       <button type="button" class="btn" data-eqp-pdf="1" aria-expanded="${st.pdf ? 'true' : 'false'}">Imprimer le planning</button></div>${rendPdf()}`;
     if (st.Perr && !P) { return barre + `<div class="eqp-err">Impossible de lire le planning : ${esc(st.Perr)}. <button type="button" class="linklike" data-eqp-relire="1">Réessayer</button></div>`; }
-    if (!P || (st.vue === 'jour' ? P.du !== st.jour : P.du !== st.lundi)) { return barre + '<div class="eqp-attente">Lecture du planning…</div>'; }
+    if (!P || P.du !== (st.vue === 'jour' ? st.jour : st.vue === 'mois' ? st.mois : st.lundi)) { return barre + '<div class="eqp-attente">Lecture du planning…</div>'; }
     const non = (P.nonLus || []).length ? `<div class="eqp-err">Le panel n’a pas rendu le planning de ${P.nonLus.map(court).join(', ')} : ces jours sont vides ici, pas au panel.</div>` : '';
-    return barre + non + (st.vue === 'jour' ? rendJour(P) : st.vue === 'semaine' ? rendSemaine(P) : rendTableau(P));
+    return barre + non + (st.vue === 'jour' ? rendJour(P) : st.vue === 'mois' ? rendMois(P) : rendTableau(P));
   }
   function rendPdf() {
     if (!st.pdf) { return ''; }
@@ -285,11 +291,10 @@
     const q = []; for (let t = H0; t < H1; t += 15) { q.push([t, C.sv.filter(s => s.de <= t && s.a > t).length]); }
     const pic = Math.max(0, ...q.map(x => x[1])), picQ = q.filter(x => x[1] === pic && pic > 0);
     const tmMin = creux.reduce((a, [x, y]) => a + y - x, 0), tmPers = creux.reduce((a, [x, y]) => a + q.filter(([t]) => t >= x && t < y).reduce((b, [, n]) => b + n * 15, 0), 0);
-    const repos = (P.employes || []).filter(e => e.actif && !C.sv.some(s => s.employe === e.id));
     const comptoirL = C.lin.find(l => l.comptoir), vides = C.lin.filter(l => !l.comptoir && l.vide);
     const nTrous = vides.length + (comptoirL ? comptoirL.trous.length : 0);
     const kpis = `<section class="card eqp-kpis"><div class="kpi-row">
-      <div class="kpi"><div class="kpi__value">${C.presents}</div><div class="kpi__label">Au planning ce jour</div><div class="kpi__note">${repos.length ? 'au repos : ' + esc(repos.slice(0, 4).map(e => e.nom.split(' ')[0]).join(', ')) + (repos.length > 4 ? '…' : '') : 'toute l’équipe'}</div></div>
+      <div class="kpi"><div class="kpi__value">${C.presents}</div><div class="kpi__label">Au planning ce jour</div></div>
       <div class="kpi"><div class="kpi__value">${fH(C.h)}</div><div class="kpi__label">Heures du jour</div><div class="kpi__note">coût estimé ${fE(C.cout)}${C.sansTaux ? ' · ' + fH(C.sansTaux) + ' sans taux' : ''}</div></div>
       <div class="kpi"><div class="kpi__value">${marq(P, C.pct, 'gros')}</div><div class="kpi__label">Personnel / CA prévu</div><div class="kpi__note">${C.objectif ? fE(C.cout) + ' pour ' + fE(C.objectif) + ' prévus' : 'pas de CA prévu'}</div></div>
       <div class="kpi"><div class="kpi__value">${TM.habitude && TM.habitude.jours >= 2 ? dm(tmMin) : '—'}</div><div class="kpi__label">Temps morts habituels</div><div class="kpi__note">${TM.habitude && TM.habitude.jours >= 2 ? (tmMin ? fH(tmPers / 60) + ' de personnel pendant ces creux' : 'aucun creux d’un quart d’heure') : 'pas assez de jours mesurés'}</div></div>
@@ -301,18 +306,18 @@
     fond += creux.map(([a, b]) => `<span class="eqp-tmz" style="left:${X(a)};width:${W(a, b)}"></span>`).join('');
     if (maintenant !== null && maintenant > H0 && maintenant < H1) { fond += `<span class="eqp-now" style="left:${X(maintenant)}"></span>`; }
     let axe = ''; for (let t = H0; t <= H1; t += 60) { axe += `<span class="eqp-t" style="left:${X(t)}">${String(t / 60).padStart(2, '0')}</span>`; }
-    if (maintenant !== null && maintenant > H0 && maintenant < H1 && !st.editer) { axe += `<span class="eqp-nowax" style="left:${X(maintenant)}">${hh(maintenant)}</span>`; }
+    if (maintenant !== null && maintenant > H0 && maintenant < H1) { axe += `<span class="eqp-nowax" style="left:${X(maintenant)}">${hh(maintenant)}</span>`; }
     axe += creux.map(([a, b]) => `<span class="eqp-tmax" style="left:${X(a)};width:${W(a, b)}" title="Temps mort habituel ${hh(a)}–${hh(b)}"></span>`).join('');
     const ed = edJ;
     const ligne = e => {
       const L = C.sv.filter(s => s.employe === e.id), orig = ed && ed.id ? C0.sv.find(s => s.id === ed.id && s.employe === e.id) : null;
       const barres = L.map(s => {
-        const en = !st.editer && maintenant !== null && s.de <= maintenant && s.a > maintenant, sel = ed && s.edite;
-        return `<span class="eqp-bar${en ? ' en' : ''}${sel ? ' sel' : ''}${st.editer ? ' mobile' : ''}" style="left:${X(s.de)};width:${W(s.de, s.a)}" data-eqp-bar="${s.id}" data-emp="${e.id}" title="${hh(s.de)}–${hh(s.a)}">${st.editer ? '<span class="eqp-poi g" data-bord="g"></span>' : ''}<b>${hh(s.de)}–${hh(s.a)}</b><i>${fH((s.a - s.de) / 60)}${en ? ' · en poste' : ''}</i>${st.editer ? '<span class="eqp-poi d" data-bord="d"></span>' : ''}</span>`;
+        const en = !ed && maintenant !== null && s.de <= maintenant && s.a > maintenant, sel = ed && s.edite;
+        return `<span class="eqp-bar${en ? ' en' : ''}${sel ? ' sel' : ''} mobile" style="left:${X(s.de)};width:${W(s.de, s.a)}" data-eqp-bar="${s.id}" data-emp="${e.id}" title="${hh(s.de)}–${hh(s.a)}"><span class="eqp-poi g" data-bord="g"></span><b>${hh(s.de)}–${hh(s.a)}</b><i>${fH((s.a - s.de) / 60)}${en ? ' · en poste' : ''}</i><span class="eqp-poi d" data-bord="d"></span></span>`;
       }).join('');
       const fant = orig && ed && ed.id && orig ? `<span class="eqp-fant" style="left:${X(orig.de)};width:${W(orig.de, orig.a)}"></span>` : '';
       const pop = ed && ed.mode === 'pop' && ed.employe === e.id ? rendPop(P, J, C, C0, e, ed, X) : '';
-      const vide = !L.length ? `<span class="eqp-repos">${e.actif === false ? 'plus dans l’équipe' : 'repos'}${st.editer && e.actif !== false ? ' · <u>glisser sur la ligne pour ajouter un service</u>' : ''}</span>` : '';
+      const vide = !L.length ? `<span class="eqp-repos">${e.actif === false ? 'plus dans l’équipe' : 'repos'}${e.actif !== false ? ' · <u>tirez une ligne sur les heures voulues pour ajouter un service</u>' : ''}</span>` : '';
       return `<div class="eqp-l${L.length ? '' : ' repos'}${pop ? ' a-pop' : ''}"><div class="eqp-n"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}${e.taux == null && !e.franchise ? ' · <span class="eqp-vide">taux inconnu</span>' : ''}</span></span></div><div class="eqp-tl" data-eqp-tl="${e.id}">${fant}${barres}${vide}${pop}</div></div>`;
     };
     const corps = groupes(P, C.eq).map(([g, L]) => `<div class="eqp-gr"><div class="eqp-n">${esc(g)} · ${L.filter(e => C.sv.some(s => s.employe === e.id)).length}/${L.length}</div><div></div></div>${L.map(ligne).join('')}`).join('');
@@ -325,15 +330,15 @@
     const piste = l => `<div class="eqp-l eqp-li"><div class="eqp-n">${esc(l.nom)}<span class="sub">${l.cv.length ? l.n + ' pers. · ' + l.cv.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ') : 'personne ce jour'}</span></div><div class="eqp-tl">${l.cv.length ? l.cv.map(([a, b]) => `<span class="eqp-cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('') : '<span class="eqp-trou plein" style="left:0;width:100%"><b>personne de ce secteur ce jour</b></span>'}${l.trous.map(([a, b]) => `<span class="eqp-trou" style="left:${X(a)};width:${W(a, b)}"><b>${hh(a)}–${hh(b)} · personne</b></span>`).join('')}</div></div>`;
     const jourTM = TM.jour ? `<div class="eqp-l eqp-li eqp-tml"><div class="eqp-n">${TM.jour.etat === 'encours' ? 'Aujourd’hui' : 'Ce jour-là'}<span class="sub">${TM.jour.trous.length} temps mort${TM.jour.trous.length > 1 ? 's' : ''} · ${dm(TM.jour.mort)}${TM.jour.etat === 'encours' ? ' jusqu’ici' : ''}</span></div><div class="eqp-tl">${TM.jour.trous.filter(([a, b]) => b > H0 && a < H1).map(([a, b]) => `<span class="eqp-tmb jour" style="left:${X(Math.max(a, H0))};width:${W(Math.max(a, H0), Math.min(b, H1))}" title="${hh(a)}–${hh(b)} · ${b - a} min sans client">${b - a >= 20 ? `<b>${b - a} min</b>` : ''}</span>`).join('')}</div></div>` : '';
     const tmL = TM.habitude ? `<div class="eqp-l eqp-li eqp-tml"><div class="eqp-n">Temps morts habituels<span class="sub">${TM.habitude.jours >= 2 ? creux.length + ' · ' + dm(tmMin) + ' sans client · ' + TM.habitude.jours + ' ' + JOURS[dt(J.date).getDay()] + 's d’avant' : 'pas assez de jours mesurés'}</span></div><div class="eqp-tl">${creux.map(([a, b]) => `<span class="eqp-tmb" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)} · ${b - a} min sans client">${b - a >= 20 ? `<b>${b - a} min</b>` : ''}</span>`).join('')}</div></div>` : '';
-    const ins = st.editer ? '' : constats(P, J, C, creux, tk, q);
+    const ins = ed ? '' : constats(P, J, C, creux, tk, q);
     return kpis + jauge(P, 'Budget d’heures du jour', C.h, C.cout, C.objectif)
-      + `<div class="eqp-pg-defil"><section class="card eqp-pg${st.editer ? ' edition' : ''}" aria-label="Planogramme du ${esc(long(J.date))}"><div class="eqp-fond">${fond}</div>
+      + `<div class="eqp-pg-defil"><section class="card eqp-pg edition" aria-label="Planogramme du ${esc(long(J.date))}"><div class="eqp-fond">${fond}</div>
         <div class="eqp-l eqp-axe"><div class="eqp-n">${esc(court(J.date))} · ${C.presents} pers. au planning</div><div class="eqp-tl">${axe}</div></div>${corps}
         <div class="eqp-sep"><div class="eqp-n">Les linéaires</div><div class="eqp-leg"><span><i class="l"></i>personnes au planning</span>${tkE.length ? `<span><i class="b"></i>tickets, moyenne des ${TM.habitude.jours} ${JOURS[dt(J.date).getDay()]}s d’avant</span>` : ''}${creux.length ? '<span><i class="m"></i>temps mort (10 min et plus sans ticket)</span>' : ''}${C.ouv ? `<span><i class="o"></i>ouvert ${hh(C.ouv[0])}–${hh(C.ouv[1])} (d’après les tickets)</span>` : ''}</div></div>
         <div class="eqp-l eqp-pres"><div class="eqp-n">Présence<span class="sub">${pic ? 'pic ' + pic + ' pers.' + (picQ.length ? ' de ' + hh(picQ[0][0]) : '') : 'personne'}${pT[1] ? ' · ' + pT[0] + ' h : ' + String(pT[1]).replace('.', ',') + ' tickets' : ''}</span></div><div class="eqp-tl"><svg viewBox="0 0 1000 66" preserveAspectRatio="none" aria-hidden="true"><g class="tk">${tkB}</g><path class="ar" d="${d} V66 H0 Z"></path><path class="ln" d="${d}"></path></svg></div></div>
         ${tmL}${jourTM}${C.lin.map(piste).join('')}
       </section></div>${ins}
-      <p class="eqp-note">${st.editer ? 'Glisser une barre la déplace, ses bords changent les heures (au quart d’heure), glisser sur une ligne vide ajoute un service ; la fenêtre montre l’effet sur le comptoir, les secteurs et le budget, puis enregistre au panel.' : 'Les barres sont les services du planning du panel. Les temps morts viennent de l’onglet Temps morts (10 minutes et plus sans ticket) ; les heures d’ouverture, des premiers et derniers tickets des 4 dernières semaines. Les linéaires disent qui est là d’après les postes de chacun : une présence planifiée ne garantit pas que la production est faite.'}</p>`;
+      <p class="eqp-note">À la souris : tirez une ligne sur la ligne d’une personne, de l’heure de début à l’heure de fin, pour lui créer un service ; glissez une barre pour la déplacer, ses bords pour changer ses heures (au quart d’heure) ; un clic ouvre le service. Rien n’est écrit au panel avant « Enregistrer » ou « Ajouter le service ». ${'Les barres sont les services du planning du panel. Les temps morts viennent de l’onglet Temps morts (10 minutes et plus sans ticket) ; les heures d’ouverture, des premiers et derniers tickets des 4 dernières semaines. Les linéaires disent qui est là d’après les postes de chacun : une présence planifiée ne garantit pas que la production est faite.'}</p>`;
   }
   /** Les constats du jour : le comptoir vide aux heures chargées, le personnel pendant les creux, les secteurs vides. */
   function constats(P, J, C, creux, tk, q) {
@@ -367,46 +372,11 @@
   }
 
   /* — Vue Semaine — */
-  function rendSemaine(P) {
-    const eq = equipeDe(P), CJ = P.jours.map(J => calculJour(P, J, null));
-    const H0 = 4 * 60, H1 = 20 * 60, X = m => ((Math.min(H1, Math.max(H0, m)) - H0) / (H1 - H0) * 100).toFixed(3) + '%', W = (a, b) => ((Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0) * 100).toFixed(3) + '%';
-    const h = CJ.reduce((a, c) => a + c.h, 0), cout = CJ.reduce((a, c) => a + c.cout, 0), ca = CJ.reduce((a, c) => a + (c.objectif || 0), 0), coutAvecCa = CJ.reduce((a, c) => a + (c.objectif ? c.cout : 0), 0);
-    const hAvecCa = CJ.reduce((a, c) => a + (c.objectif ? c.h : 0), 0);
-    const auPlanning = new Set(CJ.flatMap(c => c.sv.map(s => s.employe))), nSv = CJ.reduce((a, c) => a + c.sv.length, 0);
-    const nTrous = CJ.reduce((a, c) => a + c.lin.reduce((b, l) => b + (l.comptoir ? l.trous.length : (l.vide ? 1 : 0)), 0), 0);
-    const parPers = new Map(); CJ.forEach(c => c.sv.forEach(s => { const e = eq.get(s.employe) || {}; const x = parPers.get(s.employe) || { h: 0, c: 0 }; x.h += (s.a - s.de) / 60; x.c += (s.a - s.de) / 60 * (e.taux || 0); parPers.set(s.employe, x); }));
-    const pct = ca ? coutAvecCa / ca * 100 : null;
-    const kpis = `<section class="card eqp-kpis"><div class="kpi-row">
-      <div class="kpi"><div class="kpi__value">${auPlanning.size}</div><div class="kpi__label">Employés au planning</div><div class="kpi__note">${nSv} service${nSv > 1 ? 's' : ''}</div></div>
-      <div class="kpi"><div class="kpi__value">${fH(h)}</div><div class="kpi__label">Heures planifiées</div><div class="kpi__note">${ca && coutAvecCa ? 'budget ' + fH(P.budget.cible / 100 * ca / (coutAvecCa / hAvecCa)) + ' à ' + String(P.budget.cible).replace('.', ',') + ' %' : 'coût estimé ' + fE(cout)}</div></div>
-      <div class="kpi"><div class="kpi__value">${marq(P, pct, 'gros')}</div><div class="kpi__label">Personnel / CA prévu</div><div class="kpi__note">${ca ? fE(coutAvecCa) + ' pour ' + fE(ca) + ' prévus' : 'pas de CA prévu'}</div></div>
-      <div class="kpi"><div class="kpi__value">${nTrous}${nTrous ? '<span class="tag-warn">à vérifier</span>' : ''}</div><div class="kpi__label">Trous dans les linéaires</div><div class="kpi__note">secteurs vides, comptoir sans personne</div></div>
-    </div></section>`;
-    const col = (i, c) => `<div class="eqp-j${P.jours[i].date === P.aujourdhui ? ' auj' : ''}">${c}</div>`;
-    const fondMini = i => { const o = CJ[i].ouv; return (o ? `<span class="eqp-ouv" style="left:${X(o[0])};width:${W(o[0], o[1])}"></span>` : '') + [8, 12, 16].map(x => `<span class="eqp-g f" style="left:${X(x * 60)}"></span>`).join(''); };
-    const tete = `<div class="eqp-sl eqp-st"><div class="eqp-n">Employé</div>${P.jours.map((J, i) => col(i, `<button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le ${esc(long(J.date))}"><b>${esc(court(J.date))}</b><span class="sub">${CJ[i].presents} pers. · ${fH(CJ[i].h)}</span>${CJ[i].pct != null && CJ[i].h > 0 ? marq(P, CJ[i].pct, 'eqp-m-j') : ''}</button><span class="eqp-ax"><i style="left:${X(480)}">8</i><i style="left:${X(720)}">12</i><i style="left:${X(960)}">16</i></span>`)).join('')}<div class="eqp-tot">Semaine</div></div>`;
-    const ligne = e => `<div class="eqp-sl"><div class="eqp-n"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div>${P.jours.map((J, i) => col(i, `<div class="eqp-stl${e.actif === false ? '' : ' cliquable'}" data-eqp-cell="${J.date}" data-emp="${e.id}">${fondMini(i)}${CJ[i].sv.filter(s => s.employe === e.id).map(s => `<span class="eqp-bar" data-eqp-svc="${s.id}" style="left:${X(s.de)};width:${W(s.de, s.a)}"></span><span class="eqp-lab" data-eqp-svc="${s.id}" style="left:${X(s.de)}">${hc(s.de)}–${hc(s.a)}</span>`).join('')}</div>`)).join('')}<div class="eqp-tot">${parPers.has(e.id) ? fH(parPers.get(e.id).h) + `<span class="sub">${fE(parPers.get(e.id).c)}</span>` : '<span class="eqp-tiret">—</span>'}</div></div>`;
-    const corps = groupes(P, eq).map(([g, L]) => `<div class="eqp-sl eqp-sgr"><div class="eqp-n">${esc(g)}</div></div>${L.map(ligne).join('')}`).join('');
-    const piste = (l, k) => `<div class="eqp-sl eqp-sli"><div class="eqp-n">${esc(l.nom)}</div>${P.jours.map((J, i) => { const x = CJ[i].lin[k]; return col(i, `<div class="eqp-stl">${fondMini(i)}${x.cv.map(([a, b]) => `<span class="eqp-cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}${x.vide ? '<span class="eqp-trou plein" style="left:0;width:100%"><b>vide</b></span>' : ''}${x.trous.map(([a, b]) => `<span class="eqp-trou" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)}"></span>`).join('')}</div>${x.trous.length ? `<span class="eqp-tr">${x.trous.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ')}</span>` : ''}`); }).join('')}<div class="eqp-tot"></div></div>`;
-    const lin = CJ[0] ? CJ[0].lin : [];
-    if (!nSv) {
-      const taux = (P.employes || []).filter(e => e.actif && e.taux > 0).map(e => e.taux), moy = taux.length ? taux.reduce((a, b) => a + b, 0) / taux.length : 0;
-      const bud = ca ? P.budget.cible / 100 * ca : 0;
-      return `<div class="eqp-vide7"><b>Aucun service au planning cette semaine.</b> Partez de la semaine précédente : « Recopier la semaine précédente » montre d’abord ce qui sera recopié, puis ajustez jour par jour.
-        ${bud ? `<div class="eqp-vide7-b">Budget de la semaine à ${String(P.budget.cible).replace('.', ',')} % : <b>${fE(bud)}</b> de personnel pour ${fE(ca)} de CA prévu${moy ? `, soit environ <b>${fH(bud / moy)}</b> au taux moyen de l’équipe (${fEh(moy)})` : ''}.</div>` : ''}</div>
-        <div class="eqp-pg-defil"><section class="card eqp-sem7" aria-label="Planogramme de la semaine">${tete}${corps}</section></div>
-        <p class="eqp-note">Un clic sur un jour l’ouvre en grand : « Modifier les horaires », puis glisser sur la ligne d’une personne pour lui ajouter un service.</p>`;
-    }
-    return kpis + jauge(P, 'Budget d’heures de la semaine', hAvecCa || h, coutAvecCa, ca)
-      + `<div class="eqp-pg-defil"><section class="card eqp-sem7" aria-label="Planogramme de la semaine">${tete}${corps}
-        <div class="eqp-sl eqp-ssep"><div class="eqp-n">Les linéaires</div><div class="eqp-leg"><span><i class="c"></i>quelqu’un du secteur est là</span><span><i class="t"></i>trou : comptoir vide pendant l’ouverture, ou secteur vide</span><span><i class="o"></i>ouverture (d’après les tickets)</span></div></div>
-        ${lin.map(piste).join('')}</section></div>
-      <p class="eqp-note">Paliers du budget : jusqu’à ${String(P.budget.cible).replace('.', ',')} %, la cible du réseau ; orange au-dessus ; rouge au-dessus de ${String(P.budget.rouge).replace('.', ',')} % ; noir au-dessus de ${String(P.budget.noir).replace('.', ',')} %. Le CA prévu est l’objectif du magasin, jour par jour ; le coût, les heures au taux horaire du panel. Un clic sur un jour l’ouvre en grand.</p>`;
-  }
-
-  /* — Vue Semaine en tableau (la maquette 03, 23/11/2026 : « fais celui-là ») : une ligne par personne, une case par
-   * jour ; un clic sur un service l'ouvre (adapter, ajouter une personne sur le shift, la retirer), un clic sur une case
-   * vide en ajoute un. Dessous, par jour : les personnes et les heures, le budget, les trous (secteurs, comptoir). — */
+  /* — Vue Semaine (la maquette 03, 23/11/2026 : « fais celui-là » ; le planogramme de la semaine y est fondu le même
+   * jour : « fusionner tableau et semaine ») : une ligne par personne, une case par jour ; chaque service porte sa
+   * petite barre sur la journée (de 4 h à 20 h) ; un clic sur un service l'ouvre (adapter, ajouter une personne sur le
+   * shift, la retirer), un clic sur une case vide en ajoute un. Dessous : par jour, les personnes, les heures et le
+   * budget ; puis les linéaires (le comptoir, chaque secteur : qui le tient, où sont les trous). — */
   function rendTableau(P) {
     const eq = equipeDe(P), CJ = P.jours.map(J => calculJour(P, J, null));
     const h = CJ.reduce((a, c) => a + c.h, 0), cout = CJ.reduce((a, c) => a + c.cout, 0), ca = CJ.reduce((a, c) => a + (c.objectif || 0), 0);
@@ -415,6 +385,10 @@
     const trousJ = CJ.map(C => [...C.lin.filter(l => !l.comptoir && l.vide).map(l => esc(l.nom)), ...(C.lin.find(l => l.comptoir) || { trous: [] }).trous.map(([a, b]) => 'comptoir ' + hc(a) + '–' + hc(b))]);
     const joursTrou = trousJ.filter(t => t.length).length;
     const pct = ca ? coutCa / ca * 100 : null;
+    // La petite barre d'un service sur sa journée, et le fond des linéaires : de 4 h à 20 h, élargi aux services de la semaine.
+    const H0 = Math.min(4 * 60, ...CJ.flatMap(c => c.sv.map(x => Math.floor(x.de / 60) * 60))), H1 = Math.max(20 * 60, ...CJ.flatMap(c => c.sv.map(x => Math.ceil(x.a / 60) * 60)));
+    const X = m => ((Math.min(H1, Math.max(H0, m)) - H0) / (H1 - H0) * 100).toFixed(2) + '%', W = (a, b) => ((Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0) * 100).toFixed(2) + '%';
+    const ouv = i => { const o = CJ[i].ouv; return o ? `<span class="eqp-ouv" style="left:${X(o[0])};width:${W(o[0], o[1])}"></span>` : ''; };
     const kpis = `<section class="card eqp-kpis"><div class="kpi-row">
       <div class="kpi"><div class="kpi__value">${auPlanning.size}</div><div class="kpi__label">Employés au planning</div><div class="kpi__note">${nSv} service${nSv > 1 ? 's' : ''}</div></div>
       <div class="kpi"><div class="kpi__value">${fH(h)}</div><div class="kpi__label">Heures planifiées</div><div class="kpi__note">${ca && coutCa && hCa ? 'budget ' + fH(P.budget.cible / 100 * ca / (coutCa / hCa)) + ' à ' + String(P.budget.cible).replace('.', ',') + ' %' : (auPlanning.size ? fH(h / auPlanning.size) + ' par personne en moyenne' : '—')}</div></div>
@@ -428,25 +402,68 @@
         const L = C.sv.filter(s => s.employe === e.id), d = P.jours[i].date;
         L.forEach(s => { hp += (s.a - s.de) / 60; cp += (s.a - s.de) / 60 * (e.taux || 0); });
         const ouvert = st.edit && st.edit.mode === 'modal' && st.edit.date === d && (st.edit.employe === e.id);
-        return `<td class="eqp-c${d === P.aujourdhui ? ' auj' : ''}${ouvert ? ' on' : ''}${e.actif === false ? '' : ' cliquable'}" data-eqp-cell="${d}" data-emp="${e.id}">${L.length ? L.map(s => `<button type="button" class="eqp-sv${st.edit && st.edit.id === s.id ? ' on' : ''}" data-eqp-svc="${s.id}" title="Ouvrir le service">${hh(s.de)}–${hh(s.a)}<small>${esc(zone(e))}</small></button>`).join('') : `<span class="eqp-tiret">—</span>${e.actif === false ? '' : '<span class="eqp-plus">+ Ajouter</span>'}`}</td>`;
+        return `<td class="eqp-c${d === P.aujourdhui ? ' auj' : ''}${ouvert ? ' on' : ''}${e.actif === false ? '' : ' cliquable'}" data-eqp-cell="${d}" data-emp="${e.id}">${L.length ? L.map(s => `<button type="button" class="eqp-sv${st.edit && st.edit.id === s.id ? ' on' : ''}" data-eqp-svc="${s.id}" title="Ouvrir le service">${hh(s.de)}–${hh(s.a)}<small>${esc(zone(e))}</small><span class="eqp-mini" aria-hidden="true">${ouv(i)}<i style="left:${X(s.de)};width:${W(s.de, s.a)}"></i></span></button>`).join('') : `<span class="eqp-tiret">—</span>${e.actif === false ? '' : '<span class="eqp-plus">+ Ajouter</span>'}`}</td>`;
       }).join('');
       return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
     }).join('') || `<tr><td colspan="10" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
-    const tot = `<tr class="tot"><td>Par jour</td>${CJ.map((C, i) => `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${C.presents} pers. · ${fH(C.h)}${C.pct != null && C.h > 0 ? '<br>' + marq(P, C.pct, 'eqp-m-j') : ''}</td>`).join('')}<td class="num">${fH(h)}</td><td class="num">${fE(cout)}</td></tr>
-      <tr class="tot"><td>Trous<span class="sub">secteurs sans personne, comptoir vide pendant l’ouverture</span></td>${trousJ.map((t, i) => `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${t.length ? t.map(x => `<span class="tag-warn">${x}</span>`).join(' ') : '<span class="eqp-tiret">—</span>'}</td>`).join('')}<td></td><td></td></tr>`;
+    const tot = `<tr class="tot"><td>Par jour</td>${CJ.map((C, i) => `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${C.presents} pers. · ${fH(C.h)}${C.pct != null && C.h > 0 ? '<br>' + marq(P, C.pct, 'eqp-m-j') : ''}</td>`).join('')}<td class="num">${fH(h)}</td><td class="num">${fE(cout)}</td></tr>`;
+    // Les linéaires (du planogramme de la semaine) : une ligne par secteur et le comptoir, une piste par jour.
+    const lin = nSv && CJ[0] ? CJ[0].lin : [];
+    const pistes = lin.length ? `<tr class="eqp-lsep"><td colspan="${P.jours.length + 3}">Les linéaires<span class="eqp-leg"><span><i class="c"></i>quelqu’un du secteur est là</span><span><i class="t"></i>trou : comptoir vide pendant l’ouverture, ou secteur vide</span><span><i class="o"></i>ouverture (d’après les tickets)</span></span></td></tr>`
+      + lin.map((l, k) => `<tr class="eqp-lin"><td>${esc(l.nom)}</td>${P.jours.map((J, i) => { const x = CJ[i].lin[k] || { cv: [], trous: [], vide: false };
+        return `<td class="${J.date === P.aujourdhui ? 'auj' : ''}"><span class="eqp-mini l">${ouv(i)}${x.cv.map(([a, b]) => `<span class="eqp-cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}${x.vide ? '<span class="eqp-trou" style="left:0;width:100%"></span>' : ''}${x.trous.map(([a, b]) => `<span class="eqp-trou" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)}"></span>`).join('')}</span>${x.vide ? '<span class="eqp-tr">personne</span>' : x.trous.length ? `<span class="eqp-tr">${x.trous.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ')}</span>` : ''}</td>`; }).join('')}<td></td><td></td></tr>`).join('') : '';
     const vide = nSv ? '' : (() => {
       const taux = (P.employes || []).filter(e => e.actif && e.taux > 0).map(e => e.taux), moy = taux.length ? taux.reduce((a, b) => a + b, 0) / taux.length : 0, bud = ca ? P.budget.cible / 100 * ca : 0;
       return `<div class="eqp-vide7"><b>Aucun service au planning cette semaine.</b> Cliquez une case pour ajouter un service, ou partez de la semaine précédente (« Préparer la semaine »).${bud ? `<div class="eqp-vide7-b">Budget de la semaine à ${String(P.budget.cible).replace('.', ',')} % : <b>${fE(bud)}</b> de personnel pour ${fE(ca)} de CA prévu${moy ? `, soit environ <b>${fH(bud / moy)}</b> au taux moyen de l’équipe (${fEh(moy)})` : ''}.</div>` : ''}</div>`;
     })();
-    return vide + kpis + `<section class="card eqp-tab"><div class="eqp-table"><table><thead><tr><th>Employé</th>${P.jours.map(J => `<th class="${J.date === P.aujourdhui ? 'auj' : ''}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le planogramme du jour">${esc(court(J.date))}</button>${J.date === P.aujourdhui ? '<span class="sub">aujourd’hui</span>' : ''}</th>`).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr></thead><tbody>${lignes}${tot}</tbody></table></div></section>
-      <p class="eqp-note">Un clic sur un service l’ouvre : adapter ses heures, ajouter une personne sur le même shift, retirer une personne du shift. Un clic sur une case vide ajoute un service à cette personne ce jour-là. Le coût suit le taux horaire du panel ; le budget, la cible du réseau (${String(P.budget.cible).replace('.', ',')} %).</p>`;
+    return vide + kpis + (nSv ? jauge(P, 'Budget d’heures de la semaine', hCa || h, coutCa, ca) : '') + `<section class="card eqp-tab"><div class="eqp-table"><table><thead><tr><th>Employé</th>${P.jours.map(J => `<th class="${J.date === P.aujourdhui ? 'auj' : ''}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le planogramme du jour">${esc(court(J.date))}</button>${J.date === P.aujourdhui ? '<span class="sub">aujourd’hui</span>' : ''}</th>`).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr></thead><tbody>${lignes}${tot}${pistes}</tbody></table></div></section>
+      <p class="eqp-note">Un clic sur un service l’ouvre : adapter ses heures, ajouter une personne sur le même shift, retirer une personne du shift. Un clic sur une case vide ajoute un service à cette personne ce jour-là ; un clic sur un jour l’ouvre en grand, où l’on trace les services à la souris. Paliers du budget : jusqu’à ${String(P.budget.cible).replace('.', ',')} %, la cible du réseau ; orange au-dessus ; rouge au-dessus de ${String(P.budget.rouge).replace('.', ',')} % ; noir au-dessus de ${String(P.budget.noir).replace('.', ',')} %. Le coût suit le taux horaire du panel.</p>`;
+  }
+
+  /* — Vue Mois (23/11/2026, « rajouter mois ») : une ligne par personne, une colonne par jour du mois (ses heures, le
+   * matin ou l'après-midi), son total du mois ; dessous, chaque jour et chaque semaine face au budget. Un clic sur une
+   * case ouvre le service ou en ajoute un ; sur un jour, l'ouvre en grand ; sur une semaine, la montre. — */
+  function rendMois(P) {
+    const CJ = P.jours.map(J => calculJour(P, J, null)), b = P.budget;
+    const somme = f => CJ.reduce((a, c) => a + f(c), 0);
+    const h = somme(c => c.h), cout = somme(c => c.cout), ca = somme(c => c.objectif || 0), coutCa = somme(c => c.objectif ? c.cout : 0), hCa = somme(c => c.objectif ? c.h : 0);
+    const auPlanning = new Set(CJ.flatMap(c => c.sv.map(x => x.employe))), nSv = somme(c => c.sv.length), pct = ca ? coutCa / ca * 100 : null;
+    const hors = CJ.filter(C => C.pct != null && C.h > 0 && niveau(P, C.pct) !== 'ok'), graves = hors.filter(C => niveau(P, C.pct) !== 'orange');
+    const nb = x => { const r = Math.round(x * 2) / 2; return Number.isInteger(r) ? String(r) : r.toFixed(1).replace('.', ','); };
+    const cl = (J, base) => { const g = dt(J.date).getDay(); return [base, g === 0 || g === 6 ? 'we' : '', J.date === P.aujourdhui ? 'auj' : ''].filter(Boolean).join(' '); };
+    const semaines = []; P.jours.forEach((J, i) => { const l = lundiDe(J.date), w = semaines[semaines.length - 1]; if (w && w.lundi === l) { w.i.push(i); } else { semaines.push({ lundi: l, i: [i] }); } });
+    const kpis = `<section class="card eqp-kpis"><div class="kpi-row">
+      <div class="kpi"><div class="kpi__value">${auPlanning.size}</div><div class="kpi__label">Employés au planning</div><div class="kpi__note">${nSv} service${nSv > 1 ? 's' : ''}</div></div>
+      <div class="kpi"><div class="kpi__value">${fH(h)}</div><div class="kpi__label">Heures du mois</div><div class="kpi__note">${ca && coutCa && hCa ? 'budget ' + fH(b.cible / 100 * ca / (coutCa / hCa)) + ' à ' + String(b.cible).replace('.', ',') + ' %' : (auPlanning.size ? fH(h / auPlanning.size) + ' par personne en moyenne' : '—')}</div></div>
+      <div class="kpi"><div class="kpi__value">${nSv ? marq(P, pct, 'gros') : fE(0)}</div><div class="kpi__label">Personnel / CA prévu</div><div class="kpi__note">${fE(cout)} estimés${ca ? ' pour ' + fE(ca) + ' prévus' : ''}</div></div>
+      <div class="kpi"><div class="kpi__value">${hors.length}${hors.length ? '<span class="tag-warn">à revoir</span>' : ''}</div><div class="kpi__label">Jours au-dessus de la cible</div><div class="kpi__note">${hors.length ? (graves.length ? graves.length + ' au-dessus de ' + String(b.rouge).replace('.', ',') + ' %' : 'tous sous ' + String(b.rouge).replace('.', ',') + ' %') : (nSv ? 'tous dans la cible' : 'aucun service ce mois')}</div></div>
+    </div></section>`;
+    const tete = `<tr><th>Employé</th>${P.jours.map(J => { const d = dt(J.date); return `<th class="${cl(J, 'eqp-mj')}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le ${esc(long(J.date))}"><span>${LETTRE[d.getDay()]}</span><b>${d.getDate()}</b></button></th>`; }).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr>`;
+    const lignes = (P.employes || []).filter(e => e.actif !== false || CJ.some(c => c.sv.some(x => x.employe === e.id))).map(e => {
+      let hp = 0, cp = 0;
+      const cells = CJ.map((C, i) => {
+        const J = P.jours[i], L = C.sv.filter(x => x.employe === e.id);
+        L.forEach(x => { hp += (x.a - x.de) / 60; cp += (x.a - x.de) / 60 * (e.taux || 0); });
+        const ouvert = st.edit && st.edit.mode === 'modal' && st.edit.date === J.date && st.edit.employe === e.id;
+        return `<td class="${cl(J, 'eqp-mc')}${e.actif === false ? '' : ' cliquable'}${ouvert ? ' on' : ''}" data-eqp-cell="${J.date}" data-emp="${e.id}">${L.map(x => `<button type="button" class="eqp-ms ${x.de < 12 * 60 ? 'm' : 'a'}" data-eqp-svc="${x.id}" title="${esc(court(J.date))} · ${hh(x.de)}–${hh(x.a)}">${nb((x.a - x.de) / 60)}</button>`).join('')}</td>`;
+      }).join('');
+      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
+    }).join('') || `<tr><td colspan="${P.jours.length + 3}" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
+    const parJour = `<tr class="tot"><td>Par jour<span class="sub">heures · budget</span></td>${CJ.map((C, i) => `<td class="${cl(P.jours[i], 'eqp-mc')}">${C.h ? nb(C.h) : '<span class="eqp-tiret">—</span>'}${C.pct != null && C.h > 0 ? `<i class="eqp-pt eqp-m-${niveau(P, C.pct)}" title="${fP(C.pct)} du CA prévu"></i>` : ''}</td>`).join('')}<td class="num">${fH(h)}</td><td class="num">${fE(cout)}</td></tr>`;
+    const parSem = `<tr class="tot eqp-msem"><td>Par semaine</td>${semaines.map(w => {
+      const C = w.i.map(i => CJ[i]), hw = C.reduce((a, c) => a + c.h, 0), caw = C.reduce((a, c) => a + (c.objectif || 0), 0), cw = C.reduce((a, c) => a + (c.objectif ? c.cout : 0), 0);
+      return `<td colspan="${w.i.length}"><button type="button" class="linklike" data-eqp-semaine="${w.lundi}" title="Voir la semaine du ${esc(long(w.lundi))}">${w.i.length < 7 ? '' : 'Sem. du '}${dt(w.lundi).getDate()}/${dt(w.lundi).getMonth() + 1}</button>${hw ? ' · ' + fH(hw) + (caw && cw ? ' ' + marq(P, cw / caw * 100, 'eqp-m-j') : '') : ''}</td>`;
+    }).join('')}<td></td><td></td></tr>`;
+    const vide = nSv ? '' : `<div class="eqp-vide7"><b>Aucun service au planning ce mois.</b> Préparez-le semaine par semaine : un clic sur une semaine l’ouvre, puis « Préparer la semaine » (recopier la précédente, ou le shift maker).</div>`;
+    return vide + kpis + (nSv ? jauge(P, 'Budget d’heures du mois', hCa || h, coutCa, ca) : '') + `<section class="card eqp-tab eqp-moi"><div class="eqp-table"><table><thead>${tete}</thead><tbody>${lignes}${parJour}${parSem}</tbody></table></div></section>
+      <p class="eqp-note">Dans chaque case, les heures du service : <span class="eqp-ms m">8</span> le matin (avant midi), <span class="eqp-ms a">6</span> l’après-midi. Un clic sur une case l’ouvre (adapter, retirer, ajouter quelqu’un sur le shift) ou ajoute un service ; un clic sur un jour l’ouvre en grand ; sur une semaine, la montre. Les points sous chaque jour suivent les paliers du budget (cible ${String(b.cible).replace('.', ',')} %, orange au-dessus, rouge au-dessus de ${String(b.rouge).replace('.', ',')} %, noir au-dessus de ${String(b.noir).replace('.', ',')} %).</p>`;
   }
 
   /* ── La fenêtre d'un service (23/11/2026, « on clic je dois pouvoir adapter, rajouter et effacer une personne du
-   * shift ») : la même au tableau, au planogramme de la semaine (une fenêtre) et au jour (sous la barre). ───────── */
+   * shift ») : la même à la semaine et au mois (une fenêtre) et au jour (sous la barre). ───────── */
   /** Le planning qui porte la date d'une modification : le jour ouvert en grand, sinon la semaine. */
   function ctxEdition(ed) {
-    for (const P of ed.mode === 'pop' ? [st.PJ, st.PS] : [st.PS, st.PJ]) { const J = P && P.jours.find(x => x.date === ed.date); if (J) { return [P, J]; } }
+    for (const P of ed.mode === 'pop' ? [st.PJ, st.PS, st.PM] : (st.vue === 'mois' ? [st.PM, st.PS, st.PJ] : [st.PS, st.PJ, st.PM])) { const J = P && P.jours.find(x => x.date === ed.date); if (J) { return [P, J]; } }
     return [null, null];
   }
   /** Les heures proposées pour un nouveau service : le créneau de sa lettre ce jour-là (matrice A B C D), sinon le matin. */
@@ -488,6 +505,8 @@
     }
     if (change) { C.lin.filter(l => !l.comptoir).forEach(l => { const l0 = C0.lin.find(x => x.nom === l.nom); if (l0 && l0.vide && !l.vide) { effets.push(`<li class="ok">${esc(l.nom)} : quelqu’un ce jour</li>`); } if (l0 && !l0.vide && l.vide) { effets.push(`<li class="ko">${esc(l.nom)} : plus personne ce jour</li>`); } }); }
     if (change && C.objectif && ed.employe) { effets.push(`<li>Budget du jour ${marq(P, C0.pct)} → ${marq(P, C.pct)} <span class="mu">${C.cout - C0.cout >= 0 ? '+' : '−'}${fE(Math.abs(C.cout - C0.cout))}</span></li>`); }
+    const chev = ed.employe ? C0.sv.find(x => x.employe === ed.employe && x.id !== ed.id && x.de < ed.a && x.a > ed.de) : null;
+    if (chev) { effets.unshift(`<li class="ko">Chevauche son service de ${hh(chev.de)} à ${hh(chev.a)} : adaptez les heures</li>`); }
     const dH = orig ? (ed.a - ed.de - (orig.a - orig.de)) / 60 : 0;
     const M = st.M && st.M.matrice;
     const crens = M ? ['M', 'P'].map(k => `<button type="button" class="eqp-cren${mn(M.creneaux[k].de) === ed.de && mn(M.creneaux[k].a) === ed.a ? ' on' : ''}" data-eqp-cren="${k}">${CRENEAU[k]} ${esc(M.creneaux[k].de)}–${esc(M.creneaux[k].a)}</button>`).join('') : '';
@@ -507,13 +526,13 @@
       ${crens ? `<div class="eqp-crens">${crens}</div>` : ''}
       ${effets.length ? `<ul class="eqp-pop-e">${effets.join('')}</ul>` : ''}
       ${ed.err ? `<p class="error" role="alert">${esc(ed.err)}</p>` : ''}
-      <div class="eqp-pop-a">${ed.id ? `<button type="button" class="btn btn--sm btn--danger" data-eqp-suppr="1"${ed.occupe ? ' disabled' : ''}>Retirer ${prenom} du shift</button>` : ''}<span class="eqp-sp"></span><button type="button" class="btn btn--sm btn--ghost" data-eqp-annuler="1"${ed.occupe ? ' disabled' : ''}>${ed.id && !change ? 'Fermer' : 'Annuler'}</button><button type="button" class="btn btn--sm btn--primary${ed.occupe ? ' is-busy' : ''}" data-eqp-ok="1"${ed.occupe || !change || !ed.employe ? ' disabled' : ''}>${ed.occupe ? 'Enregistrement…' : ed.id ? 'Enregistrer' : 'Ajouter le service'}</button></div>
+      <div class="eqp-pop-a">${ed.id ? `<button type="button" class="btn btn--sm btn--danger" data-eqp-suppr="1"${ed.occupe ? ' disabled' : ''}>Retirer ${prenom} du shift</button>` : ''}<span class="eqp-sp"></span><button type="button" class="btn btn--sm btn--ghost" data-eqp-annuler="1"${ed.occupe ? ' disabled' : ''}>${ed.id && !change ? 'Fermer' : 'Annuler'}</button><button type="button" class="btn btn--sm btn--primary${ed.occupe ? ' is-busy' : ''}" data-eqp-ok="1"${ed.occupe || !change || !ed.employe || chev ? ' disabled' : ''}>${ed.occupe ? 'Enregistrement…' : ed.id ? 'Enregistrer' : 'Ajouter le service'}</button></div>
       ${ed.id ? `<div class="eqp-shift"><div class="eqp-opt-g">Sur ce shift · ${hh(ed.de)}–${hh(ed.a)}</div>
         ${meme.length ? meme.map(x => { const p2 = eq.get(x.employe) || { nom: 'Employé ' + x.employe }; return `<div class="eqp-shift-l"><span><b>${esc(p2.nom)}</b>${lettreChip(p2)} <span class="mu">${hh(x.de)}–${hh(x.a)}</span></span><span class="eqp-sp"></span><button type="button" class="linklike" data-eqp-ouvrir-svc="${x.id}">Ouvrir</button><button type="button" class="btn btn--sm btn--danger" data-eqp-retirer="${x.id}" data-nom="${esc(p2.nom)}"${ed.occupe ? ' disabled' : ''}>Retirer</button></div>`; }).join('') : '<p class="eqp-note" style="margin:4px 0 0">Personne d’autre sur ces heures.</p>'}
         <div class="eqp-shift-aj"><select data-eqp-ajout-sel="1"${libres.length ? '' : ' disabled'}><option value="">${libres.length ? '+ Ajouter une personne sur ce shift' : 'Toute l’équipe est déjà là'}</option>${libres.map(x => `<option value="${x.id}"${x.id === ed.ajout ? ' selected' : ''}>${esc(x.nom)}${(x.postes || []).length ? ' · ' + esc(x.postes[0].nom) : ''}</option>`).join('')}</select>${ed.ajout ? `<button type="button" class="btn btn--sm" data-eqp-ajout-ok="1"${ed.occupe ? ' disabled' : ''}>Ajouter ${esc(((eq.get(ed.ajout) || {}).nom || '').split(' ')[0])} ${hh(ed.de)}–${hh(ed.a)}</button>` : ''}</div>${ajoutEffet ? `<div class="eqp-shift-ef">${ajoutEffet}</div>` : ''}
       </div>` : ''}`;
   }
-  /** La fenêtre au tableau et au planogramme de la semaine. */
+  /** La fenêtre à la semaine et au mois. */
   function rendEditeurModal() {
     const ed = st.edit; if (!ed || ed.mode !== 'modal') { return ''; }
     const [P, J] = ctxEdition(ed); if (!P) { return ''; }
@@ -523,6 +542,7 @@
   function apresEcriture(msg, rouvrir) {
     st.edit = null; st.ouvrir = rouvrir || null;
     if (st.vue === 'jour') { st.PJ = null; lirePlanning('jour'); }
+    if (st.vue === 'mois') { st.PM = null; lirePlanning('mois'); } else { st.PM = null; }
     st.PS = null; lirePlanning('semaine');
     flash('ok', msg);
   }
@@ -599,7 +619,7 @@
     const T = PREP[R.type];
     R.etat = 'envoi'; R.err = null; rendre();
     envoyer('POST', T.route, Object.assign({ du: R.du }, T.corps([...R.coches])))
-      .then(x => { st.PS = null; lirePlanning('semaine'); st.PJ = null;
+      .then(x => { st.PS = null; lirePlanning('semaine'); st.PJ = null; st.PM = null;
         if (x.echecs && x.echecs.length) { R.etat = 'fini'; R.res = x; rendre(); } else { st.rec = null; flash('ok', x.crees + ' service' + (x.crees > 1 ? 's' : '') + ' ' + T.verbe[1] + (x.crees > 1 ? 's' : '') + ' au panel. Ajustez maintenant jour par jour.'); } })
       .catch(e => { R.etat = 'pret'; R.err = 'Rien n’est enregistré : ' + e.message + '.'; rendre(); });
   }
@@ -674,8 +694,7 @@
     on('[data-eqp-secteur]', 'change', e => { st.secteur = e.target.value; rendre(); });
     on('[data-eqp-tous]', 'click', () => { st.tousProduits = !st.tousProduits; rendre(); });
     on('[data-eqp-postes]', 'click', e => { const id = +e.currentTarget.dataset.eqpPostes; if (id) { ouvrirPostes(id); } });
-    on('[data-eqp-bureau]', 'click', () => { if (st.bureau) { st.bureau(); } });
-    on('[data-eqp-aller-planning]', 'click', () => { st.onglet = 'planning'; st.vue = 'semaine'; st.lundi = lundiDe(AUJ); chargerVue(); rendre(); });
+    on('[data-eqp-aller-planning]', 'click', () => { st.onglet = 'planning'; st.vue = 'tableau'; st.lundi = lundiDe(AUJ); chargerVue(); rendre(); });
     on('[data-eqp-coche]', 'change', e => { const id = +e.target.dataset.eqpCoche; if (e.target.checked) { st.mod.coches.add(id); } else { st.mod.coches.delete(id); } rendre(); });
     on('[data-eqp-fermer]', 'click', e => { if (e.target !== e.currentTarget || (st.mod && st.mod.occupe) || (st.rec && st.rec.etat === 'envoi') || (st.mat && st.mat.occupe)) { return; } st.mod = null; st.rec = null; st.mat = null; rendre(); });
     on('[data-eqp-recopier]', 'click', () => ouvrirPrep('recopie'));
@@ -691,12 +710,18 @@
     on('[data-eqp-lettre]', 'click', e => { const b = e.currentTarget; choisirLettre(+b.dataset.emp, b.dataset.eqpLettre || null); });
     on('[data-eqp-rec-ok]', 'click', appliquerRecopie);
     on('[data-eqp-enregistrer-postes]', 'click', enregistrerPostes);
-    on('[data-eqp-vue]', 'click', e => { st.vue = e.currentTarget.dataset.eqpVue; st.edit = null; if (st.vue !== 'jour') { st.editer = false; st.lundi = lundiDe(st.jour); } chargerVue(); rendre(); });
-    on('[data-eqp-pas]', 'click', e => { const n = +e.currentTarget.dataset.eqpPas; st.edit = null; if (st.vue === 'jour') { st.jour = plus(st.jour, n); } else { st.lundi = plus(st.lundi, n); } chargerVue(); rendre(); });
-    on('[data-eqp-auj]', 'click', () => { st.edit = null; st.jour = AUJ; st.lundi = lundiDe(AUJ); chargerVue(); rendre(); });
+    on('[data-eqp-vue]', 'click', e => {
+      // La date qu'on regarde suit d'une vue à l'autre : le jour ouvert, la semaine montrée, ou le mois (aujourd'hui s'il en est).
+      const ref = st.vue === 'jour' ? st.jour : st.vue === 'mois' ? (moisDe(AUJ) === st.mois ? AUJ : st.mois) : (st.lundi === lundiDe(AUJ) ? AUJ : st.lundi);
+      st.vue = e.currentTarget.dataset.eqpVue; st.edit = null;
+      if (st.vue === 'tableau') { st.lundi = lundiDe(ref); } else if (st.vue === 'mois') { st.mois = moisDe(ref); } else { st.jour = ref; }
+      chargerVue(); rendre();
+    });
+    on('[data-eqp-pas]', 'click', e => { const n = +e.currentTarget.dataset.eqpPas; st.edit = null; if (st.vue === 'jour') { st.jour = plus(st.jour, n); } else if (st.vue === 'mois') { st.mois = moisPlus(st.mois, n); } else { st.lundi = plus(st.lundi, n); } chargerVue(); rendre(); });
+    on('[data-eqp-auj]', 'click', () => { st.edit = null; st.jour = AUJ; st.lundi = lundiDe(AUJ); st.mois = moisDe(AUJ); chargerVue(); rendre(); });
+    on('[data-eqp-semaine]', 'click', e => { st.lundi = e.currentTarget.dataset.eqpSemaine; st.vue = 'tableau'; st.edit = null; chargerVue(); rendre(); });
     on('[data-eqp-jour]', 'click', e => { st.jour = e.currentTarget.dataset.eqpJour; st.vue = 'jour'; st.edit = null; chargerVue(); rendre(); });
-    on('[data-eqp-editer]', 'click', e => { st.editer = e.currentTarget.dataset.eqpEditer === '1'; st.edit = null; rendre(); });
-    on('[data-eqp-pdf]', 'click', () => { st.pdf = st.pdf ? null : { du: st.vue === 'jour' ? lundiDe(st.jour) : st.lundi, jours: 7, pres: 'magasin' }; rendre(); });
+    on('[data-eqp-pdf]', 'click', () => { st.pdf = st.pdf ? null : { du: st.vue === 'jour' ? lundiDe(st.jour) : st.vue === 'mois' ? lundiDe(st.mois) : st.lundi, jours: 7, pres: 'magasin' }; rendre(); });
     on('[data-eqp-pdfdu]', 'change', e => { st.pdf.du = e.target.value; });
     on('[data-eqp-pdfjours]', 'change', e => { st.pdf.jours = +e.target.value; });
     on('[data-eqp-pdfpres]', 'change', e => { st.pdf.pres = e.target.value; });
@@ -704,12 +729,12 @@
     on('[data-eqp-annuler]', 'click', () => { st.edit = null; rendre(); });
     on('[data-eqp-cell]', 'click', e => {
       if (e.target.closest('[data-eqp-garde]')) { return; }
-      const c = e.currentTarget, sv = e.target.closest('[data-eqp-svc]'), emp = +c.dataset.emp, P = st.PS;
+      const c = e.currentTarget, sv = e.target.closest('[data-eqp-svc]'), emp = +c.dataset.emp, P = planVue();
       const x = P && (P.employes || []).find(y => y.id === emp); if (!x || (!sv && x.actif === false)) { return; }
       ouvrirEdition({ mode: 'modal', id: sv ? +sv.dataset.eqpSvc : 0, employe: emp, date: c.dataset.eqpCell });
     });
     on('[data-eqp-ajouter]', 'click', () => {
-      const P = st.vue === 'jour' ? st.PJ : st.PS; if (!P) { return; }
+      const P = planVue(); if (!P) { return; }
       const d = P.jours.some(J => J.date === AUJ) ? AUJ : P.jours[0].date;
       ouvrirEdition({ mode: st.vue === 'jour' ? 'modal' : 'modal', id: 0, employe: null, date: d });
     });
@@ -730,12 +755,15 @@
   }
   function chargerVue() {
     if (st.vue === 'jour') { if (!st.PJ || st.PJ.du !== st.jour) { st.PJ = null; lirePlanning('jour'); } }
+    else if (st.vue === 'mois') { if (!st.PM || st.PM.du !== st.mois) { st.PM = null; lirePlanning('mois'); } }
     else if (!st.PS || st.PS.du !== st.lundi) { st.PS = null; lirePlanning('semaine'); }
   }
 
   /** Glisser sur le linéaire : déplacer une barre, l'étirer par un bord, ou dessiner un nouveau service sur une ligne. */
   function glisserDebut(ev) {
     if (ev.button !== 0 || !st.PJ || st.PJ.du !== st.jour) { return; }
+    // La fenêtre d'un service est posée dans la ligne : ses boutons et ses champs ne tracent rien.
+    if (ev.target.closest('.eqp-pop, button, input, select, textarea, a, label')) { return; }
     const tl = ev.currentTarget, emp = +tl.dataset.eqpTl, P = st.PJ, J = P.jours[0];
     const e = (P.employes || []).find(x => x.id === emp); if (!e || e.actif === false) { return; }
     const [H0, H1] = bornes(P, calculJour(P, J, st.edit).sv), r = tl.getBoundingClientRect();
@@ -753,7 +781,6 @@
     ev.preventDefault();
     st.glisse = g;
     const bouge = e2 => {
-      if (!st.editer) { return; }   // sans « Glisser les horaires », un clic ouvre la fenêtre, rien ne bouge
       const m = aMin(e2.clientX), d = q15(m - g.x0);
       let de = g.de0, a = g.a0;
       if (g.mode === 'deplacer') { de = g.de0 + d; a = g.a0 + d; if (de < H0) { a += H0 - de; de = H0; } if (a > H1) { de -= a - H1; a = H1; } }
@@ -766,7 +793,7 @@
       if (n) { n.style.left = X(de); n.style.width = ((a - de) / (H1 - H0) * 100).toFixed(3) + '%'; const b = n.querySelector('b'); if (b) { b.textContent = hh(de) + '–' + hh(a); } }
       else if (g.mode === 'nouveau') {
         let f = tl.querySelector('.eqp-bar.trace'); if (!f) { f = document.createElement('span'); f.className = 'eqp-bar sel trace'; tl.appendChild(f); }
-        f.style.left = X(de); f.style.width = ((a - de) / (H1 - H0) * 100).toFixed(3) + '%'; f.textContent = hh(de) + '–' + hh(a);
+        f.style.left = X(de); f.style.width = ((a - de) / (H1 - H0) * 100).toFixed(3) + '%'; f.textContent = a > de ? hh(de) + '–' + hh(a) + ' · ' + fH((a - de) / 60) : hh(de);
       }
     };
     const fin = () => {

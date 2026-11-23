@@ -23,7 +23,7 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
       if (pa === '/dashboard/equipe/semaine/generer') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('generer.json') }); }
       if (pa === '/dashboard/equipe/matrice') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('matrice.json') }); }
       if (pa === '/dashboard/equipe/carte') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire('carte.json') }); }
-      if (pa === '/dashboard/equipe/planning') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire(u.searchParams.get('jours') === '1' ? 'jour.json' : u.searchParams.get('du') === '2026-11-30' ? 'semaine2.json' : 'semaine.json') }); }
+      if (pa === '/dashboard/equipe/planning') { return r.fulfill({ status: 200, contentType: 'application/json', body: lire(u.searchParams.get('jours') === '1' ? 'jour.json' : +u.searchParams.get('jours') >= 28 ? 'mois.json' : u.searchParams.get('du') === '2026-11-30' ? 'semaine2.json' : 'semaine.json') }); }
       return r.fulfill({ status: 404, json: { error: 'x' } });
     }
     if (m !== 'GET') { return r.fulfill({ status: 403, json: { error: 'lecture seule' } }); }
@@ -65,8 +65,24 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   await p.click('[data-eqp-vue="jour"]');
   await p.waitForSelector('.eqp-pg', { timeout: 20000 });
   await shot('e3-planning-jour', true);
+  // Tracer : sur la ligne d'une personne au repos ce jour, tirer une ligne de 14:00 à 18:00 crée un service.
+  const libre = await p.$('.eqp-l.repos:not(.eqp-axe) .eqp-tl');
+  await libre.scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, 200));
+  const tb = await libre.boundingBox();
+  const h0 = await p.evaluate(() => +document.querySelector('.eqp-axe .eqp-t').textContent * 60);
+  const pm = tb.width / (await p.evaluate(() => { const t = [...document.querySelectorAll('.eqp-axe .eqp-t')]; return (t.length - 1) * 60; }));
+  const xDe = tb.x + (14 * 60 - h0) * pm + 1, xA = tb.x + (18 * 60 - h0) * pm + 1, yL = tb.y + tb.height / 2;
+  await p.mouse.move(xDe, yL); await p.mouse.down();
+  await p.mouse.move((xDe + xA) / 2, yL, { steps: 5 });
+  console.log('trace', await p.textContent('.eqp-bar.trace').catch(() => '—'));
+  await shot('e14-tracer-une-ligne', true);
+  await p.mouse.move(xA, yL, { steps: 5 }); await p.mouse.up();
+  await p.waitForSelector('.eqp-pop');
+  console.log('pop tracé', (await p.textContent('.eqp-pop')).replace(/\s+/g, ' ').slice(0, 220));
+  await shot('e15-ligne-tracee', true);
+  await p.click('.eqp-pop [data-eqp-ok]'); await p.waitForTimeout(900);
+  console.log('tracé enregistré', await p.textContent('.eqp-flash').catch(() => '—'), '· pop ouverte ?', !!(await p.$('.eqp-pop')));
   // Modifier : étirer la fin du premier service de Laura jusqu'à 12:30.
-  await p.click('[data-eqp-editer="1"]');
   const bar = await p.$('.eqp-l:has-text("Laura Claes") [data-eqp-bar]');
   await bar.scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, 200));
   const bb = await bar.boundingBox(); const tl = await (await p.$('.eqp-l:has-text("Laura Claes") .eqp-tl')).boundingBox();
@@ -77,14 +93,16 @@ const lire = f => fs.readFileSync(path.join(D, f), 'utf8');
   console.log('pop', (await p.textContent('.eqp-pop')).replace(/\s+/g, ' ').slice(0, 260));
   await shot('e4-modifier-un-service', true);
   await p.click('[data-eqp-ok]'); await p.waitForTimeout(500);
-  // Semaine, puis tableau.
-  await p.click('[data-eqp-vue="semaine"]'); await p.waitForSelector('.eqp-sem7');
-  await shot('e5-planning-semaine', true);
-  await p.click('[data-eqp-vue="tableau"]'); await p.waitForSelector('.eqp-tab');
+  // Le mois, puis la semaine (le tableau et le planogramme fondus).
+  await p.click('[data-eqp-vue="mois"]'); await p.waitForSelector('.eqp-moi');
+  await shot('e5-planning-mois', true);
+  await p.click('.eqp-moi tr:has-text("Laura Claes") td[data-eqp-cell="2026-11-25"] [data-eqp-svc]'); await p.waitForSelector('.eqp-ed');
+  console.log('mois, service', (await p.textContent('.eqp-ed')).replace(/\s+/g, ' ').slice(0, 120));
+  await p.click('.eqp-ed [data-eqp-annuler]');
+  await p.click('.eqp-moi [data-eqp-semaine="2026-11-23"]'); await p.waitForSelector('.eqp-tab:not(.eqp-moi)');
   await p.click('[data-eqp-pdf]');
   await shot('e6-tableau-pdf', true);
   // Recopier la semaine précédente : la semaine suivante, vide ; l'aperçu ; décocher un service ; recopier.
-  await p.click('[data-eqp-vue="semaine"]'); await p.waitForSelector('.eqp-sem7');
   await p.click('[data-eqp-pas="7"]'); await p.waitForSelector('.eqp-vide7');
   await p.click('.eqp-menu > summary');
   await p.click('[data-eqp-recopier]'); await p.waitForSelector('.eqp-rec-liste');
