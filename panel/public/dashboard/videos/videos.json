@@ -87,6 +87,27 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "marketing",
+      "genre": "tuto",
+      "titre": "Mon marketing",
+      "resume": "Le calendrier de l’année (les campagnes du magasin, les saisons des produits et leurs ventes de l’an dernier), puis chaque campagne en cours : ce qu’elle vise, l’objectif du magasin, son calendrier, sa communication.",
+      "vues": [
+        "marketing"
+      ],
+      "fichier": "16-mon-marketing.mp4",
+      "affiche": "16-mon-marketing.jpg",
+      "duree": "1 min 40",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/marketing.js",
+        "panel/public/dashboard/marketing.css",
+        "panel/src/dashboard_marketing.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
