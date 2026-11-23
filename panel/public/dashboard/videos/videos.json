@@ -2,27 +2,6 @@
   "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). sources : les fichiers dont l'écran est filmé ; tourne_sur / tourne_le : le commit et le jour du tournage (écrits par tourner.js). node panel/tools/videos/a_refaire.js dit quelles vidéos refaire. Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
   "videos": [
     {
-      "id": "equipe-horaires",
-      "genre": "nouveau",
-      "titre": "Mon équipe : faire ses horaires",
-      "resume": "Le planning de la semaine, le budget d’heures, et la fenêtre d’un service : adapter, ajouter, retirer une personne.",
-      "vues": [
-        "equipe"
-      ],
-      "fichier": "02-mon-equipe.mp4",
-      "affiche": "02-mon-equipe.jpg",
-      "duree": "2 min 20",
-      "depuis": "2026-11-23",
-      "sources": [
-        "panel/public/dashboard/equipe.js",
-        "panel/public/dashboard/equipe.css",
-        "panel/src/equipe.php",
-        "shared/public/assets/ds/global.css"
-      ],
-      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
-      "tourne_le": "2026-11-23"
-    },
-    {
       "id": "decouvrir",
       "genre": "tuto",
       "titre": "Découvrir le dashboard",
@@ -43,6 +22,27 @@
         "shared/public/assets/ds/global.css"
       ],
       "tourne_sur": "8977a6a93cfe5f08e074315a76154706c797f470",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "equipe-horaires",
+      "genre": "nouveau",
+      "titre": "Mon équipe : faire ses horaires",
+      "resume": "Le planning de la semaine, le budget d’heures, et la fenêtre d’un service : adapter, ajouter, retirer une personne.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-mon-equipe.mp4",
+      "affiche": "02-mon-equipe.jpg",
+      "duree": "2 min 20",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
       "tourne_le": "2026-11-23"
     },
     {
@@ -103,6 +103,88 @@
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "panel/src/temps_morts.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "marketing",
+      "genre": "tuto",
+      "titre": "Mon marketing",
+      "resume": "Le calendrier de l’année (les campagnes du magasin, les saisons des produits et leurs ventes de l’an dernier), puis chaque campagne en cours : ce qu’elle vise, l’objectif du magasin, son calendrier, sa communication.",
+      "vues": [
+        "marketing"
+      ],
+      "fichier": "16-mon-marketing.mp4",
+      "affiche": "16-mon-marketing.jpg",
+      "duree": "1 min 40",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/marketing.js",
+        "panel/public/dashboard/marketing.css",
+        "panel/src/dashboard_marketing.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "reseaux",
+      "genre": "tuto",
+      "titre": "Réseaux sociaux",
+      "resume": "L’entrée de l’espace boutique du Marketing dans le dashboard : la barre d’onglets et le cadre où s’ouvrent ses pages.",
+      "vues": [
+        "social"
+      ],
+      "fichier": "17-reseaux-sociaux.mp4",
+      "affiche": "17-reseaux-sociaux.jpg",
+      "duree": "1 min",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/reseaux.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "fidelite",
+      "genre": "tuto",
+      "titre": "Fidélité",
+      "resume": "La part des tickets scannés, les six profils des clients et leurs radars, la fiche d’un client, puis les cartes de fidélité : du client reconnu à la récompense.",
+      "vues": [
+        "fidelite"
+      ],
+      "fichier": "18-fidelite.mp4",
+      "affiche": "18-fidelite.jpg",
+      "duree": "2 min 29",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "catalogue",
+      "genre": "tuto",
+      "titre": "Éditer mon catalogue",
+      "resume": "L’assistant de Mon catalogue en entier : choisir le catalogue (reçu de la marque, le mien, un nouveau), les gammes et les produits, la présentation catégorie par catégorie, la validation, puis l’export PDF et sa diffusion (QR, PDF léger, affiche).",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-mon-catalogue.mp4",
+      "affiche": "19-mon-catalogue.jpg",
+      "duree": "3 min 48",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css",
+        "panel/src/catalogues_magasin.php",
         "shared/public/assets/ds/global.css"
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
