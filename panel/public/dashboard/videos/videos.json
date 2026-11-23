@@ -1,0 +1,45 @@
+{
+  "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
+  "videos": [
+    {
+      "id": "equipe-horaires",
+      "genre": "nouveau",
+      "titre": "Mon équipe : faire ses horaires",
+      "resume": "Le planning de la semaine, le budget d’heures, et la fenêtre d’un service : adapter, ajouter, retirer une personne.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-mon-equipe.mp4",
+      "affiche": "02-mon-equipe.jpg",
+      "duree": "2 min 20",
+      "depuis": "2026-11-23"
+    },
+    {
+      "id": "decouvrir",
+      "genre": "tuto",
+      "titre": "Découvrir le dashboard",
+      "resume": "Le rail, la barre du haut et la journée en cours : où trouver quoi.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-decouvrir.mp4",
+      "affiche": "01-decouvrir.jpg",
+      "duree": "2 min 11",
+      "depuis": "2026-11-23"
+    },
+    {
+      "id": "formation-horaires",
+      "genre": "formation",
+      "titre": "Formation : construire le planning de la semaine",
+      "resume": "Le module complet, pour une session de formation : objectifs, démonstration pas à pas, mises en pratique et quiz.",
+      "vues": [
+        "formation",
+        "equipe"
+      ],
+      "fichier": "03-formation-planning.mp4",
+      "affiche": "03-formation-planning.jpg",
+      "duree": "5 min 17",
+      "depuis": "2026-11-23"
+    }
+  ]
+}

@@ -45,6 +45,30 @@ l'API dit, route par route, le fichier et la fonction qui la servent.
   jour par jour avec ses invendus (`/jours`) ; la règle de marge commune (`daMarge`). Écran : `panel/public/dashboard/analyse.js`.
   Tests : `php bin/tests_analyse.php`.
 
+## Les vidéos d'instruction (23/11/2026)
+
+Demande : « des vidéos d'instruction pour utiliser le dashboard », « déclenchées par une bulle (nouvelle fonction ou
+autre) », « une vidéo type formative, à utiliser en formation », les pages de titre au design system et aux logos.
+
+- **La bulle** (`panel/public/dashboard/tutos.js`, `tutos.css`) : en bas à droite des pages qui ont une vidéo. Une
+  nouvelle fonction pas encore vue s'annonce en carte « Nouveau » (affiche, « Voir la vidéo », « Plus tard ») pendant
+  60 jours ; sinon, une petite bulle « Vidéo · durée ». Le lecteur : une fenêtre, la vidéo, les autres vidéos. « Vu » et
+  « plus tard » restent sur l'appareil (localStorage `db.videos.vues`, `db.videos.plusTard`) : aucune route, aucune
+  table. La page ouverte vient de `?vue=` puis de l'évènement `dashboard:vue` (lancé par `urlMaj` de `dashboard.js`).
+  Rien en mode incorporé (`?embed=`). `window.DashTutos.ouvrir(id)` ouvre une vidéo.
+- **Le registre** : `panel/public/dashboard/videos/videos.json` — `id`, `genre` (`nouveau` : nouvelle fonction ; `tuto` :
+  mode d'emploi ; `formation` : module à suivre en session), `titre`, `resume`, `vues` (valeurs de `?vue=`, `ops` pour
+  Opérationnel, `*` partout), `fichier` (MP4), `affiche` (JPG), `duree`, `depuis`. Les fichiers sont à côté.
+- **Les vidéos** : `01-decouvrir` (le rail, la barre du haut, la journée, Semaine et Mois), `02-mon-equipe` (nouvelle
+  fonction : lire la semaine, le budget d'heures, corriger un trou au comptoir, revenir sous la barre),
+  `03-formation-planning` (module de formation : objectifs, démonstration, deux mises en pratique, trois questions,
+  récapitulatif). 1920 × 1080, H.264, muettes et sous-titrées dans l'image.
+- **Les tourner** : `panel/tools/videos/` (son `LISEZMOI.md`) — le vrai dashboard dans Chromium, sur une fausse API à
+  données **fictives** (magasin « Magasin démo », prénoms inventés), l'horloge figée au jeudi 19/11/2026 à 15 h 40. Un
+  écran change : on relance le scénario de sa vidéo. Couvertures, intercalaires, objectifs, « À vous » et quiz suivent
+  `docs/DESIGN_SYSTEM.md` (Gotham 400/700, Ruby, Abricot, papier, filet Ruby 2 px, logos de `shared/public/assets/img/`).
+- Tests : `php panel/bin/tests_videos.php` (registre, fichiers présents, pages connues, la bulle chargée, aucune pilule).
+
 ## Les règles
 
 - **L'accès** : une session de magasin n'ouvre que les préfixes de `ACCES_FRANCHISE` (`shared/src/acces.php`), et le magasin

@@ -20,4 +20,7 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   mesure : le planogramme, les linéaires (qui est là, quand ; le comptoir ; les secteurs), les temps morts et le budget
   d'heures (17 %, orange, rouge au-dessus de 20 %, noir au-dessus de 22 %) servent à construire et corriger le planning,
   pas à le commenter. Ce qui n'aide pas à faire les horaires passe après. Les modules ajoutés (assistant, tâches des creux, matrice et shift maker, recopie) sont des options, éteintes par défaut (Mon équipe › Options).
-- **Tests** : `php panel/bin/tests_*.php` (assistant, bundles, boîte mail, trésorerie, primes, profil…).
+- **Vidéos d'instruction** (23/11/2026) : la bulle du dashboard (`public/dashboard/tutos.js`), le registre
+  `public/dashboard/videos/videos.json`, le tournage `panel/tools/videos/` (données fictives). Une nouvelle fonction du
+  dashboard peut y annoncer sa vidéo (genre `nouveau`) ; un écran filmé qui change se retourne. Détail : `src/LISEZMOI.md`.
+- **Tests** : `php panel/bin/tests_*.php` (assistant, bundles, boîte mail, trésorerie, primes, profil, vidéos…).
