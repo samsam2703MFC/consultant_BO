@@ -1500,8 +1500,10 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
   **statut** réseau (`statut` : brouillon → a_valider → publiee, affiché « Validée ») et des **jours de photo**
   (`photos_jours` : 14 pour un nouveau produit, 0 sinon, réglable). La formation initiale (les FO de pré-ouverture et
   d'ouverture) ne change pas. Le Manuel, la tablette et le sommaire du Professeur ne montrent une FC que validée.
-- **Le siège** (`#/rfcontinue`, `continue.js`) : créer (brouillon), envoyer à la validation, valider, diffuser aux
-  boutiques (échéance ; début des photos = mise en vente).
+- **Le siège** (`#/rfcontinue`, `continue.js`, entrée « Formation continue » du menu Formation) : créer (brouillon),
+  envoyer à la validation, valider, remettre en brouillon ; régler sur la fiche la catégorie, le produit et les jours de
+  photo qualité (0 à 30) ; diffuser aux boutiques une formation validée (échéance « À faire avant » ; « Photos à partir
+  du (mise en vente) », sinon le jour de la diffusion ; une boutique qui l'a déjà n'en reçoit pas une seconde).
 - **Le dossier d'une boutique** (`for_fc_dossier`) : statut en_cours → a_valider (tout est fait, automatiquement) →
   validee (le consultant) ; l'équipe déclarée par le franchisé (`for_fc_equipe` : lu, quiz, vu faire) et la mise en
   place ; une **photo qualité par jour** (`for_fc_photo`, fichiers privés `public/uploads/formation-continue/{shop}/`),
@@ -1509,13 +1511,18 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
   qui, rôle, quand, chaque geste, aussi au journal du cockpit).
 - **Le consultant** (cockpit, Franchisés › Formations continues, `formation-continue-vals.js` / `-tpl.js`) : ses
   boutiques (cadre de visite), vérifier, adapter pour une boutique (`contenu_adapte` : le texte des étapes ; qui la
-  suit, échéance, raison), relire les photos, valider ou renvoyer. **La validation** écrit son nom et l'heure, puis
+  suit, échéance, raison ; « Revenir au modèle du réseau »), relire les photos (✓ conforme, ✗ à refaire avec un mot lu
+  par le franchisé), valider ou « Renvoyer en cours ». Un dossier pas encore terminé se valide aussi, après confirmation
+  (bouton « ✓ Valider pour … (avant la fin) », dit dans la trace). **La validation** écrit son nom et l'heure, puis
   archive le dossier (version, équipe, photos) dans le **coffre-fort** du franchisé, onglet Formation (`cofDeposer`,
   PDF si le serveur en fait, sinon la page HTML).
 - **Le franchisé** (dashboard, `?vue=formation`, `panel/public/dashboard/formation.js`) : le **bouton abricot**
-  « Dossier de formation » (barre du rail, en-tête sans rail, icône du téléphone), le groupe de rail « Se former » ;
-  « Formations et suivi » : les **Nouveautés** (titre, catégorie, date, lien `?fc=`), le dossier, le suivi de l'équipe,
-  la photo du jour, le lien vers le document de formation ; le **Professeur** à côté, présélectionné.
+  « Mon dossier de formation » (barre du rail, en-tête sans rail, icône 🎓 du téléphone ; il ouvre « Formations et
+  suivi »), le groupe de rail « Se former » ; depuis le 22/11/2026 (v2, § suivant) la page s'ouvre sur l'accueil de la
+  formation et le dossier est à un clic (« Mon dossier de formation … Ouvrir › », retour par « ← Accueil de la
+  formation ») ; un lien `?fc=` ouvre directement la formation dans le dossier. Le dossier : les **Nouveautés** (titre,
+  catégorie, date), le dossier, le suivi de l'équipe, la photo du jour, le lien vers le document de formation ; le
+  **Professeur** à côté, présélectionné.
 - **Le Professeur** : outils `dossier_formation` et `formation_lire` (panel/src/assistant_ia.php) — la version de la
   boutique (adaptations comprises), jamais celle d'une autre ; le magasin vient de la question (`$demandeur`).
 - **Le Manuel** : deux articles à encoder sur demande (`formation/data/formation/continue/` : « Un nouveau produit

@@ -2420,6 +2420,11 @@ quantite, idLivraison, motif, action, texte`) accepte deux champs de plus :
   ajoutés à la description envoyée au fournisseur (« Photos (2) : http://…/uploads/reclamations/3-… »)
   — il les ouvre sans compte. Enregistrées avant l'envoi, effacées si le panel refuse ;
   rattachées ensuite à la réclamation (`panel_reclamation_photo`). La réponse rend `photos`.
+  **La photo est obligatoire** (21/11/2026) : sans photo, la route répond 422 (« ajoutez au moins une photo… ») et
+  rien ne part au panel.
+- **`photoTache`** `{taskId, date}` — depuis le contrôle des tâches du cockpit : sans `photos`, la photo de la tâche
+  contrôlée est relue au panel par le serveur et devient celle de la réclamation (jamais un lien pris dans le corps) ;
+  illisible, 422 et rien ne part.
 - **`auteur`** — le prénom de qui signale ; ajouté en fin de description (« — signalé par … »).
 
 `GET /fournisseurs/reclamations?shop=3&mois=12` ne rend que les réclamations du magasin, et

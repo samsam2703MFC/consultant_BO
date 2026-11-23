@@ -23,8 +23,20 @@ cockpit (Paramètres › ERP, `ErpApi`). Périmètre validé le 21/11/2026 :
 - **100 traductions FR / NL** des produits sans aucun point à vérifier : `PATCH /products/{id}/aliases` pour les 11
   produits du panel retrouvés sans ambiguïté par les fiches techniques, et `PATCH /materials/{id}/aliases` pour la
   matière qui porte exactement le nom du produit de l'ERP. Les 294 autres attendent une relecture.
+  Les noms ne portent plus « ⌀ 22 cm » ni « ⌀ 26 cm » (demande du 21/11, plan `2026-11-21b`) : « Tarte au riz – ⌀ 22 cm »
+  devient « Tarte au riz », « Quiche lorraine – ⌀ 26 cm » devient « Quiche lorraine », en français et en néerlandais. Les
+  autres tailles (⌀ 19 cm…) restent, elles distinguent encore des produits. « TartoCake cerises-pistache » (1007209)
+  porte maintenant le même nom que 2580064 : signalé dans le tableau, pas tranché.
 - **Pas la soupe aux courgettes** : la fusion (1002223 garde ; 2580062 à désactiver ; recette eau, courgettes, sel,
   poivre ; aucun des 14 allergènes) se fait dans l'ERP de production. Le script la rappelle seulement.
+
+## Lancer depuis GitHub (workflow d'envoi)
+
+Actions › « Envoi — étiquettes NL à TF Buddy » (`.github/workflows/envoi-etiquettes-nl.yml`) › Run workflow. Le champ
+« confirmer » vaut `essai` par défaut : essai à blanc. Taper **`ECRIRE`** pour écrire dans l'API (`--appliquer`). Le
+workflow lance le script déployé sur le serveur du cockpit ; le rapport reste sur le serveur, dans
+`/var/lib/consulant_bo/prive/etiquettes-nl/` (`essai_…json` ou `envoi_…json`). Une sortie 1 (introuvables, sous-recettes)
+est un constat attendu et le workflow reste vert ; une sortie 2 le fait échouer, rien n'est envoyé.
 
 ## Lancer (sur le serveur, là où le cockpit est installé)
 
@@ -53,5 +65,7 @@ l'écriture (détail dans le rapport) ; 2 compte admin indisponible, plan illisi
 
 Le contrat des réponses de l'API n'est pas documenté au swagger : il a été relevé par la sonde du 21/11
 (`consultant/tools/sonde_etiquettes_nl.php`) — `/allergens` est un objet indexé par id, les listes sont à la racine, une
-fiche matière porte `allergens`, les traductions se lisent `{fk_id, lang_code, alias_value}`. Les identifiants de l'ERP ne
+fiche matière porte `allergens`, les traductions se lisent `{fk_id, alias_value}`. `GET /…/aliases` ne rend qu'une
+langue par appel (`?lang_code=…`, l'anglais par défaut ; une traduction absente revient avec `alias_value` vide) : le
+script relit le français puis le néerlandais (`?lang_code=fr` / `nl&alias_type=default`). Les identifiants de l'ERP ne
 sont pas ceux des produits de l'API : les traductions passent par le nom exact (27 matières et 9 produits sur 100).

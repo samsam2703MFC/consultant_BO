@@ -69,7 +69,11 @@ chose, précédée de « Copie du SMS envoyé à {magasin} ({numéro}) » ; la c
 parti. Un seul SMS par visite : « Renvoyer le courriel » ne le renvoie pas.
 
 Le GSM est celui de Qui fait quoi, sinon celui des alertes SMS des leads (MétaDonnée › Alertes SMS). Le fournisseur
-est celui des alertes de leads (SMSAPI), sinon Twilio (`config.php › sms`). Sans GSM, sans fournisseur ou SMS coupés,
+est SMSAPI dès qu'un jeton est connu, sinon Twilio (`config.php › sms`). Depuis le 20/11/2026, les jetons SMSAPI
+sont essayés tour à tour : celui qui a déjà marché, celui de MétaDonnée › Alertes SMS, celui du CRM, les clés SMS
+d'`erp_cles` (dont `smsapi_token`, celle de l'ERP), `config.php`, `SMSAPI_TOKEN` ; un jeton refusé par une plateforme
+(.com) est essayé sur l'autre (.pl) ; un expéditeur refusé est remplacé par celui du CRM, puis par aucun (celui du
+compte). Sans GSM, sans fournisseur ou SMS coupés,
 rien ne part et l'écran dit pourquoi ; le résultat est gardé sur la visite (`rapport.sms`) et au journal.
 
 ## La page du franchisé

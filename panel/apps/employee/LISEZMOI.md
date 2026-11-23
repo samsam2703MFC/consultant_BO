@@ -25,7 +25,9 @@ Rien de l'app n'est exécutable depuis `assets/` ; les gabarits Twig restent hor
 
 - **L'adresse** : l'app supposait vivre à `/employee` à la racine d'un domaine ; `ROOT` se déduit
   maintenant de l'adresse appelée (`EMPLOYEE_BASE_PATH`), le manifeste et le service worker sont
-  relatifs à elle.
+  relatifs à elle. L'adresse du dossier (`/employee/`, celle du QR des fiches du personnel, et le `./?source=pwa`
+  de l'app installée) ouvre l'écran de connexion (`panel/public/employee/.htaccess` : `DirectoryIndex index.php`,
+  depuis le 21/11/2026 ; avant, Apache y listait les fichiers). Un dossier du site sans page d'accueil répond 403.
 - **L'API** : celle du panel, la même que le cockpit (`shared/config/config.php` › `panelApi.base`,
   sinon `EMPLOYEE_API_BASE`, sinon `https://atelierby.tfbuddy.com/api/v1`). Les employés se
   connectent avec leurs identifiants du panel (`POST /employees/authenticate`) ; le cockpit ne
