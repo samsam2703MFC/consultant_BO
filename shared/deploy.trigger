@@ -277,3 +277,4 @@
 2026-11-23T14:08:34Z Mon équipe (dashboard franchisé) : carte des responsabilités, planogramme des horaires (linéaires, temps morts, budget d'heures 17/20/22 %), modifier sur la barre, recopier la semaine précédente, matrice A B C D et shift maker (test)
 2026-11-23T14:19:31Z Mon équipe : le compte admin de l'ERP relit et réécrit ce que le panel refuse au compte du cockpit (employés du magasin)
 2026-11-23T14:24:53Z Mon équipe : étiquettes des temps morts courts (infobulle)
+2026-11-23T15:29:07Z Mon équipe : le tableau de la semaine, la fenêtre d'un service au clic (adapter, ajouter, retirer une personne du shift)
