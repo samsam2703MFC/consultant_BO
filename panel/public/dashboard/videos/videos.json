@@ -109,6 +109,72 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "analyse",
+      "genre": "tuto",
+      "titre": "Analyse : lire ses ventes",
+      "resume": "Choisir la période, lire l’essentiel, la fiche d’un produit en sept questions et la page d’une famille.",
+      "vues": [
+        "analyse"
+      ],
+      "fichier": "10-analyse.mp4",
+      "affiche": "10-analyse.jpg",
+      "duree": "2 min 57",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/analyse.js",
+        "panel/public/dashboard/analyse.css",
+        "panel/src/dashboard_analyse.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "produits",
+      "genre": "tuto",
+      "titre": "Produits : est-ce que ça se développe ?",
+      "resume": "Les 6 dernières semaines face aux 6 d’avant, les catégories en tuiles, les produits d’une catégorie et la fiche d’un produit, jusqu’au nouveau prix de vente.",
+      "vues": [
+        "produits"
+      ],
+      "fichier": "11-produits.mp4",
+      "affiche": "11-produits.jpg",
+      "duree": "2 min 58",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/analyse_produits.php",
+        "panel/src/prix_produit.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "promotions",
+      "genre": "tuto",
+      "titre": "Promotions : un bundle qui monte la marge",
+      "resume": "Où les promotions sont utilisées, puis le Coach Vente : la marge de base, les couples, le prix et la fiche du bundle, prête à lancer.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-promotions.mp4",
+      "affiche": "12-promotions.jpg",
+      "duree": "2 min 55",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
+    },
+    {
       "id": "offres",
       "genre": "tuto",
       "titre": "Les offres de prix",
