@@ -86,6 +86,27 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "temps-morts",
+      "genre": "tuto",
+      "titre": "Les temps morts",
+      "resume": "Le comptoir sans client : la journée minute par minute, la semaine face à l’habitude, et le seuil de 5, 10 ou 15 minutes.",
+      "vues": [
+        "morts"
+      ],
+      "fichier": "05-temps-morts.mp4",
+      "affiche": "05-temps-morts.jpg",
+      "duree": "2 min 23",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/temps_morts.php",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
