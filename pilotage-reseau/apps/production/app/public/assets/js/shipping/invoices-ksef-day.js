@@ -17,6 +17,8 @@
     const all = () => D.docs.concat(D.carried);
     const review = () => all().filter(d => d.review);
     const canFinish = () => !!D.can_finish;
+    // [387] Propositions de l'IA du matin (aiProp, ai-proposals.js) : rien si D.ai est vide.
+    const ai = window.aiProp || null;
     const ksef = (d) => d.wdt ? `${tw.pill(d.ksef.label, d.ksef.out ? '' : (KSEF_CLS[d.ksef.status] || (d.ksef.status ? 'warn' : '')))}${d.ksef.env === 'test' ? ' <small style="display:inline">test</small>' : ''}${d.ksef.number ? `<small>${esc(d.ksef.number)}</small>` : ''}` : '<span style="color:#999">—</span>';
     const wdt = (d) => d.wdt ? `<b>${esc(d.wdt.number)}</b><small>${d.wdt.invoiced ? 'faktura ' + esc(tw.dm(d.wdt.invoiced)) : '<span class="tw-red">bez daty faktury</span>'}</small>` : '<span class="tw-red">brak WDT</span>';
     const sigs = (d) => d.signals.map(s => tw.pill(SHORT[s.code] || s.code, SIG_CLS[s.code] || '')).join(' ')
@@ -53,7 +55,7 @@
         const ph = r.result === 'in_progress' ? 'Notatka (wymagana) : co jest robione, kto, do kiedy' : (r.result === 'justified' ? 'Notatka (wymagana) : dlaczego bez faktury' : 'Notatka (opcjonalnie)');
         const saved = d.check ? `<small>${tw.pill(d.check.label, RES_CLS[d.check.result] || '')} ${esc(d.check.on === D.today ? d.check.at : tw.dm(d.check.on))}${d.check.by ? ' · ' + esc(d.check.by) : ''}${d.waiting ? ` · <span class="tw-red">${d.check.result === 'fixed' ? 'problem wrócił' : 'nadal otwarte — wyjaśnij dziś'}</span>` : ''}</small>` : '';
         const dirty = !d.check || d.waiting || d.check.result !== r.result || (d.check.note || '') !== r.note;
-        return `<div style="display:grid;gap:6px;min-width:440px"><div class="tw-seg" style="justify-self:start">${seg}</div>
+        return `<div style="display:grid;gap:6px;min-width:440px">${ai && d.waiting ? ai.box(D.ai, d.key) : ''}<div class="tw-seg" style="justify-self:start">${seg}</div>
             <div style="display:flex;gap:6px"><input class="form-control form-control-sm" data-ik-note="${esc(d.key)}" maxlength="500" value="${esc(r.note)}" placeholder="${esc(ph)}" style="min-height:36px;border-radius:9px">
             <button type="button" class="tw-btn ghost sm" data-ik-save="${esc(d.key)}" ${!r.result || !dirty || busy || (need && r.note.trim().length < 3) ? 'disabled' : ''}>Zapisz</button></div>${links(d)}${saved}</div>`;
     }
@@ -66,7 +68,7 @@
             `${wdt(d)}<div style="margin-top:4px">${ksef(d)}</div>`,
             d.signals.length ? d.signals.map(s => `<div style="display:flex;gap:6px;align-items:baseline;margin:1px 0"><i class="bi bi-exclamation-circle ${SIG_CLS[s.code] === 'bad' ? 'tw-red' : ''}"></i><span><b>${esc(s.label)}</b> : ${esc(s.detail)}</span></div>`).join('') : '<span class="tw-green">Problem rozwiązany</span>',
             resultCell(d)]}));
-        return `<p class="tw-lead">Dla każdego dokumentu zapisz wynik : <b>Wysłane ponownie / poprawione</b> (sprawdzane : faktura przyjęta w KSeF), <b>W toku</b> z notatką
+        return `${ai ? ai.banner(D.ai) : ''}<p class="tw-lead">Dla każdego dokumentu zapisz wynik : <b>Wysłane ponownie / poprawione</b> (sprawdzane : faktura przyjęta w KSeF), <b>W toku</b> z notatką
                 albo <b>Bez faktury — uzasadnione</b> z notatką. Krok 3 otworzy się, gdy wszystkie mają wynik.</p>
             ${tw.tiles([{label: 'Do wyjaśnienia', value: String(t.review), sub: `${t.signals} ${tw.plural(t.signals, 'sygnał', 'sygnały', 'sygnałów')}${t.carried ? ` · ${t.carried} zaległe` : ''}`},
                 {label: 'Z wynikiem', value: `${t.resolved} z ${t.review}`, sub: t.waiting ? `zostało ${t.waiting}` : 'wszystkie wyjaśnione', cls: t.waiting ? 'warn' : 'ok'},
@@ -99,6 +101,13 @@
     }
 
     tw.bind(app, (n) => { step = n === -1 ? Math.max(1, step - 1) : n; render(); });
+    // « Przyjmij » / « Popraw » : la proposition remplit le brouillon (résultat et note) ; l'enregistrement reste « Zapisz ».
+    if (ai) ai.bind(app, {ai: () => D.ai, render, apply: (p, edit) => {
+        draft[p.ref] = {result: p.decision, note: p.note || ''};
+        render();
+        const n = app.querySelector(`[data-ik-note="${CSS.escape(p.ref)}"]`);
+        if (n && edit) { n.focus(); n.select(); }
+    }});
     app.addEventListener('input', (e) => {
         const n = e.target.closest('[data-ik-note]');
         if (!n) return;
