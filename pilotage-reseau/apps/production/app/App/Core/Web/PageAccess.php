@@ -18,10 +18,16 @@ final class PageAccess
     public const PAGES = [
         'dashboard' => ['Rentowność (pulpit, wynik i produkcja grup, raport miesięczny)', 'Analiza', ['/dashboard'], false],
         'sales' => ['Analiza sprzedaży', 'Analiza', ['/finances/sales-analytics'], false],
+        // [373] Asystent « Płynność i gotówka » : page /finances/liquidity (préfixe /finances), appels ajax sous le même droit.
         'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator, zamknięcie miesiąca ; Finanse : faktury i koszty, koszty usług miesiąca)', 'Analiza', ['/finances', '/cost-calculator', '/month-close'], false],
+        // [373] Asystent « Płynność i gotówka » : prawo osobne (decyzja z 22.11.2026), żeby Kierownik operacyjny miał tylko ten
+        // ekran, bez faktur i kosztów ; dłuższy prefiks wygrywa z « /finances » (keyFor).
+        'liquidity' => ['Płynność i gotówka (asystent : saldo, prognoza 4 tygodni, sygnały i decyzje)', 'Analiza', ['/finances/liquidity', '/ajax/finances/liquidity'], false],
         // [255] Magazyn (stan, zapas MTS, prognoza zapasu) i dostawy surowców : pod prawem Produkcja (wcześniej poza katalogiem = dla wszystkich).
+        // [377] Asystent « Partie i kontrola dnia » (Jakość) : page /workshop/traceability/day-check (préfixe /workshop/traceability, comme
+        // la création de NC /purchasing/nc vers laquelle il renvoie), appels ajax sous le même droit.
         'production' => ['Produkcja i magazyn (arkusz, plan tygodnia, plan zespołów, prognoza 13 tygodni, dostawy surowców, magazyn : stan, zapas MTS, prognoza zapasu, ruchy magazynowe ; partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
-            ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock', '/workshop/stock-movements', '/workshop/deliveries', '/workshop/traceability', '/production', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
+            ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock', '/workshop/stock-movements', '/workshop/deliveries', '/workshop/traceability', '/ajax/workshop/traceability/day-check', '/production', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
         // Moce produkcyjne [234] : bez tego prawa — tylko stan obecny (tydzień bieżący, do odczytu) ; z nim — pełna wersja.
         'capacity_full' => ['Moce produkcyjne — pełna wersja (co jeszcze zmieszczę, ilość na zmianę, ustawienia maszyn, co jeśli, wartość w €) : administrator, dyrektor zakładu ; bez tego prawa — tylko stan obecny', 'Produkcja',
             ['/production/capacity/full'], false],
@@ -47,7 +53,9 @@ final class PageAccess
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
-        'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders'], false],
+        // [369] Assistant « Zamówienia dnia », [370] « Klienci bez zamówienia », [371] « Domówienia dnia », [375] « Terminowość tygodnia (OTIF) » :
+        // pages sous /client-orders, appels ajax sous le même droit.
+        'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders', '/ajax/client-orders/day-check', '/ajax/client-orders/missing', '/ajax/client-orders/supplements', '/ajax/client-orders/otif'], false],
         'clients' => ['Klienci', 'Sprzedaż', ['/clients'], false],
         'price_lists' => ['Cennik ogólny', 'Sprzedaż', ['/price-lists'], false],
         'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
@@ -61,10 +69,13 @@ final class PageAccess
         // [353] Procedury SOP : lista, asystent tworzenia, zatwierdzenie (procedura asystowana /procedure : każdy zalogowany).
         'sop' => ['Procedury SOP (tworzenie, zatwierdzanie, wykonania)', 'Produkcja', ['/sop', '/ajax/sop'], false],
         'stock_pallets' => ['Stany i palety (magazyn, palety, wysłane, stan ogólny, krótka data ; usunięcie palety)', 'Logistyka i pakowanie', ['/logistics/stock', '/ajax/logistics/stock'], false],
-        'logistics' => ['Logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek ciężarówki, plan 12 tygodni, tydzień, plan dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka i pakowanie', ['/logistics'], false],
-        'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
+        // [374] Asystent « Opóźnienia dostaw » : page /logistics/delays (préfixe /logistics), appels ajax sous le même droit.
+        'logistics' => ['Logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek ciężarówki, plan 12 tygodni, tydzień, plan dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka i pakowanie', ['/logistics', '/ajax/logistics/delays'], false],
+        // [378] Asystent « Faktury i KSeF dnia » (Administracja) : page /shipments/ksef-day (préfixe /shipments, comme l'écran
+        // « Wysyłki i dokumenty » où l'on renvoie la WDT à KSeF), appels ajax sous le même droit.
+        'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/ajax/shipments/ksef-day', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
         'archive' => ['Archiwum list kompletacyjnych', 'Logistyka i pakowanie', ['/archive'], false],
-        'positions' => ['Funkcje i zadania, protokoły', 'Administracja', ['/organization', '/task-forms'], false],
+        'positions' => ['Funkcje i zadania, protokoły, struktura i obowiązki', 'Administracja', ['/organization', '/task-forms', '/ajax/organization/structure', '/ajax/organization/duties'], false],
         'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, stopki e-maili i tłumacz, KSeF, licznik stron, inne)', 'Administracja',
             ['/users', '/aliases', '/settings', '/communication/email-settings', '/other-settings'], false],
         'devices' => ['Urządzenia (dostęp API)', 'Administracja', ['/devices'], false],

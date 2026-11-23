@@ -175,6 +175,8 @@ const AM_KPIS = [
         ['kpi' => 'Promotions en cours', 'detail' => 'promotions et bundles du panel, en cours ou à venir', 'source' => 'panel · promotions', 'outil' => ['promotions_en_cours']],
         ['kpi' => 'Prix à monter, avec leur lot', 'detail' => 'le levier du food cost : les produits sous la médiane des boulangeries proches', 'source' => 'cockpit · Benchmark', 'outil' => ['prix_a_monter'], 'objectif' => 'foodCost'],
         ['kpi' => 'Manuel opératoire', 'detail' => 'le sommaire, la recherche, la lecture d’un document', 'source' => 'Formation · manuel', 'outil' => ['manuel_sommaire', 'manuel_chercher', 'manuel_lire'], 'prof' => 'le sommaire'],
+        // Le dossier de formation du magasin (22/11/2026) : ses formations continues, dans SA version (formation/src/formation_continue.php).
+        ['kpi' => 'Dossier de formation', 'detail' => 'les formations continues du magasin dans sa version (adaptations du consultant), leur avancement, leurs photos qualité', 'source' => 'Formation · formation continue', 'outil' => ['dossier_formation', 'formation_lire']],
     ]],
 ];
 
@@ -528,11 +530,12 @@ const AM_SECONDES = 100;     // au-delà, le tour suivant est le dernier
 
 /** Les outils, tels que le modèle les voit : les trois de l'historique des ventes, les trois du manuel opératoire
  *  (aiaOutilsManuel), les trois du Coach Vente (aivOutils : prix de la concurrence, points forts et faibles, promotions),
- *  et les hausses de prix avec leur lot (coOutils : prix_a_monter, 18/11/2026).
+ *  les hausses de prix avec leur lot (coOutils : prix_a_monter, 18/11/2026), et le dossier de formation du magasin
+ *  (aiaOutilsFormation : dossier_formation, formation_lire, 22/11/2026).
  *  Ordre et texte fixes : ils font partie du préfixe mis en cache. */
 function amOutils(): array
 {
-    return array_merge(amOutilsVentes(), aiaOutilsManuel(), aivOutils(), coOutils());
+    return array_merge(amOutilsVentes(), aiaOutilsManuel(), aivOutils(), coOutils(), aiaOutilsFormation());
 }
 
 function amOutilsVentes(): array
@@ -786,7 +789,7 @@ function amOutil(string $nom, array $in, int $demandeur, array $faits = []): arr
             'ventes_par_heure' => amOutilHeures($demandeur, $in),
             'produits_vendus' => amOutilProduits($demandeur, $in),
             'prix_a_monter' => coOutilPrix($demandeur, $in, $faits),
-            default => aiaOutil($nom, $in) ?? aivOutil($nom, $in, $demandeur) ?? ['erreur' => 'outil inconnu : ' . $nom],
+            default => aiaOutil($nom, $in) ?? aiaOutilFormation($nom, $in, $demandeur) ?? aivOutil($nom, $in, $demandeur) ?? ['erreur' => 'outil inconnu : ' . $nom],
         };
     } catch (Throwable $e) {
         error_log('assistant, outil ' . $nom . ' : ' . $e->getMessage());

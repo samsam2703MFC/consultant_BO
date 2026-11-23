@@ -291,6 +291,40 @@ vérifié au panel ou un jeton signé de 4 h, valable seulement sur une tablette
 | `POST /formation/sop/tablette/vu` | `{sop, employe, valideur, pin, decision: vu\|pas_encore, note}` — seule la responsable valide, jamais soi-même, quiz de la version exigé → `{statut, competence {nom, acquise, vues, total, panel {ok, deja?, erreur?}}}` — une compétence acquise est cochée au panel (`PUT /employees/{id}/competencies`, relue) |
 | `PUT /formation/sop/tablette/langue` | `{jeton, langue}` |
 
+## Formation · La formation continue — `formation/src/formation_continue.php` (22/11/2026)
+
+Une FC = une ligne de `for_sop` (type `FC`, `categorie`, `statut` brouillon | a_valider | publiee, `photos_jours`) ; un
+dossier par boutique (`for_fc_dossier`). Détail : `formation/docs/formation.md` § « La formation continue ».
+
+| Route | Corps / paramètres | Réponse |
+|---|---|---|
+| `GET /formation/continue` | — | `{formations:[{id, code, titre, categorie, categorieLib, statut, statutLib, version, produit, photosJours, etapes, boutiques, validees, avancementMoyen, diffuseLe}], categories, statuts, types:{initiale, recyclages, lesDeux, continue, contenus}, magasins}` |
+| `GET /formation/continue/{id}` | — | la ligne + `contenu`, `formations`, `postes`, `dossiers:[vue]`, `journal` |
+| `POST /formation/continue` | `{titre:{fr, nl?}, categorie, objectif?, contenu?, produit?, photosJours?, formations?, postes?, aValider?}` | 201 `{ok, id, code, statut}` · 400 |
+| `PATCH /formation/continue/{id}` | `{categorie?, statut?, produit?, photosJours?}` | `{ok, formation}` · 404 · 422 |
+| `POST /formation/continue/{id}/diffuser` | `{shops?, echeance?, photosDu?}` | `{ok, diffusees:[shop], deja}` · 409 si pas validée |
+| `GET /formation/continue/franchises?consultant=` | — | `{franchises:[{shop, nom, court, consultants, formations, aValider, enRetard, avancement, valideesMois}], consultants, consultant, reperes}` |
+| `GET /formation/continue/franchise?shop=` | — | `{shop, nom, dossiers:[vue], aVenir, categories}` |
+| `GET /formation/continue/dossier?id=` | — | la vue + `contenu` (version de la boutique), `modele`, `journal` |
+| `PUT /formation/continue/dossier` | `{id, contenu?: {…}\|null, assignes?, echeance?, note?}` | `{ok, dossier}` · 409 si validée |
+| `POST /formation/continue/dossier/avis` | `{photo, avis: conforme\|a_refaire, commentaire?}` | `{ok, dossier}` |
+| `POST /formation/continue/dossier/valider` | `{id, mot?, forcer?}` | `{ok, archive:{id, titre}\|null, dossier}` · 409 pas terminée (sans `forcer`) ou déjà validée |
+| `POST /formation/continue/dossier/renvoyer` | `{id, motif?}` | `{ok, dossier}` |
+| `GET /formation/continue/photo?id=` | — | la photo (cockpit) |
+| `GET /formation/continue/magasin?shop=` | — | `{nouveautes:[{id, code, titre, categorie, categorieLib, date, nouveau, lien}], nouveautesTotal, dossiers:[vue], reperes:{enRetard, enCours, aValider, validees, photoDuJour}, equipe}` · 403 magasin hors session |
+| `GET /formation/continue/magasin/formation?shop=&id=` | — | la vue + `contenu` (version de la boutique) ; la première lecture pose `ouvert_le` · 404 hors de la boutique |
+| `POST /formation/continue/magasin/avancement` | `{shop, id, personne, lu?, quiz?, vu?}` | `{ok, dossier}` (une personne nouvelle s'ajoute) |
+| `POST /formation/continue/magasin/mise-en-place` | `{shop, id, annuler?}` | `{ok, dossier}` |
+| `POST /formation/continue/magasin/photo` | multipart `shop, id, photo` (jpg, png, webp, heic ; 12 Mo) | `{ok, dossier}` · 409 sans photo demandée, déjà conforme ou validée |
+| `GET /formation/continue/magasin/photo?shop=&id=` | — | une photo du dossier de cette boutique |
+
+La vue d'un dossier : `{id, shop, magasin, fc, code, titre, categorie, categorieLib, statut, statutLib, retard, echeance,
+assignes, adapte, adaptation:{note, par, le, contenu}, avancement:{pct, equipe, photos, complet}, photos:{jours,
+conformes, refusees, manquantes, enAttente, du, fin, grille:[{jour, etat, photo, commentaire}], complet}, equipe,
+miseEnPlace, termineLe, validation:{par, le, mot, archive}, diffuseLe, nouveau, version}`. `/formation/continue/magasin`
+est dans `ACCES_FRANCHISE`. Le Professeur : outils `dossier_formation`, `formation_lire` (fcProfesseurDossier,
+fcProfesseurLire). Tests : `php formation/bin/tests_formation_continue.php`.
+
 ## Formation · Tablettes des magasins — une seule tablette, PIN du magasin (`formation/src/tablettes.php`, lot 5, 06/11/2026)
 
 Le PIN du MAGASIN ouvre l'appareil (session gardée : jeton envoyé en en-tête `X-Tablette`, ou cookie `ceo_tablette`
@@ -2989,6 +3023,43 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 **Promotions : la structure de l'API du panel (21/10/2026, demandé par Sam).** La documentation publique du panel (Swagger : `https://atelierby.tfbuddy.com/api/documentation/`, spécification `…/api/documentation/api.php`, OpenAPI 3, 933 routes) décrit les « Buy X Get Y » ainsi : `trigger` et `reward` portent `quantity`, `product_ids`, `category_ids`, `excluded_product_ids` ; une cible produit est un entier **ou `{id_product, id_product_portion}`** — la portion d'un produit se vise par son numéro ; une catégorie ne porte pas de portion ; `category_targets` / `portion_scope` n'y figurent plus. Une promotion se modifie par **`PATCH …/{id}`** (pas de PUT documenté). `status` : `DRAFT`, `ACTIVE`, `INACTIVE` (le cockpit garde `INACTIVE` pour ses brouillons) ; nouveaux : `activation_mode: VOUCHER_ONLY`, `voucher_campaign_id`. Le cockpit suit : (1) une portion visée part produit par produit, `product_ids: [{id_product, id_product_portion}]`, et une catégorie choisie avec une portion part en ses produits du magasin qui ont cette portion (hors exclusions) — `category_ids` vide ; un produit choisi sans cette portion au panel se dit (422) avant tout envoi ; (2) les portions de chaque produit se lisent à `/products/{id}/portions` (compte admin, sinon consultant ; type `ONE_QUARTER`/`ONE_HALF`, fraction 0,25/0,5 ou libellé « 1/4 »), sinon dans la table `product_portion`, et se gardent un jour (`pmPortions`) ; (3) modifier et activer : `PATCH` (corps complet), `PUT` en repli si le panel répond 404/405 ; (4) la relecture compare les produits avec leur portion (« 12:77 ») et reconnaît la portion d'une promotion relue par le numéro de ses portions (½, ¼ dans l'assistant). La sonde `GET /ventes/promos/sonde-portions?shop=4&q=tarte` lit aussi `/products/{id}/portions` et `/shops/{magasin}/products/{id}/portions/prices`, et dit ce que le cockpit en retient (`retenu`).
 
 **Fiche franchisé : l'onglet Documents (22/10/2026, demandé par Sam).** Un troisième onglet de Fiche & scoring, à côté de « Ce magasin » et « Le réseau » : les documents du magasin choisi — rapports de réunion, contrats de mise à disposition, autres pièces —, par sorte, les plus récents d'abord. On dépose un ou plusieurs fichiers (PDF, Word, Excel, PowerPoint, OpenDocument, photos, texte, e-mails ; 25 Mo au plus, ou moins si PHP le limite) avec une sorte, un titre (sinon le nom du fichier), la date du document et une note ; on ouvre (un PDF ou une image s'affiche, le reste se télécharge), on télécharge, on retire (la ligne et le fichier). Routes : `GET /franchises/documents?shop=` → `{documents: [{id, sorte, sorteLib, titre, nom, mime, octets, date, note, deposeLe}], sortes, maxOctets, extensions}` ; `POST /franchises/documents` en **multipart** (`shop, sorte, titre, date, note, fichiers[]`) → `{ajoutes, refuses: [{nom, motif}]}` ; `GET /franchises/documents/fichier?id=[&telecharger=1]` sort le fichier lui-même ; `DELETE /franchises/documents?id=`. Les fichiers vivent sous `public/uploads/documents/{magasin}/` (préservé par le déploiement) sous un nom tiré au hasard, et un `.htaccess` y refuse tout accès direct : un contrat ne se lit que par l'API. Table `con_doc`. `consultant/src/documents.php`, `consultant/bin/tests_documents.php`. **Le mail « matériel mis à disposition »** (maquette validée par Sam le 22/10/2026) vit dans cet onglet, bloc « Courriers au franchisé » : matériel mis à disposition à l'état neuf ; l'entretien (nettoyage, courant, périodique) et toutes les pièces qui cassent (remplacement, réparations) à la charge du franchisé. Avant l'envoi : la liste du matériel (facultative), le contrat joint (un document « Contrat de mise à disposition » du magasin, le plus récent par défaut, ou sans pièce jointe), le destinataire (les adresses que les carnets des rapports connaissent pour ce magasin, ou une adresse saisie), et l'aperçu du mail tel qu'il partira. Envoyé, il est rangé dans la sorte « Courrier envoyé » (en PDF quand le serveur sait en faire, sinon en HTML), avec le destinataire et la pièce jointe en note. Routes : `GET /franchises/documents/mail-materiel?shop=[&materiel=&contrat=]` → `{sujet, html, adresses, contrats, smtp}` ; `POST /franchises/documents/mail-materiel {shop, a, materiel?, contrat?}` → `{ok, a, sujet, copie}` (un contrat de plus de 10 Mo est refusé : trop lourd pour un e-mail).
+
+**Le coffre-fort du franchisé (22/11/2026, demandé par Sam ; `consultant/src/coffre.php`, plan et maquettes `consultant/docs/maquettes/coffre-fort/`).** Une boutique, un coffre : une page du dashboard (`?vue=coffre`, « Mon coffre-fort » épinglé tout en bas du rail, et tout en bas de chaque onglet sans rail), un tableau à onglets — Tout · Contrat & DIP · Légal · Formation · Rapports de visite · Finances · Courriers & réunions. Le coffre **rassemble** : les documents de `con_doc` cochés « dans le coffre » (`visible_franchise`, 0 pour tout ce qui précède le coffre) et les rapports de visite envoyés (`con_visite.rapport_envoye_le`, ouverts dans « Mon suivi »). Décisions de Sam : le DIP, le contrat… sont **déposés par le consultant** (onglet Documents, sortes `dip`, `contrat_franchise`, `avenant`, `implantation`, `legal`, `formation`, `finances` en plus des quatre d'avant) ; pas de connexion imposée (le coffre suit le réglage `acces`) ; le magasin dépose ses pièces **légales** ; pas d'envoi au comptable, mais un document du coffre se joint à un mail de la Boîte mail.
+
+| Route | Corps / paramètres | Réponse |
+|---|---|---|
+| `GET /coffre/magasin?shop=` | — | `{shop, nom, onglets:[{cle, nom, n}], documents:[{id, onglet, sorte, sorteLib, titre, note, date, echeance, etat:{cle: depose\|valide\|renouveler\|expiree, texte, jours}, deposePar, deposeLe, deposeRole, nom, mime, octets, nouveau, traces:[{qui, role, comment, le}]}], visites:[{id, le, type, typeCode, consultant, envoyeLe, envoyePar, luLe}], reperes:{nouveaux, aRenouveler:[…], contrat}, suivi, depot:{sorte, maxOctets, extensions}}` · 400 sans magasin · 403 magasin hors session |
+| `GET /coffre/magasin/fichier?shop=&id=[&telecharger=1][&apercu=1]` | — | le fichier, s'il est de cette boutique ET dans son coffre (sinon le même 404) ; l'ouverture est notée dans `con_coffre_acces` (pas l'aperçu) |
+| `POST /coffre/magasin/document` | multipart : `shop`, `titre?`, `date?`, `echeance?`, `note?`, `fichiers[]` (10 au plus) | `{ok, ajoutes:[…], refuses:[{nom, motif}]}` — une pièce **légale** du magasin ; le `shop` revérifié contre la session (`cofShopOk`) · 413 trop lourd · 422 rien de rangé |
+| `PATCH /franchises/documents` (siège) | `{id, coffre?: bool, echeance?: 'AAAA-MM-JJ'\|null}` | `{ok, document}` — met au coffre, en retire, règle l'échéance ; journalisé · 404 · 422 |
+| `POST /franchises/documents` (siège) | + `echeance?`, `coffre` (`'1'` par défaut, `'0'` hors du coffre) | inchangé ; chaque ligne porte en plus `echeance`, `coffre`, `deposePar`, `deposeRole`, et dans `GET /franchises/documents` `ouvertures:{n, dernier}` (ce que le magasin en a ouvert) |
+| `POST /dashboard/boite/envoyer` | + `coffre: [ids]` (5 au plus) | les documents lus au serveur dans le coffre de CETTE boutique, joints, la pièce jointe notée ; un document d'une autre boutique fait échouer l'envoi |
+
+Une pièce avec une échéance passe « à renouveler » 60 jours avant (`COF_RENOUVELER_J`). « Nouveau » : un document que le **magasin** n'a pas encore ouvert, un rapport pas encore lu. `/coffre/magasin` est dans `ACCES_FRANCHISE`. Tests : `php consultant/bin/tests_coffre.php`.
+
+**Les grandes dates du coffre et leur assistant (22/11/2026, Sam : « un bouton avec les grandes dates — triennats des contrats de bail et autres ; un assistant lorsque j'importe un document » ; `consultant/src/coffre_dates.php`).** Une grande date oblige la boutique à agir ou change ses droits : fin d'un triennat du bail et dernier jour pour donner congé, fenêtre de la demande de renouvellement, fin du bail ou du contrat, échéance d'une assurance, d'une autorisation, indexation du loyer. Table `con_coffre_date` (boutique, document d'origine, sorte, `le`, `fin` d'une fenêtre, note, source `assistant|calcul|manuel`, qui, rôle) ; les échéances des documents du coffre (`con_doc.echeance`) s'y ajoutent d'office, en lecture. L'**assistant** lit le document (PDF et photos tels quels, Word et OpenDocument par leur texte ; 20 Mo au plus) par `Anthropic::documentJson` (sortie structurée, le modèle du réglage) et **propose** — rien ne se range sans confirmation. Pour un bail commercial, le modèle relève la prise de cours, la durée et le préavis ; les dates se **calculent** au serveur (`cofBailDates`, règle générale : congé du preneur 6 mois avant la fin de chaque triennat, renouvellement du 18e au 15e mois avant la fin ; une note rappelle de vérifier le bail).
+
+| Route | Corps | Réponse |
+|---|---|---|
+| `GET /coffre/magasin/dates?shop=` | — | `{shop, aujourdhui, bientotJours, sortes:[{v, nom}], dates:[{id\|null, sorte, sorteLib, titre, le, fin, note, source: assistant\|calcul\|manuel\|document, docId, docTitre, docCoffre, par, role, etat:{cle: passee\|encours\|bientot\|avenir, jours}, modifiable}]}` |
+| `POST /coffre/magasin/dates` | `{shop, dates:[{sorte, titre, le, fin?, note?, docId?, source?}] (30 au plus), echeanceDoc?:{docId, le}, titreDoc?:{docId, titre}, depuis?:'cockpit'}` | `{ok, ajoutees, refusees:[…], document:['échéance'?, 'titre'?], dates}` — une même date (document, sorte, jour) ne se range qu'une fois ; un document hors de portée n'est pas relié ; `depuis` ne compte que sans session |
+| `DELETE /coffre/magasin/dates?shop=&id=` | — | `{ok, dates}` — un magasin ne retire que ce qu'il a rangé · 403 · 404 |
+| `POST /coffre/magasin/assistant` | `{shop, id}` | `{ok, docId, nom, docTitre, genre, genreLib, titre, resume, remarques, propositions:[{cle, sorte, sorteLib, titre, le, fin, note, source: calcul\|assistant, extrait, page, etat, deja, coche}], echeanceDoc:{actuelle, proposee}\|null, titreDoc:{actuel, propose}\|null, modele}` · 404 document hors de portée (un magasin : son coffre ; le siège : la boutique) · 422 fichier illisible · 502 le modèle n'a pas lu |
+
+`GET /coffre/magasin` porte en plus `reperes.dates:{n, bientot, prochaine}` (le bouton « Grandes dates » du dashboard).
+
+**Coffre v2 : les pièces attendues (22/11/2026, liste validée par Sam ; maquettes `consultant/docs/maquettes/coffre-fort-v2/`).** Ce que chaque coffre doit contenir (`COF_PIECES`, 16 pièces) : `dip`, `contrat`, `annexes`, `implantation` (Contrat & DIP, le consultant) ; `statuts`, `bce`, `assurance_rc`, `assurance_incendie`, `bail`, `afsca`, `permis_env` (Légal, le franchisé) ; `formation_initiale` (le consultant), `formation_continue` (d'office, l'archive d'une formation continue validée) ; `analyse`, `budget`, `redevances` (Finances, le consultant). Un document s'y rattache par `con_doc.piece` ; les sortes `dip`, `contrat_franchise`, `avenant`, `implantation` le font d'elles-mêmes.
+
+| Route | Corps | Réponse |
+|---|---|---|
+| `GET /coffre/magasin?shop=` | — | + `pieces:{liste:[{cle, onglet, nom, qui: franchise\|siege\|auto, etat: recue\|renouveler\|expiree\|manquante\|exclue, n, doc:{id, titre, date, echeance, etat, deposePar}\|null, exclue:{par, le}\|null}], completude:{a, b}, parOnglet:{onglet:{a, b}}}` ; chaque document porte `piece`, `pieceNom` ; ce que le magasin a déposé n'est pas « nouveau » pour lui |
+| `POST /coffre/magasin/document` | + `piece?` (une pièce de l'onglet Légal) | inchangé |
+| `POST /coffre/magasin/piece` | `{shop, piece, exclue: bool, depuis?:'cockpit'}` | `{ok, pieces}` — « pas concernée » (`con_coffre_piece_exclue`) ou réintégrée ; le magasin, pour les pièces qu'il dépose · 403 · 422 pièce inconnue |
+| `POST /coffre/magasin/dates` | + `pieceDoc?:{docId, piece}` | la pièce du document (un magasin : une pièce de l'onglet Légal) ; `document` peut dire `pièce` |
+| `POST /coffre/magasin/assistant` | — | + `pieceSuggeree:{cle, nom, onglet}\|null` (la pièce reconnue par le modèle) |
+| `POST /franchises/documents`, `PATCH /franchises/documents` (siège) | + `piece?` | `GET /franchises/documents` rend en plus `pieces` (le catalogue) |
+
+Le dashboard (coffre.js v2) : l'état du coffre (complétude, à traiter, prochaine grande date), la frise des 12 mois, les dossiers et leurs pièces attendues, l'aperçu en tiroir, la fenêtre de dépôt avec l'assistant ; « Joindre à un e-mail » ouvre la Boîte mail avec le document en pièce jointe (`intention.ecrire.coffre`). Le dashboard (coffre.js) et le cockpit (onglet Documents) lancent l'assistant sur le premier document lisible d'un dépôt. Tests : `php consultant/bin/tests_coffre_dates.php`.
 
 **Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026, demandé par Sam : « net pas brut »).** En tête de Reporting automatisé, une carte d'envoi ponctuel : le mois (le mois clos par défaut, douze au choix), le CA net hors TVA de chaque magasin et du réseau, la TVA, le TTC et les tickets, un destinataire et « Envoyer par e-mail ». Net = TTC après remise − TVA, ticket par ticket (`total_gross_amount_after_discount` − `tax_amount_after_discount` des tickets du panel, `/shops/{id}/transactions?date=`), tous les tickets, clients pro compris. Une journée close se lit une fois (`caNet{magasin}:{jour}`) ; le mois se lit par lots de vingt-cinq secondes, l'écran relit tant que ça avance. L'e-mail ne part qu'un mois entièrement lu, avec la TVA de chaque ticket, et seulement à une adresse que le cockpit connaît (destinataires des rapports, compte SMTP — la règle des dossiers). Routes : `GET /rapports/ca-net?mois=AAAA-MM` → `{magasins: [{shopId, nom, brut, tva, net, tickets, jours, joursLus, sansTva}], reseau, aLire, complet, adresses, smtp, moisDispo}` ; `POST /rapports/ca-net/envoyer {mois, a}` (409 tant que le mois n'est pas lu ou qu'un ticket n'a pas de TVA, 422 pour une adresse inconnue). `consultant/src/ca_net_mois.php`, `consultant/bin/tests_ca_net.php`.
 
@@ -6073,3 +6144,21 @@ secteur au besoin ; sous le `plancher` mensuel, le complément est payé. Le tau
 (`departFranchise`), prélevé avec ses royalties ; le reste, à la charge de la marque. L'objectif (`objectif`, 5 000 € HT par
 mois apportés), le coût mensuel du commercial (`cout`) et le ROI de la marque ((retour − coût) ÷ coût, le retour étant le CA HT
 ou la marge `marge` %). Tests : `php commercial/bin/tests_commercial.php`.
+
+
+## Formation · La recherche de « Formations et suivi » (22/11/2026)
+
+Sam : « tomber sur l'accueil de la formation, sans le rail, et une méga search bar sur tout le catalogue » (maquettes
+`formation/docs/maquettes/formations-et-suivi-v2/`). La page « Formations et suivi » du dashboard s'ouvre sur l'accueil du
+module Formation (la phrase et le tableau Formation · Manuel · SOP · Checklist), sous une barre de recherche sur tout le
+catalogue ; le dossier de formation (formation continue) reste à un clic. `formation/src/formation_recherche.php`.
+
+| Route | Corps | Réponse |
+|---|---|---|
+| `GET /formation/recherche` | — | `{genere, catalogues:[{cle: fo\|man\|std\|chk\|res\|fc, nom, couleur, encre, contour, manuel, n}], types:{Article, SOP, …}, docs:[{id, cat, type, code, titre, objectif, pour, texte, etapes:[{titre, critique}] (4 au plus), nbEtapes, photo, poste, moment, acces, statut, categorie}], formations:[{code, titre, famille, postes, phases, competences}], domaines:[{code, titre, souscats}]}` |
+
+`docs` : les documents du Manuel publiés et à valider (jamais les brouillons) et les formations continues publiées ;
+`texte` : le texte des étapes et des points critiques (6 000 caractères au plus), pour chercher dedans. `/formation/recherche`
+est dans `ACCES_FRANCHISE`. La page cherche dans le navigateur (sans accents ni capitales : titres, codes, objectifs,
+étapes) ; un document s'ouvre en tiroir par la route publique de la tablette (`GET /formation/sop/tablette/sop/{id}`).
+Tests : `php formation/bin/tests_formation_recherche.php`.

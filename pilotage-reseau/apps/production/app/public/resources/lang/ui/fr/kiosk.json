@@ -887,5 +887,8 @@
   "lot_reason_help": "Photographiez l’emballage (bouton « Photo de l’étiquette »), puis « Enregistrer ».",
   "lot_reason_photo": "Lot absent : prenez d’abord une photo de l’emballage.",
   "lot_progress": "{done} / {total} complétés",
-  "kf_finish_locked": "Lots manquants ({n})"
+  "kf_finish_locked": "Lots manquants ({n})",
+  "kc_seen_btn": "Vue par l’équipe — je confirme",
+  "kc_seen": "Vue le {at} — {by}",
+  "kc_not_seen": "Pas encore confirmée par le groupe"
 }

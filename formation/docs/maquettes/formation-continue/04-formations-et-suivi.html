@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>04 — Portail franchisé : Formations et suivi</title>
+<link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="fc.css"><link rel="stylesheet" href="dash.css">
+<style>
+.nouv{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;position:relative;overflow:hidden}
+.nouv::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:#F2C9A0}
+.nouv .hd{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.nouv .hd b{font-size:17px;font-weight:400}
+.nouv .hd span{color:var(--muted);font-size:12px}
+.nouv .hd a{margin-left:auto;color:var(--accent);font-size:12px}
+.cartes{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.nc{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.nc .ph{height:92px;display:flex;align-items:flex-end;padding:8px 10px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#fff;position:relative}
+.nc .ph.prod{background:linear-gradient(135deg,#C9803F,#8D1D2C)}
+.nc .ph.prod2{background:linear-gradient(135deg,#E3B27A,#9A5A2A)}
+.nc .ph.ntech{background:linear-gradient(135deg,#6E9A7C,#2F5E40)}
+.nc .ph.conn{background:linear-gradient(135deg,#7FA2C0,#2D5D80)}
+.nc .ph .neuf{position:absolute;top:8px;right:8px;background:#F2C9A0;color:var(--accent);border-radius:6px;padding:2px 7px;font-size:10px;letter-spacing:.06em;font-weight:700}
+.nc .bd{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.nc .bd b{font-weight:400;font-size:14px;line-height:1.3}
+.nc .bd .dt{font-size:11.5px;color:var(--muted)}
+.nc .bd .go{margin-top:auto;color:var(--accent);font-size:12.5px}
+.lay{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+.mat{display:grid;grid-template-columns:130px repeat(6,1fr);font-size:11.5px}
+.mat div{padding:6px 4px;border-bottom:1px solid var(--row-line);text-align:center}
+.mat div.n{text-align:left;color:var(--ink)}
+.mat div.h{color:var(--muted);font-size:10.5px}
+.pt3{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--chip)}
+.pt3.v{background:var(--green)}.pt3.qz{background:#9CC3A8}.pt3.l{background:var(--prize-soft);border:1px solid #E8C98E}.pt3.x{background:#fff;border:1px dashed var(--line)}
+.ini{display:flex;gap:10px;align-items:center;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;margin-top:14px;color:var(--muted-2);font-size:12.5px;background:#fff}
+</style></head>
+<body>
+<div class="app">
+  <nav class="drail">
+    <img class="lg" src="/shared/public/assets/img/logo.png" alt="L'Atelier">
+    <a><span class="ic"></span>Boîte mail <span class="n">4</span></a>
+    <a class="ia"><span class="ic"></span>Assistant IA</a>
+    <div class="g">La journée</div><a><span class="ic"></span>Opérationnel</a><a><span class="ic"></span>Tâches</a><a><span class="ic"></span>Temps morts</a>
+    <div class="g">Les chiffres</div><a><span class="ic"></span>Semaine</a><a><span class="ic"></span>Mois</a><a><span class="ic"></span>Année</a><a><span class="ic"></span>Trésorerie</a>
+    <div class="g">Vendre</div><a><span class="ic"></span>Analyse</a><a><span class="ic"></span>Produits</a><a><span class="ic"></span>Promotions</a>
+    <div class="g">Marketing</div><a><span class="ic"></span>Mon marketing</a><a><span class="ic"></span>Fidélité</a>
+    <div class="g" style="color:var(--accent)">Se former</div><a class="on"><span class="ic"></span>Formations et suivi</a>
+    <div class="g">Paramètres</div><a><span class="ic"></span>Mails</a>
+  </nav>
+  <main class="dmain">
+    <div class="dnav"><div><div class="kk">Se former · mon dossier de formation</div><h1>Formations et suivi</h1></div><span class="sp"></span>
+      <span class="b">↻ Relire</span><span class="b form">🎓 Mon dossier de formation <span class="pas">2</span></span><span class="b iab">Assistant</span><span class="val">Valeur<b>104 450 €</b></span><span class="avt">ML</span></div>
+
+    <section class="nouv ann" style="overflow:visible"><span class="ann-n" style="left:-11px;top:-11px">1</span>
+      <div class="hd"><b>Nouveautés</b><span>les nouvelles formations continues du réseau, la plus récente d’abord · 60 derniers jours</span><a>Toutes les nouveautés (6) →</a></div>
+      <div class="cartes">
+        <div class="nc"><div class="ph prod">Nouveau produit<span class="neuf">NOUVEAU</span></div><div class="bd"><span class="tag prod" style="align-self:flex-start"><span class="pt"></span>Nouveau produit</span><b>Pistolet poulet-curry du traiteur</b><span class="dt">publiée le 05/11/2026 · mise en vente le 08/11</span><span class="go">Ouvrir la formation →</span></div></div>
+        <div class="nc"><div class="ph ntech">Nouvelle technique<span class="neuf">NOUVEAU</span></div><div class="bd"><span class="tag ntech" style="align-self:flex-start"><span class="pt"></span>Nouvelle technique</span><b>Four ventilé : le programme P7 viennoiserie</b><span class="dt">publiée le 05/11/2026</span><span class="go">Ouvrir la formation →</span></div></div>
+        <div class="nc"><div class="ph conn">Connaissance</div><div class="bd"><span class="tag conn" style="align-self:flex-start"><span class="pt"></span>Connaissance</span><b>Étiquette allergènes : la règle FIC 2027</b><span class="dt">publiée le 03/11/2026</span><span class="go">Ouvrir la formation →</span></div></div>
+        <div class="nc"><div class="ph prod2">Nouveau produit</div><div class="bd"><span class="tag prod" style="align-self:flex-start"><span class="pt"></span>Nouveau produit</span><b>Cramique aux pépites de chocolat</b><span class="dt">publiée le 28/10/2026</span><span class="go">Ouvrir la formation →</span></div></div>
+      </div>
+    </section>
+
+    <div class="lay">
+      <div>
+        <div class="kpis ann"><span class="ann-n" style="left:-10px;top:-10px">2</span>
+          <div class="kpi ac"><div class="l">En retard</div><div class="v">1</div><div class="s">échéance passée</div></div>
+          <div class="kpi"><div class="l">En cours</div><div class="v">1</div><div class="s">à terminer avant le 15/12</div></div>
+          <div class="kpi or"><div class="l">À valider</div><div class="v">2</div><div class="s">terminées, chez Nadia K.</div></div>
+          <div class="kpi ok"><div class="l">Validées</div><div class="v">2</div><div class="s">depuis le 01/10</div></div>
+        </div>
+        <section class="carte">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center"><b style="font-weight:400;font-size:15px">Mon dossier de formation</b><span class="mut petit">formation continue · 6</span><span style="flex:1"></span><span class="seg"><span class="on">Toutes</span><span>Technique</span><span>Connaissance</span><span>Nouveau produit</span><span>Nouvelle technique</span></span></div>
+          <div class="tete"><span class="c-nom">Formation</span><span style="width:96px">Statut</span><span style="width:150px">Avancement</span><span style="width:64px">Échéance</span><span style="width:60px"></span></div>
+          <div class="ligne"><span class="c-nom"><b>Four ventilé : le programme P7 viennoiserie</b><small><span class="tag ntech"><span class="pt"></span>Nouvelle technique</span> · photos 6/14 · 2 jours sans photo · quiz à faire</small></span><span style="width:96px"><span class="st ret">En retard</span></span><span class="av"><span class="bar"><i class="o" style="width:40%"></i></span><span>40 %</span></span><span class="c-w" style="width:64px;color:var(--stop)">15/11</span><span style="width:60px" class="lien petit">Ouvrir</span></div>
+          <div class="ligne"><span class="c-nom"><b>Étiquette allergènes : la règle FIC 2027</b><small><span class="tag conn"><span class="pt"></span>Connaissance</span> · 6 personnes · lue par 4</small></span><span style="width:96px"><span class="st brou">En cours</span></span><span class="av"><span class="bar"><i class="o" style="width:55%"></i></span><span>55 %</span></span><span class="c-w" style="width:64px">15/12</span><span style="width:60px" class="lien petit">Ouvrir</span></div>
+          <div class="ligne"><span class="c-nom"><b>Pistolet poulet-curry du traiteur</b><small><span class="tag prod"><span class="pt"></span>Nouveau produit</span> <span class="tag" style="background:#FFF1E4;color:#7A3E12">adaptée pour Gosselies par Nadia K.</span> · photos 14/14 conformes</small></span><span style="width:96px"><span class="st aval">À valider</span></span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w" style="width:64px">25/11</span><span style="width:60px" class="lien petit">Ouvrir</span></div>
+          <div class="ligne"><span class="c-nom"><b>Cramique aux pépites de chocolat</b><small><span class="tag prod"><span class="pt"></span>Nouveau produit</span> · photos 14/14 conformes</small></span><span style="width:96px"><span class="st aval">À valider</span></span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w" style="width:64px">10/11</span><span style="width:60px" class="lien petit">Ouvrir</span></div>
+          <div class="ligne"><span class="c-nom"><b>Façonnage de la baguette tradition</b><small><span class="tag tech"><span class="pt"></span>Technique</span> · validée par Nadia K. le 31/10 à 17:20</small></span><span style="width:96px"><span class="st val">Validée</span></span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w" style="width:64px">31/10</span><span style="width:60px" class="lien petit">Ouvrir</span></div>
+          <div class="ligne"><span class="c-nom"><b>Tartelette tatin individuelle</b><small><span class="tag prod"><span class="pt"></span>Nouveau produit</span> · validée par Nadia K. le 20/10 à 09:05</small></span><span style="width:96px"><span class="st val">Validée</span></span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w" style="width:64px">20/10</span><span style="width:60px" class="lien petit">Ouvrir</span></div>
+        </section>
+
+        <section class="carte pad ann" style="margin-top:14px"><span class="ann-n" style="left:-10px;top:-10px">3</span>
+          <div class="h3">Le suivi de l’équipe <i><span class="pt3 v"></span> vu faire · <span class="pt3 qz"></span> quiz réussi · <span class="pt3 l"></span> lue · <span class="pt3"></span> pas commencé · <span class="pt3 x"></span> pas concerné</i></div>
+          <div class="mat">
+            <div class="n h"></div><div class="h">Four P7</div><div class="h">Allergènes</div><div class="h">Pistolet</div><div class="h">Cramique</div><div class="h">Baguette</div><div class="h">Tatin</div>
+            <div class="n">M. Lambert <span class="mut">franchisé</span></div><div><span class="pt3 l"></span></div><div><span class="pt3 qz"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 v"></span></div>
+            <div class="n">Sofia T. <span class="mut">P1</span></div><div><span class="pt3 l"></span></div><div><span class="pt3 l"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 v"></span></div>
+            <div class="n">Kevin M. <span class="mut">P1</span></div><div><span class="pt3"></span></div><div><span class="pt3 qz"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 x"></span></div>
+            <div class="n">Julie R. <span class="mut">P2</span></div><div><span class="pt3 x"></span></div><div><span class="pt3 l"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 x"></span></div>
+            <div class="n">Karim B. <span class="mut">P6</span></div><div><span class="pt3 x"></span></div><div><span class="pt3"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 x"></span></div>
+            <div class="n">Léa V. <span class="mut">P3</span></div><div><span class="pt3 x"></span></div><div><span class="pt3"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 v"></span></div><div><span class="pt3 x"></span></div><div><span class="pt3 v"></span></div>
+          </div>
+        </section>
+        <div class="ini">🎓 <span><b style="font-weight:400;color:var(--ink)">Formation initiale</b> — terminée · attestation du 14/03/2025 · 31 formations de pré-ouverture et d’ouverture</span><span style="flex:1"></span><span class="lien">Revoir →</span></div>
+        <div class="ini" style="border-style:solid;border-color:#F2C9A0;background:#FFF8F1">📄 <span><b style="font-weight:400;color:var(--ink)">Mon document de formation</b> — l’archive de chaque formation validée : qui, quand, l’équipe formée, les 14 photos qualité · 2 formations continues</span><span style="flex:1"></span><span class="lien">Ouvrir le PDF →</span></div>
+      </div>
+
+      <aside class="carte pad ann"><span class="ann-n" style="left:-10px;top:-10px">4</span>
+        <div class="prof"><img src="/panel/public/dashboard/avatars/professeur.svg" alt=""><div><b style="font-weight:400;font-size:15px">Le Professeur</b><div class="mut petit" style="margin-top:3px;line-height:1.45">Il répond à partir de <b style="font-weight:400;color:var(--ink)">votre dossier de formation</b> : vos 6 formations continues, avec les adaptations faites pour Gosselies, et le Manuel opératoire.</div></div></div>
+        <div class="h3" style="margin-top:14px">Questions toutes prêtes</div>
+        <span class="qp">Qu’est-ce que je dois terminer en premier ?<small>d’après les échéances de mon dossier</small></span>
+        <span class="qp">Résume-moi le programme P7 du four ventilé<small>Four ventilé : le programme P7 viennoiserie</small></span>
+        <span class="qp">Quels allergènes pour le pistolet poulet-curry ?<small>Pistolet poulet-curry du traiteur</small></span>
+        <span class="qp">Prépare 3 questions pour vérifier l’équipe sur la règle FIC 2027<small>Étiquette allergènes : la règle FIC 2027</small></span>
+        <div class="champ mut" style="margin-top:12px">Posez votre question au Professeur…</div>
+        <div style="display:flex;gap:8px;margin-top:8px"><span class="b form" style="flex:1;justify-content:center">Demander au Professeur</span></div>
+        <div class="note" style="margin-top:12px">Il ne voit que le dossier de Gosselies. Il cite la formation et l’étape qu’il a lues ; ce qui n’est pas dans le dossier ni dans le Manuel, il le dit.</div>
+      </aside>
+    </div>
+
+    <div class="legende"><b>« Formations et suivi » : la page Formation du franchisé, où mène le bouton abricot</b>
+      <ol><li><b>Nouveautés</b> : un bloc visuel en tête de page, les formations continues validées et diffusées par le siège (nouveaux produits, nouvelles techniques…), chacune avec son titre, sa catégorie, sa date et un lien direct vers la formation. « NOUVEAU » tant qu’elle n’a pas été ouverte.</li>
+      <li><b>Mon dossier de formation</b> : seulement les formations de ce magasin (modèle réseau, ou version adaptée par le consultant), leur statut et leur avancement ; une formation validée dit par qui et quand.</li>
+      <li><b>Le suivi de l’équipe</b> : qui a lu, réussi le quiz, été vu faire. Ce sont les mêmes états que sur la tablette.</li>
+      <li><b>Le Professeur</b>, relié au dossier : ses questions toutes prêtes viennent des formations du magasin.</li></ol></div>
+  </main>
+</div>
+</body></html>

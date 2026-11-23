@@ -100,7 +100,10 @@ class ComplaintRepository extends BaseRepository
             "SELECT c.id, c.complaint_type, c.complaint_reason, c.requested_action, c.compensation_method, c.invoice_num, c.id_product,
                     c.product_quantity, c.accepted_quantity, c.client_comment, c.single_purchase_price, COALESCE(c.acceptance_status, 'NEW') AS status,
                     c.reported_at, c.acceptance_timestamp, c.production_response, cust.company AS customer, p.name AS product,
-                    wdt.id AS wdt_id, wdt.established_date AS invoice_date, " . self::ppcSql('c') . " AS ppc
+                    wdt.id AS wdt_id, wdt.established_date AS invoice_date, " . self::ppcSql('c') . " AS ppc,
+                    (SELECT CONCAT(DATE_FORMAT(s.seen_at, '%d.%m.%Y %H:%i'), ' · ', COALESCE(g.name_pl, ''), ' · ', COALESCE(TRIM(CONCAT(pe.name, ' ', pe.surname)), ''))
+                       FROM n_complaint_seen s LEFT JOIN n_prod_group g ON g.id = s.id_group LEFT JOIN n_prod_employee e ON e.id = s.id_employee
+                       LEFT JOIN production_employee pe ON pe.id = e.id_production_employee WHERE s.id_complaint = c.id ORDER BY s.seen_at LIMIT 1) AS seen_label
              FROM complaint c
              LEFT JOIN customer cust ON cust.id = c.id_customer
              LEFT JOIN final_product p ON p.id = c.id_product
@@ -202,7 +205,10 @@ class ComplaintRepository extends BaseRepository
                     c.reported_at,
                     c.production_response,
                     wdt.established_date as invoice_date,
-                    wdt.id as wdt_id
+                    wdt.id as wdt_id,
+                    (SELECT CONCAT(DATE_FORMAT(s.seen_at, '%d.%m.%Y %H:%i'), ' · ', COALESCE(g.name_pl, ''), ' · ', COALESCE(TRIM(CONCAT(pe.name, ' ', pe.surname)), ''))
+                       FROM n_complaint_seen s LEFT JOIN n_prod_group g ON g.id = s.id_group LEFT JOIN n_prod_employee e ON e.id = s.id_employee
+                       LEFT JOIN production_employee pe ON pe.id = e.id_production_employee WHERE s.id_complaint = c.id ORDER BY s.seen_at LIMIT 1) AS seen_label
                 FROM complaint c
                 LEFT JOIN customer cust ON c.id_customer = cust.id
                 LEFT JOIN final_product p ON c.id_product = p.id

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Coffre-fort v2 — Halle aujourd’hui (vide)</title><link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/fc.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/dash.css"><link rel="stylesheet" href="/consultant/docs/maquettes/coffre-fort/coffre.css"><link rel="stylesheet" href="v2.css"></head>
+<body data-vue="coffre"><div id="page">
+<div class="v-corps" style="grid-template-columns:1fr">
+<div>
+<section class="v-carte" style="margin-bottom:14px"><div class="v-ch"><h2>Ce que votre coffre doit contenir</h2><small>16 pièces attendues · chacune se dépose une fois, puis se renouvelle à son échéance</small><span class="sp"></span><span class="v-chip on">Tout</span><span class="v-chip">À déposer par moi · 7</span><span class="v-chip">Attendu de Nadia K. · 7</span></div>
+<div class="v-vide" style="padding:14px">
+  <div class="v-vc"><div class="h"><span class="ico">⚖️</span><span><b>Légal</b><small>vous les déposez</small></span><span class="n">0 / 7</span></div>
+    <div class="v-vi"><i class="o"></i><span>Statuts de la société</span><em>Déposer</em></div>
+    <div class="v-vi"><i class="o"></i><span>Extrait de la BCE</span><em>Déposer</em></div>
+    <div class="v-vi"><i class="o"></i><span>Attestation d’assurance RC exploitation</span><em>Déposer</em></div>
+    <div class="v-vi"><i class="o"></i><span>Assurance incendie</span><em>Déposer</em></div>
+    <div class="v-vi"><i class="o"></i><span>Bail commercial</span><em>Déposer</em></div>
+    <div class="v-vi"><i class="o"></i><span>Autorisation AFSCA</span><em>Déposer</em></div>
+    <div class="v-vi"><i class="o"></i><span>Permis d’environnement</span><em>Déposer</em></div></div>
+  <div class="v-vc"><div class="h"><span class="ico">📜</span><span><b>Contrat &amp; DIP</b><small>Nadia K. les dépose</small></span><span class="n">0 / 4</span></div>
+    <div class="v-vi"><i class="o"></i><span>DIP et accusé de réception</span><em class="gris">attendu</em></div>
+    <div class="v-vi"><i class="o"></i><span>Contrat de franchise signé</span><em class="gris">attendu</em></div>
+    <div class="v-vi"><i class="o"></i><span>Annexes (zone, cahier des charges)</span><em class="gris">attendu</em></div>
+    <div class="v-vi"><i class="o"></i><span>Dossier d’implantation</span><em class="gris">attendu</em></div>
+    <div class="h" style="border-top:1px solid var(--line);border-bottom:0;margin-top:6px"><span class="ico">📊</span><span><b>Finances</b><small>Nadia K. les dépose</small></span><span class="n">0 / 3</span></div>
+    <div class="v-vi"><i class="o"></i><span>Dossier d’analyse du mois</span><em class="gris">attendu</em></div>
+    <div class="v-vi"><i class="o"></i><span>Budget de l’année</span><em class="gris">attendu</em></div>
+    <div class="v-vi"><i class="o"></i><span>Redevances (relevés)</span><em class="gris">attendu</em></div></div>
+  <div class="v-vc"><div class="h"><span class="ico">🎓</span><span><b>Formation</b><small>arrive tout seul</small></span><span class="n">0 / 2</span></div>
+    <div class="auto">L’attestation de la <b style="font-weight:400;color:var(--ink)">formation initiale</b>, puis le <b style="font-weight:400;color:var(--ink)">document de chaque formation continue</b> validée par votre consultant, rangés ici d’office.</div>
+    <div class="h" style="border-top:1px solid var(--line);border-bottom:0"><span class="ico">📝</span><span><b>Rapports de visite</b><small>arrivent tout seuls</small></span><span class="n">0</span></div>
+    <div class="auto">Chaque rapport envoyé après une visite de Nadia K. Le premier arrivera après sa prochaine visite.</div>
+    <div class="h" style="border-top:1px solid var(--line);border-bottom:0"><span class="ico">✉️</span><span><b>Courriers &amp; réunions</b><small>libre</small></span><span class="n">0</span></div>
+    <div class="auto">Les comptes rendus de réunion et les courriers échangés avec le réseau.</div></div>
+</div></section>
+</div></div>
+<div class="legende"><b>01 · Halle aujourd’hui : un coffre vide qui dit quoi faire</b><ol>
+<li><b>L’état du coffre</b> remplace les quatre tuiles à zéro : 0 pièce sur 16 attendues, et ce qui se passe ensuite (qui dépose quoi). Le bouton principal : « Déposer ma première pièce ».</li>
+<li><b>Ce que votre coffre doit contenir</b> : la liste de contrôle par dossier. Ce que <b>vous</b> déposez (Légal, avec « Déposer » sur chaque ligne), ce que votre consultant dépose (« attendu »), ce qui arrive tout seul (Formation, Rapports de visite).</li>
+<li>Plus de tableau vide ni d’aperçu vide à droite : ils n’apparaissent qu’avec des documents.</li></ol></div>
+</div>
+<script src="cadre.js"></script><script src="v2.js"></script>
+<script>V.monter(V.tete() + V.etat({ a: 0, b: 16, titre: 'Votre coffre est vide pour l’instant', texte: 'Nadia K. y dépose le DIP, le contrat et vos rapports de visite. Vous y déposez vos pièces légales : l’assistant relève leurs grandes dates (bail, assurances…).', lien: 'Déposer ma première pièce',
+  afaire: [{ c: 'ab', i: '⚖️', t: 'Déposer vos 7 pièces légales', s: 'statuts, BCE, assurances, bail, AFSCA, permis d’environnement', go: 'Commencer' }, { c: 'ac', i: '📜', t: 'Votre contrat et votre DIP', s: 'Nadia K. les dépose : vous serez prévenu', go: 'Lui écrire' }], proch: null }));</script>
+</body></html>

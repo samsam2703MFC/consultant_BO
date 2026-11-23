@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>06 — Manuel opératoire : la procédure « nouveau produit »</title>
+<link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="fc.css">
+<style>
+.lay{display:grid;grid-template-columns:330px minmax(0,1fr);gap:14px;align-items:start}
+.doc{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--row-line);align-items:baseline}
+.doc .cd{width:44px;flex:0 0 auto;font-size:11px;color:var(--muted)}
+.doc .t{flex:1;font-size:12.5px}
+.doc .t small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+.doc.sel{background:#F6EDEE;box-shadow:inset 3px 0 0 var(--accent)}
+.art{padding:22px 28px}
+.art .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.art h2{font-size:26px;font-weight:400;margin:6px 0 8px;line-height:1.2;text-transform:none;letter-spacing:-.01em;color:var(--ink)}
+.art .obj{font-size:13.5px;color:var(--muted-2);line-height:1.55;max-width:820px}
+.frise{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:18px 0 6px;position:relative}
+.frise::before{content:'';position:absolute;left:10%;right:10%;top:15px;height:2px;background:var(--line)}
+.jal{text-align:center;position:relative}
+.jal .o{width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid var(--accent);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;position:relative}
+.jal.prod .o{background:#F2C9A0;border-color:#E0A56E}
+.jal b{display:block;font-weight:400;font-size:13px;margin-top:6px}
+.jal small{display:block;color:var(--muted);font-size:11px}
+.sec{border-top:1px solid var(--line);padding:14px 0 6px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:18px}
+.sec h3{font-size:15px;font-weight:400;margin:0}
+.sec h3 small{display:block;color:var(--muted);font-size:11.5px;margin-top:3px}
+.et{display:flex;gap:10px;padding:5px 0;font-size:12.5px;line-height:1.5}
+.et .n{width:22px;height:22px;border-radius:6px;background:var(--chip);color:var(--muted-2);font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.et .qui{flex:0 0 auto;font-size:10.5px;border-radius:6px;padding:1px 6px;background:var(--table-head);border:1px solid var(--line);color:var(--muted);height:18px;margin-top:2px}
+.crit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.crit div{border:1px solid #E8C9CD;background:#FBF3F4;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5}
+.crit b{color:var(--accent);font-weight:700;display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+</style></head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <div class="logo">L’Atelier By</div><div class="k">Module Formation</div>
+    <div class="g">Formation</div>
+    <a>Accueil</a><a>Formations <span class="n">78</span></a><a>Postes <span class="n">12</span></a><a>Compétences <span class="n">56</span></a><a>Données du panel</a>
+    <div class="g">Opérationnel</div>
+    <a>Ouverture</a><a>Journée de travail</a><a>Fermeture</a><a>La tablette</a><a class="on">Rédaction des SOP</a>
+    <div class="g">Documents</div><a>Catalogue des manuels ↗</a>
+    <div class="bas">← Cockpit</div>
+  </nav>
+  <main class="main">
+    <div class="top"><div><div class="kk">Manuel opératoire · Classeur</div><h1>Partie 4 — Formation continue</h1></div><span class="sp"></span>
+      <span class="seg"><span>Par domaine</span><span class="on">Par phase</span><span>Par poste</span></span><span class="seg"><span class="on">FR</span><span>NL</span></span></div>
+    <div class="lay">
+      <section class="carte ann">
+        <span class="ann-n" style="right:-10px;top:-10px">1</span>
+        <div class="grp">Articles de la partie <i>14</i></div>
+        <div class="doc sel"><span class="cd">0.0.61</span><span class="t">Un nouveau produit arrive : la procédure<small><span class="tag prod" style="font-size:10px">nouveau</span> · v1.0 à valider · 5 parties · quiz 4</small></span></div>
+        <div class="doc"><span class="cd">0.0.62</span><span class="t">Comment fonctionnent les formations<small><span class="tag prod" style="font-size:10px">nouveau</span> · v1.0 à valider · 5 parties · quiz 3</small></span></div>
+        <div class="doc"><span class="cd">0.0.55</span><span class="t">Diriger, inspirer, embarquer<small>publié · 9 parties</small></span></div>
+        <div class="doc"><span class="cd">0.0.56</span><span class="t">La valeur d’une franchise<small>publié · 8 parties</small></span></div>
+        <div class="doc"><span class="cd">0.0.16</span><span class="t">Animation d’équipe et RH<small>publié · FO-06</small></span></div>
+        <div class="doc"><span class="cd">0.2.16</span><span class="t">Formation barista (FO-11)<small>à rédiger</small></span></div>
+        <div class="grp">Formations continues validées <i>9</i></div>
+        <div class="doc"><span class="cd">FC-023</span><span class="t">Pistolet poulet-curry du traiteur<small><span class="tag prod" style="font-size:10px">nouveau produit</span></small></span></div>
+        <div class="doc"><span class="cd">FC-021</span><span class="t">Cramique aux pépites de chocolat<small><span class="tag prod" style="font-size:10px">nouveau produit</span></small></span></div>
+        <div class="doc"><span class="cd">FC-018</span><span class="t">Four ventilé : le programme P7 viennoiserie<small><span class="tag ntech" style="font-size:10px">nouvelle technique</span></small></span></div>
+        <div class="doc"><span class="cd">FC-015</span><span class="t">Étiquette allergènes : la règle FIC 2027<small><span class="tag conn" style="font-size:10px">connaissance</span></small></span></div>
+        <div class="doc"><span class="cd">FC-011</span><span class="t">Façonnage de la baguette tradition<small><span class="tag tech" style="font-size:10px">technique</span></small></span></div>
+      </section>
+
+      <article class="carte art">
+        <div class="k">0.0.61 · Article · Formation continue · P1 à P12</div>
+        <h2>Un nouveau produit arrive : la procédure</h2>
+        <div style="display:flex;gap:6px;margin-bottom:10px"><span class="st aval">v1.0 · à valider</span><span class="tag">FR rédigé · NL à relire</span><span class="tag">12 min de lecture</span><span class="tag">relié : FO-08, FO-26, FO-16</span></div>
+        <p class="obj">Du jour où le siège annonce un produit au jour où il est en vitrine et bien vendu : qui fait quoi, dans quel ordre, et ce qui ne se négocie pas. Chaque nouveau produit arrive avec sa <b>formation continue « nouveau produit »</b> dans le dossier de formation du franchisé.</p>
+
+        <div class="frise ann"><span class="ann-n" style="left:-14px;top:-6px">2</span>
+          <div class="jal"><span class="o">1</span><b>L’annonce</b><small>J-21 à J-14 · siège</small></div>
+          <div class="jal"><span class="o">2</span><b>Préparer</b><small>J-14 à J-7 · franchisé</small></div>
+          <div class="jal"><span class="o">3</span><b>Former l’équipe</b><small>J-7 à J-2 · responsable</small></div>
+          <div class="jal prod"><span class="o">4</span><b>Mettre en vente</b><small>Jour J · équipe</small></div>
+          <div class="jal"><span class="o">5</span><b>Suivre et valider</b><small>J à J+14 · photos, consultant</small></div>
+        </div>
+
+        <div class="sec"><h3>1. L’annonce<small>le siège</small></h3><div>
+          <div class="et"><span class="n">1</span><span>Le siège crée la formation continue « nouveau produit » (FC-…) : la fiche technique du panel (recette, grammages, conservation, durée de vie, allergènes), les photos, le prix conseillé, la date de mise en vente.</span></div>
+          <div class="et"><span class="n">2</span><span>Elle est relue puis <b>validée</b> : elle arrive dans le dossier de formation de chaque franchisé concerné et dans le bloc <b>Nouveautés</b> de « Formations et suivi ».</span></div></div></div>
+        <div class="sec"><h3>2. Préparer<small>le franchisé</small></h3><div>
+          <div class="et"><span class="n">3</span><span>Lire la formation et la fiche technique ; poser ses questions au Professeur depuis le dossier.</span></div>
+          <div class="et"><span class="n">4</span><span>Vérifier que l’article existe en caisse et au catalogue du magasin ; commander les matières ou le kit ; prévoir la production d’essai au plan de production.</span></div></div></div>
+        <div class="sec"><h3>3. Former l’équipe<small>le responsable du magasin</small></h3><div>
+          <div class="et"><span class="n">5</span><span>Chaque personne des postes concernés suit la formation sur la tablette : étapes, vidéo, quiz.</span></div>
+          <div class="et"><span class="n">6</span><span>Une production d’essai, goûtée et pesée ; le responsable valide « vu faire » pour chacun.</span></div></div></div>
+        <div class="sec"><h3>4. Mettre en vente<small>l’équipe, le jour J</small></h3><div>
+          <div class="et"><span class="n">7</span><span>Vitrine selon la photo de la fiche, étiquette prix et allergènes posée <b>avant</b> la première vente, l’argumentaire en trois phrases appris par la vente.</span></div>
+          <div class="et"><span class="n">8</span><span>Une photo de contrôle de la vitrine, comme pour les autres rayons.</span></div></div></div>
+        <div class="sec"><h3>5. Suivre et valider<small>le consultant</small></h3><div>
+          <div class="et"><span class="n">9</span><span>Pendant <b>14 jours</b>, la tâche unique « Photo qualité » du produit arrive chaque jour dans les tâches du magasin : <b>photo obligatoire</b>, relue par le consultant (conforme / à refaire). Ventes et invendus du produit se suivent au dashboard.</span></div>
+          <div class="et"><span class="n">10</span><span>Le consultant vérifie l’avancement, adapte si besoin (un magasin sans traiteur, une date décalée) et <b>valide</b> la formation du franchisé : son nom et la date restent au journal, la tâche est désactivée (gardée) et les 14 photos rejoignent le <b>document de formation</b> du franchisé.</span></div></div></div>
+
+        <div class="crit ann"><span class="ann-n" style="left:-14px;top:-8px">3</span>
+          <div><b>Point critique</b>Jamais en vente sans l’étiquette allergènes du produit : la fiche technique fait foi.</div>
+          <div><b>Point critique</b>La recette et les grammages ne s’adaptent pas en magasin : toute adaptation passe par le consultant, qui la trace.</div></div>
+      </article>
+    </div>
+
+    <div class="legende"><b>Ta demande : « rajouter dans le manuel opératoire la procédure lors d’un nouveau produit, comment fonctionnent les formations »</b>
+      <ol><li>Deux nouveaux articles dans la partie 4 « Formation continue » du Manuel : <b>0.0.61 « Un nouveau produit arrive : la procédure »</b> (cet écran) et <b>0.0.62 « Comment fonctionnent les formations »</b> (écran 07). Les codes sont proposés, posés à l’encodage. Ils arrivent en v1.0 « à valider », comme les autres articles ; ils sont publiés quand tu le demandes.</li>
+      <li>La procédure en cinq temps, du siège au consultant ; chaque temps dit qui agit.</li>
+      <li>Les points critiques et le quiz se lisent sur la tablette, comme pour toute SOP. Les formations continues validées se rangent aussi dans cette partie du Manuel, et le Professeur les lit.</li></ol></div>
+  </main>
+</div>
+</body></html>

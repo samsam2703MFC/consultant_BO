@@ -518,6 +518,48 @@ final class Anthropic
             : ['json' => null, 'erreur' => 'réponse non exploitable du modèle', 'modele' => $modele, 'usage' => $usage];
     }
 
+    /**
+     * Un document (PDF, photo, ou le texte d'un fichier Word déjà extrait) et une consigne, une réponse JSON contrainte
+     * par un schéma : pour les modules qui font LIRE un document au modèle (les grandes dates du coffre-fort,
+     * consultant/src/coffre_dates.php). Le document part avant la consigne ; le modèle est celui du réglage.
+     *
+     * @param string $mime application/pdf, image/jpeg|png|webp|gif, ou text/plain ($octets est alors le texte)
+     * @return array{json:?array, erreur:?string, modele:string, usage:?array}
+     */
+    public static function documentJson(string $system, string $texte, string $octets, string $mime, array $schema, int $maxTokens = 8000, int $delai = 150): array
+    {
+        $c = self::config();
+        $modele = $c['modele'];
+        if ($c['cle'] === '') { return ['json' => null, 'erreur' => 'clé Anthropic absente (Paramètres › Assistance IA)', 'modele' => $modele, 'usage' => null]; }
+        if ($mime === 'application/pdf') {
+            $bloc = ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => base64_encode($octets)]];
+        } elseif (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
+            $bloc = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $mime, 'data' => base64_encode($octets)]];
+        } elseif ($mime === 'text/plain') {
+            $bloc = ['type' => 'document', 'source' => ['type' => 'text', 'media_type' => 'text/plain', 'data' => $octets]];
+        } else {
+            return ['json' => null, 'erreur' => 'sorte de fichier que le modèle ne lit pas (' . $mime . ')', 'modele' => $modele, 'usage' => null];
+        }
+        $corps = [
+            'model' => $modele,
+            'max_tokens' => $maxTokens,
+            'system' => $system,
+            'output_config' => ['format' => ['type' => 'json_schema', 'schema' => $schema]],
+            'messages' => [['role' => 'user', 'content' => [$bloc, ['type' => 'text', 'text' => $texte]]]],
+        ];
+        [$code, $rep] = self::http($corps, $c['cle'], [], $delai);
+        $usage = is_array($rep) ? ($rep['usage'] ?? null) : null;
+        if ($code >= 200 && $code < 300 && is_array($rep) && ($rep['stop_reason'] ?? '') === 'max_tokens') {
+            return ['json' => null, 'erreur' => 'réponse coupée par la limite de jetons', 'modele' => $modele, 'usage' => $usage];
+        }
+        if (($err = self::erreurReponse($code, $rep)) !== null) { return ['json' => null, 'erreur' => $err, 'modele' => $modele, 'usage' => $usage]; }
+        $txt = '';
+        foreach ((array) ($rep['content'] ?? []) as $b) { if (($b['type'] ?? '') === 'text') { $txt .= (string) ($b['text'] ?? ''); } }
+        $j = json_decode($txt, true);
+        return is_array($j) ? ['json' => $j, 'erreur' => null, 'modele' => (string) ($rep['model'] ?? $modele), 'usage' => $usage]
+            : ['json' => null, 'erreur' => 'réponse non exploitable du modèle', 'modele' => $modele, 'usage' => $usage];
+    }
+
     /** Une réponse en échec, un refus ou une coupure : le message à afficher ; null si la réponse est bonne. */
     private static function erreurReponse(int $code, mixed $rep): ?string
     {

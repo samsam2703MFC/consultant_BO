@@ -475,6 +475,7 @@ class ComplaintService
             'requested_action' => $r['requested_action'] ? ($labels[$r['requested_action']] ?? $r['requested_action']) : null,
             'compensation' => $r['compensation_method'] ? ($labels[$r['compensation_method']] ?? $r['compensation_method']) : null,
             'production_response' => (string) ($r['production_response'] ?? ''),
+            'seen' => $r['seen_label'] ?? null, // [367] grupa produkcji widziała (tablet) : data · grupa · osoba
             'quantity' => $qty, 'accepted_quantity' => $acc, 'ppc' => $ppc, 'carton_price' => $price,
             'cartons' => $qty > 0 ? (int) ceil($qty / $ppc - 0.000001) : 0,
             'accepted_cartons' => $acc !== null && $acc > 0 ? (int) ceil($acc / $ppc - 0.000001) : null,

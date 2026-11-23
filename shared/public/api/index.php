@@ -127,6 +127,10 @@ require __DIR__ . '/../../../consultant/src/taches_suivi.php';
 require __DIR__ . '/../../../consultant/src/cq_mail.php';
 require __DIR__ . '/../../../panel/src/pointages_mail.php';
 require __DIR__ . '/../../../consultant/src/documents.php';
+// Le coffre-fort du franchisé (22/11/2026) : ses documents et ses rapports, une page à onglets du dashboard.
+require __DIR__ . '/../../../consultant/src/coffre.php';
+// Ses grandes dates (triennats du bail, échéances) et l'assistant qui les lit à l'import d'un document (22/11/2026).
+require __DIR__ . '/../../../consultant/src/coffre_dates.php';
 require __DIR__ . '/../../../consultant/src/ca_net_mois.php';
 require __DIR__ . '/../../../consultant/src/controles_qualite.php';
 require __DIR__ . '/../../../consultant/src/kpi_table.php';
@@ -156,6 +160,10 @@ require __DIR__ . '/../../../formation/src/tablettes.php';
 require __DIR__ . '/../../../formation/src/referentiel_guides.php';
 require __DIR__ . '/../../../formation/src/fiches_techniques.php';
 require __DIR__ . '/../../../formation/src/formation_postes.php';
+// La formation continue (22/11/2026) : un type de formation, ses dossiers par boutique, la validation du consultant.
+require __DIR__ . '/../../../formation/src/formation_continue.php';
+// La recherche de la formation (22/11/2026) : l'index de tout le catalogue pour la méga-barre de « Formations et suivi ».
+require __DIR__ . '/../../../formation/src/formation_recherche.php';
 require __DIR__ . '/../../../consultant/src/benchmark.php';
 require __DIR__ . '/../../../consultant/src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
 require __DIR__ . '/../../../marketing/src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
@@ -219,6 +227,11 @@ try {
     if ($method === 'GET' && $path === '/franchises/documents/fichier') {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_franchises_document_fichier();   // sort le fichier, puis exit
+    }
+    // Un document du coffre-fort du franchisé (22/11/2026) : de CE magasin et dans son coffre ; l'ouverture est notée.
+    if ($method === 'GET' && $path === '/coffre/magasin/fichier') {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
+        ep_coffre_fichier();   // sort le fichier, puis exit
     }
     // Le PDF d'une offre client (15/11/2026) : celui que TF Buddy rend, tel quel (src/offres_client.php).
     if ($method === 'GET' && $path === '/exploitation/offres-client/pdf') {
@@ -413,6 +426,11 @@ function route(string $method, string $path): mixed
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
+    // --- Formation › La formation continue (22/11/2026, src/formation_continue.php) : le siège, le consultant, le magasin.
+    if ($path === '/formation/continue' || str_starts_with($path, '/formation/continue/')) {
+        $f = fcRoute($method, $path);
         if ($f !== null) { return $f; }
     }
     // --- Formation › Manuel du réseau › Tablettes des magasins : la gestion (src/tablettes.php, lot 5)
@@ -806,6 +824,9 @@ function route(string $method, string $path): mixed
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
             $path === '/franchises/documents'          => ep_franchises_documents(),
+            $path === '/coffre/magasin'                => ep_coffre_magasin(),
+            $path === '/coffre/magasin/dates'          => ep_coffre_dates(),
+            $path === '/formation/recherche'           => ep_formation_recherche(),
             $path === '/franchises/documents/mail-materiel' => ep_franchises_mail_materiel(),
             $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),
@@ -1001,6 +1022,12 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/franchises/documents') { return wr_franchises_documents(); }
     // Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026).
     if ($method === 'POST' && $path === '/rapports/ca-net/envoyer') { return wr_rapports_ca_net_envoyer(); }
+    if ($method === 'PATCH' && $path === '/franchises/documents') { return wr_franchises_document_maj(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/document') { return wr_coffre_document(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/dates') { return wr_coffre_dates(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/piece') { return wr_coffre_piece(); }
+    if ($method === 'DELETE' && $path === '/coffre/magasin/dates') { return wr_coffre_date_suppr(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/assistant') { return wr_coffre_assistant(); }
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).

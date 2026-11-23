@@ -12,6 +12,18 @@ return function (RouteCollector $r) {
     $r->addRoute('PUT', '/ajax/organization/positions/{id:\d+}/sheet', ['controller' => $c, 'method' => 'saveSheet']);
     $r->addRoute('POST', '/ajax/organization/positions/{id:\d+}/sheet/validate', ['controller' => $c, 'method' => 'validateSheet']);
     $r->addRoute('PUT', '/ajax/organization/positions/{id:\d+}/employees', ['controller' => $c, 'method' => 'sheetEmployees']);
+    // [368] Struktura i obowiązki : organigram (przeciągnij i upuść) i matryca obowiązek → stanowisko → asystent kontroli.
+    $st = App\Controllers\Web\Organization\StructureController::class;
+    $r->addRoute('GET', '/organization/structure', ['controller' => $st, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/organization/structure', ['controller' => $st, 'method' => 'data']);
+    $r->addRoute('PUT', '/ajax/organization/structure/positions/{id:\d+}', ['controller' => $st, 'method' => 'move']);
+    $r->addRoute('POST', '/ajax/organization/duties', ['controller' => $st, 'method' => 'createDuty']);
+    $r->addRoute('PUT', '/ajax/organization/duties/{id:\d+}', ['controller' => $st, 'method' => 'updateDuty']);
+    $r->addRoute('DELETE', '/ajax/organization/duties/{id:\d+}', ['controller' => $st, 'method' => 'deleteDuty']);
+    $r->addRoute('POST', '/ajax/organization/duties/{id:\d+}/task', ['controller' => $st, 'method' => 'addTask']);
+    $r->addRoute('POST', '/ajax/organization/duties/import-sheets', ['controller' => $st, 'method' => 'importSheets']);
+    $r->addRoute('POST', '/ajax/organization/duties/docx', ['controller' => $st, 'method' => 'parseDocx']);
+    $r->addRoute('POST', '/ajax/organization/duties/docx/save', ['controller' => $st, 'method' => 'importDocx']);
     // Uprawnienia stanowisk : które strony widzi każde stanowisko (tylko administrator).
     $r->addRoute('GET', '/organization/access', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'index']);
     $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'save']);

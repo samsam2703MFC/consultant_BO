@@ -53,7 +53,7 @@ verifie('rangé sous un nom tiré au hasard, l’extension gardée', $r !== null
 verifie('le dossier des documents est fermé à l’accès direct', str_contains((string) @file_get_contents(dirname(docDossier($shop)) . '/.htaccess'), 'Require all denied'));
 verifie('la sorte et le type du fichier', ($a['sorteLib'] ?? '') === 'Contrat de mise à disposition' && ($a['mime'] ?? '') === 'application/pdf' && ($b['mime'] ?? '') === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 $_GET = ['shop' => (string) $shop]; $l = ep_franchises_documents();
-verifie('la liste du magasin, la plus récente d’abord', array_column($l['documents'], 'titre') === ['Réunion du 21/10', 'Contrat de mise à disposition'] && count($l['sortes']) === 4 && in_array('pdf', $l['extensions'], true), json_encode(array_column($l['documents'], 'titre'), JSON_UNESCAPED_UNICODE));
+verifie('la liste du magasin, la plus récente d’abord', array_column($l['documents'], 'titre') === ['Réunion du 21/10', 'Contrat de mise à disposition'] && count($l['sortes']) === count(DOC_SORTES) && in_array('dip', array_column($l['sortes'], 'v'), true) && in_array('pdf', $l['extensions'], true), json_encode(array_column($l['documents'], 'titre'), JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '990002']; $l2 = ep_franchises_documents();
 verifie('un autre magasin ne les voit pas', $l2['documents'] === []);
 verifie('la limite d’un envoi : la nôtre ou celle de PHP, la plus petite', docMaxOctets() > 0 && docMaxOctets() <= DOC_MAX_OCTETS);
