@@ -268,3 +268,4 @@
 2026-11-22T19:34:33Z [378] faktury i ksef dnia
 2026-11-23T06:28:46Z [379]-[385] asystenci: reklamacje, haccp, palety, powiadomienia, poczta, nowe produkty, dane klientow
 2026-11-23T09:18:22Z [386] plan zespolu do zrobienia w dniach
+2026-11-23T09:35:43Z [388] plan zespolu stan osobno
