@@ -161,7 +161,7 @@ final class WeekService
     /**
      * Arkusz tygodnia (cała produkcja na jednej kartce) : jeden wiersz na kartę — produkty z ilością w tygodniu
      * i produkty « na magazyn » zawsze (stan, dostępne, min., maks.), zamówienia, uzupełnienie (dostępne < min. →
-     * do maks.), do produkcji = tydzień produktu w pełnych partiach, sztuk w partii, partie (📌 na przypiętych dniach,
+     * do min.), do produkcji = tydzień produktu w pełnych partiach, sztuk w partii, partie (📌 na przypiętych dniach,
      * reszta czeka), godziny, dni ; grupy :
      * dostępne godziny i osoby (ETP = godziny ÷ week.fte_hours po stronie widoku).
      */

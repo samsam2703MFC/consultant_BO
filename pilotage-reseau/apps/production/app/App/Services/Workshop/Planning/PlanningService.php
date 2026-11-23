@@ -110,10 +110,10 @@ final class PlanningService
             }
         }
 
-        // --- MTS (prosta reguła) : gdy dostępne < stan min., uzupełnienie do stanu maks. (pierwszy dzień okresu) ;
+        // --- MTS (prosta reguła) : gdy dostępne < stan min., uzupełnienie do stanu min. [399] (pierwszy dzień okresu) ;
         // dostępne = stan wolny + zlecenia MTS w toku − zamówienia obsłużone z magazynu. [389] Cały stan wolny się
         // liczy, także kartony zrobione w tym tygodniu (decyzja z 23.11.2026 : « liczyć prawdziwy stan ») — zostaje
-        // do zrobienia tylko to, czego brakuje do stanu maks. ; « made » zostaje tylko informacją.
+        // do zrobienia tylko to, czego brakuje do stanu min. ; « made » zostaje tylko informacją.
         $today = date('Y-m-d');
         $added = $from <= $today ? $this->planning->cartonsAdded($from, min($to, $today)) : [];
         $openMts = $this->planning->openMtsOrders();
