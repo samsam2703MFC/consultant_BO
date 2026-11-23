@@ -285,3 +285,4 @@
 2026-11-23T19:00:24Z Demandes des franchisés : une demande annulée ou résolue quitte la liste tout de suite et ne revient plus au rechargement
 2026-11-23T19:06:40Z [407] plan zespolu klienci zamowienia
 2026-11-23T19:28:06Z [408] gratis w ilosciach produkcji i zaladunku
+2026-11-23T19:29:19Z Dashboard magasin : vidéos d'instruction ouvertes par une bulle (« Nouveau » pour une nouvelle fonction, « Vidéo » sinon) — Découvrir le dashboard, Mon équipe : faire ses horaires, et le module de formation « Construire le planning de la semaine »

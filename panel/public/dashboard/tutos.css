@@ -1,0 +1,64 @@
+/* Dashboard magasin › la bulle des vidéos d'instruction et son lecteur (tutos.js, 23/11/2026).
+   Design system (docs/DESIGN_SYSTEM.md) : Gotham 400, filets --line, Ruby pour l'action et la nouveauté, rectangles
+   aux coins arrondis (aucune pilule), pas d'ombre ; le voile des fenêtres rgba(24,18,20,.42). */
+
+.tu-bulle { position: fixed; right: 20px; bottom: 20px; z-index: 850; font-family: 'Gotham', system-ui, sans-serif; color: var(--ink); }
+.tu-bulle[hidden] { display: none; }
+.tu-bulle.tu-haut { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+.tu-bulle svg { width: 16px; height: 16px; flex: none; }
+
+/* La petite bulle : une vidéo pour cette page. */
+.tu-b { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 14px;
+  background: #fff; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px;
+  font: 400 13px/1.2 'Gotham', system-ui, sans-serif; cursor: pointer; transition: background .15s, color .15s; }
+.tu-b:hover { background: var(--accent); color: #fff; }
+.tu-b:focus-visible, .tu-affiche:focus-visible, .tu-item:focus-visible, .tu-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tu-pt { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; }
+
+/* La carte « Nouveau » : une nouvelle fonction pas encore vue. */
+.tu-carte { width: 320px; max-width: calc(100vw - 40px); background: #fff; border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: 8px; padding: 12px 14px 14px; animation: tu-entree .35s ease-out; }
+@keyframes tu-entree { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tu-carte { animation: none; } }
+.tu-c-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.tu-tag { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; background: var(--accent); color: #fff;
+  font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-style: normal; }
+.tu-x { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted-2); cursor: pointer; }
+.tu-x:hover { background: var(--paper); color: var(--ink); }
+.tu-affiche { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; padding: 0; border: 1px solid var(--line); border-radius: 6px;
+  overflow: hidden; background: var(--paper); cursor: pointer; }
+.tu-affiche img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tu-lire { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+  background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.tu-lire svg { width: 26px; height: 26px; }
+.tu-affiche:hover .tu-lire { background: #6f1622; }
+.tu-c-t { font-size: 15px; margin: 12px 0 4px; }
+.tu-c-r { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.tu-c-a { display: flex; gap: 6px; margin-top: 12px; }
+
+/* Le lecteur. */
+.tu-voile { position: fixed; inset: 0; z-index: 2100; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(24, 18, 20, .42); font-family: 'Gotham', system-ui, sans-serif; color: var(--ink); }
+.tu-fen { width: min(1040px, 100%); max-height: calc(100vh - 48px); overflow: auto; background: #fff; border: 1px solid var(--line);
+  border-radius: 12px; padding: 18px 20px 20px; }
+.tu-f-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 12px; margin-bottom: 14px;
+  border-bottom: 2px solid var(--accent); }
+.tu-f-h h3 { margin: 2px 0 0; font-size: 16px; font-weight: 400; }
+.tu-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.tu-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--ink); border-radius: 8px; }
+.tu-res { font-size: 13px; line-height: 1.55; color: var(--muted-2); margin: 12px 0 0; }
+.tu-autres { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.tu-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 8px; }
+.tu-item { display: flex; align-items: center; gap: 10px; padding: 8px; text-align: left; background: #fff; border: 1px solid var(--line);
+  border-radius: 8px; cursor: pointer; font: 400 13px/1.3 'Gotham', system-ui, sans-serif; color: var(--ink); }
+.tu-item:hover { border-color: var(--muted-2); }
+.tu-item img { width: 88px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); flex: none; }
+.tu-item b { display: block; font-weight: 400; }
+.tu-item small { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); }
+
+@media (max-width: 700px) {
+  .tu-bulle { right: 12px; bottom: 12px; }
+  .tu-voile { padding: 10px; }
+  .tu-fen { padding: 14px; }
+}
