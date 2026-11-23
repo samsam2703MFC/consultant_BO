@@ -5,7 +5,7 @@ namespace App\Domain\Stock;
 
 /**
  * Jedna formuła « do produkcji » (kartony), wspólna dla /stock i « Stan magazynu » (karty produktów) :
- *  - zamówione     = zamówienia otwarte (App\Domain\Client\Order\OpenOrders : Nowe, bez WDT, bez gratisów) ;
+ *  - zamówione     = zamówienia otwarte (App\Domain\Client\Order\OpenOrders::demandSql : Nowe, bez WDT, z gratisami [408]) ;
  *  - stan          = kartony wolne + kartony na paletach (OpenOrders::STOCK_STATUSES) — zamówienie paletyzowane
  *                    zostaje otwarte do WDT, więc jego kartony na paletach liczą się po obu stronach, nigdy podwójnie ;
  *  - na zamówienia = zamówione − stan ;

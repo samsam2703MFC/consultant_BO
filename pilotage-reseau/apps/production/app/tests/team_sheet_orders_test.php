@@ -1,7 +1,7 @@
 <?php
 /**
  * [407] Feuille d'équipe : clic sur un produit → clients et quantités commandées de la semaine. Mêmes commandes que la
- * colonne « Zamówienie » (ouvertes : en attente sans WDT, hors gratuits), une ligne par commande, triées par départ.
+ * colonne « Zamówienie » (ouvertes : en attente sans WDT, gratuits compris [408]), une ligne par commande, triées par départ.
  * Base : TFB_TEST_DSN (défaut mysql:unix_socket=/run/mysqld/mysqld.sock), base erp_team_orders_test recréée puis supprimée.
  */
 declare(strict_types=1);
@@ -19,19 +19,19 @@ $pdo->exec("INSERT INTO customer VALUES (1, 'Sklep A', NULL, NULL), (2, '', 'Jan
 $pdo->exec("INSERT INTO customer_order (id, id_customer, status, id_wdt, is_freebie, expected_shipping_date) VALUES
     (10, 1, 1, NULL, 0, '2026-11-24 00:00:00'), (11, 2, 1, NULL, 0, '2026-11-20 00:00:00'), (12, 3, 1, NULL, NULL, '2026-11-24 00:00:00'),
     (13, 1, 1, 77, 0, '2026-11-24 00:00:00'), (14, 1, 1, NULL, 1, '2026-11-24 00:00:00'), (15, 1, 1, NULL, 0, '2026-11-25 00:00:00'), (16, 1, 2, NULL, 0, '2026-11-24 00:00:00')");
-// Produit 5 : 10 (6 + 4 kart., deux lignes), 11 (3), 12 (1) ; exclus : WDT (13), gratuit (14), semaine suivante (15), autre statut (16), autre produit.
+// Produit 5 : 10 (6 + 4 kart., deux lignes), 11 (3), 12 (1), gratuit 14 (2) [408] ; exclus : WDT (13), semaine suivante (15), autre statut (16), autre produit.
 $pdo->exec('INSERT INTO customer_order_product (id_order, id_product, quantity_carton) VALUES (10, 5, 6), (10, 5, 4), (10, 6, 9), (11, 5, 3), (12, 5, 1), (13, 5, 50), (14, 5, 2), (15, 5, 7), (16, 5, 8)');
 
 $fail = 0;
 $check = function (bool $ok, string $label) use (&$fail) { echo ($ok ? 'ok   ' : 'FAIL ') . $label . "\n"; if (!$ok) $fail++; };
 $rows = (new PlanningRepository($pdo))->productOrders(5, '2026-11-18', '2026-11-24');
-$check(array_map('intval', array_column($rows, 'customer_order_id')) === [11, 10, 12], 'open orders of the week only (no WDT, no freebie, no next week, no other status), by departure');
+$check(array_map('intval', array_column($rows, 'customer_order_id')) === [11, 10, 14, 12], '[408] open orders of the week, freebie (GRATIS) included — no WDT, no next week, no other status ; by departure');
 $by = array_column($rows, null, 'customer_order_id');
 $check((float) $by[10]['cartons'] === 10.0 && (float) $by[11]['cartons'] === 3.0 && (float) $by[12]['cartons'] === 1.0, 'one line per order, product lines summed (6 + 4 = 10 cartons), other products ignored');
 $check($by[10]['customer'] === 'Sklep A' && $by[11]['customer'] === 'Jan Testowy' && $by[12]['customer'] === null, 'customer : company, else name + surname, else null (shown as « Klient #id »)');
 $open = array_sum(array_map(fn($r) => (float) $r['cartons'], (new PlanningRepository($pdo))->openOrderLines('2026-11-18', '2026-11-24')
     ? array_filter((new PlanningRepository($pdo))->openOrderLines('2026-11-18', '2026-11-24'), fn($r) => (int) $r['id_product'] === 5) : []));
-$check($open === 14.0, 'same total as the « Zamówienie » column (openOrderLines) : 14 cartons');
+$check($open === 16.0, 'same total as the « Zamówienie » column (openOrderLines) : 16 cartons, freebie included');
 
 // Câblage : route, OpenAPI, service, écran.
 $routes = (string) file_get_contents(__DIR__ . '/../App/Core/Routes/Api/WorkshopApiRoutes.php');

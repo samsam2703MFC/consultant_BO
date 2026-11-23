@@ -5786,7 +5786,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Fenêtre « Zamówienie » de la feuille d'équipe : une ligne par commande ouverte (hors gratuits) du produit avec départ dans la semaine — client, départ, cartons, pièces (cartons × pièces par carton). Lecture seule.",
+                "description": "Fenêtre « Zamówienie » de la feuille d'équipe : une ligne par commande ouverte (gratuits compris) du produit avec départ dans la semaine — client, départ, cartons, pièces (cartons × pièces par carton). Lecture seule.",
                 "parameters": [
                     {
                         "name": "item_id",

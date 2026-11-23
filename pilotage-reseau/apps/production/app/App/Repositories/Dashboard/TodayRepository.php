@@ -66,7 +66,7 @@ class TodayRepository extends BaseRepository
                 JOIN customer_order_product cop ON cop.id_order = co.id
                 LEFT JOIN (SELECT id_product, COUNT(*) AS qty FROM carton_stock
                            WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) st ON st.id_product = cop.id_product
-                WHERE " . OpenOrders::quantitySql('co') . " AND co.expected_shipping_date = :day
+                WHERE " . OpenOrders::demandSql('co') . " AND co.expected_shipping_date = :day
                 GROUP BY cop.id_product
                 HAVING missing > 0
              ) x",
@@ -130,7 +130,7 @@ class TodayRepository extends BaseRepository
                            WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) st ON st.id_product = fp.id
                 LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co
                            JOIN customer_order_product cop ON cop.id_order = co.id
-                           WHERE " . OpenOrders::quantitySql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
+                           WHERE " . OpenOrders::demandSql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
                 LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM n_prod_order WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item) mo ON mo.id_item = ti.id
                 WHERE fp.active = 1
              ) x WHERE x.min_cartons IS NOT NULL AND ROUND(x.available, 1) < x.min_cartons"

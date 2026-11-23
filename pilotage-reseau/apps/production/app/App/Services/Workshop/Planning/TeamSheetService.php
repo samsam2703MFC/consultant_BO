@@ -97,7 +97,7 @@ final class TeamSheetService
 
     /**
      * [407] Okno « Zamówienie » : klienci i ilości zamówione produktu w tygodniu (te same zamówienia co kolumna
-     * Zamówienie — otwarte, bez gratisów), jeden wiersz na zamówienie. Tylko odczyt.
+     * Zamówienie — otwarte, z gratisami [408]), jeden wiersz na zamówienie. Tylko odczyt.
      */
     public function orders(string $date, int $itemId): array
     {
