@@ -32,7 +32,7 @@
       ],
       "fichier": "01-decouvrir.mp4",
       "affiche": "01-decouvrir.jpg",
-      "duree": "2 min 19",
+      "duree": "2 min 36",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
@@ -42,7 +42,7 @@
         "panel/public/dashboard/tutos.css",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "710bbb05e09b7c6f7885eee6608bf84180cde929",
+      "tourne_sur": "8977a6a93cfe5f08e074315a76154706c797f470",
       "tourne_le": "2026-11-23"
     },
     {

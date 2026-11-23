@@ -22,8 +22,8 @@ module.exports = async function () {
   await f.annonce(true);
   await f.dire('Une <b>nouvelle fonction</b> ? Le carré passe en Ruby, avec le nombre à voir, et une bulle l’annonce.', 4800);
   if (await f.p.locator('.tu-annonce [data-tu=tard]').count()) {
-    await f.cliquer(f.p.locator('.tu-annonce .btn--ghost[data-tu=tard]').first(), { apres: 900 });
-    await f.dire('« Plus tard » la range : la vidéo reste dans le carré.', 3200);
+    await f.cliquer(f.p.locator('.tu-annonce .tu-a-tard').first(), { apres: 900 });
+    await f.dire('« Plus tard » la range pour la journée : elle revient demain, tant que la vidéo n’est pas vue.', 4200);
   }
   await f.cacher();
 
