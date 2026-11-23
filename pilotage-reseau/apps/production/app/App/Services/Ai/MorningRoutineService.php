@@ -370,7 +370,8 @@ final class MorningRoutineService
                 'summary' => Anonymizer::reveal($run['summary'], $names), 'counts' => $counts, 'proposals' => $list,
                 'note_required' => RoutineAssistants::noteRequired($code)];
         } catch (\Throwable $e) {
-            error_log('[ai-routines] forPage : ' . (new \ReflectionClass($e))->getShortName());
+            // Base sans la migration 234 (tables absentes) : simplement rien à afficher.
+            if (!$e instanceof \PDOException) error_log('[ai-routines] forPage : ' . (new \ReflectionClass($e))->getShortName());
             return null;
         }
     }
@@ -399,7 +400,7 @@ final class MorningRoutineService
             $same = $decision === $p['decision'] && trim((string) $note) === $proposed;
             $this->repo->decide((int) $p['id'], $same ? 'accepted' : 'edited', $decision, $userId);
         } catch (\Throwable $e) {
-            error_log('[ai-routines] recordOutcome : ' . (new \ReflectionClass($e))->getShortName());
+            if (!$e instanceof \PDOException) error_log('[ai-routines] recordOutcome : ' . (new \ReflectionClass($e))->getShortName());
         }
     }
 
