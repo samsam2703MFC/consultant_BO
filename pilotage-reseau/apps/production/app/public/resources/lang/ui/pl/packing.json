@@ -177,5 +177,7 @@
   "check_hint": "Popraw palety przed wyjazdem (dotknij braku, aby dołożyć).",
   "check_all_ok": "Palety zgodne z zamówieniem.",
   "check_back": "Wróć do paletyzacji",
-  "free_hint": "W tym GRATIS : {n} kart. — pakuj, nie skanuj"
+  "free_hint": "W tym GRATIS : {n} kart. — pakuj, nie skanuj",
+  "held_tag": "Partia wstrzymana — etykiety {days} ({n} kart.) : nie kłaść na paletę",
+  "held_confirm": "Kładziesz kartony z innych dni etykiety niż wstrzymana partia ? OK = tak, zapisz."
 }

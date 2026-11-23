@@ -19436,6 +19436,9 @@
                     "403": {
                         "$ref": "#/components/responses/Error403"
                     },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
                     "422": {
                         "$ref": "#/components/responses/Error422"
                     },
@@ -19443,7 +19446,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "loaded = true : la palette est à sa place ; false : annulé. Seulement les places du plan envoyé (DRIVER_LOAD_SLOT_UNKNOWN). Un nouvel envoi du plan annule les places dont le contenu a changé.",
+                "description": "loaded = true : la palette est à sa place ; false : annulé. Seulement les places du plan envoyé (DRIVER_LOAD_SLOT_UNKNOWN). Un nouvel envoi du plan annule les places dont le contenu a changé. [416] Palette portant des cartons d'un lot bloqué par la qualité (tablette qualité) : 409 LOT_HELD_ON_PALLET.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -19749,6 +19752,9 @@
                     "403": {
                         "$ref": "#/components/responses/Error403"
                     },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
                     "422": {
                         "$ref": "#/components/responses/Error422"
                     },
@@ -19756,7 +19762,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "cartons 1–999 ; produit commandé par ce client ce jour (sinon PALLET_PRODUCT_NOT_ORDERED) ; employee_id = opérateur choisi (personne active). Réponse : la vue du client.",
+                "description": "cartons 1–999 ; produit commandé par ce client ce jour (sinon PALLET_PRODUCT_NOT_ORDERED) ; employee_id = opérateur choisi (personne active). Réponse : la vue du client. [416] Produit avec un lot bloqué par la qualité (cartons au magasin ou sur palette) : 409 PALLET_PRODUCT_HELD, sauf held_confirmed = true (l'opérateur confirme des cartons d'autres jours d'étiquette).",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -22946,6 +22952,1003 @@
                     }
                 ],
                 "x-permission": "prod.employees.write"
+            }
+        },
+        "/kiosk/quality-round/people": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Tablet jakości : kto (Kierownik produkcji, Jakość) / Tablette qualité : qui",
+                "operationId": "qualityRoundPeople",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/QualityRoundPerson"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Personnes actives aux postes KIEROWNIK_PRODUKCJI et JAKOSC, pour s'identifier ensuite avec POST /kiosk/identify (employee_id + PIN).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Obchód jakości dnia / Tournée qualité du jour",
+                "operationId": "qualityRound",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityRound"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Parties du jour de toutes les grupy. status : urgent (signal d'une tablette de groupe non encore contrôlé : contrôle du groupe en non-conformité, non-conformité signalée sur le produit), now (première partie à contrôler, par heure de démarrage), later, puis ok / warn (écart accepté sans NC) / nc. todo : poids + aspect, sacs sans scan (même calcul que « Partie i kontrola dnia »), échantillon à faire (« Próbki produkcji »), rappels envoyés au groupe. round : obchód N sur M (qc_round.times). Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/batches/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Kontrola partii : dane / Contrôle d'un lot : données",
+                "operationId": "qualityRoundBatch",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityRoundBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Poids (qc_round.pieces pièces ; cible = final_product.weight, tolérance qc_round.weight_tolerance_pct sur la moyenne), sacs de la partie (scans de la tablette du groupe, lots du registre proposés), compositions d'autres groupes, échantillon (stored, planned, suggested, not_required), dernier contrôle, blocage. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/batches/{id}/controls": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zapisz kontrolę / Enregistrer le contrôle",
+                "operationId": "qualityRoundControl",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityRoundSaved"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Poids moyen hors tolérance ou aspect mauvais : décision obligatoire sur la non-conformité proposée (sinon 409 QC_ROUND_NC_DECISION) — nc.create true crée la non-conformité au registre de l'ERP (source production, groupe de la partie), false enregistre un écart accepté (warn). Sacs sans scan non envoyés au groupe : 409 QC_ROUND_LOTS_OPEN. Le résultat est aussi porté sur la partie (contrôle qualité de la tablette du groupe), sauf une non-conformité déjà portée par la partie. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QualityRoundControlInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/batches/{id}/lots/{material}": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zeskanuj sam : partia worka / Scanner soi-même le lot d'un sac",
+                "operationId": "qualityRoundLot",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityRoundBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Même enregistrement que PUT /kiosk/production/{id}/lots/{material} de la tablette du groupe, au nom du groupe de la partie. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "material",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OutputLotInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/batches/{id}/lot-requests": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Wyślij grupie : brak skanu worka / Envoyer au groupe : sac sans scan",
+                "operationId": "qualityRoundLotRequest",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityRoundBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Message sur la tablette du groupe de la partie (messages du responsable, GET /kiosk/messages) : sacs sans scan. Un seul tant qu'il n'est pas lu ; fermé quand les sacs sont scannés. 409 QC_ROUND_NO_MISSING_LOTS. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/batches/{id}/sample": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Próbka partii / Échantillon du lot",
+                "operationId": "qualityRoundSample",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityRoundBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "« Próbki produkcji » : create = échantillon de la partie (étiquette QR imprimée par l'assistant) ; store = étiquette QR scannée (code de l'échantillon de cette partie), échantillon posé. 422 QC_ROUND_SAMPLE_OTHER : étiquette d'une autre partie. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QualityRoundSampleInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/photos": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zdjęcie wyglądu / Photo de l'aspect",
+                "operationId": "qualityRoundPhoto",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PhotoUploaded"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Data URL JPEG / PNG / WebP (kiosk.lot_photo_max_kb), conservée comme les étiquettes de lot ; id à passer dans photo_id. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PhotoInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/trace": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Śledzenie partii : skan etykiety kartonu albo partii / Suivi : scan d'un carton ou d'un lot",
+                "operationId": "qualityRoundScan",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityTraceScan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Partie trouvée : lot. Carton : produit et jour d'étiquette, parties du produit fabriquées dans la fenêtre trace.label_days (une seule : lot ; plusieurs : choices). 404 QC_TRACE_UNKNOWN_CODE. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "description": "numéro de partie RRMMDD-GRUPA-NN ou numéro du carton (étiquette)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/trace/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Partia : skąd surowce, dokąd kartony / Lot : d'où, où",
+                "operationId": "qualityRoundTrace",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityTrace"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Matières (lot, fournisseur, réception ; sac sans scan : missing ; non suivie : untracked), cartons du produit étiquetés du jour de production à + trace.label_days (partis : client, livraison, WDT ; sur palette ; au magasin), contrôle, blocage. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/trace/{id}/pdf": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "PDF partii / PDF du lot",
+                "operationId": "qualityRoundTracePdf",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityTracePdf"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Même contenu que le suivi, gabarit des documents ; fichier en base64. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/trace/{id}/hold": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Wstrzymaj partię / Bloquer le lot",
+                "operationId": "qualityRoundHold",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityTrace"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Blocage enregistré seulement (n_qc_hold) : aucun statut de carton ni stock modifié. La palettisation refuse le produit sans confirmation (PALLET_PRODUCT_HELD), le chargement refuse la palette (LOT_HELD_ON_PALLET). Partie sans produit fini : 422 QC_HOLD_NO_PRODUCT. Déjà bloquée : le blocage existant. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QualityHoldInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality-round/holds/{id}/release": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zwolnij partię / Lever le blocage",
+                "operationId": "qualityRoundRelease",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityTrace"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Décision Kierownik produkcji / Jakość, note obligatoire. 409 QC_HOLD_RELEASED. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QualityReleaseInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
             }
         }
     },
@@ -28145,6 +29148,10 @@
                     "vehicle_id": {
                         "type": "integer",
                         "nullable": true
+                    },
+                    "held_confirmed": {
+                        "type": "boolean",
+                        "description": "[416] cartons hors du lot bloqué (confirmé par l'opérateur)"
                     }
                 }
             },
@@ -28181,6 +29188,19 @@
                     },
                     "over": {
                         "type": "integer"
+                    },
+                    "held": {
+                        "type": "object",
+                        "nullable": true,
+                        "description": "[416] lot bloqué par la qualité : jours d'étiquette, cartons au magasin / sur palette",
+                        "properties": {
+                            "days": {
+                                "type": "string"
+                            },
+                            "cartons": {
+                                "type": "integer"
+                            }
+                        }
                     }
                 }
             },
@@ -40630,6 +41650,1095 @@
                     },
                     "src": {
                         "type": "string"
+                    }
+                }
+            },
+            "QualityRoundPerson": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "string",
+                        "enum": [
+                            "KIEROWNIK_PRODUKCJI",
+                            "JAKOSC"
+                        ]
+                    },
+                    "has_pin": {
+                        "type": "boolean"
+                    },
+                    "clocked_in": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "QualityRound": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "now": {
+                        "type": "string"
+                    },
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "position": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "round": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "no": {
+                                "type": "integer"
+                            },
+                            "of": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "to_check": {
+                        "type": "integer"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "properties": {
+                            "batches": {
+                                "type": "integer"
+                            },
+                            "checked": {
+                                "type": "integer"
+                            },
+                            "urgent": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "next_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "group": {
+                                    "type": "string"
+                                },
+                                "product": {
+                                    "type": "string"
+                                },
+                                "lot_code": {
+                                    "type": "string"
+                                },
+                                "started_at": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "urgent",
+                                        "now",
+                                        "later",
+                                        "ok",
+                                        "warn",
+                                        "nc"
+                                    ]
+                                },
+                                "signal": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                                "group_nc",
+                                                "group_report"
+                                            ]
+                                        },
+                                        "at": {
+                                            "type": "string"
+                                        },
+                                        "text": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "number": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "todo": {
+                                    "type": "object",
+                                    "properties": {
+                                        "weight": {
+                                            "type": "boolean"
+                                        },
+                                        "missing_lots": {
+                                            "type": "integer"
+                                        },
+                                        "lot_reasons": {
+                                            "type": "integer"
+                                        },
+                                        "sample": {
+                                            "type": "boolean"
+                                        },
+                                        "requested": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "checked": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "at": {
+                                            "type": "string"
+                                        },
+                                        "by": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "result": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok",
+                                                "warn",
+                                                "nc"
+                                            ]
+                                        },
+                                        "weight_result": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok",
+                                                "light",
+                                                "heavy",
+                                                "none"
+                                            ]
+                                        },
+                                        "appearance": {
+                                            "type": "string",
+                                            "enum": [
+                                                "good",
+                                                "bad"
+                                            ]
+                                        },
+                                        "weights": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "lots_missing": {
+                                            "type": "integer"
+                                        },
+                                        "lots_requested": {
+                                            "type": "boolean"
+                                        },
+                                        "sample": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "nc_id": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "photo": {
+                                            "type": "boolean"
+                                        },
+                                        "note": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "weight",
+                                                    "appearance",
+                                                    "lots",
+                                                    "sample"
+                                                ]
+                                            }
+                                        }
+                                    }
+                                },
+                                "hold": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "output_id": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "lot_code": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "product_id": {
+                                            "type": "integer"
+                                        },
+                                        "product": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "label_from": {
+                                            "type": "string"
+                                        },
+                                        "label_to": {
+                                            "type": "string"
+                                        },
+                                        "days": {
+                                            "type": "string"
+                                        },
+                                        "reason": {
+                                            "type": "string"
+                                        },
+                                        "held_at": {
+                                            "type": "string"
+                                        },
+                                        "held_by": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "released_at": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "released_by": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "release_note": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "active": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "QualityRoundBatch": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "position": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "product": {
+                        "type": "string"
+                    },
+                    "lot_code": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "work_date": {
+                        "type": "string"
+                    },
+                    "started_at": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "number"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "piece_weight": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "weight": {
+                        "type": "object",
+                        "properties": {
+                            "pieces": {
+                                "type": "integer"
+                            },
+                            "target_g": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "tolerance_pct": {
+                                "type": "number"
+                            },
+                            "min_g": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "max_g": {
+                                "type": "number",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "lots": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "state": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ok",
+                                        "missing",
+                                        "reason",
+                                        "untracked"
+                                    ]
+                                },
+                                "lot_number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "missing_reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "supplier": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "received_on": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "choices": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "lot_number": {
+                                                "type": "string"
+                                            },
+                                            "best_before": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "supplier": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "received_on": {
+                                                "type": "string",
+                                                "nullable": true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "components": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "recipe_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "producer": {
+                                    "type": "string"
+                                },
+                                "state": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ok",
+                                        "missing"
+                                    ]
+                                },
+                                "lot_code": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "missing_lots": {
+                        "type": "integer"
+                    },
+                    "requested": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "at": {
+                                "type": "string"
+                            },
+                            "count": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "sample": {
+                        "type": "object",
+                        "properties": {
+                            "state": {
+                                "type": "string",
+                                "enum": [
+                                    "stored",
+                                    "planned",
+                                    "suggested",
+                                    "not_required"
+                                ]
+                            },
+                            "id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "code": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "frequency": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "group_qc": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "status": {
+                                "type": "string"
+                            },
+                            "at": {
+                                "type": "string"
+                            },
+                            "note": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "last_control": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "at": {
+                                "type": "string"
+                            },
+                            "by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "result": {
+                                "type": "string",
+                                "enum": [
+                                    "ok",
+                                    "warn",
+                                    "nc"
+                                ]
+                            },
+                            "weight_result": {
+                                "type": "string",
+                                "enum": [
+                                    "ok",
+                                    "light",
+                                    "heavy",
+                                    "none"
+                                ]
+                            },
+                            "appearance": {
+                                "type": "string",
+                                "enum": [
+                                    "good",
+                                    "bad"
+                                ]
+                            },
+                            "weights": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            },
+                            "lots_missing": {
+                                "type": "integer"
+                            },
+                            "lots_requested": {
+                                "type": "boolean"
+                            },
+                            "sample": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "nc_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "photo": {
+                                "type": "boolean"
+                            },
+                            "note": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "weight",
+                                        "appearance",
+                                        "lots",
+                                        "sample"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "hold": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "output_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "lot_code": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "product_id": {
+                                "type": "integer"
+                            },
+                            "product": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "label_from": {
+                                "type": "string"
+                            },
+                            "label_to": {
+                                "type": "string"
+                            },
+                            "days": {
+                                "type": "string"
+                            },
+                            "reason": {
+                                "type": "string"
+                            },
+                            "held_at": {
+                                "type": "string"
+                            },
+                            "held_by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "released_at": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "released_by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "release_note": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "active": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "severities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "QualityRoundControlInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "weights",
+                    "appearance"
+                ],
+                "properties": {
+                    "weights": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 10,
+                        "items": {
+                            "type": "number",
+                            "exclusiveMinimum": true,
+                            "minimum": 0
+                        },
+                        "description": "grammes, une valeur par pièce"
+                    },
+                    "appearance": {
+                        "type": "string",
+                        "enum": [
+                            "good",
+                            "bad"
+                        ]
+                    },
+                    "photo_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "nc": {
+                        "type": "object",
+                        "nullable": true,
+                        "description": "décision sur la non-conformité proposée (obligatoire en cas d'écart)",
+                        "properties": {
+                            "create": {
+                                "type": "boolean"
+                            },
+                            "description": {
+                                "type": "string",
+                                "maxLength": 2000
+                            },
+                            "severity": {
+                                "type": "string",
+                                "enum": [
+                                    "minor",
+                                    "major",
+                                    "critical"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "QualityRoundSaved": {
+                "type": "object",
+                "properties": {
+                    "control_id": {
+                        "type": "integer"
+                    },
+                    "result": {
+                        "type": "string",
+                        "enum": [
+                            "ok",
+                            "warn",
+                            "nc"
+                        ]
+                    },
+                    "round": {
+                        "$ref": "#/components/schemas/QualityRound"
+                    }
+                }
+            },
+            "QualityRoundSampleInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "action"
+                ],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "create",
+                            "store"
+                        ]
+                    },
+                    "code": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "store : contenu du QR de l'étiquette (adresse …/q/CODE ou code)"
+                    }
+                }
+            },
+            "QualityTrace": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "product": {
+                        "type": "string"
+                    },
+                    "product_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "lot_code": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "string"
+                    },
+                    "work_date": {
+                        "type": "string"
+                    },
+                    "started_at": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "number"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "cancelled": {
+                        "type": "boolean"
+                    },
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string"
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "state": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ok",
+                                        "missing",
+                                        "reason",
+                                        "untracked"
+                                    ]
+                                },
+                                "lot_number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "missing_reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "supplier": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "received_on": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "missing": {
+                        "type": "integer"
+                    },
+                    "cartons": {
+                        "type": "object",
+                        "properties": {
+                            "total": {
+                                "type": "integer"
+                            },
+                            "shipped": {
+                                "type": "integer"
+                            },
+                            "pallet": {
+                                "type": "integer"
+                            },
+                            "stock": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "destinations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "shipped",
+                                        "pallet",
+                                        "stock"
+                                    ]
+                                },
+                                "customer": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "delivery_date": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "wdt_date": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "wdt": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "cartons": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "label_from": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "label_to": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "control": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "at": {
+                                "type": "string"
+                            },
+                            "result": {
+                                "type": "string"
+                            },
+                            "group": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "hold": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "output_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "lot_code": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "product_id": {
+                                "type": "integer"
+                            },
+                            "product": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "label_from": {
+                                "type": "string"
+                            },
+                            "label_to": {
+                                "type": "string"
+                            },
+                            "days": {
+                                "type": "string"
+                            },
+                            "reason": {
+                                "type": "string"
+                            },
+                            "held_at": {
+                                "type": "string"
+                            },
+                            "held_by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "released_at": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "released_by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "release_note": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "active": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            },
+            "QualityTraceScan": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "lot",
+                            "carton"
+                        ]
+                    },
+                    "scanned": {
+                        "type": "string"
+                    },
+                    "carton": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "product_id": {
+                                "type": "integer"
+                            },
+                            "product": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "label_day": {
+                                "type": "string"
+                            },
+                            "status": {
+                                "type": "integer"
+                            },
+                            "holds": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            }
+                        }
+                    },
+                    "choices": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "lot": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/QualityTrace"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                }
+            },
+            "QualityTracePdf": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string"
+                    },
+                    "content_base64": {
+                        "type": "string",
+                        "format": "byte"
+                    }
+                }
+            },
+            "QualityHoldInput": {
+                "type": "object",
+                "required": [
+                    "reason"
+                ],
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 500
+                    }
+                }
+            },
+            "QualityReleaseInput": {
+                "type": "object",
+                "required": [
+                    "note"
+                ],
+                "properties": {
+                    "note": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 500
                     }
                 }
             },
