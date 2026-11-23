@@ -14,7 +14,8 @@
  *   pas encore vues. Un clic ouvre le lecteur : la vidéo de la page s'il y en a une, sinon la nouveauté, sinon le
  *   mode d'emploi.
  * - L'ANNONCE : une nouvelle fonction pas encore vue (moins de JOURS_NOUVEAU jours) s'annonce dans une bulle
- *   accrochée au carré (« Voir la vidéo », « Plus tard » : elle ne revient plus pour cette vidéo).
+ *   accrochée au carré (« Voir la vidéo » ; « Plus tard » la range pour la journée : elle revient le lendemain, tant que
+ *   la vidéo n'est pas vue).
  * - Le lecteur : une fenêtre, la vidéo, la liste des autres vidéos. Ouvrir une vidéo la marque « vue ».
  * « Vu » et « plus tard » sont gardés par appareil (localStorage) : rien n'est écrit au serveur.
  * Au téléphone, le rail n'est pas affiché : ni carré ni annonce. Rien dans le mode incorporé (?embed=).
@@ -39,7 +40,12 @@
   function ecrireSet(cle, o) { try { localStorage.setItem(cle, JSON.stringify(o)); } catch (e) { /* stockage indisponible : l'annonce reviendra */ } }
   function vue(id) { return !!lireSet(CLE_VUS)[id]; }
   function marquerVue(id) { const o = lireSet(CLE_VUS); o[id] = new Date().toISOString().slice(0, 10); ecrireSet(CLE_VUS, o); }
-  function plusTard(id) { const o = lireSet(CLE_TARD); o[id] = new Date().toISOString().slice(0, 10); ecrireSet(CLE_TARD, o); }
+  /** Le jour local (AAAA-MM-JJ) : « plus tard » vaut pour la journée. */
+  function jour() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function plusTard(id) { const o = lireSet(CLE_TARD); o[id] = jour(); ecrireSet(CLE_TARD, o); }
+  /** « Plus tard » (ou ×) range l'annonce pour la journée ; elle revient le lendemain, tant que la vidéo n'est pas vue
+   * (23/11/2026, Sam : « quand je mets plus tard, il ne s'ouvre que quand je pousse dessus »). */
+  function remise(id) { return lireSet(CLE_TARD)[id] === jour(); }
   /** Une nouvelle fonction pas encore vue, et récente. */
   function aVoir(v) {
     if (v.genre !== 'nouveau' || vue(v.id)) { return false; }
@@ -73,8 +79,7 @@
     return [...document.querySelectorAll('.tu-carre')].find(c => c.offsetParent !== null && c.getBoundingClientRect().width > 0) || null;
   }
   function annoncer() {
-    const tard = lireSet(CLE_TARD);
-    const L = T.videos.filter(v => aVoir(v) && !tard[v.id]);
+    const L = T.videos.filter(v => aVoir(v) && !remise(v.id));
     const v = L.find(dePage) || L[0];
     const c = carreVisible();
     if (!v || !c || T.lecteur) { retirerAnnonce(); return; }

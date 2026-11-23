@@ -56,7 +56,8 @@ autre) », « une vidéo type formative, à utiliser en formation », les pages 
   place (`railTuto()`, `.db-tu-slot`), `DashTutos.carre()` la remplit. Abricot au repos, Ruby avec le nombre de vidéos
   « nouveau » pas encore vues. Un clic ouvre le lecteur : la vidéo de la page, sinon la nouveauté, sinon le mode
   d'emploi ; le lecteur liste les autres vidéos. Une nouvelle fonction pas encore vue (60 jours) s'annonce dans une
-  bulle accrochée au carré (« Voir la vidéo », « Plus tard »). « Vu » et « plus tard » restent sur l'appareil
+  bulle accrochée au carré (« Voir la vidéo » ; « Plus tard » ou × la range pour la journée : elle revient le
+  lendemain tant que la vidéo n'est pas vue). « Vu » et « plus tard » restent sur l'appareil
   (localStorage `db.videos.vues`, `db.videos.plusTard`) : aucune route, aucune table. Au téléphone, pas de rail : ni
   carré ni annonce (décision du 23/11/2026). La page ouverte vient de `?vue=` puis de l'évènement `dashboard:vue`
   (`urlMaj`). Rien en mode incorporé (`?embed=`). `window.DashTutos.ouvrir(id)` ouvre une vidéo.
