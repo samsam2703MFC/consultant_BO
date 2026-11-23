@@ -87,6 +87,26 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "primes",
+      "genre": "tuto",
+      "titre": "Les primes de l’équipe",
+      "resume": "Où en sont tes vendeuses : les primes d’équipe, le tableau prime par prime, le mois, l’année et les filtres.",
+      "vues": [
+        "primes"
+      ],
+      "fichier": "14-primes.mp4",
+      "affiche": "14-primes.jpg",
+      "duree": "2 min 11",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "1e40cb22ca3b07b8628beeb88ba0863339628ba6",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
