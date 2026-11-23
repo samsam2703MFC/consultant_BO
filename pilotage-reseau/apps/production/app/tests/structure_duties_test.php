@@ -2,7 +2,8 @@
 /**
  * [368] Struktura i obowiązki : migracja 216 (Zarząd, Kierownik operacyjny, Administracja pod nim, 34 obowiązki),
  * organigram (przełożony, cykle, włączenie z palety), matryca (stan, zadanie stanowiska, edycja), wczytanie z kart
- * stanowisk i z pliku Word.
+ * stanowisk i z pliku Word ; [376] migracja 224 (obowiązki wszystkich stanowisk poza KO : dwa przebiegi bez duplikatów,
+ * asystenci z TaskWizards::CATALOG, wiersze KO bez zmian).
  *
  * Base : TFB_TEST_DSN (défaut mysql:unix_socket=/run/mysqld/mysqld.sock), TFB_TEST_USER (root), TFB_TEST_PASS (vide).
  * Base erp_structure_test recréée (tables minimales + migration 216), supprimée à la fin (ST_JSON_OUT=fichier : données
@@ -15,7 +16,7 @@ use App\Core\Api\Workshop\ApiException;
 use App\Core\TransactionManager;
 use App\Exceptions\CustomException;
 use App\Repositories\Organization\{PositionDutyRepository, PositionRepository};
-use App\Services\Organization\{PositionSheetService, PositionTaskService, StructureService};
+use App\Services\Organization\{PositionSheetService, PositionTaskService, StructureService, TaskWizards};
 use App\Services\Workshop\Migration\MigrationRunner;
 
 $pdo = new PDO(getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock', getenv('TFB_TEST_USER') ?: 'root', getenv('TFB_TEST_PASS') ?: '',
@@ -123,6 +124,47 @@ foreach ($it as $f) {
     if (!class_exists($cls) || !method_exists($cls, 'userId')) $missing[] = $m[2];
 }
 $check(!$missing, 'controllers calling $this->userId() define it' . ($missing ? ' — missing : ' . implode(', ', $missing) : ''));
+
+// --- [376] Migracja 224 : obowiązki wszystkich stanowisk (poza Kierownikiem operacyjnym)
+$m224 = MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/224_structure_duties_all.sql'));
+$koHash = fn(PDO $db) => $db->query("SELECT MD5(GROUP_CONCAT(CONCAT_WS('|', d.id, d.number, d.text_pl, IFNULL(d.wizard_code, ''), IFNULL(d.proposed_wizard, ''), d.rhythm, d.active, IFNULL(d.source, ''))
+    ORDER BY d.id)) FROM n_position_duty d JOIN n_position p ON p.id = d.id_position WHERE p.code = 'KIEROWNIK_OPERACYJNY'")->fetchColumn();
+$dupes = fn(PDO $db) => (int) $db->query('SELECT COUNT(*) FROM (SELECT 1 FROM n_position_duty GROUP BY id_position, number HAVING COUNT(*) > 1
+    UNION ALL SELECT 1 FROM n_position_duty GROUP BY id_position, text_pl HAVING COUNT(*) > 1) x')->fetchColumn();
+// Ta sama baza : Logistyka ma już 3 punkty z karty (importSheets, numery 1–3) — 224 ich nie dubluje.
+$before = $koHash($pdo);
+for ($k = 0; $k < 2; $k++) foreach ($m224 as $sql) $pdo->exec($sql);
+$per = array_column($pdo->query('SELECT p.code, COUNT(*) AS n FROM n_position_duty d JOIN n_position p ON p.id = d.id_position WHERE d.active = 1 GROUP BY p.code')->fetchAll(), 'n', 'code');
+$check($koHash($pdo) === $before && (int) $per['KIEROWNIK_OPERACYJNY'] === 34, '224 on the working base: Kierownik operacyjny rows untouched');
+$check((int) $per['LOGISTYKA'] === 8 && (int) $per['ADMINISTRACJA'] === 7 && (int) $per['ZAKUPY'] === 6 && (int) $per['KIEROWCA'] === 8 && $dupes($pdo) === 0,
+    '224 after importSheets / Word import: missing points only, no duplicate number or text (replayed twice)');
+
+// Baza ze wszystkimi stanowiskami : 216 potem 224 dwa razy.
+$pdo->exec('DROP DATABASE IF EXISTS erp_structure_test_224'); $pdo->exec('CREATE DATABASE erp_structure_test_224'); $pdo->exec('USE erp_structure_test_224');
+$pdo->exec("CREATE TABLE n_position (id INT AUTO_INCREMENT PRIMARY KEY, code VARCHAR(40), name_pl VARCHAR(120), name_fr VARCHAR(120), description TEXT NULL, kind VARCHAR(16) DEFAULT 'erp',
+    id_group INT NULL, id_reports_to INT NULL, sort_order INT DEFAULT 0, active TINYINT DEFAULT 1)");
+$pdo->exec('CREATE TABLE n_position_sheet (id_position INT PRIMARY KEY, mission_pl TEXT, mission_fr TEXT, responsibilities_pl TEXT, responsibilities_fr TEXT)');
+$expected = ['ZAKUPY' => 6, 'JAKOSC' => 7, 'KIEROWNIK_PRODUKCJI' => 17, 'LOGISTYKA' => 8, 'ADMINISTRACJA' => 7, 'BRYGADZISTA' => 6, 'PIEKARZ' => 6, 'TARTY' => 5,
+    'ROGAL' => 6, 'CUKIERNIK' => 5, 'GARMAZER' => 6, 'PAKOWACZ' => 6, 'KIEROWCA' => 7];
+$ins = $pdo->prepare("INSERT INTO n_position (code, name_pl, name_fr, kind, sort_order, active) VALUES (?, ?, ?, ?, ?, ?)");
+foreach (array_keys($expected) as $i => $c) $ins->execute([$c, $c, $c, in_array($c, ['ZAKUPY', 'JAKOSC', 'KIEROWNIK_PRODUKCJI', 'LOGISTYKA', 'ADMINISTRACJA'], true) ? 'erp' : 'atelier', 10 + $i, $c === 'ZAKUPY' ? 0 : 1]);
+foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/216_structure_duties.sql')) as $sql) $pdo->exec($sql);
+$before = $koHash($pdo);
+for ($k = 0; $k < 2; $k++) foreach ($m224 as $sql) $pdo->exec($sql);
+$per = array_column($pdo->query("SELECT p.code, COUNT(*) AS n FROM n_position_duty d JOIN n_position p ON p.id = d.id_position WHERE p.code <> 'KIEROWNIK_OPERACYJNY' GROUP BY p.code")->fetchAll(), 'n', 'code');
+$per = array_map('intval', $per);
+ksort($per); ksort($expected);
+$check($per === $expected && !isset($per['ZARZAD']), '224 replayed twice: 92 duties for 13 positions (inactive Zakupy included, Zarząd without sheet: none), no duplicates');
+$st = $pdo->query("SELECT SUM(wizard_code IS NOT NULL) AS ok, SUM(wizard_code IS NULL AND proposed_wizard IS NOT NULL) AS proposed, SUM(wizard_code IS NULL AND proposed_wizard IS NULL) AS none,
+    SUM(source = 'task') AS task, SUM(source = 'sheet') AS sheet FROM n_position_duty d JOIN n_position p ON p.id = d.id_position WHERE p.code <> 'KIEROWNIK_OPERACYJNY'")->fetch();
+$check(array_map('intval', $st) === ['ok' => 46, 'proposed' => 17, 'none' => 29, 'task' => 14, 'sheet' => 78], '224: 46 with an assistant, 17 proposed, 29 without ; 78 from sheets, 14 from tasks');
+$codes = array_column($pdo->query('SELECT DISTINCT wizard_code FROM n_position_duty WHERE wizard_code IS NOT NULL')->fetchAll(), 'wizard_code');
+$check($codes !== [] && array_diff($codes, array_keys(TaskWizards::CATALOG)) === [], 'every seeded wizard_code exists in TaskWizards::CATALOG');
+$proposed = array_column($pdo->query("SELECT DISTINCT d.proposed_wizard FROM n_position_duty d JOIN n_position p ON p.id = d.id_position WHERE p.code <> 'KIEROWNIK_OPERACYJNY' AND d.proposed_wizard IS NOT NULL")->fetchAll(), 'proposed_wizard');
+$check(count($proposed) === 9 && array_intersect($proposed, array_column(TaskWizards::CATALOG, 0)) === [], '9 proposed assistants, none named like an existing one (217 → 222 updates never take them)');
+$check($koHash($pdo) === $before && (int) $pdo->query("SELECT COUNT(*) FROM n_position_duty d JOIN n_position p ON p.id = d.id_position WHERE p.code = 'KIEROWNIK_OPERACYJNY'")->fetchColumn() === 34
+    && $dupes($pdo) === 0, '224 leaves the 34 Kierownik operacyjny rows as they are');
+$pdo->exec('DROP DATABASE erp_structure_test_224'); $pdo->exec('USE erp_structure_test');
 
 if (getenv('ST_JSON_OUT')) file_put_contents((string) getenv('ST_JSON_OUT'), json_encode(['chart' => $svc->chart(), 'matrix' => $svc->matrix()], JSON_UNESCAPED_UNICODE));
 $pdo->exec('DROP DATABASE erp_structure_test');

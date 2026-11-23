@@ -97,11 +97,23 @@ final class PlanningService
         }
         if ($unplanned) $warnings[] = ['code' => 'UNPLANNED_PRODUCTS', 'count' => count($unplanned)];
 
-        // --- MTS (prosta reguła) : gdy dostępne < stan min., uzupełnienie do stanu maks. (pierwszy dzień okresu) ;
-        // dostępne = stan wolny + zlecenia MTS w toku − zamówienia obsłużone z magazynu. Kartony, które weszły na
-        // magazyn od początku okresu (partie tego tygodnia), nie zmniejszają potrzeby okresu : zrobione partie
-        // zostają w tygodniu jako zrobione, a potrzeba nie znika, gdy stan przekroczy min. w trakcie tygodnia.
+        // [389] MTO : le stock libre sert d'abord les commandes (les plus proches) — à produire = commandé − en stock.
         $stock = $this->planning->stockCartons();
+        $mtoLines = [];
+        foreach ($lines as $key => $l) $mtoLines[(int) $l['item']['id']][$key] = ['due_date' => $l['due_date'], 'qty' => $l['qty_mto']];
+        foreach ($mtoLines as $id => $byKey) {
+            $it = $byId[$id];
+            $free = $it['id_final_product'] !== null ? ($stock[(int) $it['id_final_product']] ?? 0) * max(1, (int) $it['ppc']) : 0;
+            foreach (DemandCalculator::netStock($byKey, (float) $free) as $key => $used) {
+                $lines[$key]['qty_mto'] -= $used;
+                $lines[$key]['from_stock'] = $used;
+            }
+        }
+
+        // --- MTS (prosta reguła) : gdy dostępne < stan min., uzupełnienie do stanu min. [399] (pierwszy dzień okresu) ;
+        // dostępne = stan wolny + zlecenia MTS w toku − zamówienia obsłużone z magazynu. [389] Cały stan wolny się
+        // liczy, także kartony zrobione w tym tygodniu (decyzja z 23.11.2026 : « liczyć prawdziwy stan ») — zostaje
+        // do zrobienia tylko to, czego brakuje do stanu min. ; « made » zostaje tylko informacją.
         $today = date('Y-m-d');
         $added = $from <= $today ? $this->planning->cartonsAdded($from, min($to, $today)) : [];
         $openMts = $this->planning->openMtsOrders();
@@ -115,7 +127,7 @@ final class PlanningService
             $made = ($added[(int) $it['id_final_product']] ?? 0) * $ppc;
             $inProduction = $openMts[(int) $it['id']] ?? 0.0;
             $fromStock = $committed[(int) $it['id']] ?? 0.0;
-            $r = DemandCalculator::refill($free - $made + $inProduction - $fromStock, $it['stock_min'] !== null ? (float) $it['stock_min'] : null, (float) $it['stock_max']);
+            $r = DemandCalculator::refill($free + $inProduction - $fromStock, $it['stock_min'] !== null ? (float) $it['stock_min'] : null, (float) $it['stock_max']);
             $stockInfo[(int) $it['id']] = ['free' => $free, 'made' => $made, 'in_production' => $inProduction, 'orders_from_stock' => $fromStock] + $r;
             if ($r['qty'] <= 0) continue;
             $key = $line($it, $from);

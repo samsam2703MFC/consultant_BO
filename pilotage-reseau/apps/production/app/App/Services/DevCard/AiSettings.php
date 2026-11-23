@@ -10,6 +10,7 @@ use Anthropic\Core\Exceptions\AuthenticationException;
 use Anthropic\Core\Exceptions\PermissionDeniedException;
 use Anthropic\RequestOptions;
 use App\Exceptions\CustomException;
+use App\Repositories\Communication\SmsLogRepository;
 use App\Repositories\Translation\AppSecretRepository;
 use App\Repositories\Workshop\DevCardRepository;
 use App\Repositories\Workshop\ParamRepository;
@@ -17,9 +18,11 @@ use App\Services\Mail\MailboxSecretCipher;
 use App\Services\Organization\PageAccessService;
 
 /**
- * Ustawienia › Asystent AI [196] : klucz Anthropic (ANTHROPIC_API_KEY w .env serwera, a bez niego klucz wpisany
- * w Ustawieniach — n_app_secret, zaszyfrowany ; ERP pokazuje tylko 4 ostatnie znaki, nigdy nie wysyła klucza do
- * przeglądarki), model (parametr ai.model) i prompt karty technologicznej w wersjach (n_ai_prompt). Zmiany : administrator.
+ * Ustawienia › Asystent AI [196] : klucz Anthropic — kolejność [387] jak SmsGateway::token() : ANTHROPIC_API_KEY w .env
+ * serwera, potem wspólna tabela kluczy ERP (erp_cles, klucz « anthropic_api_key », portal commun albo pil — reguła
+ * repozytorium « wszystkie klucze w erp_cles »), na końcu klucz wpisany w Ustawieniach (n_app_secret, zaszyfrowany) ;
+ * ERP pokazuje tylko 4 ostatnie znaki, nigdy nie wysyła klucza do przeglądarki ani do dziennika. Model (parametr ai.model)
+ * i prompt karty technologicznej w wersjach (n_ai_prompt). Zmiany : administrator.
  */
 final class AiSettings
 {
@@ -31,6 +34,8 @@ final class AiSettings
     public const PROMPT_CODE = 'dev_card';
     public const MAX_PROMPT_CHARS = 20000;
     private const SECRET = 'anthropic_api_key';
+    /** [387] Nazwa klucza we wspólnej tabeli kluczy ERP (erp_cles). */
+    public const SHARED_KEY = 'anthropic_api_key';
     /** Czas odpowiedzi API (s) : karta z ~30 klatkami to zwykle 30–90 s. */
     public const TIMEOUT = 240.0;
     /** Testy : fn(string $key): Client — klient wskazujący lokalny serwer zamiast api.anthropic.com. */
@@ -61,16 +66,19 @@ UWAGI
 TXT;
 
     public function __construct(private AppSecretRepository $secrets, private MailboxSecretCipher $cipher, private ParamRepository $params,
-                                private DevCardRepository $cards, private PageAccessService $access)
+                                private DevCardRepository $cards, private PageAccessService $access, private SmsLogRepository $shared)
     {
     }
 
-    /** @return array{key:string, source:?string, hint:?string} source : env | settings | null */
+    /** @return array{key:string, source:?string, hint:?string} source : env | erp_cles | settings | null */
     private function resolve(): array
     {
         if ($this->resolved !== null) return $this->resolved;
         $env = trim((string) ($_ENV['ANTHROPIC_API_KEY'] ?? getenv('ANTHROPIC_API_KEY') ?: ''));
         if ($env !== '') return $this->resolved = ['key' => $env, 'source' => 'env', 'hint' => substr($env, -4)];
+        // [387] Wspólna tabela kluczy ERP (ten sam odczyt co token SMS) ; brak tabeli = ''.
+        $shared = $this->shared->sharedKey(self::SHARED_KEY);
+        if ($shared !== '') return $this->resolved = ['key' => $shared, 'source' => 'erp_cles', 'hint' => substr($shared, -4)];
         $row = $this->secrets->get(self::SECRET);
         $key = $row ? (string) $this->cipher->decrypt($row['secret']) : '';
         return $this->resolved = $key !== '' ? ['key' => $key, 'source' => 'settings', 'hint' => $row['hint']] : ['key' => '', 'source' => null, 'hint' => null];
@@ -79,6 +87,19 @@ TXT;
     public function configured(): bool
     {
         return $this->resolve()['key'] !== '';
+    }
+
+    /** [387] Źródło klucza bez klucza : {configured, source (env | erp_cles | settings | null), hint (4 ostatnie znaki)}. */
+    public function keyInfo(): array
+    {
+        $r = $this->resolve();
+        return ['configured' => $r['key'] !== '', 'source' => $r['source'], 'hint' => $r['hint']];
+    }
+
+    /** Zapomina odczytany klucz (testy, zmiana w erp_cles w tym samym procesie). */
+    public function forget(): void
+    {
+        $this->resolved = null;
     }
 
     public function model(): string

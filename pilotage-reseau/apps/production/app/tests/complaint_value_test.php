@@ -78,6 +78,16 @@ $pdo->exec('ALTER TABLE complaint ADD complaint_uuid VARCHAR(40) NULL, ADD id_or
 $all = array_column($repo->getAll(), 'seen_label', 'id');
 $check(str_contains((string) ($all[$baguetteId] ?? ''), 'Piekarnia'), 'list label for the seen complaint');
 
+// [391] Fenêtre de détail sans montants (pas Finanse / CEO) : cartons et pièces gardés, prix et valeurs retirés.
+$d0 = ['quantity' => 30.0, 'cartons' => 2, 'ppc' => 24.0, 'carton_price' => 24.5, 'value' => 49.0, 'accepted_value' => 24.5,
+    'shipped' => [['cartons' => 10.0, 'ppc' => 24.0, 'pieces' => 240.0, 'price_carton' => 24.5, 'total' => 245.0]]];
+$d1 = \App\Services\Client\Complaint\ComplaintService::withoutAmounts($d0);
+$check($d1['values'] === false && $d1['carton_price'] === null && $d1['value'] === null && $d1['accepted_value'] === null
+    && $d1['shipped'][0]['price_carton'] === null && $d1['shipped'][0]['total'] === null && $d1['shipped'][0]['pieces'] === 240.0 && $d1['cartons'] === 2 && $d1['quantity'] === 30.0,
+    'detail without amounts : prices, values and totals removed ; cartons and pieces kept');
+$ctl = (string) file_get_contents(__DIR__ . '/../App/Controllers/Web/Client/Complaint/ComplaintController.php');
+$check(str_contains($ctl, 'seesOrderValues($uid) ? $d') && str_contains($ctl, 'ComplaintService::withoutAmounts($d)'), 'detail endpoint applies the [312] rule');
+
 $pdo->exec('DROP DATABASE erp_complaint_value_test');
 echo $fail ? "\n{$fail} FAIL\n" : "\nall ok\n";
 exit($fail ? 1 : 0);

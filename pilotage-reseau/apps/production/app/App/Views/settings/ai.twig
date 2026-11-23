@@ -2,14 +2,15 @@
 
 {% block title %}Asystent AI · ustawienia{% endblock %}
 
-{% block head %}<link rel="stylesheet" href="{{ root }}/assets/css/dev-card.css?v={{ asset_v() }}">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ root }}/assets/css/dev-card.css?v={{ asset_v() }}">
+<link rel="stylesheet" href="{{ root }}/assets/css/ai-proposals.css?v={{ asset_v() }}">{% endblock %}
 
 {% block page_heading %}
     <div class="page-heading at-profit-head">
         <div class="page-title">
             <h3><i class="bi bi-stars"></i> Asystent AI</h3>
             <p class="text-subtitle text-muted">Klucz Anthropic, model i prompt karty technologicznej « Nowy produkt z filmu » (Produkt › Nowe produkty).
-                Klucz jest zaszyfrowany na serwerze i nigdy nie wraca do przeglądarki.</p>
+                Klucz (.env, wspólna tabela kluczy erp_cles albo zaszyfrowany tutaj) nigdy nie wraca do przeglądarki.{% if routines %} Niżej : rutyny poranne AI (propozycje w asystentach).{% endif %}</p>
         </div>
         <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-primary" href="{{ root }}/test-products/new"><i class="bi bi-stars"></i> Nowy produkt testowy</a></div>
     </div>
@@ -35,11 +36,17 @@
         </aside>
     </div>
 </section>
+{# [387] Rutyny poranne AI : administrator seulement (routines = null pour les autres ou sans la migration 234). #}
+{% if routines %}
+<section class="section dc ai-rt" id="aiRoutines"></section>
+<script type="application/json" id="aiRoutinesBoot">{{ routines|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP') b-or constant('JSON_UNESCAPED_UNICODE'))|raw }}</script>
+{% endif %}
 <script type="application/json" id="aiBoot">{{ {configured: configured, source: source, hint: hint, model: model, models: models, prompt: prompt, default_prompt: default_prompt, versions: versions, is_admin: is_admin}|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP') b-or constant('JSON_UNESCAPED_UNICODE'))|raw }}</script>
 {% endblock %}
 
 {% block scripts %}
 {% include "page_components/ajax_helpers.twig" %}
+{% if routines %}<script src="{{ root }}/assets/js/organization/ai-routines.js?v={{ asset_v() }}"></script>{% endif %}
 <script>
 (function () {
     const app = document.getElementById('aiSettings');
@@ -63,7 +70,9 @@
             box.innerHTML = `<p class="mb-2"><span class="dc-pill w">brak klucza</span> Karta technologiczna z filmu jest wyłączona (gotową kartę .docx można wczytać).</p>
                 ${s.is_admin ? form : '<p class="text-muted mb-0">Klucz wpisuje administrator.</p>'}`;
         } else {
+            // [387] Ordre de lecture : .env, puis erp_cles (table commune des clés), puis ce réglage chiffré.
             const src = s.source === 'env' ? 'klucz z pliku .env serwera (ANTHROPIC_API_KEY) — zmiana na serwerze'
+                : s.source === 'erp_cles' ? `klucz …${esc(s.hint || '')} ze wspólnej tabeli kluczy ERP (erp_cles : anthropic_api_key) — zmiana w erp_cles`
                 : `klucz …${esc(s.hint || '')} wpisany w Ustawieniach${s.is_admin ? ' · <button type="button" class="dc-link" data-change>zmień</button> · <button type="button" class="dc-link dc-danger" data-del>usuń</button>' : ''}`;
             box.innerHTML = `<p class="mb-2"><span class="dc-pill ok">✓ włączony</span> ${src}</p>
                 ${s.is_admin ? `<button type="button" class="btn btn-outline-secondary" data-test>Sprawdź połączenie</button> <span class="dc-status" data-testmsg></span>` : ''}

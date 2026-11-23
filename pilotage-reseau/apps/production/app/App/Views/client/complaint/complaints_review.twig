@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Reklamacje klientów{% endblock %}
+
+{% block content %}
+{# [379] Assistant « Reklamacje klientów » : App\Services\Organization\Wizards\ComplaintsReviewService — écran dans
+   assets/js/client/complaints-review.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche de la semaine du
+   poste « Specjalista ds. jakości » se valide seule après « Zakończ ». Aucun statut de réclamation changé ici (liens vers
+   la liste « Reklamacje » et le registre NC), aucune NC créée, aucun envoi. Montants seulement si data.values ([312]). #}
+<section class="section">
+    <div id="crApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="crBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/client/complaints-review.js?v={{ asset_v() }}"></script>
+{% endblock %}

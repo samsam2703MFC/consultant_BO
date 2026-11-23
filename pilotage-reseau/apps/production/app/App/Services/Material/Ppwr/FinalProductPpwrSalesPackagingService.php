@@ -7,6 +7,14 @@ use App\Repositories\Material\Ppwr\FinalProductPpwrSalesPackagingRepository;
 
 class FinalProductPpwrSalesPackagingService
 {
+    /** Braki kartonu sprzedażowego : kod => etykieta (rejestr kartonów sprzedażowych PPWR i asystent « PPWR i opakowania » [397]). */
+    public const ISSUES = [
+        'NO_RECIPE' => 'Brak receptury',
+        'NO_PACKAGING' => 'Brak opakowania w recepturze',
+        'NO_SALES_CARTON' => 'Nie wybrano kartonu sprzedażowego',
+        'NO_PPC' => 'Brak PPC produktu',
+    ];
+
     public function __construct(private FinalProductPpwrSalesPackagingRepository $repository)
     {
     }
@@ -14,15 +22,22 @@ class FinalProductPpwrSalesPackagingService
     public function getAudit(): array
     {
         return array_map(function (array $row): array {
-            $issues = [];
-            if (empty($row['id_recipe'])) $issues[] = 'Brak receptury';
-            if ((int)$row['packaging_candidate_count'] === 0) $issues[] = 'Brak opakowania w recepturze';
-            if (empty($row['id_outer_raw_material'])) $issues[] = 'Nie wybrano kartonu sprzedażowego';
-            if (empty($row['ppc'])) $issues[] = 'Brak PPC produktu';
+            $issues = array_map(fn(string $code) => self::ISSUES[$code], self::issueCodes($row));
             $row['issues'] = $issues;
             $row['computed_status'] = empty($issues) ? 'COMPLETE' : 'REQUIRES_DATA';
             return $row;
         }, $this->repository->getProductAudit());
+    }
+
+    /** Kody braków produktu (kolejność ISSUES) : jedna reguła dla ekranu i asystenta. @return list<string> */
+    public static function issueCodes(array $row): array
+    {
+        $codes = [];
+        if (empty($row['id_recipe'])) $codes[] = 'NO_RECIPE';
+        if ((int) ($row['packaging_candidate_count'] ?? 0) === 0) $codes[] = 'NO_PACKAGING';
+        if (empty($row['id_outer_raw_material'])) $codes[] = 'NO_SALES_CARTON';
+        if (empty($row['ppc'])) $codes[] = 'NO_PPC';
+        return $codes;
     }
 
     public function getCandidates(int $productId): array

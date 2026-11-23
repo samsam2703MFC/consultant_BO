@@ -4,7 +4,7 @@
   "lang_switch": "Polski",
   "loading": "Chargement…",
   "cart": "cart.",
-  "rule": "Règle : 📦 réassort seulement si disponible < min. — jusqu'au max. (disponible = stock − commandes servies sur stock + en production ; les lots faits cette semaine restent comptés dans la semaine). À produire = 🚚 commandes + 📦 réassort, arrondi aux lots entiers. Les lots vont d'abord sur les jours 📌 (jusqu'au nombre épinglé), le surplus ⏳ attend dans « À produire » ; pas assez de lots = le jour 📌 reste vide.",
+  "rule": "Règle : 📦 réassort seulement si disponible < min. — jusqu'au min. (max. = au plus) (disponible = stock − commandes servies sur stock + en production ; les lots faits cette semaine restent comptés dans la semaine). À produire = 🚚 commandes + 📦 réassort, arrondi aux lots entiers. Les lots vont d'abord sur les jours 📌 (jusqu'au nombre épinglé), le surplus ⏳ attend dans « À produire » ; pas assez de lots = le jour 📌 reste vide.",
   "calc_refill": "max. {max} − dispo {available}",
   "calc_enough": "disponible {available} ≥ min. {min} — rien à produire",
   "calc_no_max": "pas de stock max. — renseignez-le pour calculer le réassort",

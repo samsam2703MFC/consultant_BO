@@ -3,6 +3,7 @@ namespace App\Controllers\Web\Product;
 
 use App\Core\Web\BaseController;
 use App\Exceptions\CustomException;
+use App\Services\Ai\MorningRoutineService;
 use App\Services\DevCard\AiSettings;
 use App\Services\DevCard\DevCardCostService;
 use App\Services\DevCard\DevCardService;
@@ -16,7 +17,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class DevCardController extends BaseController
 {
-    public function __construct(private DevCardService $cards, private AiSettings $ai, private PageAccessService $access, private DevCardCostService $costs)
+    public function __construct(private DevCardService $cards, private AiSettings $ai, private PageAccessService $access, private DevCardCostService $costs,
+                                private MorningRoutineService $routines)
     {
     }
 
@@ -150,7 +152,14 @@ class DevCardController extends BaseController
 
     public function settings()
     {
-        $this->view('settings/ai', $this->ai->state($this->userId()));
+        $state = $this->ai->state($this->userId());
+        // [387] Rutyny poranne AI : sekcja tylko dla administratora (baza bez migracji 234 → bez sekcji).
+        try {
+            $state['routines'] = $state['is_admin'] ? $this->routines->settingsState($this->userId()) : null;
+        } catch (\Throwable) {
+            $state['routines'] = null;
+        }
+        $this->view('settings/ai', $state);
     }
 
     public function settingsState()
