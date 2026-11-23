@@ -28,9 +28,13 @@ const lire = f => fs.readFileSync(path.join(DATA, f), 'utf8');
   await p.addStyleTag({ path: path.join(__dirname, 'formulaire.css') });
   await p.addScriptTag({ path: path.join(__dirname, 'formulaire.js') });
   const noms = ['', 'form-1-fenetre-compacte', 'form-2-creneaux-d-abord', 'form-3-panneau-a-droite'];
-  for (const n of [1, 2, 3]) {
+  for (const n of (process.env.EQF_BIS ? [] : [1, 2, 3])) {
     await p.evaluate(k => window.EQF.monter(k), n); await p.waitForTimeout(400);
     await p.screenshot({ path: path.join(OUT, noms[n] + '.png') }); console.log('capture', noms[n]);
+  }
+  for (const e of (process.env.EQF_BIS ? ['ok', 'long', 'court'] : [])) {
+    await p.evaluate(x => window.EQF.monter(4, x), e); await p.waitForTimeout(400);
+    await p.screenshot({ path: path.join(OUT, 'form-2b-ligne-' + e + '.png') }); console.log('capture', 'form-2b-ligne-' + e);
   }
   console.log(err.length ? 'erreurs : ' + err.join(' | ') : 'sans erreur de page');
   await b.close();

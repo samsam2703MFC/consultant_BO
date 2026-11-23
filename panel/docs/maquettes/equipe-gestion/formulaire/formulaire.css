@@ -112,3 +112,48 @@
 .eqf-cell-on{box-shadow:inset 0 0 0 2px var(--accent)!important;background:rgba(141,29,44,.06)!important}
 .eqf-etiq{position:fixed;z-index:70;left:24px;bottom:18px;padding:7px 12px;border-radius:8px;background:#1c1a17;color:#fff;font-size:12.5px;letter-spacing:.02em}
 .eqf-etiq b{color:#F2C14E;font-weight:600}
+
+/* Proposition 2 bis (23/11/2026, « la 2, mais au lieu d'un input, tirer une ligne horizontale sur un axe des heures de
+   la journée, en rouge si plus courte que 4 h ou plus longue que 8 h ») : les créneaux en haut, la ligne à tirer au-dessus
+   de qui est là (même échelle), l'effet en bas. */
+.eqf-2b{width:min(1060px,100%)}
+.eqf-2b .eqf-cartes{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:10px;padding:14px 22px 4px}
+.eqf-2b .eqf-carte{margin:0}
+.eqf-2b .eqf-carte .d{flex-direction:column;gap:3px}
+.eqf-carte.rouge.on{border-color:#C0281F;background:rgba(192,40,31,.04)}
+.eqf-carte.rouge.on .eqf-radio{border-color:#C0281F;background:#C0281F}
+.eqf-carte .t .r{color:#C0281F;font-weight:600}
+.eqf-plan{padding:12px 22px 14px;--eqf-nom:150px;border-bottom:1px solid var(--row-line)}
+.eqf-axe2{position:relative;height:16px;margin-left:var(--eqf-nom)}
+.eqf-axe2 i{position:absolute;transform:translateX(-50%);white-space:nowrap;font-style:normal;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.eqf-axe2 i:first-child{transform:none}
+.eqf-axe2 i:last-child{transform:translateX(-100%)}
+.eqf-tl{display:grid;grid-template-columns:var(--eqf-nom) 1fr;align-items:center}
+.eqf-tl>.nom{font-weight:600;color:var(--ink)}
+.eqf-tl>.nom small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+.eqf-trace{position:relative;height:58px;border:1px solid var(--line);border-radius:9px;background:#fff;cursor:crosshair;overflow:visible}
+.eqf-trace .eqf-ouv{border-radius:0}
+.eqf-trace .h{position:absolute;top:0;bottom:0;border-left:1px solid rgba(34,34,34,.09)}
+.eqf-trace .hh{position:absolute;top:22px;bottom:22px;border-left:1px dashed rgba(34,34,34,.08)}
+.eqf-trait{position:absolute;top:31px;height:10px;border-radius:5px;background:var(--green)}
+.eqf-trait.rouge{background:#C0281F}
+.eqf-poi{position:absolute;top:28px;width:16px;height:16px;margin-left:-8px;border:3px solid var(--green);border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:ew-resize}
+.eqf-poi.rouge{border-color:#C0281F}
+.eqf-bul{position:absolute;top:5px;transform:translateX(-50%);padding:1px 6px;border-radius:5px;background:var(--green);color:#fff;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.eqf-bul.rouge{background:#C0281F}
+.eqf-duree2{position:absolute;top:5px;transform:translateX(-50%);font-size:12px;font-weight:700;color:var(--green);white-space:nowrap}
+.eqf-duree2.rouge{color:#C0281F}
+.eqf-main{position:absolute;top:36px;width:22px;height:22px;pointer-events:none}
+.eqf-regle{margin:6px 0 10px var(--eqf-nom);font-size:11.5px;color:var(--muted)}
+.eqf-regle b{font-weight:600;color:var(--green)}
+.eqf-regle b.r{color:#C0281F}
+.eqf-plan .eqf-ligne{margin-top:3px}
+.eqf-plan .eqf-ligne.cpt{margin-top:7px;padding-top:6px}
+.eqf-effs{display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:12px 22px;border-bottom:1px solid var(--row-line)}
+.eqf-effs>div{padding:2px 14px;border-left:1px solid var(--row-line)}
+.eqf-effs>div:first-child{padding-left:0;border-left:0}
+.eqf-effs>div>span{display:block;margin-bottom:5px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.eqf-effs b{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.eqf-effs em{display:block;margin-top:3px;font-style:normal;font-size:11.5px;color:var(--muted)}
+.eqf-effs .ok b{color:var(--green)}
+.eqf-pied .eqf-res .tag-r{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:5px;background:#C0281F;color:#fff;font-size:11.5px;font-weight:600}

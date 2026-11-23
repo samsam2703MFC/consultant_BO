@@ -152,3 +152,16 @@ au quart d'heure (− / +) : le champ « heure » du navigateur affichait 07:00 
 | `formulaire/form-1-fenetre-compacte.png` | la fenêtre d'aujourd'hui, rangée : les heures, les créneaux, la petite journée (sa barre, le comptoir), puis « Ce que ça change » en quatre lignes (comptoir, budget du jour, de la semaine, ses heures) |
 | `formulaire/form-2-creneaux-d-abord.png` | les créneaux d'abord, chacun avec son effet avant d'être choisi (comble le comptoir ou non, budget du jour, coût) ; « Sur mesure » en touchant les heures (tablette) ; à droite, qui est là ce jour-là |
 | `formulaire/form-3-panneau-a-droite.png` | un panneau à droite, le tableau reste visible et la case est cerclée : sa semaine (jours travaillés, repos), les heures, « le même horaire d'autres jours » (poser plusieurs jours d'un coup), l'effet, la journée |
+
+**Choix de Sam : la 2, sans champ (« au lieu de faire un input, je préfère tirer une ligne horizontale sur un axe qui
+représente les heures de la journée, qui se met en rouge si plus court que 4 et si plus que 8 »).** La proposition 2 bis :
+les deux créneaux et « Sur mesure » en haut, chacun avec son effet ; la ligne se tire sur l'axe des heures (4 h → 20 h, au
+quart d'heure, les bords se tirent pour ajuster), au-dessus de qui est là, à la même échelle ; verte de 4 h à 8 h, rouge
+en dessous de 4 h ou au-dessus de 8 h ; l'effet en bas (comptoir, budget du jour, de la semaine, ses heures). `EQF_BIS=1
+node formulaire/capturer.cjs <données> <sortie>`.
+
+| Capture | L'état |
+|---|---|
+| `formulaire/form-2b-ligne-ok.png` | 07:00–13:30, 6,5 h : verte ; le trou du comptoir comblé, mercredi 28,4 %, +103 € |
+| `formulaire/form-2b-ligne-long.png` | 06:00–15:30, 9,5 h : rouge, « plus de 8 h » (et commence 1 h avant l'ouverture) |
+| `formulaire/form-2b-ligne-court.png` | 07:00–10:00, 3 h : rouge, « moins de 4 h » |

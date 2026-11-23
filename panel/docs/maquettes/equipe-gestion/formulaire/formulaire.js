@@ -82,11 +82,51 @@
       </div>${pied('mer. 25 · 7 h · <b>+111 €</b>')}</aside>${etiquette(3, 'Le panneau à droite, le tableau reste visible')}`;
   }
 
+  /* 2 bis — La 2, sans champ : la ligne se tire sur l'axe des heures de la journée, au-dessus de qui est là (même
+   *     échelle, on voit qui est déjà là pendant qu'on tire). Verte de 4 h à 8 h, rouge en dessous de 4 h et au-dessus
+   *     de 8 h. Trois états : 'ok' (07:00–13:30), 'long' (06:00–15:30), 'court' (07:00–10:00). */
+  const ETATS = {
+    ok: { de: '07:00', a: '13:30', h: '6,5 h', cout: '+103 €', jour: ['28,4 %', 'noir'], sem: ['21,0 %', 'rouge'], elle: '37,5 h', motif: '' },
+    long: { de: '06:00', a: '15:30', h: '9,5 h', cout: '+150 €', jour: ['29,7 %', 'noir'], sem: ['21,2 %', 'rouge'], elle: '40,5 h', motif: 'plus de 8 h' },
+    court: { de: '07:00', a: '10:00', h: '3 h', cout: '+47 €', jour: ['26,9 %', 'noir'], sem: ['20,8 %', 'rouge'], elle: '34 h', motif: 'moins de 4 h' },
+  };
+  function deuxBis(etat) {
+    const E = ETATS[etat], r = E.motif ? ' rouge' : '', de = mn(E.de), a = mn(E.a);
+    const main = '<svg class="eqf-main" viewBox="0 0 24 24" style="left:' + X(a) + '"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.9-2.6L4.4 15a1.5 1.5 0 0 1 2.4-1.8L9 15.5" fill="#fff" stroke="#1c1a17" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+    const grille = Array.from({ length: 16 }, (_, i) => 5 + i).map(h => `<span class="h" style="left:${X(h * 60)}"></span>`).join('') + Array.from({ length: 16 }, (_, i) => 4 + i).map(h => `<span class="hh" style="left:${X(h * 60 + 30)}"></span>`).join('');
+    const trace = `<div class="eqf-trace"><span class="eqf-ouv" style="left:${X(mn(OUV[0]))};width:${L(mn(OUV[0]), mn(OUV[1]))}"></span>${grille}
+      <span class="eqf-trait${r}" style="left:${X(de)};width:${L(de, a)}"></span><span class="eqf-poi${r}" style="left:${X(de)}"></span><span class="eqf-poi${r}" style="left:${X(a)}"></span>
+      <span class="eqf-bul${r}" style="left:${X(de)}">${E.de}</span><span class="eqf-bul${r}" style="left:${X(a)}">${E.a}</span>
+      <span class="eqf-duree2${r}" style="left:${X((de + a) / 2)}">${E.h}${E.motif ? ' · ' + E.motif : ''}</span>${main}</div>`;
+    const carte = (on, t, h, prix, lignes, cl) => `<div class="eqf-carte${on ? ' on' : ''}${cl || ''}"><span class="eqf-radio"></span><span class="t">${t}<span>${h}</span></span><span class="prix">${prix}</span><span class="d">${lignes}</span></div>`;
+    const comble = '<span class="bon">✓ comble le comptoir de 7 h à 10 h</span>';
+    const cpt = barre('07:00', '10:00', 'comble', 'comblé') + barre('10:00', '18:30', 'cv');
+    return `<div class="eqf-voile"><div class="eqf eqf-2b" role="dialog" aria-label="Nouveau service">
+      ${tete('Vente · mercredi 25 novembre · nouveau service')}
+      <div class="eqf-cartes">
+        ${carte(false, 'Matin', '07:00–14:00 · 7 h', '+111 €', comble + `<span>mercredi ${m('28,6 %', 'noir')}</span>`)}
+        ${carte(false, 'Après-midi', '12:30–18:30 · 6 h', '+95 €', `<span>le comptoir reste vide de 7 h à 10 h</span><span>mercredi ${m('28,2 %', 'noir')}</span>`)}
+        ${carte(true, 'Sur mesure', `${E.de}–${E.a} · <span${r ? ' class="r"' : ''}>${E.h}</span>`, E.cout, (E.motif ? `<span style="color:#C0281F">${E.motif === 'plus de 8 h' ? 'plus de 8 h : au-dessus de la durée maximale' : 'moins de 4 h : en dessous de la durée minimale'}</span>` : '') + comble + `<span>mercredi ${m(E.jour[0], E.jour[1])} · tracé sur la ligne ci-dessous</span>`, r)}
+      </div>
+      <div class="eqf-plan"><div class="eqf-axe2">${Array.from({ length: 17 }, (_, i) => 4 + i).map(h => `<i style="left:${X(h * 60)}">${h} h</i>`).join('')}</div>
+        <div class="eqf-tl"><span class="nom">Chloé<small>tirez sa ligne</small></span>${trace}</div>
+        <p class="eqf-regle">Tirez du début à la fin, au quart d’heure ; tirez un bord pour ajuster. <b>Verte de 4 h à 8 h</b> · <b class="r">rouge sous 4 h ou au-dessus de 8 h</b></p>
+        ${JOUR.map(([n, d, f]) => ligne(n, barre(d, f, '', d + '–' + f))).join('')}${ligne('Comptoir', cpt, 'cpt')}</div>
+      <div class="eqf-effs">
+        <div class="ok"><span>Comptoir</span><b><span class="eqf-ok">✓</span> trou de 7 h à 10 h comblé</b><em>${E.de === '06:00' ? 'commence 1 h avant l’ouverture' : 'les postes de vente'}</em></div>
+        <div><span>Budget du mercredi</span><b>${m('25,5 %', 'noir')} → ${m(E.jour[0], E.jour[1])}</b><em>${E.cout} · cible 17 %</em></div>
+        <div><span>Budget de la semaine</span><b>${m('20,6 %', 'rouge')} → ${m(E.sem[0], E.sem[1])}</b><em>+${E.h} au planning</em></div>
+        <div><span>Chloé cette semaine</span><b class="eqf-num">31 h → ${E.elle}</b><em>6 jours, repos le vendredi</em></div>
+      </div>
+      ${pied(`<b>Chloé</b> · mer. 25 · ${E.de}–${E.a} · ${E.h} · ${E.cout}${E.motif ? `<span class="tag-r">${E.motif}</span>` : ''}`)}
+    </div></div>${etiquette('2 bis', 'tirer sa ligne — ' + (E.motif ? 'en rouge : ' + E.motif : 'entre 4 h et 8 h'))}`;
+  }
+
   window.EQF = {
-    monter(n) {
+    monter(n, etat) {
       document.querySelectorAll('.eqf-voile,.eqf-tiroir,.eqf-etiq').forEach(x => x.remove());
       document.querySelectorAll('.eqf-cell-on').forEach(x => x.classList.remove('eqf-cell-on'));
-      const d = document.createElement('div'); d.innerHTML = [null, une, deux, trois][n]();
+      const d = document.createElement('div'); d.innerHTML = n === 4 ? deuxBis(etat || 'ok') : [null, une, deux, trois][n]();
       [...d.children].forEach(x => document.body.appendChild(x));
       const c = document.querySelector('.eqp-tab td[data-eqp-cell="2026-11-25"][data-emp="23"]'); if (c) { c.classList.add('eqf-cell-on'); }
     },
