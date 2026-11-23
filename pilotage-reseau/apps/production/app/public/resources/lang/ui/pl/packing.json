@@ -176,5 +176,6 @@
   "check_over_n": "{n} produkt(ów) ma nadmiar kartonów",
   "check_hint": "Popraw palety przed wyjazdem (dotknij braku, aby dołożyć).",
   "check_all_ok": "Palety zgodne z zamówieniem.",
-  "check_back": "Wróć do paletyzacji"
+  "check_back": "Wróć do paletyzacji",
+  "free_hint": "W tym GRATIS : {n} kart. — pakuj, nie skanuj"
 }

@@ -274,7 +274,8 @@
             const open = c.lines.filter(l => l.left > 0);
             list = `<section class="kiosk-card pp-list"><div class="pp-head"><span>${esc(t('col_product'))}</span><span>${esc(t('col_ordered'))}</span><span>${esc(t('col_on'))}</span><span>${esc(t('col_left'))}</span><span></span></div>
                 ${c.lines.map(l => `<div class="pp-row ${l.left === 0 ? 'is-done' : ''} ${l.product_id === product ? 'is-sel' : ''}" data-line="${l.product_id}">
-                    <div class="pp-pn"><b>${esc(l.name)}</b><small>${esc(l.category || '')}${l.ppc ? ' · ' + esc(t('pcs_per', {n: l.ppc})) : ''}${l.carton_mm ? ' · ' + esc(t('carton_cm', {h: fmt(l.carton_mm / 10)})) : ''}</small></div>
+                    <div class="pp-pn"><b>${esc(l.name)}</b><small>${esc(l.category || '')}${l.ppc ? ' · ' + esc(t('pcs_per', {n: l.ppc})) : ''}${l.carton_mm ? ' · ' + esc(t('carton_cm', {h: fmt(l.carton_mm / 10)})) : ''}</small>
+                        ${l.free ? `<small class="pp-free">${esc(t('free_hint', {n: fmt(l.free)}))}</small>` : ''}</div>
                     <div class="pp-n">${fmt(l.ordered)}</div><div class="pp-n">${l.on_pallet ? fmt(l.on_pallet) : '—'}</div>
                     <div class="pp-n pp-rem ${l.left === 0 ? 'is-zero' : ''}">${l.left === 0 ? (l.over ? '+' + fmt(l.over) : '✓') : fmt(l.left)}</div>
                     <button type="button" class="pp-plus ${l.left === 0 ? 'is-ok' : ''}" data-plus="${l.product_id}" aria-label="${esc(t('add'))}">${l.left === 0 ? '✓' : '+'}</button></div>`).join('')}

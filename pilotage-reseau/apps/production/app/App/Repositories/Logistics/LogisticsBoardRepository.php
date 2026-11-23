@@ -20,7 +20,7 @@ final class LogisticsBoardRepository extends WorkshopRepository
     {
         return $this->all(
             "SELECT co.id_customer, cop.id_product, SUM(cop.quantity_carton) AS cartons, fp.name AS product, COALESCE(fp.ppc, 0) AS ppc,
-                    cat.name AS category
+                    cat.name AS category, SUM(CASE WHEN COALESCE(co.is_freebie, 0) = 1 THEN cop.quantity_carton ELSE 0 END) AS free_cartons
              FROM customer_order co
              JOIN customer_order_product cop ON cop.id_order = co.id
              JOIN final_product fp ON fp.id = cop.id_product

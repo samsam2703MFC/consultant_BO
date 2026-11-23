@@ -79,6 +79,8 @@
 .pp-pn { min-width: 0; }
 .pp-pn b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pp-pn small { color: var(--k-muted); font-size: 12.5px; }
+/* [409] Kartony GRATIS : pakuj, nie skanuj (złoto = uwaga). */
+.pp-pn small.pp-free { display: block; color: #7A5207; }
 .pp-n { text-align: right; font-size: 18px; font-variant-numeric: tabular-nums; }
 .pp-rem { font-size: 24px; font-weight: 700; color: var(--k-primary); }
 .pp-rem.is-zero { color: var(--k-ok); font-size: 18px; }
