@@ -86,6 +86,27 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "annee",
+      "genre": "tuto",
+      "titre": "La page Année et ses trimestres",
+      "resume": "L’objectif de l’année, les quatre trimestres et le détail d’un trimestre, les douze mois face à l’an passé, le trafic et le long terme.",
+      "vues": [
+        "annee"
+      ],
+      "fichier": "08-annee.mp4",
+      "affiche": "08-annee.jpg",
+      "duree": "2 min 36",
+      "depuis": "2026-11-23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/public/assets/js/cartes-magasin.js",
+        "shared/public/assets/ds/global.css"
+      ],
+      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
+      "tourne_le": "2026-11-23"
     }
   ]
 }
