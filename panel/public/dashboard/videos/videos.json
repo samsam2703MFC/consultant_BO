@@ -291,15 +291,16 @@
       ],
       "fichier": "14-primes.mp4",
       "affiche": "14-primes.jpg",
-      "duree": "2 min 11",
+      "duree": "2 min",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
+        "panel/public/dashboard/equipe.css",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "1e40cb22ca3b07b8628beeb88ba0863339628ba6",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "aa3729dd2e71e4f35ab62acac048a20093921ac2",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "concurrence",

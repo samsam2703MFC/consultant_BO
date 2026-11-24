@@ -1,7 +1,7 @@
 /* Dashboard magasin › Mon équipe (23/11/2026, étape 1 ; maquettes panel/docs/maquettes/equipe-gestion/).
  *
  * La gestion de l'équipe du panel TF Buddy, reprise pour le cockpit (le paquet panel-team-files : la carte des
- * responsabilités et le planning). Deux onglets :
+ * responsabilités et le planning). Trois onglets :
  *   - RESPONSABILITÉS : qui a quel poste, et les produits qui en dépendent (le secteur du poste) ; la fiche de la personne
  *     choisie ; « Modifier les affectations » (ce que le changement donne avant d'enregistrer) ;
  *   - PLANNING : le planogramme des horaires — vue Jour (une ligne par personne, ses services en barres ; dessous, les
@@ -13,12 +13,16 @@
  *     17 %, orange au-dessus, rouge au-dessus de 20 %, noir au-dessus de 22 % (personnelPaliers, réglables), et ce qu'il
  *     faut retirer pour revenir à la cible ; au jour, la souris suffit : tirer une ligne sur celle d'une personne lui
  *     crée un service, glisser ou étirer une barre le change ; la fenêtre montre l'effet sur le comptoir, les secteurs et
- *     le budget avant d'enregistrer.
+ *     le budget avant d'enregistrer ;
+ *   - PRIMES (24/11/2026, « mettre les primes dans l'icône Mon équipe, après le planning ») : la page des primes du
+ *     dashboard (?vue=primes, rendPrimes de dashboard.js), qui reprend cette rangée d'onglets ; l'onglet n'est là que si
+ *     le dashboard passe `primes` (le geste qui l'ouvre).
  * Routes (panel/src/equipe.php) : GET /dashboard/equipe/carte, POST …/postes, GET …/planning, GET …/planning/pdf,
  * POST|PATCH|DELETE …/service.
  *
- * `window.DashEquipe.racine(shop, {apiBase, aller, bureau})` rend l'élément du module, gardé d'un rendu à l'autre ;
- * `relire()` relit tout ; `bureau()` ouvre la demande au bureau du dashboard.
+ * `window.DashEquipe.racine(shop, {apiBase, aller, bureau, primes})` rend l'élément du module, gardé d'un rendu à l'autre ;
+ * `relire()` relit tout ; `onglet('resp' | 'planning')` choisit l'onglet (le retour depuis la page des primes) ;
+ * `bureau()` ouvre la demande au bureau du dashboard.
  */
 (function () {
   'use strict';
@@ -50,7 +54,7 @@
   const COMPTOIR = /vente|vendeu|comptoir|caisse|verkoop|kassa|sprzeda|kasa|sales|counter/i;
   const SVG = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
-  const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, onglet: 'resp',
+  const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, primes: null, onglet: 'resp',
     R: null, Rerr: null, sel: null, q: '', secteur: '', tousProduits: false, mod: null,
     PJ: null, PS: null, PM: null, Perr: null, vue: 'tableau', ouvrir: null, jour: AUJ, lundi: lundiDe(AUJ), mois: moisDe(AUJ), edit: null, edSection: null, as: null, glisse: null,
     opts: { assistant: false, taches: false, matrice: false, recopie: false }, O: null, optMod: false,
@@ -136,7 +140,8 @@
   function rendre() {
     if (!st.el) { return; }
     const garde = st.el.querySelector('.eqp-pg-defil'), x = garde ? garde.scrollLeft : 0;
-    const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
+    // Primes (24/11/2026) : après le planning ; la page est celle du dashboard (st.primes l'ouvre).
+    const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].concat(st.primes ? [['primes', 'Primes']] : []).map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
     const nOpt = Object.values(st.opts).filter(Boolean).length;
     st.el.innerHTML = `<nav class="page-tabs eqp-tabs" aria-label="Mon équipe">${tabs}<span class="eqp-sp"></span><button type="button" class="btn btn--sm btn--ghost eqp-opt-btn" data-eqp-options="1"${st.O ? '' : ' disabled'}>Options${nOpt ? ' · ' + nOpt + ' allumée' + (nOpt > 1 ? 's' : '') : ''}</button></nav>${st.flash ? `<div class="eqp-flash ${st.flash[0]}" role="status">${esc(st.flash[1])}</div>` : ''}`
       + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal() + rendAssistant() + rendOptions();
@@ -1168,7 +1173,7 @@
   /* ── Les gestes ──────────────────────────────────────────────────────────────────────────────────────────────── */
   function brancher() {
     const el = st.el, on = (sel, ev, f) => el.querySelectorAll(sel).forEach(n => n.addEventListener(ev, f));
-    on('[data-eqp-onglet]', 'click', e => { st.onglet = e.currentTarget.dataset.eqpOnglet; st.edit = null; if (st.onglet === 'planning') { chargerVue(); } rendre(); });
+    on('[data-eqp-onglet]', 'click', e => { const k = e.currentTarget.dataset.eqpOnglet; if (k === 'primes') { if (st.primes) { st.primes(); } return; } st.onglet = k; st.edit = null; if (st.onglet === 'planning') { chargerVue(); } rendre(); });
     on('[data-eqp-relire]', 'click', () => relireTout());
     on('[data-eqp-sel]', 'click', e => { st.sel = +e.currentTarget.dataset.eqpSel; st.tousProduits = false; rendre(); });
     on('[data-eqp-q]', 'input', e => { st.q = e.target.value; const p = e.target.selectionStart; rendre(); const n = el.querySelector('[data-eqp-q]'); if (n) { n.focus(); n.setSelectionRange(p, p); } });
@@ -1324,11 +1329,14 @@
       if (!st.el || st.shop !== String(shop)) {
         Object.assign(st, { shop: String(shop), R: null, PJ: null, PS: null, edit: null, mod: null, sel: null });
         st.el = document.createElement('div'); st.el.className = 'eqp';
-        st.api = o.apiBase || st.api; st.aller = o.aller || null; st.bureau = o.bureau || null;
+        st.api = o.apiBase || st.api; st.aller = o.aller || null; st.bureau = o.bureau || null; st.primes = o.primes || null;
         rendre(); relireTout();
-      } else { st.bureau = o.bureau || st.bureau; rendre(); }
+      } else { st.bureau = o.bureau || st.bureau; st.primes = o.primes || st.primes; rendre(); }
       return st.el;
     },
     relire() { if (st.el) { st.PJ = null; st.PS = null; relireTout(); if (st.onglet === 'planning') { chargerVue(); } } },
+    /** L'onglet à montrer (24/11/2026) : la page des primes y revient par sa rangée d'onglets. Avant le premier rendu,
+     *  l'onglet attend racine() (qui lit la semaine du planning) ; après, la vue du planning se lit si besoin. */
+    onglet(k) { if (k !== 'resp' && k !== 'planning') { return; } st.onglet = k; st.edit = null; if (st.el && k === 'planning') { chargerVue(); } },
   };
 })();

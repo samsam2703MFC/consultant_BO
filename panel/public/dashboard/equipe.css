@@ -539,6 +539,8 @@ button.eqp-as-et:hover b{text-decoration:underline}
 /* Les options de Mon équipe (23/11/2026) : le bouton, la fenêtre, les interrupteurs. */
 .eqp-tabs{display:flex;align-items:flex-end}
 .eqp-opt-btn{align-self:center;margin-left:auto}
+/* La page des primes, onglet de Mon équipe (24/11/2026) : la même rangée d'onglets, hors du module (dashboard.js). */
+.db-eqp-tabs{margin-bottom:14px;font-family:'Gotham',system-ui,sans-serif}
 .eqp-opts{width:min(560px,100%)}
 .eqp-opt-l{display:flex;align-items:center;gap:16px;padding:12px 0;border-top:1px solid var(--row-line)}
 .eqp-opt-l>div{flex:1}

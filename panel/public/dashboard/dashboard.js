@@ -5367,7 +5367,7 @@
       ? `<button class="db-btn" data-pry="-1"${y > PR_Y_DEBUT ? '' : ' disabled'} aria-label="Année précédente">‹</button><span class="pr-per">${y}${y === yMax ? '<small> · en cours</small>' : ''}</span><button class="db-btn" data-pry="1"${y < yMax ? '' : ' disabled'} aria-label="Année suivante">›</button>`
       : `<button class="db-btn" data-prm="-1"${m > PR_M_DEBUT ? '' : ' disabled'} aria-label="Mois précédent">‹</button><span class="pr-per">${esc(prLibMois(m))}${m === mMax ? '<small> · en cours</small>' : ''}</span><button class="db-btn" data-prm="1"${m < mMax ? '' : ' disabled'} aria-label="Mois suivant">›</button>`;
     const sous = an ? (V && V.periode ? esc(V.periode) + ' · ' + esc(V.total) + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes, prime par prime.';
-    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Primes</div><div class="pm-titre">Où en sont tes vendeuses</div><div class="db-mini pr-sous">${sous}</div></div><span style="flex:1"></span>
+    let h = `<div class="pm-tete"><div><div class="pm-titre">Où en sont tes vendeuses</div><div class="db-mini pr-sous">${sous}</div></div><span style="flex:1"></span>
       <div class="pr-outils">
         <div class="db-ong db-ong-p">${[['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
         <div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
@@ -7636,7 +7636,9 @@
     ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
     // Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy (offres.js).
     // Analyse (15/11/2026, « go E et F, A en entrée ») : le magasin, ses familles et ses produits, question par question (analyse.js).
-    ['Vendre', [['analyse', 'Analyse', 'loupe'], ['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['offres', 'Offres', 'offre'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
+    // Primes (24/11/2026, « mettre les primes dans l'icône Mon équipe, après le planning ») : plus dans Vendre ; un onglet
+    // de Mon équipe, après Planning (railOn, eqpOngletsPrimes).
+    ['Vendre', [['analyse', 'Analyse', 'loupe'], ['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['offres', 'Offres', 'offre'], ['concurrence', 'Concurrence', 'analyse']]],
     // Le Marketing du magasin (15/11/2026, maquette docs/maquettes/rail-franchise/marketing.png) : le calendrier des posts
     // (l'espace boutique du Marketing, dans un nouvel onglet tant qu'il ne sait pas s'afficher incorporé), la fidélité et
     // le catalogue, qui relèvent du Marketing.
@@ -7649,7 +7651,9 @@
     // Se former (22/11/2026) : la page Formation du magasin, où mène aussi le bouton abricot de la barre.
     ['Se former', [['formation', 'Formations et suivi', 'formation']]],
   ];
-  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : v === 'assistant' ? 'Assistant IA' : v === 'coffre' ? 'Mon coffre-fort' : v === 'mails' ? 'Mails et automatisations' : 'Dashboard'; };
+  /** L'entrée du rail allumée : la sienne ; les primes allument Mon équipe (24/11/2026). */
+  const railOn = v => S.vue === v || (v === 'equipe' && S.vue === 'primes');
+  const railLib = v => { if (v === 'primes') { return 'Mon équipe'; } for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : v === 'assistant' ? 'Assistant IA' : v === 'coffre' ? 'Mon coffre-fort' : v === 'mails' ? 'Mails et automatisations' : 'Dashboard'; };
   /** Le dossier de formation (22/11/2026) : ce qu'il reste à faire (en retard, en cours) et les nouveautés pas encore ouvertes. */
   function fcAFaire() { const F = S.aux['fc|' + S.shop]; return F && F.reperes ? (F.reperes.enRetard || 0) + (F.reperes.enCours || 0) : 0; }
   function fcNouveaux() { const F = S.aux['fc|' + S.shop]; return F && F.nouveautes ? F.nouveautes.filter(n => n.nouveau).length : 0; }
@@ -7673,8 +7677,14 @@
     const p = document.getElementById(id);
     if (!p) { return; }
     if (!window.DashEquipe) { p.innerHTML = '<div class="db-err">Le module Mon équipe n’a pas été chargé.</div>'; return; }
-    const el = window.DashEquipe.racine(S.shop, { apiBase: API, aller: allerVers, bureau: () => iaOuvrir('d') });
+    const el = window.DashEquipe.racine(S.shop, { apiBase: API, aller: allerVers, bureau: () => iaOuvrir('d'), primes: () => allerVers('primes') });
     if (id === 'db-mod-mob') { p.appendChild(el); } else { p.replaceWith(el); }
+  }
+  /** La page des primes, onglet de Mon équipe (24/11/2026, « mettre les primes dans l'icône Mon équipe, après le
+   *  planning ») : la rangée d'onglets du module (equipe.js), Primes allumé ; Responsabilités et Planning y ramènent. */
+  function eqpOngletsPrimes() {
+    return `<nav class="page-tabs eqp-tabs db-eqp-tabs" aria-label="Mon équipe">${[['resp', 'Responsabilités'], ['planning', 'Planning'], ['primes', 'Primes']]
+      .map(([k, l]) => `<button type="button" class="page-tabs__tab${k === 'primes' ? ' is-on' : ''}" data-eqponglet="${k}"${k === 'primes' ? ' aria-current="page"' : ''}>${l}</button>`).join('')}</nav>`;
   }
   /** Le calendrier des posts du magasin : l'espace boutique du Marketing (GET /meta → espaceBoutiqueUrl) ; '' : pas d'entrée. */
   function postsUrl() {
@@ -7738,7 +7748,7 @@
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
       <div class="sidebar__groups"><div class="sidebar__group db-rail-boite${railIaOuvert() ? '' : ' db-rail-tu'}"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button>${railIaOuvert() ? '' : railTuto()}</div>${railIa()}${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
-        : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}${v === 'formation' && fcNouveaux() ? `<span class="sidebar__count">${fcNouveaux()} nouv.</span>` : ''}</button>`).join('')}</div>`).join('')}</div>${railCoffre()}`;
+        : `<button type="button" class="sidebar__item${railOn(v) ? ' is-active' : ''}" data-vue="${v}"${railOn(v) ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}${v === 'formation' && fcNouveaux() ? `<span class="sidebar__count">${fcNouveaux()} nouv.</span>` : ''}</button>`).join('')}</div>`).join('')}</div>${railCoffre()}`;
   }
   /* --- Les paramètres (22/11/2026, Sam : « Mails et automatisations sont des paramètres : pour gagner de la place dans
    * le rail, une roue dans une icône carrée à gauche du Coffre-fort ; au clic, tous les paramètres dans une fenêtre type
@@ -7953,9 +7963,10 @@
     const L = S.aux[cleRVL()], e = rvEtat(), vif = e === 'afaire' || e === 'encours';
     const rv = !L ? '…' : ({ faite: 'faite', encours: 'en cours', afaire: 'à faire', pasfaite: 'pas faite' }[e] || 'à ' + String(L.heure || '18:00').replace(/:00$/, ' h').replace(':', ' h '));
     const av = (attr, cl, o, k, x) => `<button type="button" class="db-av${cl}" ${attr}><span class="db-av__o">${o}</span><span class="db-av__t"><span class="k">${k}</span><span class="v">${x}</span></span></button>`;
-    // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Primes, Trésorerie, Mon
+    // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Trésorerie, Mon
     // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
-    const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
+    // Les primes (24/11/2026) : un onglet de Mon équipe, sous son titre, comme Responsabilités et Planning.
+    const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
     // Les vignettes (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles, sous le
     // titre, six vignettes égales sur toute la largeur ; le titre et la date au-dessus, s'il y en a.
     const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();
@@ -8047,7 +8058,7 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button><button class="db-btn db-btn-fc" data-fcouvrir="1">🎓 Mon dossier de formation${fcAFaire() ? `<span class="n">${fcAFaire()}</span>` : ''}</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia${S.vue === 'assistant' ? ' on' : ''}" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['equipe', 'Mon équipe'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['equipe', 'Mon équipe'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${railOn(o[0]) ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${S.vue !== 'promos' && S.vue !== 'assistant' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && S.vue !== 'coffre' && S.vue !== 'formation' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
@@ -8081,7 +8092,7 @@
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); bndMonter(); pmRestaurer(g); return; }
     if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
-    if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
+    if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += eqpOngletsPrimes() + rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
     // Sur le rail, le détail de la valeur est le panneau de la vignette (15/11/2026) ; sans rail, le tiroir d'avant.
     if (!surRail) { h += rendValeur(); }
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
@@ -11496,6 +11507,8 @@
     // L'assistant s'ouvre en pleine page au bureau (17/11/2026) ; la fenêtre reste pour la demande au bureau et au téléphone.
     $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => { if (b.dataset.iaouvrir === 'd') { iaOuvrir('d'); } else if (estMobile()) { iaOuvrir(null); } else { iaPage(null); } }));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
+    // La page des primes, onglet de Mon équipe (24/11/2026) : Responsabilités et Planning rouvrent le module sur leur onglet.
+    $.querySelectorAll('[data-eqponglet]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.eqponglet; if (k === 'primes') { return; } if (window.DashEquipe) { window.DashEquipe.onglet(k); } allerVers('equipe'); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;
