@@ -106,6 +106,8 @@ final class PageTabs
             ['/workshop/execution', 'Tablety, PIN, czas pracy', 'bi-tablet'],
             ['/workshop/production-days', 'Zatwierdzenia produkcji', 'bi-check2-square'],
             ['/workshop/group-orders', 'Zamówienia między grupami', 'bi-arrow-left-right'],
+            // [409] Tablet hali : kroki dnia grup i strefy sprzątania (droit « hala »).
+            ['/production/hala', 'Tablet hali : kroki i strefy', 'bi-list-check'],
             ['/tablet/office', 'Otwórz tablet biurowy', 'bi-box-arrow-up-right', false, 'blank'],
             ['/tablet/production', 'Otwórz tablet grupy', 'bi-box-arrow-up-right', false, 'blank'],
             ['/tablet/driver', 'Otwórz tablet kierowcy', 'bi-box-arrow-up-right', false, 'blank'],

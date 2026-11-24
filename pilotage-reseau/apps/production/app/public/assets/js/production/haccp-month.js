@@ -12,10 +12,12 @@
     const draft = {};
     const STEPS = ['Przegląd', 'Do wyjaśnienia', 'Zatwierdź'];
     const DEC_CLS = {explained: 'ok', corrective: 'warn', nc: 'bad'};
-    const SIG_CLS = {haccp_untreated: 'bad', haccp_unfavorable: 'bad', haccp_below: 'bad', sop_deviation_haccp: 'bad', delivery_temp: 'warn', sop_deviation: 'warn', sop_review_late: 'warn', sop_review_missing: 'warn'};
+    const SIG_CLS = {haccp_untreated: 'bad', haccp_unfavorable: 'bad', haccp_below: 'bad', sop_deviation_haccp: 'bad', delivery_temp: 'warn', sop_deviation: 'warn', sop_review_late: 'warn', sop_review_missing: 'warn',
+        hala_chill_warm: 'bad', hala_clean_missing: 'warn'};
     const SHORT = {haccp_untreated: 'nieobsłużone', haccp_unfavorable: 'negatywny', haccp_below: 'poniżej progu', sop_deviation_haccp: 'etap HACCP', delivery_temp: 'temperatura',
-        sop_deviation: 'odchylenie', sop_review_late: 'po terminie', sop_review_missing: 'bez daty'};
-    const KIND_ICON = {haccp_event: 'bi-shield-exclamation', sop_review: 'bi-journal-check', sop_run: 'bi-list-check', delivery_temp: 'bi-thermometer-half'};
+        sop_deviation: 'odchylenie', sop_review_late: 'po terminie', sop_review_missing: 'bez daty', hala_chill_warm: 'schładzanie', hala_clean_missing: 'sprzątanie'};
+    const KIND_ICON = {haccp_event: 'bi-shield-exclamation', sop_review: 'bi-journal-check', sop_run: 'bi-list-check', delivery_temp: 'bi-thermometer-half',
+        hala_chill: 'bi-thermometer-snow', hala_clean: 'bi-stars'};
     const PERIOD = {month: '', current: 'bieżący miesiąc', backlog: 'zaległe', state: ''};
     const canFinish = () => !!D.can_finish;
     const sel = (k) => CSS.escape(k);
@@ -39,11 +41,14 @@
             {label: 'Przegląd SOP po terminie', value: srcVal('sop', m.sop_review), sub: srcSub('sop', `z ${t.sops_active} obowiązujących procedur`), cls: D.sources.sop.available ? (m.sop_review ? 'warn' : 'ok') : ''},
             {label: 'Odchylenia przy wykonaniu SOP', value: srcVal('sop_run', m.sop_run), sub: srcSub('sop_run', D.sources.sop_haccp.available ? `${t.month_runs_haccp} na etapie HACCP` : 'etapy HACCP : ' + D.sources.sop_haccp.note), cls: D.sources.sop_run.available ? (m.sop_run ? 'warn' : 'ok') : ''},
             {label: 'Temperatura w dostawie', value: srcVal('temp', m.delivery_temp), sub: srcSub('temp', 'zgłoszenia z tabletu kierowcy'), cls: D.sources.temp.available ? (m.delivery_temp ? 'warn' : 'ok') : ''},
+            // [409] Tablet hali : schładzanie poza limitem, dni bez pełnego sprzątania.
+            {label: 'Schładzanie (tablet hali)', value: srcVal('hala_chill', m.hala_chill), sub: srcSub('hala_chill', 'poza limitem temperatury albo czasu'), cls: D.sources.hala_chill.available ? (m.hala_chill ? 'warn' : 'ok') : ''},
+            {label: 'Sprzątanie (tablet hali)', value: srcVal('hala_clean', m.hala_clean), sub: srcSub('hala_clean', 'dni produkcji bez wszystkich stref'), cls: D.sources.hala_clean.available ? (m.hala_clean ? 'warn' : 'ok') : ''},
             {label: 'Do wyjaśnienia', value: String(t.review), sub: t.review ? `${t.resolved} z ${t.review} z decyzją${t.current ? ` · ${t.current} z bieżącego miesiąca` : ''}` : 'brak sygnałów', cls: t.waiting ? 'warn' : 'ok'}];
         const info = D.info.length ? `<div class="tw-cap">Pozostałe zdarzenia HACCP (bez sygnału) : ${D.info.length}</div>`
             + tw.table([{label: 'Data'}, {label: 'Zdarzenie'}, {label: 'Opis'}], D.info.map(i => ({cells: [when(i), what(i), i.text ? esc(i.text) : '—']}))) : '';
         const missing = Object.values(D.sources).filter(s => !s.available);
-        return `<p class="tw-lead">Miesiąc <b>${esc(D.month_label)}</b> i bieżący miesiąc do dziś : zdarzenia HACCP z modułu Kierownik produkcji, procedury SOP po terminie przeglądu, odchylenia przy wykonaniu SOP i problemy z temperaturą zgłoszone przez kierowców. Każdy element z sygnałem trafia do kroku 2.</p>
+        return `<p class="tw-lead">Miesiąc <b>${esc(D.month_label)}</b> i bieżący miesiąc do dziś : zdarzenia HACCP z modułu Kierownik produkcji, procedury SOP po terminie przeglądu, odchylenia przy wykonaniu SOP, problemy z temperaturą zgłoszone przez kierowców, schładzanie poza limitem i niepełne sprzątanie z tabletu hali. Każdy element z sygnałem trafia do kroku 2.</p>
             ${tw.tiles(tiles)}
             ${missing.length ? tw.alert(missing.map(s => `<div><b>${esc(s.from)}</b> : ${esc(s.note)}</div>`).join(''), '', 'bi-info-circle') : ''}
             <div class="tw-cap">Do wyjaśnienia (${D.review.length})</div>
@@ -100,7 +105,7 @@
         const t = D.totals;
         if (D.done) return tw.done('HACCP miesiąca przejrzany · ' + (D.done.at || ''), D.done.summary + ' · zadanie zaliczone');
         const decided = D.review.filter(i => eff(i));
-        const SRC = {haccp_event: 'haccp', sop_review: 'sop', sop_run: 'sop_run', delivery_temp: 'temp'};
+        const SRC = {haccp_event: 'haccp', sop_review: 'sop', sop_run: 'sop_run', delivery_temp: 'temp', hala_chill: 'hala_chill', hala_clean: 'hala_clean'};
         const by = Object.entries(D.kind_labels).map(([k, l]) => ({label: l, value: srcVal(SRC[k], t.by_kind[k]),
             sub: srcSub(SRC[k], k === 'sop_review' ? 'stan na dziś' : `${t.month_by_kind[k]} w miesiącu · ${t.by_kind[k] - t.month_by_kind[k]} poza nim`)}));
         return `<p class="tw-lead">Gotowe : <b>${esc(D.summary)}</b>.</p>

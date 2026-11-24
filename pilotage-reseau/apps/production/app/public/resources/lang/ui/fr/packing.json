@@ -176,5 +176,8 @@
   "check_over_n": "{n} produit(s) avec des cartons en trop",
   "check_hint": "Corrigez les palettes avant le départ (touchez un manque pour compléter).",
   "check_all_ok": "Palettes conformes à la commande.",
-  "check_back": "Retour à la palettisation"
+  "check_back": "Retour à la palettisation",
+  "free_hint": "Dont GRATUIT : {n} cart. — emballer, ne pas scanner",
+  "held_tag": "Lot bloqué — étiquettes {days} ({n} cartons) : ne pas palettiser",
+  "held_confirm": "Les cartons posés ont-ils d’autres jours d’étiquette que le lot bloqué ? OK = oui, enregistrer."
 }

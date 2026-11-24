@@ -91,6 +91,9 @@ final class PageAccess
         'sop' => ['Procedury SOP (tworzenie, zatwierdzanie, wykonania)', 'Produkcja', ['/sop', '/ajax/sop'], false],
         // [405] Asystent « Serwisy i przeglądy maszyn » (Kierownik produkcji, co miesiąc i w każdej chwili) : droit propre (page
         // /maintenance et appels ajax : rejestry urządzeń, przeglądów, zgłoszeń), donné au Kierownik produkcji par la migration 245.
+        // [409] Tablet hali : kroki dnia grup (« Mój dzień ») i strefy sprzątania — Jakość et Kierownik produkcji (migration 249) ; le
+        // préfixe le plus long l'emporte sur « /production ».
+        'hala' => ['Tablet hali : kroki dnia grup i strefy sprzątania (Jakość, Kierownik produkcji)', 'Tablety', ['/production/hala', '/ajax/production/hala'], false],
         'maintenance' => ['Serwisy i przeglądy maszyn (asystent : rejestr urządzeń, przeglądy i pomiary z terminem, zgłoszenia awarii i serwisów, awarie z tabletów)', 'Produkcja', ['/maintenance', '/ajax/maintenance'], false],
         // [403] Asystent « Stany magazynowe na koniec miesiąca » (Kierownik produkcji, co miesiąc) : droit propre (page /stock/month-end —
         // le préfixe le plus long l'emporte sur « /stock » — appels ajax, PDF et CSV), donné au Kierownik produkcji par la migration 243.

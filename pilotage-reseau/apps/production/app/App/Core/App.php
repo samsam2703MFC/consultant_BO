@@ -50,11 +50,12 @@ class App
 
         // Bez zalogowania dostępne są tylko logowanie (GET/POST /), wylogowanie i ekran tabletu
         // produkcji (/kiosk, /kiosk/scan telefonu : sama powłoka, dane wyłącznie przez API z tokenem tabletu
-        // albo kodem QR z tabletu), tablet kierowcy (/driver), tablet biurowy (/office) i tablet pakowania (/tablet/packing) :
+        // albo kodem QR z tabletu), tablet kierowcy (/driver), tablet biurowy (/office), tablet pakowania (/tablet/packing) i tablet
+        // jakości (/tablet/quality, [415]) :
         // dane przez API z tokenem tabletu ;
         // link dostawcy z zapytania ofertowego (/offer/{token}) : formularz cen, token z e-maila ;
         // [300] logowanie kodem QR (/ajax/login-qr, /ajax/login-qr/status) : kod i oczekiwanie tej przeglądarki.
-        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver', '/tablet/packing', '/ajax/login-qr', '/ajax/login-qr/status'], true)
+        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver', '/tablet/packing', '/tablet/quality', '/ajax/login-qr', '/ajax/login-qr/status'], true)
             && !preg_match('#^/offer/[a-f0-9]{48}$#', $uri)
             // [354] Próbka z kodu QR (telefon, często bez sesji ERP) : karta próbki i « odłożona » ; dawne adresy QR → /q/KOD.
             && !preg_match('#^/(q|workshop/traceability/samples/s)/[A-Za-z0-9]{12}$#', $uri)) {
