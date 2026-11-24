@@ -19,7 +19,8 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   faire ses horaires.** Sam : « le plus important est que ça aide le franchisé à faire ses horaires ». Chaque ajout s'y
   mesure : le planogramme, les linéaires (qui est là, quand ; le comptoir ; les secteurs), les temps morts et le budget
   d'heures (17 %, orange, rouge au-dessus de 20 %, noir au-dessus de 22 %) servent à construire et corriger le planning,
-  pas à le commenter. Ce qui n'aide pas à faire les horaires passe après. Les modules ajoutés (assistant, tâches des creux, matrice et shift maker, recopie) sont des options, éteintes par défaut (Mon équipe › Options).
+  pas à le commenter. Ce qui n'aide pas à faire les horaires passe après. La fiche d'une personne (`src/equipe_fiche.php`, 24/11/2026) :
+  identité, contrat et taux modifiables, évaluations par service, ventes des 12 semaines, compétences, primes. Les modules ajoutés (assistant, tâches des creux, matrice et shift maker, recopie) sont des options, éteintes par défaut (Mon équipe › Options).
 - **Vidéos d'instruction** (23/11/2026) : le carré du rail, à côté d'Assistant IA (`public/dashboard/tutos.js`), le registre
   `public/dashboard/videos/videos.json`, le tournage `panel/tools/videos/` (données fictives). Une nouvelle fonction du
   dashboard peut y annoncer sa vidéo (genre `nouveau`) ; un écran filmé qui change se retourne. Détail : `src/LISEZMOI.md`.

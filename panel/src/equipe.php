@@ -146,6 +146,8 @@ function eqpRoute(string $method, string $path): ?array
             return eqpErreur(403, 'option éteinte pour ce magasin : ' . EQP_OPTIONS[$besoin[0]]['nom'] . ' (Mon équipe › Options)', ['motif' => 'option', 'option' => $besoin[0]]);
         }
     }
+    // La fiche d'une personne (24/11/2026, panel/src/equipe_fiche.php) : identité, contrat, taux, évaluations, ventes.
+    if (function_exists('eqfRoute') && ($c = eqfRoute($method, $path)) !== null) { return $c; }
     if ($method === 'GET' && $path === '/dashboard/equipe/carte') { return ep_equipe_carte(); }
     if ($method === 'POST' && $path === '/dashboard/equipe/postes') { return wr_equipe_postes(); }
     if ($method === 'GET' && $path === '/dashboard/equipe/planning') { return ep_equipe_planning(); }

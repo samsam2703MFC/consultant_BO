@@ -179,6 +179,7 @@ require __DIR__ . '/../../../panel/src/offres_newsletter.php';  // Vendre › Of
 require __DIR__ . '/../../../panel/src/boite_mail.php';         // Boîte mail du magasin : IMAP/SMTP de sa boîte OVH, modèles, messages automatiques (15/11/2026)
 require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
 require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe : la carte des responsabilités, le planning et son budget d'heures (23/11/2026)
+require __DIR__ . '/../../../panel/src/equipe_fiche.php';       // Mon équipe › la fiche d'une personne : identité, contrat, taux, évaluations, ventes (24/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
 require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
