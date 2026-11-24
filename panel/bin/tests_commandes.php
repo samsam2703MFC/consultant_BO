@@ -178,6 +178,14 @@ echo "Le panel sans commande\n";
 verifie('404 NO_ORDERS_FOR_PICKUP_DATE : aucune commande, pas une panne', pcoAucuneCommande(404, ['status' => 'error', 'description' => 'NO_ORDERS_FOR_PICKUP_DATE']));
 verifie('un autre 404 : une panne', !pcoAucuneCommande(404, ['description' => 'NOT_FOUND']) && !pcoAucuneCommande(500, ['description' => 'NO_ORDERS']));
 
+echo "Le résumé d'une réponse de TF Buddy\n";
+$R = pcoTfResume(['date' => '2026-11-24', 'depot_address' => 'Rue X 1', 'routes' => [['id' => 7, 'name' => 'Midi', 'start_time' => '11:15', 'weekdays' => [1, 2], 'site_ids' => [3, 4], 'secret' => 'x']],
+    'orders' => [['id' => 1, 'client' => ['phone' => '+32…']], ['id' => 2]], 'sites' => []]);
+verifie('les listes comptées, les champs du premier élément', $R['nombres'] === ['routes' => 1, 'orders' => 2, 'sites' => 0] && $R['champs']['orders'] === ['id', 'client']);
+verifie('une tournée à plat, ses sites comptés, rien d’autre', $R['tournees'][0] === ['id' => 7, 'name' => 'Midi', 'start_time' => '11:15', 'weekdays' => [1, 2], 'sites' => 2], json_encode($R['tournees']));
+verifie('les valeurs simples gardées, jamais une valeur d’une liste', $R['valeurs']['depot_address'] === 'Rue X 1' && !str_contains(json_encode($R), '+32'));
+verifie('l’enveloppe data défaite', pcoTfResume(['data' => ['cutoff_time' => '11:30', 'version' => 3]])['valeurs']['cutoff_time'] === '11:30');
+
 echo "Une tournée lue, les clients pro\n";
 [$t, $e] = pcoTourneeLue(['nom' => ' Midi ', 'depart' => '11:15', 'retour' => '12:40', 'jours' => '5321x3', 'livreur' => 'Nadia']);
 verifie('les jours rangés, sans doublon', $t !== null && $t['jours'] === '1235' && $t['nom'] === 'Midi', json_encode([$t, $e], JSON_UNESCAPED_UNICODE));
