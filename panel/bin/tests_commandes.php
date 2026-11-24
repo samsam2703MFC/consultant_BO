@@ -174,6 +174,10 @@ verifie('les bureaux, le plus gros d’abord', $P['bureaux'][0]['total']['ca'] >
 verifie('la semaine d’avant : 16 au 22/11, deux commandes, 100 €', $P['avant']['du'] === '2026-11-16' && $P['avant']['total'] === ['n' => 2, 'ca' => 100.0], json_encode($P['avant']));
 verifie('la semaine d’avant par canal : webshop 1, bureau 0 (Hainaut au comptoir)', $P['avant']['webshop']['n'] === 1 && $P['avant']['comptoir']['n'] === 1, json_encode($P['avant']));
 
+echo "Le panel sans commande\n";
+verifie('404 NO_ORDERS_FOR_PICKUP_DATE : aucune commande, pas une panne', pcoAucuneCommande(404, ['status' => 'error', 'description' => 'NO_ORDERS_FOR_PICKUP_DATE']));
+verifie('un autre 404 : une panne', !pcoAucuneCommande(404, ['description' => 'NOT_FOUND']) && !pcoAucuneCommande(500, ['description' => 'NO_ORDERS']));
+
 echo "Une tournée lue, les clients pro\n";
 [$t, $e] = pcoTourneeLue(['nom' => ' Midi ', 'depart' => '11:15', 'retour' => '12:40', 'jours' => '5321x3', 'livreur' => 'Nadia']);
 verifie('les jours rangés, sans doublon', $t !== null && $t['jours'] === '1235' && $t['nom'] === 'Midi', json_encode([$t, $e], JSON_UNESCAPED_UNICODE));
