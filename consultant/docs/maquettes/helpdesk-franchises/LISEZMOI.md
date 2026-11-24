@@ -71,4 +71,11 @@ n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode «
     SMSAPI, le compte et ses points, puis le statut de remise (`GET /helpdesk/sms/remise?id=`) — remis, non remis,
     expiré… Un SMS « accepté » par SMSAPI n'est pas encore un SMS reçu.
 
+- **Le 23/11/2026** : une demande rendue « Annulée » ou « Résolue » sort de la liste tout de suite et ne revient plus
+  au rechargement (« quand je recharge la page, elle revient »). Le panel garde bien le statut, mais sa liste peut
+  rendre l'ancien quelques instants. L'écran prend le nouveau statut dès que le panel a dit OK (changement de statut,
+  ou réponse avec statut) ; le cockpit garde le statut posé (`con_hdk_statut`) et le préfère à la liste du panel tant
+  qu'elle ne l'a pas rattrapé, quinze minutes au plus. Au-delà, le journal dit que le panel rend toujours l'ancien
+  statut. Vaut pour la liste du cockpit et pour « Mes demandes » du franchisé.
+
 Banc : `php consultant/bin/tests_helpdesk.php` (SMS, date limite, relances ; SQLite en mémoire, doublures du panel et de SMSAPI).
