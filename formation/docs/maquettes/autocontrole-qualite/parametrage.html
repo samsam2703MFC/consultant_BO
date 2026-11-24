@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grilles d'autocontrôle — paramétrage réseau (maquette)</title>
+<!-- Servir depuis la racine du dépôt (polices dans shared/, icônes dans panel/). Lit grilles.json.
+     Adresse : parametrage.html#categorie=brioche&critere=mie_toucher -->
+<link rel="stylesheet" href="../../../../panel/public/employee/assets/bootstrap-icons/bootstrap-icons.min.css">
+<style>
+@font-face { font-family: 'Gotham'; src: url('../../../../shared/public/assets/ds/fonts/Gotham_Medium.otf') format('opentype'); font-weight: 400; }
+@font-face { font-family: 'Gotham'; src: url('../../../../shared/public/assets/ds/fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700; }
+@font-face { font-family: 'Vank'; src: url('../../../../shared/public/assets/ds/fonts/GC_Vank.ttf') format('truetype'); }
+:root {
+  --c-primary:#8D1D2C; --c-primary-soft:#f4dfe2; --c-bg:#EAE4DC; --c-bg-2:#F4EFE8; --c-ink:#241f1c; --c-muted:#7a7168;
+  --c-line:rgba(36,26,22,.09); --c-line-2:rgba(36,26,22,.16);
+  --ok:#2D7A3E; --ok-s:#e5f1e7; --mi:#C17A2A; --mi-s:#fbefdf; --ma:#B42318; --ma-s:#fde8e6;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Gotham', system-ui, sans-serif; color: var(--c-ink); background: var(--c-bg-2); font-size: 14px; }
+h1, h2 { font-family: 'Vank', 'Gotham', serif; font-weight: 400; margin: 0; letter-spacing: .01em; }
+.top { display: flex; align-items: center; gap: 16px; padding: 12px 28px; background: #fff; border-bottom: 1px solid var(--c-line); }
+.top img { height: 26px; }
+.top .mod { color: var(--c-primary); font-family: 'Vank'; font-size: 1.15rem; border-left: 1px solid var(--c-line-2); padding-left: 14px; }
+.top .fil { color: var(--c-muted); font-size: .85rem; }
+.top .moi { margin-left: auto; font-size: .85rem; color: var(--c-muted); }
+.page { display: grid; grid-template-columns: 270px 1fr; gap: 20px; padding: 20px 28px; }
+.cats { background: #fff; border-radius: 16px; border: 1px solid var(--c-line); padding: 12px; align-self: start; }
+.cats h3, .bloc h3 { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--c-muted); margin: 4px 6px 10px; font-weight: 700; }
+.cat { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 12px; cursor: pointer; }
+.cat b { font-weight: 700; font-size: .95rem; }
+.cat span { font-size: .76rem; color: var(--c-muted); }
+.cat.is-on { background: var(--c-primary-soft); }
+.cat.is-on b { color: var(--c-primary); }
+.cat-add { margin-top: 8px; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed var(--c-line-2); color: var(--c-muted); font-size: .85rem; text-align: center; }
+.main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.head { display: flex; align-items: flex-end; gap: 16px; }
+.head h1 { font-size: 2.1rem; line-height: 1; }
+.head p { margin: 6px 0 0; color: var(--c-muted); }
+.head .act { margin-left: auto; display: flex; gap: 8px; }
+.btn { border: 1.5px solid var(--c-line-2); background: #fff; border-radius: 12px; padding: 10px 16px; font: inherit; font-weight: 700; font-size: .85rem; display: inline-flex; gap: 8px; align-items: center; color: var(--c-ink); }
+.btn.p { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+.bloc { background: #fff; border-radius: 16px; border: 1px solid var(--c-line); padding: 14px 16px; }
+.regles { display: grid; grid-template-columns: 1.1fr 2fr; gap: 14px; }
+.regle { display: flex; gap: 12px; align-items: center; font-size: .9rem; }
+.regle i { font-size: 1.2rem; color: var(--c-primary); }
+.photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ph { display: flex; flex-direction: column; gap: 6px; }
+.ph label { font-size: .8rem; font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.seg { display: flex; border: 1.5px solid var(--c-line-2); border-radius: 10px; overflow: hidden; }
+.seg span { flex: 1; text-align: center; padding: 7px 4px; font-size: .78rem; font-weight: 700; color: var(--c-muted); }
+.seg span + span { border-left: 1px solid var(--c-line-2); }
+.seg span.on { background: var(--c-primary); color: #fff; }
+.cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.col h2 { font-size: 1.35rem; display: flex; align-items: center; gap: 8px; margin: 2px 4px 10px; }
+.col h2 small { font-family: 'Gotham'; font-size: .75rem; color: var(--c-muted); margin-left: auto; }
+.cr { background: #fff; border-radius: 14px; border: 1px solid var(--c-line); padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+.cr.is-on { border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(141,29,44,.12); }
+.cr-h { display: flex; gap: 8px; align-items: center; }
+.cr-h .bi-grip-vertical { color: #c3b8ac; }
+.cr-h b { flex: 1; font-size: .9rem; }
+.ty { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 7px; border-radius: 6px; background: var(--c-bg); color: var(--c-muted); }
+.ops { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.op { font-size: .72rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+.op.ok { background: var(--ok-s); color: var(--ok); }
+.op.mineur { background: var(--mi-s); color: var(--mi); }
+.op.majeur { background: var(--ma-s); color: var(--ma); }
+.op.ok::before { content: '\2713  '; }
+.cr-add { padding: 10px; border-radius: 14px; border: 1.5px dashed var(--c-line-2); color: var(--c-muted); font-size: .82rem; text-align: center; }
+table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--c-muted); padding: 6px 8px; border-bottom: 1px solid var(--c-line-2); }
+td { padding: 8px; border-bottom: 1px solid var(--c-line); vertical-align: top; }
+td.lib { font-weight: 700; white-space: nowrap; }
+.niv { display: inline-block; font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.dec { font-size: .78rem; white-space: nowrap; }
+.ed-h { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ed-h h2 { font-size: 1.4rem; }
+.ed-h .meta { display: flex; gap: 8px; margin-left: auto; font-size: .8rem; color: var(--c-muted); align-items: center; }
+.pill { padding: 4px 10px; border-radius: 999px; background: var(--c-bg); font-weight: 700; font-size: .76rem; color: var(--c-ink); }
+.surch { display: flex; gap: 10px; flex-wrap: wrap; }
+.surch div { border: 1px solid var(--c-line-2); border-radius: 12px; padding: 8px 12px; font-size: .84rem; }
+.surch b { display: block; }
+.surch span { color: var(--c-muted); font-size: .78rem; }
+</style>
+</head>
+<body>
+<header class="top">
+  <img src="../../../../shared/public/assets/img/logo.png" alt="L'Atelier">
+  <span class="mod">Qualité</span>
+  <span class="fil">Fiches techniques › Grilles d'autocontrôle</span>
+  <span class="moi"><i class="bi bi-person-circle"></i> Production centrale</span>
+</header>
+<div class="page">
+  <aside class="cats" id="cats"></aside>
+  <main class="main" id="main"></main>
+</div>
+<script>
+(async function () {
+  const G = await (await fetch('grilles.json')).json();
+  const p = new URLSearchParams(location.hash.slice(1));
+  const cat = G.categories.find(c => c.cle === (p.get('categorie') || 'brioche'));
+  const sel = cat.criteres.find(c => c.cle === (p.get('critere') || 'mie_toucher')) || cat.criteres[0];
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const TYPE = { echelle: 'Échelle', oui_non: 'Oui / non', mesure: 'Mesure' };
+  const NIV = { ok: ['Conforme', 'ok'], mineur: ['À surveiller', 'mineur'], majeur: ['Non conforme', 'majeur'] };
+  const nivPill = n => `<span class="niv op ${n}" style="padding:3px 9px">${NIV[n][0]}</span>`;
+  const PH = { obligatoire: 'Obligatoire', facultative: 'Facultative', non: 'Non' };
+
+  // Les options d'un critère, quel que soit son type, sous une même forme : libellé, niveau, correction.
+  const options = c => {
+    if (c.type === 'echelle') return c.options;
+    if (c.type === 'oui_non') return ['oui', 'non'].map(v => v === c.attendu
+      ? { libelle: v === 'oui' ? 'Oui' : 'Non', niveau: 'ok', cible: true }
+      : Object.assign({ libelle: v === 'oui' ? 'Oui' : 'Non' }, c[v]));
+    const cible = c.minimum !== undefined ? `${c.minimum} ${c.unite} minimum` : `${c.cible - c.tolerance} à ${c.cible + c.tolerance} ${c.unite}`;
+    return [{ libelle: cible, niveau: 'ok', cible: true }, Object.assign({ libelle: 'Hors tolérance' }, c.hors)];
+  };
+
+  document.getElementById('cats').innerHTML = `<h3>Catégories</h3>` + G.categories.map(c => {
+    const n = c.criteres.length;
+    const ph = Object.values(c.photos).filter(v => v === 'obligatoire').length;
+    return `<div class="cat${c === cat ? ' is-on' : ''}"><b>${esc(c.libelle)}</b><span>${n} critères · ${ph} photo${ph > 1 ? 's' : ''} obligatoire${ph > 1 ? 's' : ''}</span></div>`;
+  }).join('') + `<div class="cat-add"><i class="bi bi-plus-lg"></i> Nouvelle catégorie</div>`;
+
+  const col = e => {
+    const cs = cat.criteres.filter(c => c.etape === e.cle);
+    return `<div class="col"><h2><i class="bi ${e.icone}" style="font-size:1.1rem;color:var(--c-primary)"></i>${e.titre}<small>${cs.length} critères</small></h2>
+      ${cs.map(c => `<div class="cr${c === sel ? ' is-on' : ''}"><div class="cr-h"><i class="bi bi-grip-vertical"></i><b>${esc(c.libelle)}</b><span class="ty">${TYPE[c.type]}</span></div>
+        <div class="ops">${options(c).map(o => `<span class="op ${o.niveau}">${esc(o.libelle)}</span>`).join('')}</div></div>`).join('')}
+      <div class="cr-add"><i class="bi bi-plus-lg"></i> Ajouter un critère</div></div>`;
+  };
+
+  const surch = Object.entries(G.produits).filter(([, x]) => x.categorie === cat.cle);
+  document.getElementById('main').innerHTML = `
+    <div class="head"><div><h1>${esc(cat.libelle)}</h1><p>Grille appliquée à tous les produits de la catégorie ; un produit peut en surcharger une valeur.</p></div>
+      <div class="act"><button class="btn"><i class="bi bi-eye"></i> Aperçu tablette</button><button class="btn p"><i class="bi bi-cloud-upload"></i> Publier aux magasins</button></div></div>
+    <div class="regles">
+      <div class="bloc"><h3>Quand contrôler</h3><div class="regle"><i class="bi bi-alarm"></i><div>${esc(cat.quand)}</div></div>
+        <div class="regle" style="margin-top:10px"><i class="bi bi-bell"></i><div>Rappel sur la tablette si la fournée n'est pas contrôlée 45 min après la sortie du four</div></div></div>
+      <div class="bloc"><h3>Photos par étape</h3><div class="photos">${G.etapes.map(e => `<div class="ph"><label><i class="bi ${e.icone}"></i>${e.titre}</label>
+        <div class="seg">${Object.keys(PH).map(k => `<span class="${cat.photos[e.cle] === k ? 'on' : ''}">${PH[k]}</span>`).join('')}</div>
+        <span style="font-size:.74rem;color:var(--c-muted)">${esc((cat.consignes_photo || {})[e.cle] || '—')}</span></div>`).join('')}</div></div>
+    </div>
+    <div class="cols">${G.etapes.map(col).join('')}</div>
+    <div class="bloc"><div class="ed-h"><h2>${esc(sel.libelle)}</h2><span class="ty">${TYPE[sel.type]}</span>
+      <div class="meta">${sel.visuel ? `<span class="pill"><i class="bi bi-image"></i> Visuel : ${sel.visuel === 'teinte' ? 'photo du produit' : 'dessin « ' + sel.visuel + ' »'}</span>` : ''}${sel.aide ? `<span>Aide : ${esc(sel.aide)}</span>` : ''}</div></div>
+      <table><thead><tr><th>Réponse</th><th>Niveau</th><th>Cause probable</th><th>À faire maintenant</th><th>Prochaine fournée</th><th>Le lot</th></tr></thead><tbody>
+      ${options(sel).map(o => `<tr><td class="lib">${o.cible ? '<i class="bi bi-bullseye" style="color:var(--ok)"></i> ' : ''}${esc(o.libelle)}</td><td>${nivPill(o.niveau)}</td>
+        <td>${esc(o.cause || '—')}</td><td>${esc(o.maintenant || '—')}</td><td>${esc(o.prochaine || '—')}</td><td class="dec">${o.decision ? esc(G.decisions[o.decision].split(' (')[0]) : '—'}</td></tr>`).join('')}
+      </tbody></table></div>
+    <div class="bloc"><h3>Surcharges par produit</h3><div class="surch">${surch.map(([id, x]) => `<div><b>${esc(x.nom)}</b>${Object.entries(x.surcharges).map(([k, v]) =>
+      `<span>${esc(cat.criteres.find(c => c.cle === k).libelle)} : ${v.cible} g (${v.cible - v.tolerance} à ${v.cible + v.tolerance} g)</span>`).join('')}</div>`).join('')}
+      <div style="border-style:dashed;color:var(--c-muted)"><i class="bi bi-plus-lg"></i> Surcharger un produit</div></div></div>`;
+  document.documentElement.dataset.pret = '1';
+})();
+</script>
+</body>
+</html>

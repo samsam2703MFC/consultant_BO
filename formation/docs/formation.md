@@ -1526,3 +1526,17 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
 - **À savoir** : l'éditeur du Manuel exige le néerlandais pour publier une nouvelle version ; une FC créée par le
   formulaire du siège démarre avec une étape « À rédiger » à compléter dans l'éditeur (FR et NL).
 - Tests : `php formation/bin/tests_formation_continue.php` (37 points).
+
+## L'autocontrôle qualité par produit, dans l'app Cuisine — maquettes (24/11/2026)
+
+Sam, sur la fiche produit de l'app Cuisine en tablette : « rajouter un bouton autocontrôle qualité (1. cuisson,
+2. structure, 3. organoleptique) avec des photos (oui / non) et des corrections, des boutons à variables (mou, très mou,
+dur, grosseur de la croûte, retombé après cuisson) ; rapide, intuitif et complet ».
+
+- **Maquettes** : `formation/docs/maquettes/autocontrole-qualite/` (neuf captures et une planche, `LISEZMOI.md`). La
+  fiche est la vraie page de l'app (`ThaiZu/TFB-Kitchen`), relevée en local ; l'autocontrôle y est greffé et se clique.
+- **La grille** (`grilles.json`) : une par catégorie, surchargée par produit ; photo obligatoire / facultative / non
+  par étape ; chaque réponse hors cible porte sa cause probable, ce qu'on fait du lot maintenant et le réglage de la
+  prochaine fournée. Critères et corrections d'exemple, à valider par la production.
+- **Rien n'est construit** : le bouton et l'écran iront dans l'app Cuisine, les grilles et les résultats derrière
+  l'API de l'ERP ou dans ce domaine (à décider, voir le LISEZMOI).
