@@ -155,7 +155,7 @@ function planning(du, n) {
   const out = jours.map(j => { const c = caDu(j); return { date: j, objectif: c.objectif, ca: c.ca, caSource: c.caSource, caEnCours: c.caEnCours, lu: true, services: servicesDu(j).map(s => Object.assign({}, s)) }; });
   const r = { shop: 4, du: jours[0], au: jours[n - 1], aujourdhui: AUJ, maintenant: MAINTENANT, jours: out,
     employes: EQUIPE.map(personnePlanning), secteurs: SECTEURS.filter(s => s.id !== 4 || true).map(s => ({ id: s.id, nom: s.nom })),
-    objectif: { source: 'budget', motif: null }, budget: { cible: 17, rouge: 20, noir: 22, source: 'réglage' },
+    objectif: { source: 'budget', motif: null }, budget: { cible: 17, rouge: 20, noir: 22, source: 'réglage' }, etp: { heuresMois: 168, caCible: 13000, caCritique: 10000 },
     durees: { min: 4, max: 8, source: 'départ' }, options: Object.assign({}, S.options),
     taches: S.options.taches ? { liste: TACHES, fixes: FIXES, places: placesEntre(jours[0], jours[n - 1]) } : null, nonLus: [],
     ouvertures: Object.fromEntries(Object.entries(OUVERTURES).map(([k, v]) => [k, v])) };

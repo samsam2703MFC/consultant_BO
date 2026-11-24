@@ -438,6 +438,14 @@ $REGLAGES['equipeDureesService'] = ['min' => 8, 'max' => 4];
 verifie('un réglage incohérent est ignoré', eqpDurees()['source'] === 'départ');
 unset($REGLAGES['equipeDureesService']);
 
+echo "Les ETP et le CA par ETP\n";
+verifie('168 h par mois, cible 13 000 €, critique 10 000 € par défaut', eqpEtp() === ['heuresMois' => 168.0, 'caCible' => 13000.0, 'caCritique' => 10000.0], json_encode(eqpEtp()));
+$REGLAGES['heuresEtpMois'] = 164;
+verifie('le réglage heuresEtpMois', eqpEtp()['heuresMois'] === 164.0);
+$REGLAGES['heuresEtpMois'] = 0;
+verifie('un réglage nul est ignoré', eqpEtp()['heuresMois'] === 168.0);
+unset($REGLAGES['heuresEtpMois']);
+
 echo "Le CA du jour pour les % (comptoir + B2B)\n";
 $auj = date('Y-m-d'); $hier = date('Y-m-d', strtotime('-1 day')); $demain = date('Y-m-d', strtotime('+1 day'));
 verifie('un jour passé : la caisse', eqpCaDuJour(1, $hier, $auj, 2247.5, 1510.68) === [2247.5, 'reel']);

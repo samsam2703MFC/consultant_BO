@@ -119,6 +119,9 @@
 .eqp-bj-r .t{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .eqp-bj-r b{font-weight:700;color:var(--ink);font-size:13px}
 .eqp-bj-r .ou{color:var(--muted)}
+/* La jauge du CA par ETP (24/11/2026) : à l'inverse du budget, plus haut est mieux — rouge à gauche, la cible à droite. */
+.eqp-bj-z.rouge.g{border-radius:6px 0 0 6px}
+.eqp-bj-z.ok.d{border-radius:0 6px 6px 0}
 /* Le planogramme du jour */
 .eqp-pg-defil{overflow-x:auto}
 .eqp-pg{position:relative;padding:0 0 10px;overflow:hidden;min-width:920px}
