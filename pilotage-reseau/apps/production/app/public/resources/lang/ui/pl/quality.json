@@ -54,6 +54,8 @@
   "signal_group_report": "Zgłoszenie {number}",
   "signal_suffix": " — sygnał z tabletu grupy",
   "trace_btn": "Śledzenie partii",
+  "cards_btn": "Karty produktów",
+  "card_btn": "Karta produktu",
   "check_btn": "Sprawdź {product}",
   "check_sub": "Partia {lot} · {group} · start {at}",
   "back": "Wróć",

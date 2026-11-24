@@ -206,6 +206,13 @@ $check($round->round($kp, $at('07:10'))['round'] === ['no' => 1, 'of' => 3] && $
 
 // --- J. Une partie
 $bt = $round->batch(1, $kp);
+// [431] Karta produktu depuis la tablette : l'article et le produit du lot pour ouvrir la fiche (mode tablette).
+$check($bt['item_id'] === 1 && array_key_exists('product_id', $bt), 'batch : item and product of the lot for « Karta produktu »');
+$qjs = (string) file_get_contents(__DIR__ . '/../public/assets/js/workshop/quality.js');
+$ptw = (string) file_get_contents(__DIR__ . '/../App/Views/workshop/products.twig');
+$check(str_contains($qjs, '/workshop/products?tablet=1#/') && str_contains($qjs, 'data-cards') && str_contains($qjs, 'data-card]')
+    && str_contains($ptw, '{{ root }}/tablet/quality') && str_contains($ptw, '#sidebar, #main > header { display: none !important; }'),
+    'tablet : « Karty produktów » (round) and « Karta produktu » (batch) open the ERP product cards in tablet mode, with the way back');
 $check($bt['weight'] === ['pieces' => 3, 'target_g' => 500.0, 'tolerance_pct' => 2.0, 'min_g' => 490.0, 'max_g' => 510.0], 'weight spec: 3 pieces, product card 500 g ± 2 %');
 $lots = array_column($bt['lots'], null, 'name');
 $check($lots['Mąka T65']['state'] === 'ok' && $lots['Mąka T65']['supplier'] === 'Młyn Testowy' && $lots['Drożdże']['state'] === 'missing' && $lots['Woda']['state'] === 'untracked'

@@ -273,10 +273,13 @@
                 <span class="r">${x.hold ? `<span class="badge stop" style="margin-right:8px">${esc(t('st_held'))}</span>` : ''}<span class="badge ${BADGE[x.status]}">${esc(t('st_' + x.status))}</span></span></button>`).join('')
                 : `<p class="empty">${esc(t('no_batches'))}</p>`}</div>
             <div class="actions"><button type="button" class="btn" style="flex:1" data-trace>${icon('qr')}${esc(t('trace_btn'))}</button>
+                <button type="button" class="btn" style="flex:1" data-cards>${icon('list')}${esc(t('cards_btn'))}</button>
                 <button type="button" class="btn btn--primary" style="flex:2" data-check ${next ? '' : 'disabled'}>${esc(next ? t('check_btn', {product: next.product}) : t('all_checked'))} ${icon('next')}</button></div></div>`;
         bindTop();
         el.querySelectorAll('[data-row]').forEach(b => b.addEventListener('click', () => openCheck(Number(b.dataset.row))));
         el.querySelector('[data-trace]').addEventListener('click', () => openTrace());
+        // [431] Karty produktów : l'assistant de l'ERP en mode tablette (connexion ERP par QR si le navigateur n'est pas connecté).
+        el.querySelector('[data-cards]').addEventListener('click', () => { stopCam(); location.href = `${root}/workshop/products?tablet=1#/`; });
         const c = el.querySelector('[data-check]');
         if (next) c.addEventListener('click', () => openCheck(next.id));
     }
@@ -340,7 +343,8 @@
             <span class="r badge ${c.state === 'ok' ? 'ok' : 'stop'}">${c.state === 'ok' ? icon('check') : esc(t('b_missing'))}</span></div>`)].join('');
         const missing = b.missing_lots > 0;
         const sample = sampleRow();
-        el.innerHTML = top(b.product + (b.piece_weight ? ' ' + num(b.piece_weight) + ' g' : ''), t('check_sub', {lot: b.lot_code, group: b.group.name, at: b.started_at}), b.hold ? `<span class="badge stop big">${icon('stop')}${esc(t('st_held'))}</span>` : '', true)
+        const cardBtn = `<button type="button" class="btn" style="height:60px;font-size:19px;margin-left:12px" data-card>${icon('list')}${esc(t('card_btn'))}</button>`;
+        el.innerHTML = top(b.product + (b.piece_weight ? ' ' + num(b.piece_weight) + ' g' : ''), t('check_sub', {lot: b.lot_code, group: b.group.name, at: b.started_at}), (b.hold ? `<span class="badge stop big">${icon('stop')}${esc(t('st_held'))}</span>` : '') + cardBtn, true)
             + `<div class="prog">${prog}</div><div class="body"><div class="two">
             <div class="card panel"><p class="h2">${esc(wTitle)} ${wBadge}</p>
                 <div class="pieces" style="grid-template-columns:repeat(${Math.min(n, 3)},1fr)">${pieces}</div>
@@ -358,6 +362,8 @@
                 <button type="button" class="btn btn--primary grow ${all ? '' : 'off'}" data-save ${all ? '' : 'aria-disabled="true"'}>${esc(t('save'))} ${icon('next')}</button></div>
             </div></div>`;
         bindTop();
+        // [431] Karta produktu du lot : fiche de l'article (étape 1 « Produkt »), sinon création à partir du produit.
+        el.querySelector('[data-card]')?.addEventListener('click', () => { stopCam(); location.href = `${root}/workshop/products?tablet=1#/` + (b.item_id ? `item/${b.item_id}/1` : `product/${b.product_id}`); });
         el.querySelectorAll('[data-piece]').forEach(x => x.addEventListener('click', () => weightPad(Number(x.dataset.piece))));
         el.querySelectorAll('[data-app]').forEach(x => x.addEventListener('click', () => { draft.appearance = x.dataset.app; renderCheck(); }));
         el.querySelector('[data-photo]').addEventListener('change', (e) => takePhoto(e.target.files && e.target.files[0]));

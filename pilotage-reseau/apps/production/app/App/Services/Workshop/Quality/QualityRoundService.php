@@ -226,6 +226,8 @@ final class QualityRoundService
         $last = $this->repo->lastControls([$id])[$id] ?? null;
         return [
             'id' => $id, 'employee' => $me, 'product' => (string) $o['item_name'], 'lot_code' => (string) $o['lot_code'],
+            // [431] Karta produktu sur la tablette (même assistant que l'ERP, en mode tablette).
+            'item_id' => (int) $o['id_item'], 'product_id' => $o['id_final_product'] !== null ? (int) $o['id_final_product'] : null,
             'group' => ['id' => (int) $o['id_group'], 'name' => $fr && trim((string) $o['group_name_fr']) !== '' ? $o['group_name_fr'] : (string) $o['group_name']],
             'work_date' => substr((string) $o['work_date'], 0, 10), 'started_at' => self::hm((string) $o['created_at']),
             'quantity' => (float) $o['quantity'], 'unit' => $o['base_unit'], 'piece_weight' => $o['piece_weight'] !== null && (float) $o['piece_weight'] > 0 ? (float) $o['piece_weight'] : null,

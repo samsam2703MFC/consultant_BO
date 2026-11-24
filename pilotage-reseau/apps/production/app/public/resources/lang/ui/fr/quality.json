@@ -54,6 +54,8 @@
   "signal_group_report": "Signalement {number}",
   "signal_suffix": " — signal de la tablette du groupe",
   "trace_btn": "Suivi des lots",
+  "cards_btn": "Fiches produits",
+  "card_btn": "Fiche produit",
   "check_btn": "Contrôler {product}",
   "check_sub": "Lot {lot} · {group} · début {at}",
   "back": "Retour",
