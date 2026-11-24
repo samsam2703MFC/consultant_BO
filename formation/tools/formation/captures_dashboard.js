@@ -28,7 +28,8 @@ const puce = x => async p => {
 // defile : la page défile dans un panneau intérieur (le cockpit) — la cible est amenée en haut de l'écran, et l'écran capturé.
 const PLANS = [
   { nom: 'dash-entete', vue: 'ops', cibles: ['.db-nav'], top: true },
-  { nom: 'dash-valeur', vue: 'semaine', cibles: ['.db-vpop'], avant: async p => { await p.locator('[data-vdrop]').first().click().catch(e => console.log('clic', e.message)); await p.waitForTimeout(2500); }, top: true },
+  // Les vignettes ne sont plus que sur l'Opérationnel (22/11/2026, commit 1ab9119a) : la Valeur du magasin s'ouvre là.
+  { nom: 'dash-valeur', vue: 'ops', cibles: ['.db-vpop'], avant: async p => { await p.locator('[data-vdrop]').first().click().catch(e => console.log('clic', e.message)); await p.waitForTimeout(2500); }, top: true },
   { nom: 'dash-frise', vue: 'ops', cibles: ['.db-frise'], top: true },
   { nom: 'dash-reseau', vue: 'ops', cibles: ['.db-bench'] },
   { nom: 'dash-objectif', vue: 'ops', cibles: ['.op-duel:not(.b2b)'] },
@@ -36,6 +37,7 @@ const PLANS = [
   { nom: 'dash-duel', vue: 'ops', cibles: ['.db-card.op-bloc >> nth=1'] },
   { nom: 'dash-pl', vue: 'ops', cibles: ['.db-card:has(.db-cascade)'] },
   // L'onglet Frais (16/11/2026) : les frais du mois, « TVA comprise ? » et le taux de chaque poste (ART-PIL-01 partie 28, SOP 5.7).
+  // Les Frais deviennent un onglet de la Trésorerie (22/11/2026, commit 73e483b0) : vue=frais ouvre cet onglet.
   { nom: 'dash-frais', vue: 'frais', cibles: ['.fx-tuiles', '.db-card:has(.fx-t)'], top: true },
   { nom: 'dash-categories', vue: 'ops', cibles: ['.db-card:has(.db-acc)'] },
   { nom: 'dash-journee', vue: 'ops', cibles: ['.db-card.op-bloc:has(.op-jr)'] },
@@ -98,6 +100,15 @@ async function entourer(p, sel) {
   if (BASE.startsWith('http:')) {
     await ctx.route('**/assets/js/garde.js', r => r.fulfill({ contentType: 'application/javascript', body: 'window.ACCES = { connecte: true, role: "siege", nom: "Captures" };' }));
   }
+  // Les vidéos d'instruction (23/11/2026) : l'annonce « Nouveau » s'accroche au carré du rail et couvrirait le haut des blocs.
+  // Pour la capture, chaque vidéo du registre est rangée « plus tard » pour la journée (localStorage de la capture seule).
+  try {
+    const reg = await (await ctx.request.get(new URL('videos/videos.json', BASE).href)).json();
+    const L = Array.isArray(reg) ? reg : (reg.videos || []);
+    const d = new Date(), jour = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const tard = Object.fromEntries(L.map(v => [v.id, jour]));
+    await ctx.addInitScript(t => { try { localStorage.setItem('db.videos.plusTard', t); } catch (e) { /* sans stockage */ } }, JSON.stringify(tard));
+  } catch (e) { console.log('registre des vidéos illisible :', e.message); }
   const pages = {};
   for (const plan of PLANS) {
     if (SEULES.length && !SEULES.includes(plan.nom)) continue;
