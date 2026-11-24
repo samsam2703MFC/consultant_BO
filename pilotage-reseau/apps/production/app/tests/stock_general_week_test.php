@@ -22,7 +22,8 @@ foreach ([
     'CREATE TABLE n_stock_period (id INT PRIMARY KEY, name VARCHAR(80), status VARCHAR(16), date_from DATE, date_to DATE)',
     'CREATE TABLE n_stock_period_item (id_period INT, id_item INT, stock_min DECIMAL(12,3) NULL, stock_max DECIMAL(12,3) NULL)',
     'CREATE TABLE carton_stock (id_carton INT AUTO_INCREMENT PRIMARY KEY, id_product INT, status INT)',
-    'CREATE TABLE customer_order (id INT PRIMARY KEY, status INT, id_wdt INT NULL, is_freebie TINYINT NULL, expected_shipping_date DATETIME NULL)',
+    'CREATE TABLE customer_order (id INT PRIMARY KEY, status INT, id_wdt INT NULL, is_freebie TINYINT NULL, expected_shipping_date DATETIME NULL, id_customer INT NULL, create_order_date DATETIME NULL, order_type VARCHAR(12) NULL, reference VARCHAR(40) NULL)',
+    'CREATE TABLE customer (id INT PRIMARY KEY, company VARCHAR(120) NULL, name VARCHAR(80) NULL, surname VARCHAR(80) NULL)',
     'CREATE TABLE customer_order_product (id INT AUTO_INCREMENT PRIMARY KEY, id_order INT, id_product INT, quantity_carton DECIMAL(10,2))',
     'CREATE TABLE document_wdt (id INT PRIMARY KEY, id_customer INT, established_date DATE, currency VARCHAR(3))',
     'CREATE TABLE document_wdt_product (id INT AUTO_INCREMENT PRIMARY KEY, id_document_wdt INT, id_product INT, name VARCHAR(120), quantity DECIMAL(10,2), price_carton DECIMAL(10,2))',
@@ -37,7 +38,7 @@ $pdo->exec("INSERT INTO n_prod_item VALUES (10, 1, 'product')");
 $pdo->exec("INSERT INTO n_prod_product_settings VALUES (10, 'MTS', 1854, 5544)");
 for ($i = 0; $i < 125; $i++) $pdo->exec('INSERT INTO carton_stock (id_product, status) VALUES (1, ' . ($i < 120 ? 1 : 2) . ')');
 $pdo->exec('INSERT INTO carton_stock (id_product, status) VALUES (1, 3)'); // déjà parti : hors stock
-$pdo->exec("INSERT INTO customer_order VALUES
+$pdo->exec("INSERT INTO customer_order (id, status, id_wdt, is_freebie, expected_shipping_date) VALUES
     (1, 1, NULL, 0, '2026-11-24 00:00:00'), (2, 1, NULL, 1, '2026-11-26 00:00:00'), (3, 1, NULL, 0, '2026-11-20 00:00:00'), (8, 1, NULL, 1, '2026-11-10 00:00:00'),
     (4, 1, NULL, 0, '2026-12-01 00:00:00'), (5, 1, NULL, 0, NULL), (6, 1, 55, 0, '2026-11-24 00:00:00'), (7, 2, NULL, 0, '2026-11-24 00:00:00')");
 $pdo->exec('INSERT INTO customer_order_product (id_order, id_product, quantity_carton) VALUES (1, 1, 80), (2, 1, 2), (3, 1, 5), (8, 1, 3), (4, 1, 40), (5, 1, 3), (6, 1, 99), (7, 1, 99)');
@@ -54,8 +55,22 @@ $check($r['left'] === 43 && $r['state'] === 'low' && $r['min'] === 103, 'left af
 $check($g['totals']['ordered'] === 82 && $g['totals']['ordered_later'] === 43 && $g['totals']['ordered_late'] === 8 && $g['totals']['ordered_late_free'] === 3, 'totals');
 $all = (new StockPalletRepository($pdo))->generalStock(42);
 $check((int) round((float) $all[0]['ordered_week']) === 130 && (int) round((float) $all[0]['ordered_later']) === 3 && (int) round((float) $all[0]['ordered']) === 133, 'repository without week : every dated order counts, undated apart');
+// [430] Fenêtre « Zamówione » : mêmes règles, une ligne par commande.
+$pdo->exec("INSERT INTO customer VALUES (1, 'Sklep A', NULL, NULL)");
+$pdo->exec('UPDATE customer_order SET id_customer = 1');
+$o = (new StockPalletService(new StockPalletRepository($pdo)))->productOrders(1, '2026-11-24');
+$ids = fn(string $k) => array_column($o['groups'][$k], 'order_id');
+$check($o['name'] === 'Baguette Tradition 500 g.' && $o['ppc'] === 18 && $ids('late') === [8, 3] && $ids('week') === [1, 2] && $ids('later') === [4, 5],
+    '[430] orders window : late 10.11 + 20.11, this week 24.11 + 26.11, later 01.12 + no date (WDT / other status excluded)');
+$check($o['totals'] === ['late' => 8.0, 'week' => 82.0, 'later' => 43.0] && $o['groups']['week'][1]['freebie'] === true && $o['groups']['late'][1]['late_days'] === 3
+    && $o['groups']['late'][0]['customer'] === 'Sklep A', 'same totals as the column ; GRATIS flagged ; 3 days before the week');
+$err = null; try { (new StockPalletService(new StockPalletRepository($pdo)))->productOrders(999); } catch (App\Exceptions\CustomException $e) { $err = $e->getCode(); }
+$check($err === 404, 'unknown product : 404');
+$routes = (string) file_get_contents(__DIR__ . '/../App/Core/Routes/Logistics/LogisticsRoutes.php');
+$js = (string) file_get_contents(__DIR__ . '/../public/assets/js/logistics/stock-general.js');
+$check(str_contains($routes, "'/ajax/logistics/stock/orders/{id:\\d+}'") && str_contains($js, '/ajax/logistics/stock/orders/'), 'route (right « stock_pallets » : /ajax/logistics/stock) and screen call');
 $tw = (string) file_get_contents(__DIR__ . '/../App/Views/logistics/stock_pallets.twig');
-$check(str_contains($tw, 'tydzień {{ general.week_label }}') && str_contains($tw, '+ {{ r.ordered_late }} zaległe') && str_contains($tw, '+ {{ r.ordered_later }} później'), 'screen : week in the header, overdue and later under the number');
+$check(str_contains($tw, 'tydzień {{ general.week_label }}') && str_contains($tw, '+ {{ r.ordered_late }} zaległe') && str_contains($tw, '+ {{ r.ordered_later }} później') && str_contains($tw, 'data-gen-orders="{{ r.id }}"'), 'screen : week in the header, overdue and later under the number');
 
 $pdo->exec('DROP DATABASE erp_stock_general_test');
 echo $fail ? "\n{$fail} FAIL\n" : "\nall ok\n";
