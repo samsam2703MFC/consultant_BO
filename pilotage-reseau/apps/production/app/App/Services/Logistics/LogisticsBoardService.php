@@ -92,7 +92,9 @@ final class LogisticsBoardService
                 if ($packed) $pendingLeft[$pid] -= $packed;
                 $rows[] = ['product_id' => $pid, 'name' => $l['product'], 'category' => $l['category'], 'ppc' => (int) $l['ppc'],
                     'ordered' => $ordered, 'on_pallet' => $on, 'scanned' => $scanned[$cid][$pid] ?? 0, 'entered' => $entered[$cid][$pid] ?? 0,
-                    'stock' => $take, 'packed' => $packed, 'ready' => $take + $packed, 'missing' => $rest - $packed, 'to_pack' => $rest];
+                    'stock' => $take, 'packed' => $packed, 'ready' => $take + $packed, 'missing' => $rest - $packed, 'to_pack' => $rest,
+                    // [409] Kartony z zamówień GRATIS (w zamówionych) : tablet pokazuje « pakuj, nie skanuj ».
+                    'free' => (int) round((float) ($l['free_cartons'] ?? 0))];
             }
             $c = $day['by_id'][$cid] ?? null;
             $truck = $vehicleOf[$cid] ?? null;
@@ -298,7 +300,7 @@ final class LogisticsBoardService
             $lines = array_map(fn($l) => ['product_id' => $l['product_id'], 'name' => $l['name'], 'category' => $l['category'], 'ppc' => $l['ppc'],
                 'ordered' => $l['ordered'], 'on_pallet' => $l['on_pallet'], 'scanned' => $l['scanned'], 'entered' => $l['entered'],
                 'left' => max(0, $l['ordered'] - $l['on_pallet']), 'over' => max(0, $l['on_pallet'] - $l['ordered']),
-                'carton_mm' => $data[$l['product_id']]['height_mm'] ?? null], $c['lines']);
+                'carton_mm' => $data[$l['product_id']]['height_mm'] ?? null, 'free' => $l['free']], $c['lines']);
             // Kolejność stała (kategoria, nazwa) — wiersz nie skacze po dodaniu ; gotowe na końcu.
             usort($lines, fn($a, $b) => [$a['left'] === 0, (string) $a['category'], $a['name']] <=> [$b['left'] === 0, (string) $b['category'], $b['name']]);
             $ordered = $this->sum($lines, 'ordered');

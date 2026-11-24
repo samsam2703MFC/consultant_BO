@@ -145,6 +145,15 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/packing', ['api_base' => $this->apiBase()]);
     }
 
+    /**
+     * [415] Tablet jakości Kierownika produkcji (obchód, kontrola partii, śledzenie partii) : sama powłoka, dane przez API z tokenem
+     * tabletu i PIN-em osoby ze stanowiska Kierownik produkcji albo Jakość.
+     */
+    public function quality()
+    {
+        $this->view('workshop/quality', ['api_base' => $this->apiBase()]);
+    }
+
     /** Tablet biurowy (PWA) : dział → nazwisko → osobisty kod QR (osoba + dzień) zatwierdzany telefonem ; sama powłoka. */
     /**
      * Tablet biurowy. [299] Otwarty z sesji ERP (prawo do Tablety albo Czas pracy) : sparowany od razu, bez kodu — także

@@ -230,6 +230,13 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - **Tablette chauffeur** : avant le PIN, liste déroulante des **tournées** du jour (véhicule, transporteur, heure de départ, clients, palettes ; proposée : la dernière choisie ou le QR, sinon le véhicule de la tablette), puis **chauffeur** dans la liste de tout le personnel, les chauffeurs (poste Kierowca) en tête, puis PIN. La tournée choisie devient le véhicule de la journée. API : `GET /driver/tours`.
 - **Tablette de bureau (pointage)** : tout le personnel actif de l'entreprise, y compris les personnes sans service (section « Sans service » en fin de liste).
 
+## Tablet hali « Mój dzień » : asystenci stanowisk produkcji (23/11/2026)
+
+- **Après le PIN**, la tablette du groupe ouvre « Mój dzień » (`assets/js/workshop/hala.js`, `assets/css/hala.css`, API `/kiosk/hala/*`) : kafelki dans l'ordre fixe, seul « Teraz » actif — Co robię dziś (plan du jour de l'équipe, photo de la fiche, grande liczba, compteur « zrobione » = une partie par produit et jour, « Zepsute » : spalone / zły kształt / upadło → `/kiosk/waste`), Skanuj worki (code du sac cherché dans « Partie surowców » : bon → lot de la partie ; autre surowiec ou date dépassée → STOP rouge, rien d'enregistré ; inconnu → surowiec choisi), Schładzanie (thermomètre + minutnik, limites `hala.chill_target_c` / `hala.chill_max_minutes`), Sprzątanie (strefy du groupe), Pakuję (groupe d'emballage : zamówienie po zamówieniu, GRATIS « pakuj, nie skanuj »), Koniec dnia (« Zatwierdź dzień » = validation du jour du groupe, tâche « Dzień grupy »). Les autres écrans restent dans le menu (« Wszystkie ekrany tabletu », onglet « Mój dzień »).
+- **Pomoc** sur chaque écran : wezwanie au brygadzista (un par groupe, motif zły worek / za ciepło). **Zmiana** (postes `hala.shift_lead_positions`) : état des groupes vert / or / rouge, wezwania (« Idę » → « Załatwione »), « Zatwierdź zmianę ».
+- **ERP** : Tablety › « Tablet hali : kroki i strefy » (`/production/hala`, droit `hala` : Jakość, Kierownik produkcji) — étapes de chaque groupe et strefy sprzątania. Schładzanie hors limites et jours sans sprzątanie complet : éléments du « HACCP miesiąca ».
+- Tables `n_hala_*` (migrations 247–249). Test : `php tests/hala_tablet_test.php`.
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).
