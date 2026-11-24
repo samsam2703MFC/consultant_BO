@@ -511,13 +511,23 @@
       return `<div class="carte"><h3>Connexion ERP<small>${esc((d.statut.erp.base || '').replace(/^https?:\/\//, ''))}</small></h3>
         ${d.statut.erp.configure ? '' : '<div class="alerte ko">Le compte API du panel n’est pas configuré (Paramètres → compte consultant) : rien ne peut partir.</div>'}
         <div class="regle"><b>Envoi automatique</b><span class="v"><button class="tog ${e.envoiActif ? 'on' : ''}" data-a="erpActif"></button><span class="mini">${e.envoiActif ? 'chaque lead prêt part tout de suite' : 'éteint : les leads attendent « à envoyer »'}</span></span></div>
+        <div class="regle"><b>Destination</b><span class="v"><select data-c="erp" data-k="cible" style="width:100%">
+          <option value="webshop"${e.cible === 'webshop' ? ' selected' : ''}>Webshop TF Buddy · demande de livraison du bureau (delivery interest)</option>
+          <option value="routes"${e.cible === 'routes' ? ' selected' : ''}>Routes de l’ERP /consultant/leads (à créer côté panel)</option></select></span></div>
+        ${e.cible === 'webshop' ? `
+        <div class="regle"><b>Envoi</b><span class="v"><code>POST</code><input type="text" data-f="erpInt" data-c="erp" data-k="routeInteret" value="${esc(e.routeInteret)}" style="flex:1"><span class="mini">publique, sans compte</span></span></div>
+        <div class="regle"><b>Suivi</b><span class="v"><code>GET</code><input type="text" data-f="erpInts" data-c="erp" data-k="routeInterets" value="${esc(e.routeInterets)}" style="flex:1"><span class="mini">toutes les ${esc(e.relectureMin)} min</span></span></div>
+        <div class="regle"><b>Bureaux</b><span class="v"><code>GET</code><input type="text" data-f="erpBur" data-c="erp" data-k="routeBureaux" value="${esc(e.routeBureaux)}" style="flex:1"><span class="mini">bureau créé</span></span></div>
+        <div class="regle"><b>Lien du SMS</b><span class="v"><input type="text" data-f="erpLienD" data-c="erp" data-k="lienDemandes" value="${esc(e.lienDemandes)}" style="width:100%"></span></div>` : `
         <div class="regle"><b>Envoi</b><span class="v"><code>POST</code><input type="text" data-f="erpEnv" data-c="erp" data-k="routeEnvoi" value="${esc(e.routeEnvoi)}" style="flex:1"></span></div>
         <div class="regle"><b>Statuts</b><span class="v"><code>GET</code><input type="text" data-f="erpSt" data-c="erp" data-k="routeStatuts" value="${esc(e.routeStatuts)}" style="flex:1"><span class="mini">?ids=…, toutes les ${esc(e.relectureMin)} min</span></span></div>
-        <div class="regle"><b>Lien d’un lead</b><span class="v"><input type="text" data-f="erpLien" data-c="erp" data-k="lienLead" value="${esc(e.lienLead)}" style="width:100%"></span></div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn s xs" data-a="erpTest">Tester la route des statuts</button>
+        <div class="regle"><b>Lien d’un lead</b><span class="v"><input type="text" data-f="erpLien" data-c="erp" data-k="lienLead" value="${esc(e.lienLead)}" style="width:100%"></span></div>`}
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn s xs" data-a="erpTest">${e.cible === 'webshop' ? 'Tester la lecture des demandes' : 'Tester la route des statuts'}</button>
           <button class="btn s xs" data-a="erpEssai" ${this.s.busy ? 'disabled' : ''} title="Un lead « TEST » envoyé pour de vrai, puis relu : les réponses brutes de l’API">Envoyer un lead d’essai</button>
           <button class="btn xs" data-a="erpEnregistrer" ${sale && !this.s.busy ? '' : 'disabled'}>Enregistrer</button></div>
-        <div class="mini" style="margin-top:8px">Les deux routes sont à créer côté panel (docs/contrat-api.md, « MétaDonnée ») : l’envoi est idempotent sur <code>meta_lead_id</code>.</div></div>`;
+        <div class="mini" style="margin-top:8px">${e.cible === 'webshop'
+          ? 'Chaque lead part comme une demande de livraison au webshop du magasin (swagger TF Buddy) : code postal, e-mail, entreprise, personnes — idempotent sur le numéro du lead ; le magasin reçoit l’e-mail du webshop. Le nom et le téléphone ne passent pas par cette route : le SMS au gérant les donne. Suivi : nouvelle → vu (reviewing) → contacté → close ; un bureau de la même entreprise au panel = bureau créé.'
+          : 'Les deux routes sont à créer côté panel (docs/contrat-api.md, « MétaDonnée ») : l’envoi est idempotent sur <code>meta_lead_id</code>.'}</div></div>`;
     }
 
     /* --- 3 · suivi des leads ----------------------------------------------------------- */
@@ -718,10 +728,13 @@
         case 'cpEnregistrer': this.act(W('PUT', '/metadonnee/reglages', { cp: s.cpBr }), r => 'Plages enregistrées' + (r.liberes ? ' — ' + r.liberes + ' lead(s) réaffecté(s)' : ''), () => { s.cpBr = null; return this.charger(); }); break;
         case 'erpActif': s.erpBr.envoiActif = !s.erpBr.envoiActif; this.render(); break;
         case 'erpEnregistrer': this.act(W('PUT', '/metadonnee/reglages', { erp: s.erpBr }), 'Connexion ERP enregistrée', () => { s.erpBr = null; return this.charger(); }); break;
-        case 'erpTest': this.act(W('POST', '/metadonnee/erp/test'), r => (r.ok ? '✓ ' : '') + r.message, () => null); break;
+        case 'erpTest': this.act(W('POST', '/metadonnee/erp/test', { shopId: (this.form(s.formSel) || {}).shopId || '' }), r => (r.ok ? '✓ ' : '') + r.message, () => null); break;
         case 'erpEssai': {
           const f = this.form(s.formSel);
-          if (!confirm('Envoyer un lead d’ESSAI à l’ERP' + (f && f.shopId ? ' de ' + this.nomMag(f.shopId) : '') + ' ? Il est marqué « TEST » et restera dans l’ERP : à y supprimer.')) break;
+          const web = (this.d().reglages.erp || {}).cible === 'webshop';
+          if (!confirm(web
+            ? 'Envoyer une demande de livraison d’ESSAI au webshop' + (f && f.shopId ? ' de ' + this.nomMag(f.shopId) : ' du premier magasin ouvert') + ' ? Le magasin reçoit l’e-mail du webshop ; la demande « TEST » restera dans sa liste : à clore au panel.'
+            : 'Envoyer un lead d’ESSAI à l’ERP' + (f && f.shopId ? ' de ' + this.nomMag(f.shopId) : '') + ' ? Il est marqué « TEST » et restera dans l’ERP : à y supprimer.')) break;
           this.act(W('POST', '/metadonnee/erp/essai', { shopId: f ? f.shopId : '' }), r => r.ok ? 'Lead d’essai envoyé et relu' : 'Lead d’essai : voir le détail', r => { s.essai = r; return this.charger(); });
           break;
         }

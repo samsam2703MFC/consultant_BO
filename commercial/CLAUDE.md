@@ -36,8 +36,10 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des domaines, clés, migration
   règle par secteur, commande minimum, plancher, objectif mensuel, coût et ROI ; le taux de départ payé par le franchisé
   avec ses royalties (`/commercial/commissions`) ; la simulation d'un client (`/commercial/simulation`, dans « Ma semaine »).
 - **Le formulaire Meta des bureaux** (`src/commercial_meta.php`) : « Lunch au bureau » créé sur la Page par l'API Graph, avec
-  le jeton de MétaDonnée ; ses fonctions seulement, jamais ses tables. Il se met en inactif (archivé chez Meta) et se
-  réactive d'ici (`POST /commercial/formulaires/{id}/actif`) ; seuls les formulaires « Lunch au bureau » se touchent.
+  le jeton de MétaDonnée ; ses fonctions seulement, jamais ses tables. Ses leads partent (MétaDonnée, cible `webshop`,
+  24/11/2026) comme demandes de livraison au webshop du magasin (`POST /webshop/shops/{shop}/delivery-interest`) ; leur
+  suivi revient par `webshop-delivery-interests` et les bureaux du magasin (`shared/docs/contrat-api.md`, « MétaDonnée »).
+  Il se met en inactif (archivé chez Meta) et se réactive d'ici (`POST /commercial/formulaires/{id}/actif`) ; seuls les formulaires « Lunch au bureau » se touchent.
   La publicité qui va avec : la vidéo (15 s, 9:16 et 4:5, `tools/video-lunch/`, rendue dans `public/commercial/meta/`),
   le texte du post (`smPubLunch`) et l'aperçu du formulaire (`smApercuFormulaire` : accueil, champs, remerciement),
   `GET /commercial/formulaires/pub?langue=`, montrés dans Leads Meta. La version NL est celle de Halle (formulaire

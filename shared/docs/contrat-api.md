@@ -5055,8 +5055,34 @@ lecture du lead en trois jeux de champs, comme `fl_meta_traiter`) — quand l'ap
 webhook va au CRM) : relève des formulaires suivis toutes les 2 min sur un jour. Filet horaire sur 3 jours dans les
 deux cas. Un lead d'un formulaire non suivi n'est pas lu : il est seulement compté.
 
-**À créer côté panel (atelierby.tfbuddy.com/api/v1, compte consultant)** — les routes sont des réglages
-(étape 2 → Connexion ERP) ; défauts :
+**Destination « webshop » (24/11/2026, défaut).** Demande : « relier les formulaires Meta entrants pour les demandes
+du bureau et les poster via l'API ». Le swagger TF Buddy (`test.tfbuddy.com/docs/openapi.json`, tag « Webshop —
+delivery Interest ») décrit la demande de livraison d'un bureau ; la route d'envoi répond en production (sondée le
+24/11/2026 : `DELIVERY_SHOP_NOT_FOUND` pour un magasin sans livraison). Réglage `mdReglages.erp.cible` : `webshop`
+(défaut) ou `routes` (les routes génériques ci-dessous, jamais écrites côté panel). Avec `webshop` :
+
+- **Envoi** — `POST /webshop/shops/{shop}/delivery-interest` (`routeInteret`), route **publique** (`security: []`),
+  appelée sans jeton (`PanelApi::publique`). Corps : les seuls champs du swagger —
+  `{request_key, postalCode, email, company?, city?, headcount?}`. `request_key` = md5 de `metadonnee:{meta_lead_id}`
+  (32 hexadécimaux, idempotent par magasin : un renvoi rend `saved: true` sans second e-mail). Requis côté cockpit :
+  e-mail et code postal (le téléphone ne l'est plus). Réponse : `{saved: true}` ; le magasin reçoit l'e-mail du webshop.
+  404 (`DELIVERY_SHOP_NOT_FOUND` : le magasin ne livre pas) et 429 se rejouent ; 400 et 422 se corrigent.
+  **Ce qui ne passe pas** : nom, téléphone, fonction, besoin, note, source (formulaire, campagne) — la route ne les
+  décrit pas. Le SMS au gérant porte le nom et le téléphone (`{contact} {telephone}`).
+- **Suivi** (toutes les 10 min, compte du cockpit) — `GET /panel/shops/{shop}/webshop-delivery-interests`
+  (`routeInterets`) → `data.items[{id, postal_code, company, email, headcount, management_status, status_updated_at,
+  created_at}]`. La route ne rend pas la clé d'envoi : une demande se rend à son lead par son numéro une fois connu
+  (`erp_id`), sinon par e-mail et code postal, la plus proche de l'envoi (deux jours au plus). `management_status` :
+  `new` → pas vu, `reviewing` → vu, `contacted` → contacté, `closed` → perdu.
+- **Bureau créé** — `GET /panel/shops/{shop}/offices` (`routeBureaux`) : un bureau de la même entreprise (nom du bureau
+  ou de sa société, comparés lettres et chiffres) et du même code postal fait passer le lead à « bureau créé », même si
+  la demande est close. « Bureau connecté » ne se lit pas encore.
+- Les deux lectures exigent un jeton du magasin (« matching shop JWT », swagger) : un refus (403, 404) est dit au
+  journal, magasin par magasin. Lien du SMS : `lienDemandes` (le panel ; `{shop}`, `{erp_id}` permis).
+- L'essai (`POST /metadonnee/erp/essai`) envoie une demande « TEST » au webshop du magasin (e-mail compris) et la relit.
+
+**À créer côté panel (atelierby.tfbuddy.com/api/v1, compte consultant)** — destination `routes` ; les routes sont des
+réglages (étape 2 → Connexion ERP) ; défauts :
 
 `POST /consultant/leads` — idempotent sur `meta_lead_id` (un second envoi rend 409 ou 200 avec le même `id`) ;
 400/422 = refus sur le contenu (le cockpit ne rejoue pas, le consultant corrige) ; 5xx = rejoué (5 min, 10, 20… 6 h).

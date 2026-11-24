@@ -41,8 +41,19 @@ declare(strict_types=1);
  * Secrets : la clé de l'application et le jeton de la Page se saisissent à
  * l'écran (réglages `mdMetaSecret`, `mdMetaJeton`), comme le jeton SMSAPI
  * (`mdSmsJeton`) — aucun n'est jamais renvoyé ; l'ERP passe par le compte API
- * du panel (PanelApi). Les routes de l'ERP sont des réglages : elles restent à
- * écrire côté panel (docs/contrat-api.md, « MétaDonnée »).
+ * du panel (PanelApi). Les routes de l'ERP sont des réglages.
+ *
+ * La destination (réglage `erp.cible`, 24/11/2026 : « relier les formulaires
+ * Meta entrants pour les demandes de bureau et les poster via l'API ») :
+ *  - `webshop` (défaut) — la demande de livraison du webshop TF Buddy, que le
+ *    swagger décrit : `POST /webshop/shops/{shop}/delivery-interest` (publique,
+ *    sans jeton ; `request_key` idempotent par magasin ; le magasin reçoit un
+ *    e-mail), relue par `GET /panel/shops/{shop}/webshop-delivery-interests`
+ *    (`management_status` new, reviewing, contacted, closed) et, pour « bureau
+ *    créé », la liste des bureaux du magasin (`GET /panel/shops/{shop}/offices`).
+ *    La route ne porte ni le nom ni le téléphone : ils partent au gérant par le SMS ;
+ *  - `routes` — les routes génériques `/consultant/leads`, jamais écrites côté
+ *    panel (docs/contrat-api.md, « MétaDonnée »).
  *
  * `MdErp::$transport`, `MdSms::$transport` et `MdMeta::$transport`
  * s'injectent : bin/tests_metadonnee.php vérifie la logique sans réseau.
@@ -73,6 +84,9 @@ const MD_CHAMPS = [
 
 /** Sans eux, l'ERP ne reçoit rien : le franchisé doit pouvoir rappeler un bureau. */
 const MD_REQUIS = ['contact.phone', 'company.name'];
+
+/** Ce que la demande de livraison du webshop exige (`postalCode`, `email` : swagger TF Buddy, 24/11/2026). */
+const MD_REQUIS_WEBSHOP = ['contact.email', 'company.zip'];
 
 /** Les codes de besoin proposés pour `lead.need` (la liste reste libre). */
 const MD_BESOINS = ['daily_lunch' => 'Lunch tous les jours', 'meeting_trays' => 'Plateaux réunion',
@@ -197,8 +211,14 @@ function mdJournal(string $type, string $message, ?int $leadId = null): void
 function mdReglagesDefaut(): array
 {
     return [
-        'erp' => ['envoiActif' => false, 'routeEnvoi' => '/consultant/leads', 'routeStatuts' => '/consultant/leads',
-            'lienLead' => 'https://atelierby.tfbuddy.com/panel/leads/{erp_id}', 'relectureMin' => 10, 'relectureJours' => 30],
+        // cible : « webshop » (la demande de livraison du swagger TF Buddy) ou « routes » (routeEnvoi / routeStatuts).
+        'erp' => ['envoiActif' => false, 'cible' => 'webshop',
+            'routeInteret' => '/webshop/shops/{shop}/delivery-interest', 'routeInterets' => '/panel/shops/{shop}/webshop-delivery-interests',
+            'routeBureaux' => '/panel/shops/{shop}/offices',
+            'routeEnvoi' => '/consultant/leads', 'routeStatuts' => '/consultant/leads',
+            'lienLead' => 'https://atelierby.tfbuddy.com/panel/leads/{erp_id}',
+            // Le lien du SMS quand la cible est le webshop : le panel, où le magasin lit ses demandes de livraison.
+            'lienDemandes' => 'https://atelierby.tfbuddy.com/panel', 'relectureMin' => 10, 'relectureJours' => 30],
         'sms' => ['actif' => false, 'heureDebut' => 8, 'heureFin' => 20, 'relanceH' => 2, 'relancesMax' => 2, 'escaladeH' => 24,
             'from' => 'AtelierBy', 'base' => '',
             // Sans apostrophe typographique ni accent hors GSM : 160 caractères par SMS, pas 70.
@@ -221,7 +241,20 @@ function mdReglages(): array
         if (is_array($s[$k] ?? null)) { $d[$k] = array_merge($d[$k], array_intersect_key($s[$k], $d[$k])); }
     }
     $d['cp'] = mdCpNettoyer($s['cp'] ?? []);
+    if (!in_array($d['erp']['cible'], ['webshop', 'routes'], true)) { $d['erp']['cible'] = 'webshop'; }
     return $d;
+}
+
+/** Les champs sans lesquels rien ne part, selon la destination. */
+function mdRequis(array $reg): array
+{
+    return ($reg['erp']['cible'] ?? 'webshop') === 'webshop' ? MD_REQUIS_WEBSHOP : MD_REQUIS;
+}
+
+/** Une route d'un magasin : `{shop}` remplacé par son numéro au panel. */
+function mdRouteMagasin(string $route, mixed $erpId): string
+{
+    return str_replace('{shop}', rawurlencode((string) $erpId), $route);
 }
 
 /** Les plages de codes postaux : bornes entières, dans l'ordre, rien d'autre. */
@@ -460,7 +493,7 @@ function mdOui(string $v): bool
  *
  * @return array{payload:array, manques:list<string>, avertissements:list<string>, consentement:?bool}
  */
-function mdTransformer(array $reponses, array $mapping, array $valeurs = [], ?int $maintenant = null): array
+function mdTransformer(array $reponses, array $mapping, array $valeurs = [], ?int $maintenant = null, array $requis = MD_REQUIS): array
 {
     $p = ['company' => [], 'contact' => [], 'lead' => []];
     $noteDirecte = []; $notes = []; $avert = [];
@@ -519,7 +552,7 @@ function mdTransformer(array $reponses, array $mapping, array $valeurs = [], ?in
     $note = array_merge($noteDirecte, $notes);
     if ($note) { $p['lead']['note'] = mb_substr(implode("\n", $note), 0, 2000); }
     $manques = [];
-    foreach (MD_REQUIS as $req) {
+    foreach ($requis as $req) {
         [$g, $c] = explode('.', $req, 2);
         if (!isset($p[$g][$c]) || $p[$g][$c] === '') { $manques[] = $req; }
     }
@@ -544,7 +577,7 @@ function mdStatutErp(string $brut): ?string
     if ($s === '') { return null; }
     $table = [
         'nouveau' => ['new', 'nouveau', 'open', 'pending', 'received', 'recu', 'created', 'unread', 'non_lu'],
-        'vu' => ['seen', 'vu', 'viewed', 'read', 'opened', 'lu'],
+        'vu' => ['seen', 'vu', 'viewed', 'read', 'opened', 'lu', 'reviewing', 'in_review', 'review'],
         'contacte' => ['contacted', 'contacte', 'called', 'appele', 'in_progress', 'en_cours', 'quote', 'devis', 'devis_envoye', 'meeting', 'rdv', 'trial', 'essai', 'qualified'],
         'bureau_cree' => ['office_created', 'bureau_cree', 'account_created', 'compte_cree', 'onboarding'],
         'bureau_connecte' => ['office_connected', 'bureau_connecte', 'connected', 'connecte', 'won', 'gagne', 'converted', 'customer', 'client', 'active', 'actif'],
@@ -649,7 +682,8 @@ function mdDuree(int $secondes): string
 function mdSmsTexte(string $modele, array $l, array $reg, int $maintenant): string
 {
     $payload = json_decode((string) ($l['payload_json'] ?? ''), true);
-    $pers = is_array($payload) ? ($payload['lead']['headcount'] ?? null) : null;
+    // La demande du webshop porte `headcount` à la racine ; l'ERP générique sous `lead`.
+    $pers = is_array($payload) ? ($payload['lead']['headcount'] ?? ($payload['headcount'] ?? null)) : null;
     $besoin = is_array($payload) ? (string) ($payload['lead']['need'] ?? '') : '';
     $vars = [
         '{entreprise}' => trim((string) ($l['entreprise'] ?? '')) ?: (trim((string) ($l['contact'] ?? '')) ?: 'un bureau'),
@@ -659,12 +693,25 @@ function mdSmsTexte(string $modele, array $l, array $reg, int $maintenant): stri
         '{telephone}'  => mdTelLisible((string) ($l['telephone'] ?? '')),
         '{besoin}'     => MD_BESOINS[$besoin] ?? $besoin,
         '{magasin}'    => (string) ($l['magasin'] ?? ''),
-        '{lien_erp}'   => str_replace('{erp_id}', rawurlencode((string) ($l['erp_id'] ?? '')), (string) $reg['erp']['lienLead']),
+        '{lien_erp}'   => mdLienErp($l, $reg),
         '{attente}'    => mdDuree($maintenant - (int) strtotime((string) ($l['envoye_le'] ?? date('Y-m-d H:i:s', $maintenant)))),
     ];
     $t = strtr($modele, $vars);
     $t = (string) preg_replace('/ {2,}/', ' ', $t);
     return trim((string) preg_replace('/\s+([.,])/', '$1', $t));
+}
+
+/**
+ * Le lien d'un lead pour le franchisé : dans l'ERP (`lienLead`, `{erp_id}`), ou, la cible étant le webshop, le panel
+ * où le magasin lit ses demandes de livraison (`lienDemandes`, `{shop}` et `{erp_id}` permis).
+ */
+function mdLienErp(array $l, array $reg): string
+{
+    $id = rawurlencode((string) ($l['erp_id'] ?? ''));
+    if (($reg['erp']['cible'] ?? '') === 'webshop') {
+        return str_replace(['{shop}', '{erp_id}'], [rawurlencode((string) ($l['shop_id'] ?? '')), $id], (string) $reg['erp']['lienDemandes']);
+    }
+    return str_replace('{erp_id}', $id, (string) $reg['erp']['lienLead']);
 }
 
 /* --- les accès : ERP, SMS --------------------------------------------------------------- */
@@ -675,7 +722,7 @@ function mdSmsTexte(string $modele, array $l, array $reg, int $maintenant): stri
  */
 final class MdErp
 {
-    /** @var null|callable(string $methode, string $chemin, ?array $corps): array{0:int,1:mixed} */
+    /** @var null|callable(string $methode, string $chemin, ?array $corps, bool $public): array{0:int,1:mixed} */
     public static $transport = null;
 
     public static function configured(): bool
@@ -683,9 +730,19 @@ final class MdErp
         return self::$transport !== null || (class_exists('PanelApi') && PanelApi::configured());
     }
 
-    public static function appel(string $methode, string $chemin, ?array $corps = null): array
+    /** `$public` : une route sans sécurité au swagger (la demande de livraison du webshop), appelée sans jeton ni compte. */
+    public static function appel(string $methode, string $chemin, ?array $corps = null, bool $public = false): array
     {
-        if (self::$transport) { return (self::$transport)($methode, $chemin, $corps); }
+        if (self::$transport) { return (self::$transport)($methode, $chemin, $corps, $public); }
+        if ($public) {
+            if (!class_exists('PanelApi')) { return [0, ['error' => 'client du panel absent']]; }
+            PanelApi::$lastError = null;
+            $r = PanelApi::publique($methode, $chemin, $corps);
+            $res = $r['data'];
+            if ($r['erreur'] === null) { return [(int) $r['code'], $res]; }
+            $msg = is_array($res) ? mdMessage($res) : '';
+            return [(int) $r['code'], ['error' => $msg !== '' ? $msg : (string) $r['erreur']] + (is_array($res) ? $res : [])];
+        }
         if (!class_exists('PanelApi') || !PanelApi::configured()) {
             return [0, ['error' => 'compte API du panel non configuré (Paramètres → compte consultant)']];
         }
@@ -1076,6 +1133,118 @@ function mdPayload(array $l, array $f, array $t, array $mag): array
             'received_at' => date('c', (int) strtotime((string) $l['recu_le']))],
         'company' => $o($t['company']), 'contact' => $o($t['contact']), 'lead' => $o($t['lead']),
     ];
+}
+
+/* --- la demande de livraison du webshop (cible « webshop ») : des fonctions pures ----------- */
+
+/** La clé d'idempotence d'un lead (32 caractères hexadécimaux, `^[a-f0-9]{32}$`) : la même à chaque renvoi. */
+function mdCleDemande(string $metaLeadId): string
+{
+    return md5('metadonnee:' . $metaLeadId);
+}
+
+/**
+ * Le corps de `POST /webshop/shops/{shop}/delivery-interest` : les seuls champs que le swagger décrit (request_key,
+ * postalCode, city, company, headcount, email). Le code postal du lead sert si le mapping n'en donne pas.
+ */
+function mdPayloadInteret(array $l, array $t): array
+{
+    $cp = (string) preg_replace('/\D/', '', (string) ($t['company']['zip'] ?? ($l['cp'] ?? '')));
+    $p = ['request_key' => mdCleDemande((string) $l['meta_lead_id']), 'postalCode' => mb_substr($cp, 0, 20),
+        'email' => mb_substr((string) ($t['contact']['email'] ?? ''), 0, 254)];
+    $societe = trim((string) ($t['company']['name'] ?? ''));
+    if ($societe !== '') { $p['company'] = mb_substr($societe, 0, 200); }
+    $ville = trim((string) ($t['company']['city'] ?? ''));
+    if ($ville !== '') { $p['city'] = mb_substr($ville, 0, 150); }
+    $n = $t['lead']['headcount'] ?? null;
+    if (is_int($n) && $n >= 1 && $n <= 100000) { $p['headcount'] = $n; }
+    return $p;
+}
+
+/** La réponse de l'envoi : `saved: true` (à la racine ou sous `data`). */
+function mdInteretEnregistre(mixed $res): bool
+{
+    return is_array($res) && (($res['saved'] ?? null) === true || (is_array($res['data'] ?? null) && ($res['data']['saved'] ?? null) === true));
+}
+
+/** Une entreprise ramenée à ses lettres et chiffres, pour comparer deux saisies. */
+function mdNomCompare(string $v): string
+{
+    return trim((string) preg_replace('/[^a-z0-9]+/', ' ', mdPlat($v)));
+}
+
+/**
+ * Les demandes relues au webshop, rendues à leurs leads. La route ne rend pas la clé d'envoi : une demande se
+ * reconnaît à son numéro une fois connu (`erp_id`), sinon à son e-mail et à son code postal, la plus proche de
+ * l'envoi (deux jours au plus). Une demande ne va qu'à un lead. Rend [id du lead => demande].
+ */
+function mdApparierInterets(array $leads, array $items): array
+{
+    $out = []; $pris = [];
+    $parId = [];
+    foreach ($items as $i => $x) { if (is_array($x) && isset($x['id'])) { $parId[(string) $x['id']] = $i; } }
+    foreach ($leads as $l) {
+        $e = (string) ($l['erp_id'] ?? '');
+        if ($e !== '' && isset($parId[$e])) { $out[(int) $l['id']] = $items[$parId[$e]]; $pris[$parId[$e]] = true; }
+    }
+    foreach ($leads as $l) {
+        if (isset($out[(int) $l['id']])) { continue; }
+        $mail = mb_strtolower(trim((string) ($l['email'] ?? '')));
+        $cp = (string) preg_replace('/\D/', '', (string) ($l['cp'] ?? ''));
+        if ($mail === '') { continue; }
+        $t = (int) strtotime((string) ($l['envoye_le'] ?? $l['recu_le'] ?? ''));
+        $mieux = null; $ecart = 2 * 86400 + 1;
+        foreach ($items as $i => $x) {
+            if (isset($pris[$i]) || !is_array($x) || mb_strtolower(trim((string) ($x['email'] ?? ''))) !== $mail) { continue; }
+            $xcp = (string) preg_replace('/\D/', '', (string) ($x['postal_code'] ?? ''));
+            if ($cp !== '' && $xcp !== '' && $xcp !== $cp) { continue; }
+            $tx = strtotime((string) ($x['created_at'] ?? ''));
+            $d = $tx === false || $t <= 0 ? 2 * 86400 : abs($tx - $t);
+            if ($d < $ecart) { $ecart = $d; $mieux = $i; }
+        }
+        if ($mieux !== null) { $out[(int) $l['id']] = $items[$mieux]; $pris[$mieux] = true; }
+    }
+    return $out;
+}
+
+/** Les bureaux d'une réponse de `GET /panel/shops/{shop}/offices` (`offices`, à la racine ou sous `data`). */
+function mdBureauxListe(mixed $res): array
+{
+    if (!is_array($res)) { return []; }
+    foreach ([$res['offices'] ?? null, $res['data']['offices'] ?? null] as $l) { if (is_array($l) && array_is_list($l)) { return $l; } }
+    return mdListe($res);
+}
+
+/** Le bureau du magasin créé pour ce lead : même entreprise (nom du bureau ou de sa société), même code postal s'il est connu. */
+function mdBureauPour(array $l, array $bureaux): ?array
+{
+    $nom = mdNomCompare((string) ($l['entreprise'] ?? ''));
+    if (mb_strlen($nom) < 3) { return null; }
+    $cp = (string) preg_replace('/\D/', '', (string) ($l['cp'] ?? ''));
+    foreach ($bureaux as $b) {
+        if (!is_array($b)) { continue; }
+        $bcp = (string) preg_replace('/\D/', '', (string) ($b['primary_postal_code'] ?? ''));
+        if ($cp !== '' && $bcp !== '' && $bcp !== $cp) { continue; }
+        foreach ([(string) ($b['company_name'] ?? ''), (string) ($b['name'] ?? '')] as $n) {
+            if ($n !== '' && mdNomCompare($n) === $nom) { return $b; }
+        }
+    }
+    return null;
+}
+
+/**
+ * Une demande relue, dite comme une ligne de l'ancienne route des statuts (mdAppliquerStatut la lit) : un bureau
+ * créé l'emporte (`office_created`) ; sinon `management_status` (new, reviewing → vu, contacted, closed → perdu),
+ * daté par `status_updated_at`.
+ */
+function mdStatutInteret(array $x, ?array $bureau): array
+{
+    $st = (string) ($x['management_status'] ?? 'new');
+    $le = (string) ($x['status_updated_at'] ?? '');
+    $out = ['id' => $x['id'] ?? null, 'status' => $bureau !== null ? 'office_created' : ($st !== '' ? $st : 'new')];
+    if ($le !== '' && $st === 'reviewing') { $out['seen_at'] = $le; }
+    if ($le !== '' && $st === 'contacted') { $out['contacted_at'] = $le; }
+    return $out;
 }
 
 /** L'identifiant et le statut rendus par l'ERP, où qu'il les range. */
@@ -1662,33 +1831,45 @@ function mdEnvoyer(int $id, bool $main = false): array
     }
     $mags = mdMagasins();
     $mag = $mags[(string) $shop] ?? ['id' => $shop, 'erpId' => $shop, 'nom' => (string) $shop];
-    $t = mdTransformer(mdJson($l['reponses_json']), mdJson($f['mapping_json']), mdJson($f['valeurs_json']), (int) strtotime((string) $l['recu_le']));
+    $webshop = $reg['erp']['cible'] === 'webshop';
+    $t = mdTransformer(mdJson($l['reponses_json']), mdJson($f['mapping_json']), mdJson($f['valeurs_json']), (int) strtotime((string) $l['recu_le']), mdRequis($reg));
+    // Le webshop : la demande de livraison du magasin (swagger TF Buddy), publique ; sinon la route générique de l'ERP.
+    $route = $webshop ? mdRouteMagasin((string) $reg['erp']['routeInteret'], $mag['erpId'] ?? $mag['id']) : (string) $reg['erp']['routeEnvoi'];
     $rejet = null;
     if ($t['consentement'] === false) { $rejet = 'consentement non donné : rien ne part'; }
     elseif ($t['manques']) { $rejet = 'champ requis manquant : ' . implode(', ', array_map(static fn ($c) => MD_CHAMPS[$c][0] ?? $c, $t['manques'])); }
-    $payload = mdPayload($l, $f, $t['payload'], $mag);
+    $payload = $webshop ? mdPayloadInteret($l, $t['payload']) : mdPayload($l, $f, $t['payload'], $mag);
     if ($rejet !== null) {
         Db::exec('UPDATE mar_md_lead SET etat = ?, motif = ?, shop_id = ?, shop_par = ?, payload_json = ? WHERE id = ?',
             ['rejete', $rejet, $shop, $par, json_encode($payload, JSON_UNESCAPED_UNICODE), $id]);
         mdJournal('envoi', 'Lead ' . ($l['entreprise'] ?: '#' . $id) . ' non envoyé — ' . $rejet, $id);
         return ['ok' => false, 'etat' => 'rejete', 'motif' => $rejet];
     }
-    [$code, $res] = MdErp::appel('POST', (string) $reg['erp']['routeEnvoi'], $payload);
+    [$code, $res] = MdErp::appel('POST', $route, $payload, $webshop);
     $essais = (int) $l['essais'] + 1;
-    if (($code >= 200 && $code < 300) || $code === 409) {
-        [$erpId, $statut] = mdErpReponse($res);
+    // Le webshop rend `saved: true` (aussi pour un renvoi de la même clé) ; l'ERP générique un 2xx, ou 409 « déjà présent ».
+    $passe = $webshop ? ($code >= 200 && $code < 300 && mdInteretEnregistre($res)) : (($code >= 200 && $code < 300) || $code === 409);
+    if ($webshop && $code >= 200 && $code < 300 && !$passe) { $res = ['error' => 'réponse sans « saved: true »'] + (is_array($res) ? $res : []); $code = 502; }
+    if ($passe) {
+        // Le numéro de la demande n'est pas rendu par le webshop : la relecture le trouve (mdRelireWebshop).
+        [$erpId, $statut] = $webshop ? [null, 'new'] : mdErpReponse($res);
         $s = $statut !== null ? (mdStatutErp($statut) ?? 'nouveau') : 'nouveau';
         Db::exec('UPDATE mar_md_lead SET etat = ?, motif = NULL, shop_id = ?, shop_par = ?, erp_id = COALESCE(?, erp_id), envoye_le = COALESCE(envoye_le, ?),'
             . ' payload_json = ?, statut_erp = COALESCE(statut_erp, ?), statut_brut = COALESCE(statut_brut, ?), statut_le = COALESCE(statut_le, ?), essais = ?, essai_le = ? WHERE id = ?',
             ['envoye', $shop, $par, $erpId, $maintenant, json_encode($payload, JSON_UNESCAPED_UNICODE), $s, $statut, $maintenant, $essais, $maintenant, $id]);
-        mdJournal('envoi', 'Dans l’ERP de ' . $mag['nom'] . ' — ' . ($l['entreprise'] ?: '#' . $id) . ($erpId ? ' · ' . $erpId : '') . ($code === 409 ? ' (déjà présent)' : ''), $id);
+        mdJournal('envoi', ($webshop ? 'Demande de livraison au webshop de ' : 'Dans l’ERP de ') . $mag['nom'] . ' — ' . ($l['entreprise'] ?: '#' . $id)
+            . ($erpId ? ' · ' . $erpId : '') . ($code === 409 ? ' (déjà présent)' : ''), $id);
         return ['ok' => true, 'etat' => 'envoye', 'erpId' => $erpId];
     }
     $msg = mdMessage($res) ?: ($code ? 'HTTP ' . $code : 'ERP injoignable');
-    // Un refus sur le CONTENU (400, 422) se corrige ; le reste (réseau, 5xx, route absente) se rejoue.
+    // Un refus sur le CONTENU (400, 422) se corrige ; le reste (réseau, 5xx, 429, route absente) se rejoue.
     $definitif = in_array($code, [400, 422], true);
     $etatErr = $definitif ? 'rejete' : 'erreur';
-    $motifErr = ($definitif ? 'refusé par l’ERP' : 'ERP') . ' (' . ($code ?: '—') . ') : ' . $msg . (in_array($code, [404, 405], true) ? ' — route ' . $reg['erp']['routeEnvoi'] . ' à créer côté panel ?' : '');
+    $aide = '';
+    if ($webshop && $code === 404) { $aide = ' — le webshop de ' . $mag['nom'] . ' (n° ' . ($mag['erpId'] ?? $mag['id']) . ') ne prend pas de demande de livraison (à ouvrir au panel)'; }
+    elseif ($webshop && $code === 429) { $aide = ' — trop de demandes d’un coup : rejoué plus tard'; }
+    elseif (!$webshop && in_array($code, [404, 405], true)) { $aide = ' — route ' . $route . ' à créer côté panel ?'; }
+    $motifErr = ($definitif ? 'refusé par ' . ($webshop ? 'le webshop' : 'l’ERP') : ($webshop ? 'webshop' : 'ERP')) . ' (' . ($code ?: '—') . ') : ' . $msg . $aide;
     Db::exec('UPDATE mar_md_lead SET etat = ?, motif = ?, shop_id = ?, shop_par = ?, payload_json = ?, essais = ?, essai_le = ? WHERE id = ?',
         [$etatErr, mb_substr($motifErr, 0, 300), $shop, $par, json_encode($payload, JSON_UNESCAPED_UNICODE), min(255, $essais), $maintenant, $id]);
     mdJournal('erreur', 'Lead ' . ($l['entreprise'] ?: '#' . $id) . ' : ' . $motifErr, $id);
@@ -1776,6 +1957,7 @@ function mdAppliquerStatut(array $l, array $x, string $maintenant): ?string
 /** La relecture des statuts dans l'ERP : les leads envoyés depuis moins de 30 jours, pas encore clos. */
 function mdRelire(array $reg, int $max = 400): array
 {
+    if ($reg['erp']['cible'] === 'webshop') { return mdRelireWebshop($reg, $max); }
     $depuis = date('Y-m-d H:i:s', time() - (int) $reg['erp']['relectureJours'] * 86400);
     $rows = Db::rows("SELECT * FROM mar_md_lead WHERE etat = 'envoye' AND erp_id IS NOT NULL AND envoye_le >= ?"
         . " AND (statut_erp IS NULL OR statut_erp NOT IN ('bureau_connecte','perdu')) ORDER BY envoye_le DESC LIMIT " . (int) $max, [$depuis]);
@@ -1806,6 +1988,52 @@ function mdRelire(array $reg, int $max = 400): array
     mdJournal('relecture', count($rows) . ' lead(s) ouvert(s), ' . $relus . ' relu(s) · '
         . ($changes ? count($changes) . ' changé(s) : ' . implode(', ', array_slice($changes, 0, 4)) : 'rien de changé'));
     return ['ouverts' => count($rows), 'relus' => $relus, 'changes' => count($changes), 'erreur' => $erreur];
+}
+
+/**
+ * La relecture au webshop : par magasin, ses demandes de livraison (`GET /panel/shops/{shop}/webshop-delivery-interests`,
+ * `management_status`) et ses bureaux (`GET /panel/shops/{shop}/offices` : un bureau de la même entreprise = « bureau
+ * créé »). Deux lectures par magasin qui a des leads ouverts. La demande trouvée donne son numéro au lead (`erp_id`).
+ * Les deux routes exigent un jeton du magasin : un refus est dit au journal, magasin par magasin.
+ */
+function mdRelireWebshop(array $reg, int $max = 400): array
+{
+    $depuis = date('Y-m-d H:i:s', time() - (int) $reg['erp']['relectureJours'] * 86400);
+    $rows = Db::rows("SELECT * FROM mar_md_lead WHERE etat = 'envoye' AND envoye_le >= ?"
+        . " AND (statut_erp IS NULL OR statut_erp NOT IN ('bureau_connecte','perdu')) ORDER BY envoye_le DESC LIMIT " . (int) $max, [$depuis]);
+    if (!$rows) { return ['relus' => 0, 'changes' => 0]; }
+    $mags = mdMagasins();
+    $parShop = [];
+    foreach ($rows as $l) { $parShop[(string) $l['shop_id']][] = $l; }
+    $maintenant = date('Y-m-d H:i:s');
+    $relus = 0; $changes = []; $erreurs = [];
+    foreach ($parShop as $shop => $leads) {
+        $mag = $mags[$shop] ?? ['id' => $shop, 'erpId' => $shop, 'nom' => $shop];
+        $route = mdRouteMagasin((string) $reg['erp']['routeInterets'], $mag['erpId'] ?? $shop);
+        [$code, $res] = MdErp::appel('GET', $route);
+        if ($code < 200 || $code >= 300) {
+            $erreurs[] = $mag['nom'] . ' (' . ($code ?: '—') . ') ' . (mdMessage($res) ?: 'injoignable')
+                . (in_array($code, [403, 404], true) ? ' — le compte du cockpit n’a pas accès aux demandes de ce magasin' : '');
+            continue;
+        }
+        [$cb, $rb] = MdErp::appel('GET', mdRouteMagasin((string) $reg['erp']['routeBureaux'], $mag['erpId'] ?? $shop));
+        $bureaux = $cb >= 200 && $cb < 300 ? mdBureauxListe($rb) : [];
+        foreach (mdApparierInterets($leads, mdListe($res)) as $lid => $x) {
+            $l = null;
+            foreach ($leads as $c) { if ((int) $c['id'] === $lid) { $l = $c; break; } }
+            if ($l === null) { continue; }
+            $relus++;
+            if ((string) ($l['erp_id'] ?? '') === '' && isset($x['id'])) {
+                Db::exec('UPDATE mar_md_lead SET erp_id = ? WHERE id = ?', [mb_substr((string) $x['id'], 0, 60), $lid]);
+            }
+            $st = mdAppliquerStatut($l, mdStatutInteret($x, mdBureauPour($l, $bureaux)), $maintenant);
+            if ($st !== null) { $changes[] = ($l['entreprise'] ?: '#' . $l['id']) . ' ' . (MD_STATUTS[$st] ?? $st); }
+        }
+    }
+    if ($erreurs) { mdJournal('erreur', 'Relecture des demandes du webshop : ' . implode(' · ', array_slice($erreurs, 0, 4))); }
+    mdJournal('relecture', count($rows) . ' lead(s) ouvert(s), ' . $relus . ' relu(s) au webshop · '
+        . ($changes ? count($changes) . ' changé(s) : ' . implode(', ', array_slice($changes, 0, 4)) : 'rien de changé'));
+    return ['ouverts' => count($rows), 'relus' => $relus, 'changes' => count($changes), 'erreur' => $erreurs ? implode(' · ', $erreurs) : null];
 }
 
 /** Le SMS dû pour un lead, s'il y en a un — premier ou relance. */
@@ -1865,7 +2093,7 @@ function mdEscalader(array $l, array $mag, array $reg): void
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
     $html = '<p>Le lead <b>' . $e($l['entreprise'] ?: '—') . '</b> (' . $e($l['contact']) . ', ' . $e(mdTelLisible((string) $l['telephone'])) . ', ' . $e($l['cp']) . ')'
         . ' attend depuis <b>' . $e($att) . '</b> dans l’ERP de ' . $e($nomMag) . ' : ' . $e(MD_STATUTS[$l['statut_erp'] ?: 'nouveau'] ?? $l['statut_erp']) . '.</p>'
-        . '<p>Lien ERP : ' . $e(str_replace('{erp_id}', (string) $l['erp_id'], (string) $reg['erp']['lienLead'])) . '</p>';
+        . '<p>Lien ERP : ' . $e(mdLienErp($l, $reg)) . '</p>';
     $ok = class_exists('Smtp') && Smtp::configured() && Smtp::envoyer((string) $mag['escalade_email'], $sujet, $html);
     Db::exec('UPDATE mar_md_lead SET escalade_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $l['id']]);
     mdJournal('escalade', ($ok ? 'E-mail à ' : '⚠ E-mail NON parti (' . (class_exists('Smtp') && Smtp::configured() ? (Smtp::$lastError ?? 'échec') : 'SMTP non configuré') . ') pour ')
@@ -1931,7 +2159,7 @@ function mdLeadVue(array $l, array $reg, int $t, array $mags, array $forms): arr
         'vu' => $l['vu_le'], 'contacte' => $l['contacte_le'], 'connecte' => $l['connecte_le'], 'relu' => $l['relu_le'],
         'sms' => $l['sms_le'], 'smsDerniere' => $l['sms_derniere'], 'smsRelances' => (int) $l['sms_relances'], 'smsErreur' => $l['sms_erreur'], 'escalade' => $l['escalade_le'],
         'retard' => mdRetard($l, $reg, $t),
-        'lien' => $l['erp_id'] ? str_replace('{erp_id}', rawurlencode((string) $l['erp_id']), (string) $reg['erp']['lienLead']) : null,
+        'lien' => $l['erp_id'] || ($reg['erp']['cible'] === 'webshop' && $l['etat'] === 'envoye') ? mdLienErp($l, $reg) : null,
     ];
 }
 
@@ -2016,7 +2244,7 @@ function ep_md(): array
     return [
         'statut' => [
             'meta' => mdMetaStatut(),
-            'erp' => ['configure' => MdErp::configured(), 'base' => class_exists('PanelApi') ? (string) (PanelApi::config()['base'] ?? '') : ''],
+            'erp' => ['configure' => MdErp::configured(), 'cible' => $reg['erp']['cible'], 'base' => class_exists('PanelApi') ? (string) (PanelApi::config()['base'] ?? '') : ''],
             'sms' => ['configure' => MdSms::configured(), 'base' => MdSms::config()['base'], 'jetonSaisi' => (string) setting('mdSmsJeton', '') !== ''],
             'smtp' => class_exists('Smtp') && Smtp::configured(),
             'cron' => ['dernier' => is_array($cycle) && !empty($cycle['dernier']) ? date('Y-m-d H:i:s', (int) $cycle['dernier']) : null,
@@ -2024,7 +2252,7 @@ function ep_md(): array
                 'url' => $base . '/api/cockpit/metadonnee/cron?jeton=…'],
         ],
         'reglages' => $reg,
-        'champs' => array_map(static fn ($k, $v) => ['cle' => $k, 'libelle' => $v[0], 'regle' => $v[1], 'requis' => in_array($k, MD_REQUIS, true)], array_keys(MD_CHAMPS), MD_CHAMPS),
+        'champs' => array_map(static fn ($k, $v) => ['cle' => $k, 'libelle' => $v[0], 'regle' => $v[1], 'requis' => in_array($k, mdRequis($reg), true)], array_keys(MD_CHAMPS), MD_CHAMPS),
         'besoins' => MD_BESOINS, 'statuts' => MD_STATUTS,
         'formulaires' => $formulaires,
         'magasins' => $magasins,
@@ -2173,14 +2401,16 @@ function wr_md_apercu(): array
     if ($l === null) { return ['vide' => true]; }
     $mapping = is_array($b['mapping'] ?? null) ? $b['mapping'] : mdMappingEffectif($f);
     $valeurs = is_array($b['valeurs'] ?? null) ? $b['valeurs'] : mdJson($f['valeurs_json']);
-    $t = mdTransformer(mdJson($l['reponses_json']), $mapping, $valeurs, (int) strtotime((string) $l['recu_le']));
     $reg = mdReglages();
+    $t = mdTransformer(mdJson($l['reponses_json']), $mapping, $valeurs, (int) strtotime((string) $l['recu_le']), mdRequis($reg));
     $shop = trim((string) ($b['shopId'] ?? ($f['shop_id'] ?? '')));
     if (($b['affectation'] ?? $f['affectation']) === 'cp') { $shop = (string) (mdMagasinParCp((string) ($t['payload']['company']['zip'] ?? ''), $reg['cp']) ?? ''); }
     $mags = mdMagasins();
     $mag = $mags[$shop] ?? ['id' => $shop ?: null, 'erpId' => null, 'nom' => ''];
+    $webshop = $reg['erp']['cible'] === 'webshop';
     return ['lead' => ['id' => (int) $l['id'], 'entreprise' => $l['entreprise'], 'recu' => $l['recu_le']],
-        'route' => 'POST ' . $reg['erp']['routeEnvoi'], 'payload' => mdPayload($l, $f, $t['payload'], $mag),
+        'route' => 'POST ' . ($webshop ? mdRouteMagasin((string) $reg['erp']['routeInteret'], $mag['erpId'] ?? '{shop}') : $reg['erp']['routeEnvoi']),
+        'payload' => $webshop ? mdPayloadInteret($l, $t['payload']) : mdPayload($l, $f, $t['payload'], $mag),
         'manques' => array_map(static fn ($c) => MD_CHAMPS[$c][0] ?? $c, $t['manques']), 'avertissements' => $t['avertissements'],
         'consentement' => $t['consentement'], 'magasin' => $mag['nom'] ?: null];
 }
@@ -2257,14 +2487,20 @@ function wr_md_reglages_put(): array
     if (is_array($b['erp'] ?? null)) {
         // Seul ce qui est saisi est gardé : un défaut qui évolue (modèle, route) suit le code.
         $e = is_array($cur['erp'] ?? null) ? $cur['erp'] : [];
-        foreach (['routeEnvoi', 'routeStatuts'] as $k) {
+        if (isset($b['erp']['cible'])) {
+            if (!in_array($b['erp']['cible'], ['webshop', 'routes'], true)) { http_response_code(422); return ['error' => 'destination inconnue : webshop ou routes']; }
+            $e['cible'] = $b['erp']['cible'];
+        }
+        foreach (['routeEnvoi', 'routeStatuts', 'routeInteret', 'routeInterets', 'routeBureaux'] as $k) {
             if (isset($b['erp'][$k])) {
                 $r = '/' . ltrim(trim((string) $b['erp'][$k]), '/');
                 if (!preg_match('#^/[\w\-./{}?=&]*$#', $r)) { http_response_code(422); return ['error' => 'route ERP illisible : ' . $r]; }
                 $e[$k] = $r;
             }
         }
-        if (isset($b['erp']['lienLead'])) { $e['lienLead'] = mb_substr(trim((string) $b['erp']['lienLead']), 0, 300); }
+        foreach (['lienLead', 'lienDemandes'] as $k) {
+            if (isset($b['erp'][$k])) { $e[$k] = mb_substr(trim((string) $b['erp'][$k]), 0, 300); }
+        }
         if (array_key_exists('envoiActif', $b['erp'])) { $e['envoiActif'] = (bool) $b['erp']['envoiActif']; }
         if (isset($b['erp']['relectureMin'])) { $e['relectureMin'] = $int($b['erp']['relectureMin'], 5, 240); }
         if (isset($b['erp']['relectureJours'])) { $e['relectureJours'] = $int($b['erp']['relectureJours'], 1, 90); }
@@ -2404,11 +2640,35 @@ function wr_md_meta_connecter(): array
     catch (Throwable $e) { http_response_code(502); return ['error' => $e->getMessage()]; }
 }
 
-/** POST /metadonnee/erp/test — la route des statuts répond-elle ? (lecture seule) */
+/** Le magasin d'un essai : celui demandé, sinon le premier ouvert. */
+function mdMagasinEssai(string $shopId): array
+{
+    $mags = mdMagasins();
+    if (isset($mags[$shopId])) { return $mags[$shopId]; }
+    foreach ($mags as $m) { if (($m['statut'] ?? '') === 'Ouvert') { return $m; } }
+    return array_values($mags)[0] ?? ['id' => null, 'erpId' => null, 'nom' => ''];
+}
+
+/** La lecture des demandes de livraison d'un magasin répond-elle ? [ok, code, message] (lecture seule). */
+function mdTestWebshop(array $reg, array $mag): array
+{
+    $route = mdRouteMagasin((string) $reg['erp']['routeInterets'], $mag['erpId'] ?? '');
+    [$code, $res] = MdErp::appel('GET', $route);
+    $ok = $code >= 200 && $code < 300;
+    return [$ok, $code, 'GET ' . $route . ' (' . $mag['nom'] . ') ' . ($ok ? 'répond (' . count(mdListe($res)) . ' demande(s))'
+        : '→ ' . ($code ?: 'injoignable') . ' : ' . (mdMessage($res) ?: '—')
+            . (in_array($code, [403, 404], true) ? ' — le compte du cockpit n’a pas accès aux demandes de ce magasin (jeton du magasin exigé)' : ($code === 401 ? ' — connexion refusée : identifiants du compte' : '')))];
+}
+
+/** POST /metadonnee/erp/test {shopId?} — la route des statuts (ou des demandes du webshop) répond-elle ? (lecture seule) */
 function wr_md_erp_test(): array
 {
     mdTables();
     $reg = mdReglages();
+    if ($reg['erp']['cible'] === 'webshop') {
+        [$ok, $code, $message] = mdTestWebshop($reg, mdMagasinEssai((string) (body()['shopId'] ?? '')));
+        return ['ok' => $ok, 'code' => $code, 'message' => $message];
+    }
     $route = (string) $reg['erp']['routeStatuts'];
     [$code, $res] = MdErp::appel('GET', $route . (str_contains($route, '?') ? '&' : '?') . 'ids=');
     $ok = $code >= 200 && $code < 300;
@@ -2476,7 +2736,16 @@ function mdSonde(): array
     $blocs[] = ['nom' => 'Meta', 'etapes' => $m];
 
     $e = [];
-    if (!MdErp::configured()) { $e[] = ['ko', 'Compte API du panel', 'non configuré (Paramètres → compte consultant) : rien ne peut partir']; }
+    if ($reg['erp']['cible'] === 'webshop') {
+        $e[] = [!empty($reg['erp']['envoiActif']) ? 'ok' : 'att', 'Envoi · POST ' . $reg['erp']['routeInteret'],
+            (!empty($reg['erp']['envoiActif']) ? 'automatique' : 'éteint — « Envoyer un lead d’essai » (étape 2) vérifie la route sans l’allumer')
+            . ' · route publique du webshop, sans compte ; le magasin reçoit un e-mail'];
+        if (!MdErp::configured()) { $e[] = ['ko', 'Compte API du panel', 'non configuré (Paramètres → compte consultant) : les demandes partent, leur suivi ne se relit pas']; }
+        else {
+            [$okW, , $msgW] = mdTestWebshop($reg, mdMagasinEssai(''));
+            $e[] = [$okW ? 'ok' : 'ko', 'Suivi des demandes', $msgW];
+        }
+    } elseif (!MdErp::configured()) { $e[] = ['ko', 'Compte API du panel', 'non configuré (Paramètres → compte consultant) : rien ne peut partir']; }
     else {
         $e[] = ['ok', 'Compte API du panel', class_exists('PanelApi') ? (string) PanelApi::config()['base'] : 'transport d’essai'];
         $route = (string) $reg['erp']['routeStatuts'];
@@ -2527,6 +2796,7 @@ function wr_md_erp_essai(): array
     $mags = mdMagasins();
     $mag = $mags[(string) ($b['shopId'] ?? '')] ?? (array_values($mags)[0] ?? ['id' => null, 'erpId' => null, 'nom' => '']);
     $mid = 'TEST-' . date('YmdHis');
+    if ($reg['erp']['cible'] === 'webshop') { return mdEssaiWebshop($reg, mdMagasinEssai((string) ($b['shopId'] ?? '')), $mid); }
     $payload = ['meta_lead_id' => $mid, 'test' => true, 'shop_id' => $mag['erpId'] ?? null,
         'source' => ['channel' => 'meta_leadgen', 'platform' => null, 'form_id' => 'TEST', 'form' => 'Essai MétaDonnée (cockpit)', 'page' => '',
             'campaign' => null, 'ad' => null, 'received_at' => date('c')],
@@ -2548,5 +2818,33 @@ function wr_md_erp_essai(): array
     $out['ok'] = $code >= 200 && $code < 300 && $id !== null && !empty($out['relecture']['trouve']);
     mdJournal($out['ok'] ? 'envoi' : 'erreur', 'Lead d’essai ' . $mid . ' → ERP : ' . ($code ?: 'injoignable') . ($id ? ' · ' . $id : ' · aucun identifiant rendu')
         . (isset($out['relecture']) ? ' · relu ' . ($out['relecture']['trouve'] ? 'oui' : 'NON') : ''));
+    return $out;
+}
+
+/**
+ * L'essai au webshop : une demande de livraison « TEST » envoyée pour de vrai au magasin (il reçoit l'e-mail du
+ * webshop), puis cherchée dans ses demandes (même e-mail, même code postal). Elle y reste : à clore au panel.
+ */
+function mdEssaiWebshop(array $reg, array $mag, string $mid): array
+{
+    $l = ['id' => 0, 'meta_lead_id' => $mid, 'cp' => '1000', 'email' => 'essai@exemple.invalid', 'entreprise' => 'TEST', 'envoye_le' => date('Y-m-d H:i:s')];
+    $payload = mdPayloadInteret($l, ['company' => ['name' => 'TEST — demande d’essai MétaDonnée (à clore)', 'zip' => '1000'],
+        'contact' => ['email' => 'essai@exemple.invalid'], 'lead' => ['headcount' => 1]]);
+    $route = mdRouteMagasin((string) $reg['erp']['routeInteret'], $mag['erpId'] ?? '');
+    [$code, $res] = MdErp::appel('POST', $route, $payload, true);
+    $enr = $code >= 200 && $code < 300 && mdInteretEnregistre($res);
+    $out = ['magasin' => $mag['nom'] ?? null, 'payload' => $payload, 'envoi' => ['route' => 'POST ' . $route, 'code' => $code, 'corps' => $res],
+        'lu' => ['id' => null, 'statut' => $enr ? 'new' : null, 'statutCockpit' => $enr ? 'nouveau' : null]];
+    if ($enr) {
+        $rl = mdRouteMagasin((string) $reg['erp']['routeInterets'], $mag['erpId'] ?? '');
+        [$c2, $r2] = MdErp::appel('GET', $rl);
+        $x = mdApparierInterets([$l], mdListe($r2))[0] ?? null;
+        if ($x !== null) { $out['lu'] = ['id' => isset($x['id']) ? (string) $x['id'] : null, 'statut' => $x['management_status'] ?? null,
+            'statutCockpit' => mdStatutErp((string) ($x['management_status'] ?? '')) ]; }
+        $out['relecture'] = ['route' => 'GET ' . $rl, 'code' => $c2, 'corps' => $x ?? $r2, 'trouve' => $x !== null];
+    }
+    $out['ok'] = $enr && !empty($out['relecture']['trouve']);
+    mdJournal($out['ok'] ? 'envoi' : 'erreur', 'Demande d’essai ' . $mid . ' → webshop de ' . ($mag['nom'] ?? '?') . ' : ' . ($code ?: 'injoignable')
+        . ($enr ? ' · enregistrée' : ' · ' . (mdMessage($res) ?: 'non enregistrée')) . (isset($out['relecture']) ? ' · relue ' . ($out['relecture']['trouve'] ? 'oui' : 'NON') : ''));
     return $out;
 }

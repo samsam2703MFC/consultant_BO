@@ -327,6 +327,26 @@ final class PanelApi
     }
 
     /**
+     * Une route PUBLIQUE du panel (le swagger la donne sans sécurité, `security: []`), appelée SANS jeton : elle ne
+     * dépend pas du compte du cockpit. Première : `POST /webshop/shops/{shop}/delivery-interest`, la demande de
+     * livraison d'un bureau (MétaDonnée, 24/11/2026). Même forme que `requete()` : `['code', 'data', 'erreur']`.
+     */
+    public static function publique(string $methode, string $path, ?array $body = null, int $timeout = 15): array
+    {
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http($methode, $url, $body, null, $timeout);
+        if ($code >= 200 && $code < 300) { return ['code' => $code, 'data' => $res, 'erreur' => null]; }
+        $det = $code === 0 ? (self::$lastError ?? 'API injoignable') : 'HTTP ' . $code;
+        if (is_array($res)) {
+            foreach (['description', 'message', 'detail', 'error'] as $k) {
+                if (!empty($res[$k]) && is_string($res[$k])) { $det .= ' : ' . mb_substr($res[$k], 0, 300); break; }
+            }
+        }
+        self::$lastError = $methode . ' ' . $path . ' → ' . $det;
+        return ['code' => $code, 'data' => $res, 'erreur' => $det];
+    }
+
+    /**
      * Lecture BINAIRE authentifiée (un PDF du panel) : `[code, octets, type]`.
      * Le corps n'est jamais décodé ; un 401 déclenche une reconnexion.
      */

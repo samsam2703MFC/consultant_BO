@@ -211,6 +211,75 @@ foreach (['new' => 'nouveau', 'Seen' => 'vu', 'contacted' => 'contacte', 'Devis 
 }
 verifie('statut inconnu → null', mdStatutErp('???') === null);
 
+// --- 5b. le webshop : la demande de livraison du bureau (swagger TF Buddy, 24/11/2026) ---------------
+echo "Webshop : delivery interest\n";
+$regW = mdReglages();
+verifie('destination par défaut : le webshop', $regW['erp']['cible'] === 'webshop' && $regW['erp']['routeInteret'] === '/webshop/shops/{shop}/delivery-interest'
+    && $regW['erp']['routeInterets'] === '/panel/shops/{shop}/webshop-delivery-interests', json_encode($regW['erp']));
+$REGLAGES['mdReglages'] = ['erp' => ['cible' => 'n_importe_quoi']];
+verifie('destination inconnue en base → le webshop', mdReglages()['erp']['cible'] === 'webshop');
+$REGLAGES['mdReglages'] = ['erp' => ['cible' => 'routes']];
+verifie('destination « routes » gardée', mdReglages()['erp']['cible'] === 'routes');
+unset($REGLAGES['mdReglages']);
+verifie('requis : e-mail et code postal (webshop), téléphone et entreprise (routes)', mdRequis($regW) === ['contact.email', 'company.zip']
+    && mdRequis(['erp' => ['cible' => 'routes']]) === ['contact.phone', 'company.name']);
+verifie('route du magasin', mdRouteMagasin('/webshop/shops/{shop}/delivery-interest', 12) === '/webshop/shops/12/delivery-interest');
+$cle = mdCleDemande('1234567890');
+verifie('clé d’envoi : 32 hexadécimaux, la même à chaque renvoi, propre au lead', preg_match('/^[a-f0-9]{32}$/', $cle) === 1 && $cle === mdCleDemande('1234567890') && $cle !== mdCleDemande('1234567891'));
+$tw = mdTransformer($reps, $sug, $valeurs, $ref, mdRequis($regW));
+$pw = mdPayloadInteret(['meta_lead_id' => '1234567890', 'cp' => '6041'], $tw['payload']);
+verifie('demande : clé, code postal, e-mail, entreprise, personnes — rien d’autre', $pw === ['request_key' => $cle, 'postalCode' => '6041',
+    'email' => 'c.mertens@fiduciaire-delvaux.be', 'company' => 'Fiduciaire Delvaux & associés', 'headcount' => 35], json_encode($pw));
+verifie('rien ne manque pour le webshop', $tw['manques'] === []);
+$sansMail = array_values(array_filter($reps, static fn ($r) => $r['key'] !== 'email'));
+verifie('sans e-mail → manque (le webshop l’exige)', mdTransformer($sansMail, $sug, $valeurs, $ref, mdRequis($regW))['manques'] === ['contact.email']);
+verifie('sans téléphone → part quand même au webshop', mdTransformer($sansTel, $sug, $valeurs, $ref, mdRequis($regW))['manques'] === []);
+$pv = mdPayloadInteret(['meta_lead_id' => '9', 'cp' => '1435'], ['company' => [], 'contact' => ['email' => 'a@b.be'], 'lead' => ['headcount' => 0]]);
+verifie('code postal du lead en repli ; personnes hors bornes et entreprise vide omises', $pv === ['request_key' => mdCleDemande('9'), 'postalCode' => '1435', 'email' => 'a@b.be'], json_encode($pv));
+verifie('enregistrée : saved true (racine ou data), sinon non', mdInteretEnregistre(['saved' => true]) && mdInteretEnregistre(['data' => ['saved' => true]])
+    && !mdInteretEnregistre(['saved' => false]) && !mdInteretEnregistre(['saved' => 'true']) && !mdInteretEnregistre(null));
+$items = ['data' => ['items' => [
+    ['id' => 501, 'id_shop' => 12, 'postal_code' => '6041', 'company' => 'Fiduciaire Delvaux', 'email' => 'C.Mertens@fiduciaire-delvaux.be', 'management_status' => 'contacted', 'status_updated_at' => '2026-11-24 11:00:00', 'created_at' => '2026-11-24 09:01:00'],
+    ['id' => 502, 'id_shop' => 12, 'postal_code' => '6041', 'company' => 'Fiduciaire Delvaux', 'email' => 'c.mertens@fiduciaire-delvaux.be', 'management_status' => 'new', 'created_at' => '2026-11-20 08:00:00'],
+    ['id' => 503, 'id_shop' => 12, 'postal_code' => '6000', 'company' => 'Garage Dupont', 'email' => 'info@dupont.be', 'management_status' => 'closed', 'created_at' => '2026-11-24 09:30:00'],
+    ['id' => 504, 'id_shop' => 12, 'postal_code' => '6001', 'company' => 'Autre', 'email' => 'paul@exemple.be', 'management_status' => 'new', 'created_at' => '2026-11-24 09:05:00'],
+]]];
+$liste = mdListe($items);
+verifie('liste des demandes lue sous data.items', count($liste) === 4);
+$leadsW = [
+    ['id' => 1, 'erp_id' => null, 'email' => 'c.mertens@fiduciaire-delvaux.be', 'cp' => '6041', 'envoye_le' => '2026-11-24 09:00:30'],
+    ['id' => 2, 'erp_id' => null, 'email' => 'c.mertens@fiduciaire-delvaux.be', 'cp' => '6041', 'envoye_le' => '2026-11-20 08:00:10'],
+    ['id' => 3, 'erp_id' => '503', 'email' => 'autre@dupont.be', 'cp' => '6000', 'envoye_le' => '2026-11-24 09:30:00'],
+    ['id' => 4, 'erp_id' => null, 'email' => 'paul@exemple.be', 'cp' => '1000', 'envoye_le' => '2026-11-24 09:05:00'],
+    ['id' => 5, 'erp_id' => null, 'email' => 'jamais@exemple.be', 'cp' => '6041', 'envoye_le' => '2026-11-24 09:00:00'],
+];
+$app = mdApparierInterets($leadsW, $liste);
+verifie('même e-mail deux fois : chaque lead reçoit la demande la plus proche de son envoi', ($app[1]['id'] ?? null) === 501 && ($app[2]['id'] ?? null) === 502, json_encode(array_map(static fn ($x) => $x['id'], $app)));
+verifie('numéro connu : il l’emporte sur l’e-mail', ($app[3]['id'] ?? null) === 503);
+verifie('autre code postal ou e-mail absent : rien', !isset($app[4]) && !isset($app[5]));
+verifie('une demande loin dans le temps (plus de 2 jours) : rien', mdApparierInterets([['id' => 9, 'email' => 'info@dupont.be', 'cp' => '6000', 'envoye_le' => '2026-11-10 09:00:00']], $liste) === []);
+$bureaux = mdBureauxListe(['offices' => [['id' => 77, 'name' => 'Delvaux — 2e étage', 'company_name' => 'FIDUCIAIRE DELVAUX & Associés', 'status' => 'active', 'primary_postal_code' => '6041'],
+    ['id' => 78, 'name' => 'Garage Dupont', 'company_name' => null, 'primary_postal_code' => '6000']]]);
+verifie('bureaux lus sous offices', count($bureaux) === 2 && count(mdBureauxListe(['data' => ['offices' => $bureaux]])) === 2);
+verifie('bureau de la même entreprise (accents, casse, ponctuation)', (mdBureauPour(['entreprise' => 'Fiduciaire Delvaux & associés', 'cp' => '6041'], $bureaux)['id'] ?? null) === 77);
+verifie('même nom, autre code postal : pas ce bureau', mdBureauPour(['entreprise' => 'Garage Dupont', 'cp' => '5000'], $bureaux) === null);
+verifie('entreprise trop courte ou absente : pas de bureau', mdBureauPour(['entreprise' => 'AB', 'cp' => '6041'], $bureaux) === null && mdBureauPour(['cp' => '6041'], $bureaux) === null);
+$s1 = mdStatutInteret($liste[0], null);
+verifie('contacted → contacté, daté par status_updated_at', mdStatutErp($s1['status']) === 'contacte' && ($s1['contacted_at'] ?? '') === '2026-11-24 11:00:00' && $s1['id'] === 501);
+verifie('reviewing → vu', mdStatutErp(mdStatutInteret(['management_status' => 'reviewing'], null)['status']) === 'vu');
+verifie('new → pas vu ; closed → perdu', mdStatutErp(mdStatutInteret(['management_status' => 'new'], null)['status']) === 'nouveau'
+    && mdStatutErp(mdStatutInteret(['management_status' => 'closed'], null)['status']) === 'perdu');
+verifie('un bureau créé l’emporte (même clos)', mdStatutErp(mdStatutInteret(['management_status' => 'closed'], $bureaux[0])['status']) === 'bureau_cree');
+verifie('lien du SMS : le panel (webshop), le lead (routes)', mdLienErp(['erp_id' => '501', 'shop_id' => '12'], $regW) === 'https://atelierby.tfbuddy.com/panel'
+    && mdLienErp(['erp_id' => 'L-1'], ['erp' => ['cible' => 'routes'] + $regW['erp']]) === 'https://atelierby.tfbuddy.com/panel/leads/L-1');
+$vuAppel = null;
+MdErp::$transport = static function (string $m, string $c, ?array $b, bool $public = false) use (&$vuAppel): array { $vuAppel = [$m, $c, $public]; return [200, ['saved' => true]]; };
+[$cw, $rw] = MdErp::appel('POST', '/webshop/shops/12/delivery-interest', $pw, true);
+verifie('l’envoi au webshop part comme route publique', $vuAppel === ['POST', '/webshop/shops/12/delivery-interest', true] && $cw === 200 && mdInteretEnregistre($rw));
+MdErp::appel('GET', '/panel/shops/12/webshop-delivery-interests');
+verifie('la relecture part avec le compte du cockpit', $vuAppel === ['GET', '/panel/shops/12/webshop-delivery-interests', false]);
+MdErp::$transport = null;
+
 // --- 6. le webhook ----------------------------------------------------------------------------------
 echo "Webhook leadgen\n";
 $wh = ['object' => 'page', 'entry' => [['id' => '111', 'changes' => [
@@ -363,8 +432,11 @@ verifie('escalade une seule fois', mdEscaladePlan(['escalade_le' => '2026-10-29 
 verifie('pas d’escalade sans adresse', mdEscaladePlan($env, ['escalade_email' => ''] + $mag, $reg, $t0 + 30 * 3600) === false);
 $lsms = ['entreprise' => 'Fiduciaire Delvaux', 'contact' => 'Claire Mertens', 'telephone' => '+32476123456', 'cp' => '6041', 'erp_id' => 'L-20488',
     'envoye_le' => '2026-10-28 09:00:00', 'payload_json' => json_encode(['lead' => ['headcount' => 35]])];
-$sms = mdSmsTexte($reg['sms']['modele'], $lsms, $reg, $t0);
-verifie('SMS rempli', $sms === "L'Atelier by - Lead bureau : Fiduciaire Delvaux, 35 pers., 6041. Claire Mertens 0476 12 34 56. ERP : https://atelierby.tfbuddy.com/panel/leads/L-20488", $sms);
+$regRoutes = $reg; $regRoutes['erp']['cible'] = 'routes';
+$sms = mdSmsTexte($reg['sms']['modele'], $lsms, $regRoutes, $t0);
+verifie('SMS rempli (routes de l’ERP : le lien du lead)', $sms === "L'Atelier by - Lead bureau : Fiduciaire Delvaux, 35 pers., 6041. Claire Mertens 0476 12 34 56. ERP : https://atelierby.tfbuddy.com/panel/leads/L-20488", $sms);
+$smsW = mdSmsTexte($reg['sms']['modele'], ['erp_id' => null, 'shop_id' => '12', 'payload_json' => json_encode(['request_key' => str_repeat('a', 32), 'headcount' => 18])] + $lsms, $reg, $t0);
+verifie('SMS rempli (webshop : personnes de la demande, lien du panel)', $smsW === "L'Atelier by - Lead bureau : Fiduciaire Delvaux, 18 pers., 6041. Claire Mertens 0476 12 34 56. ERP : https://atelierby.tfbuddy.com/panel", $smsW);
 verifie('le SMS par défaut tient en un SMS (≤ 160)', mb_strlen($sms) <= 160, (string) mb_strlen($sms));
 verifie('relance : l’attente dite', str_contains(mdSmsTexte($reg['sms']['modeleRelance'], $lsms, $reg, $t0 + 2 * 3600), 'attend depuis 3 h'));
 verifie('sans entreprise ni personnes : « un bureau », « ? »', str_contains(mdSmsTexte($reg['sms']['modele'], ['entreprise' => '', 'contact' => '', 'payload_json' => '{}'] + $lsms, $reg, $t0), 'un bureau, ? pers.'));
