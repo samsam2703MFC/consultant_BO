@@ -5,8 +5,8 @@
  * au besoin par produit (ici le poids du Cougnou Nature 400 g).
  *
  * L'écran se choisit dans l'adresse, pour les captures : fiche.html#ecran=cuisson&demo=ecarts
- *   ecran : fiche | cuisson | structure | organoleptique | bilan | fait
- *   demo  : (vide) aucune réponse · ecarts : un contrôle avec quatre écarts · conforme : tout est conforme
+ *   ecran : fiche | cuisson | structure | organoleptique | presentation | bilan | fait
+ *   demo  : (vide) aucune réponse · ecarts : un contrôle avec cinq écarts · conforme : tout est conforme
  *   defiler : clé d'un critère ou d'un bloc à amener en haut de l'écran
  * Sans paramètre, tout se clique : bouton, réponses, photos, « le reste est conforme », bilan, validation.
  */
@@ -21,7 +21,9 @@
   const PID = '1700400';
   const PRODUIT = G.produits[PID];
   const CAT = G.categories.find(c => c.cle === PRODUIT.categorie);
-  const CRITERES = CAT.criteres.map(c => Object.assign({}, c, (PRODUIT.surcharges || {})[c.cle] || {}));
+  // Les critères de la catégorie, puis ceux de tous les produits (photo de référence, planogramme).
+  const CRITERES = CAT.criteres.concat(G.criteres_communs || []).map(c => Object.assign({}, c, (PRODUIT.surcharges || {})[c.cle] || {}));
+  const PLANO = PRODUIT.planogramme;
   const ETAPES = G.etapes;
   const PHOTO = 'contexte/cougnou.jpg';
 
@@ -40,6 +42,7 @@
         coloration_dessus: 'dore', coloration_dessous: 'dore', dorure: 'irreguliere', cuisson_coeur: 'cuit', sonne_creux: 'oui',
         volume: 'juste', retombe: 'oui', mie_toucher: 'mou', croute: 'fine', forme: 'reguliere', poids: '412',
         odeur: 'brioche', gout: 'conforme', mie_bouche: 'pateuse', vendeur: 'oui',
+        ressemblance: 'proche', planogramme: 'oui',
       },
       photos: { cuisson: true, structure: true },
     },
@@ -161,6 +164,7 @@
   function visuel(c, o) {
     if (c.visuel === 'teinte') return `<span class="aq-vis"><img src="${PHOTO}" alt="" style="filter:${TEINTE[o.teinte]}"></span>`;
     if (DESSIN[c.visuel] && c.visuel !== 'retombe') return `<span class="aq-vis">${DESSIN[c.visuel](o)}</span>`;
+    if (o.icone) return `<i class="bi ${o.icone}"></i>`;
     return '';
   }
 
@@ -205,7 +209,7 @@
   /* ── L'écran d'autocontrôle ────────────────────────────────────────────── */
   function rendreOverlay() {
     let ov = document.querySelector('.aq-ov');
-    if (!['cuisson', 'structure', 'organoleptique', 'bilan'].includes(S.ecran)) { if (ov) ov.remove(); return; }
+    if (!ETAPES.some(e => e.cle === S.ecran) && S.ecran !== 'bilan') { if (ov) ov.remove(); return; }
     const garde = ov ? ov.querySelector('.aq-body').scrollTop : 0;
     if (!ov) { ov = document.createElement('div'); ov.className = 'aq-ov'; ov.setAttribute('role', 'dialog'); document.body.append(ov); }
     const f = FOURNEES[S.fournee];
@@ -238,7 +242,7 @@
   function corpsEtape(e) {
     const photo = CAT.photos[e.cle];
     let h = '';
-    if (photo !== 'non') {
+    if (photo !== 'non' && e.cle !== 'presentation') {
       const fait = S.photos[e.cle];
       const ref = e.cle === 'cuisson' ? `<img src="${PHOTO}" alt="">` : coupe(7);
       const moi = e.cle === 'cuisson'
@@ -287,6 +291,7 @@
           <div class="aq-mes-leg"><span>${min}</span><span>${c.cible - c.tolerance}</span><span>${c.cible}</span><span>${c.cible + c.tolerance}</span><span>${max} ${c.unite}</span></div>
           <div class="aq-mes-st">${!v ? 'Peser une pièce (facultatif)' : niv === 'ok' ? '<i class="bi bi-check-circle-fill"></i> Dans la tolérance' : 'Hors tolérance'}</div></div></div>`;
     }
+    const avant = c.visuel === 'comparaison' ? comparaison() : c.visuel === 'planogramme' ? planogramme() : '';
     const corr = ev && niv !== 'ok' ? `<div class="aq-corr lvl-${niv}">
         <div class="aq-corr-t"><i class="bi bi-tools"></i> ${niv === 'majeur' ? 'Non conforme' : 'À surveiller'} — correction</div>
         <dl><dt>Cause probable</dt><dd>${esc(ev.cause)}</dd><dt>Maintenant</dt><dd>${esc(ev.maintenant)}</dd><dt>Prochaine fournée</dt><dd>${esc(ev.prochaine)}</dd></dl>
@@ -295,7 +300,34 @@
     return `<section class="aq-crit${niv ? ' lvl-' + niv : ''}${todo ? ' is-todo' : ''}" id="aq-${c.cle}">
       <div class="aq-crit-h"><span class="aq-num">${niv === 'ok' ? '<i class="bi bi-check-lg"></i>' : num}</span><h3>${esc(c.libelle)}${c.facultatif ? ' <small style="font-weight:500;color:var(--c-muted)">· facultatif</small>' : ''}</h3>
         <span class="aq-cible"><i class="bi bi-bullseye"></i> Attendu : ${esc(ciblTxt)}</span></div>
-      ${c.aide ? `<p class="aq-aide">${esc(c.aide)}</p>` : ''}${opts}${corr}</section>`;
+      ${c.aide ? `<p class="aq-aide">${esc(c.aide)}</p>` : ''}${avant}${opts}${corr}</section>`;
+  }
+
+  // La photo de la fiche à côté de celle prise à l'étape Cuisson, en grand : on compare d'un coup d'œil.
+  function comparaison() {
+    const moi = S.photos.cuisson
+      ? `<img src="${PHOTO}" alt="" style="transform:rotate(-9deg) scale(1.18);filter:brightness(1.04) saturate(1.06)"><figcaption>Votre produit · 07:58</figcaption>`
+      : `<button type="button" class="aq-shot" data-aq-photo="cuisson"><i class="bi bi-camera"></i><span>Prendre la photo</span></button><figcaption>Votre produit</figcaption>`;
+    return `<div class="aq-comp"><figure><img src="${PHOTO}" alt=""><figcaption>Référence · fiche produit</figcaption></figure><figure>${moi}</figure></div>`;
+  }
+  // L'emplacement du produit au planogramme du magasin : le module vu de face, sa case en bordeaux.
+  function planogramme() {
+    if (!PLANO) return '';
+    const v = PLANO.voisins || {};
+    const pieces = n => Array.from({ length: n }, (_, i) => `<ellipse cx="${18 + i * 13.5}" cy="132" rx="6.5" ry="4.6" fill="${OR}" stroke="${BRUN}" stroke-width="1"/>`).join('');
+    const caseP = (x, y, w, h, nom, moi) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${moi ? '#f4dfe2' : '#fbf8f4'}" stroke="${moi ? '#8D1D2C' : '#d8cec3'}" stroke-width="${moi ? 2.5 : 1}"/>`
+      + `<text x="${x + w / 2}" y="${y + 16}" text-anchor="middle" font-size="9" font-weight="${moi ? 700 : 400}" fill="${moi ? '#8D1D2C' : '#7a7168'}" font-family="Gotham, sans-serif">${esc(nom)}</text>`;
+    const plan = svg(`<rect x="1" y="1" width="198" height="148" rx="8" fill="#efe8df" stroke="#cfc5bb"/>`
+      + caseP(6, 6, 188, 40, v.e3 || '') + caseP(6, 52, 188, 40, v.e2 || '')
+      + caseP(6, 98, 94, 46, PRODUIT.nom.replace(/ - 400 g\.?/, ''), true) + caseP(104, 98, 90, 46, v.e1b || '')
+      + pieces(Math.min(PLANO.facade, 6)), '0 0 200 150');
+    const fait = S.photos.presentation;
+    const photo = CAT.photos.presentation;
+    return `<div class="aq-plano"><div class="aq-plano-svg">${plan}</div>
+      <div class="aq-plano-txt"><small>Planogramme du magasin</small><strong>${esc(PLANO.zone)}</strong><span>${esc(PLANO.libelle)}</span>
+        <span class="aq-req is-fac"><i class="bi bi-grid-3x3-gap"></i> ${PLANO.facade} pièces en façade</span>
+        <span class="aq-lien"><i class="bi bi-map"></i> Voir le plan du magasin</span></div>
+      <button type="button" class="aq-shot${fait ? ' is-done' : ''}" data-aq-photo="presentation">${fait ? '' : `<i class="bi bi-camera"></i><span>Photo de la vitrine</span><em class="aq-shot-sous">${photo === 'obligatoire' ? 'obligatoire' : 'facultative'}</em>`}</button></div>`;
   }
 
   function corpsBilan() {
@@ -335,7 +367,7 @@
     if (S.ecran === 'bilan') {
       const r = bilan();
       const ok = CRITERES.filter(c => !c.facultatif).every(c => S.rep[c.cle] !== undefined);
-      return `<button type="button" class="aq-btn" data-aq-aller="organoleptique"><i class="bi bi-arrow-left"></i> Modifier</button>
+      return `<button type="button" class="aq-btn" data-aq-aller="${ETAPES[ETAPES.length - 1].cle}"><i class="bi bi-arrow-left"></i> Modifier</button>
         <button type="button" class="aq-btn aq-btn-p" data-aq="valider"${ok ? '' : ' disabled'}><i class="bi bi-check2-circle"></i> Valider l'autocontrôle <small>· ${r.ecarts.length ? r.ecarts.length + ' écart' + (r.ecarts.length > 1 ? 's' : '') : 'aucun écart'}</small></button>`;
     }
     const e = ETAPES.find(x => x.cle === S.ecran);

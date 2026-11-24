@@ -1533,10 +1533,14 @@ Sam, sur la fiche produit de l'app Cuisine en tablette : « rajouter un bouton a
 2. structure, 3. organoleptique) avec des photos (oui / non) et des corrections, des boutons à variables (mou, très mou,
 dur, grosseur de la croûte, retombé après cuisson) ; rapide, intuitif et complet ».
 
-- **Maquettes** : `formation/docs/maquettes/autocontrole-qualite/` (neuf captures et une planche, `LISEZMOI.md`). La
+- **Maquettes** : `formation/docs/maquettes/autocontrole-qualite/` (dix captures et une planche, `LISEZMOI.md`). La
   fiche est la vraie page de l'app (`ThaiZu/TFB-Kitchen`), relevée en local ; l'autocontrôle y est greffé et se clique.
 - **La grille** (`grilles.json`) : une par catégorie, surchargée par produit ; photo obligatoire / facultative / non
   par étape ; chaque réponse hors cible porte sa cause probable, ce qu'on fait du lot maintenant et le réglage de la
   prochaine fournée. Critères et corrections d'exemple, à valider par la production.
+- **4e étape « Présentation »** (même jour, Sam : « est-ce que le produit est semblable à la photo de référence ou au
+  planogramme ») : deux critères communs à tous les produits, la photo de la fiche à côté de celle du produit, et la
+  case du produit sur le module du planogramme standard du cockpit (`GET /planogramme`), que l'app Cuisine ne lit pas
+  encore.
 - **Rien n'est construit** : le bouton et l'écran iront dans l'app Cuisine, les grilles et les résultats derrière
   l'API de l'ERP ou dans ce domaine (à décider, voir le LISEZMOI).

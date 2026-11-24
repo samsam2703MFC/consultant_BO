@@ -41,17 +41,18 @@ h1, h2 { font-family: 'Vank', 'Gotham', serif; font-weight: 400; margin: 0; lett
 .btn { border: 1.5px solid var(--c-line-2); background: #fff; border-radius: 12px; padding: 10px 16px; font: inherit; font-weight: 700; font-size: .85rem; display: inline-flex; gap: 8px; align-items: center; color: var(--c-ink); }
 .btn.p { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
 .bloc { background: #fff; border-radius: 16px; border: 1px solid var(--c-line); padding: 14px 16px; }
-.regles { display: grid; grid-template-columns: 1.1fr 2fr; gap: 14px; }
+.regles { display: grid; grid-template-columns: 1fr 2.3fr; gap: 14px; }
 .regle { display: flex; gap: 12px; align-items: center; font-size: .9rem; }
 .regle i { font-size: 1.2rem; color: var(--c-primary); }
-.photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .ph { display: flex; flex-direction: column; gap: 6px; }
 .ph label { font-size: .8rem; font-weight: 700; display: flex; gap: 6px; align-items: center; }
 .seg { display: flex; border: 1.5px solid var(--c-line-2); border-radius: 10px; overflow: hidden; }
 .seg span { flex: 1; text-align: center; padding: 7px 4px; font-size: .78rem; font-weight: 700; color: var(--c-muted); }
 .seg span + span { border-left: 1px solid var(--c-line-2); }
 .seg span.on { background: var(--c-primary); color: #fff; }
-.cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.commun { font-size: .66rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: #e7eef4; color: #1F4F6B; margin: 6px 0 0 22px; display: inline-block; }
 .col h2 { font-size: 1.35rem; display: flex; align-items: center; gap: 8px; margin: 2px 4px 10px; }
 .col h2 small { font-family: 'Gotham'; font-size: .75rem; color: var(--c-muted); margin-left: auto; }
 .cr { background: #fff; border-radius: 14px; border: 1px solid var(--c-line); padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
@@ -99,7 +100,10 @@ td.lib { font-weight: 700; white-space: nowrap; }
   const G = await (await fetch('grilles.json')).json();
   const p = new URLSearchParams(location.hash.slice(1));
   const cat = G.categories.find(c => c.cle === (p.get('categorie') || 'brioche'));
-  const sel = cat.criteres.find(c => c.cle === (p.get('critere') || 'mie_toucher')) || cat.criteres[0];
+  // Les critères de la catégorie, puis ceux de tous les produits (photo de référence, planogramme).
+  const COMMUNS = G.criteres_communs || [];
+  const tous = cat.criteres.concat(COMMUNS);
+  const sel = tous.find(c => c.cle === (p.get('critere') || 'mie_toucher')) || tous[0];
   const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const TYPE = { echelle: 'Échelle', oui_non: 'Oui / non', mesure: 'Mesure' };
   const NIV = { ok: ['Conforme', 'ok'], mineur: ['À surveiller', 'mineur'], majeur: ['Non conforme', 'majeur'] };
@@ -117,15 +121,15 @@ td.lib { font-weight: 700; white-space: nowrap; }
   };
 
   document.getElementById('cats').innerHTML = `<h3>Catégories</h3>` + G.categories.map(c => {
-    const n = c.criteres.length;
+    const n = c.criteres.length + COMMUNS.length;
     const ph = Object.values(c.photos).filter(v => v === 'obligatoire').length;
     return `<div class="cat${c === cat ? ' is-on' : ''}"><b>${esc(c.libelle)}</b><span>${n} critères · ${ph} photo${ph > 1 ? 's' : ''} obligatoire${ph > 1 ? 's' : ''}</span></div>`;
   }).join('') + `<div class="cat-add"><i class="bi bi-plus-lg"></i> Nouvelle catégorie</div>`;
 
   const col = e => {
-    const cs = cat.criteres.filter(c => c.etape === e.cle);
+    const cs = tous.filter(c => c.etape === e.cle);
     return `<div class="col"><h2><i class="bi ${e.icone}" style="font-size:1.1rem;color:var(--c-primary)"></i>${e.titre}<small>${cs.length} critères</small></h2>
-      ${cs.map(c => `<div class="cr${c === sel ? ' is-on' : ''}"><div class="cr-h"><i class="bi bi-grip-vertical"></i><b>${esc(c.libelle)}</b><span class="ty">${TYPE[c.type]}</span></div>
+      ${cs.map(c => `<div class="cr${c === sel ? ' is-on' : ''}"><div class="cr-h"><i class="bi bi-grip-vertical"></i><b>${esc(c.libelle)}</b><span class="ty">${TYPE[c.type]}</span></div>${COMMUNS.includes(c) ? '<span class="commun"><i class="bi bi-diagram-3"></i> Tous les produits</span>' : ''}
         <div class="ops">${options(c).map(o => `<span class="op ${o.niveau}">${esc(o.libelle)}</span>`).join('')}</div></div>`).join('')}
       <div class="cr-add"><i class="bi bi-plus-lg"></i> Ajouter un critère</div></div>`;
   };
