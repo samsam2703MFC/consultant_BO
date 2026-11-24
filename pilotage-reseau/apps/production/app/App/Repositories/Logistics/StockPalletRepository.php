@@ -186,7 +186,7 @@ final class StockPalletRepository extends WorkshopRepository
         $weekEnd ??= '9999-12-31';
         return $this->all("SELECT fp.id, fp.name, COALESCE(cp.name, 'Bez kategorii') AS category, fp.ppc,
                 COALESCE(cs.free, 0) AS free, COALESCE(cs.pallet, 0) AS pallet, COALESCE(oo.cartons, 0) AS ordered,
-                COALESCE(oo.late, 0) AS ordered_late, COALESCE(oo.week, 0) AS ordered_week, COALESCE(oo.later, 0) AS ordered_later,
+                COALESCE(oo.late, 0) AS ordered_late, COALESCE(oo.late_free, 0) AS ordered_late_free, COALESCE(oo.week, 0) AS ordered_week, COALESCE(oo.later, 0) AS ordered_later,
                 i.id AS item_id, COALESCE(ps.mode, 'MTO') AS mode, COALESCE(w.cartons, 0) AS sold,
                 " . StockLevels::columns('ps') . "
             FROM final_product fp
@@ -198,6 +198,7 @@ final class StockPalletRepository extends WorkshopRepository
                        WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs ON cs.id_product = fp.id
             LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons,
                               SUM(CASE WHEN DATE(co.expected_shipping_date) < ? THEN cop.quantity_carton ELSE 0 END) AS late,
+                              SUM(CASE WHEN DATE(co.expected_shipping_date) < ? AND COALESCE(co.is_freebie, 0) = 1 THEN cop.quantity_carton ELSE 0 END) AS late_free,
                               SUM(CASE WHEN DATE(co.expected_shipping_date) BETWEEN ? AND ? THEN cop.quantity_carton ELSE 0 END) AS week,
                               SUM(CASE WHEN co.expected_shipping_date IS NULL OR DATE(co.expected_shipping_date) > ? THEN cop.quantity_carton ELSE 0 END) AS later
                        FROM customer_order co
@@ -205,7 +206,7 @@ final class StockPalletRepository extends WorkshopRepository
             LEFT JOIN (SELECT sl.id_product, SUM(sl.cartons) AS cartons FROM (" . WdtSalesRepository::linesSql() . ") sl
                        WHERE sl.sale_date >= CURDATE() - INTERVAL ? DAY AND sl.sale_date < CURDATE() GROUP BY sl.id_product) w ON w.id_product = fp.id
             WHERE cs.id_product IS NOT NULL OR oo.id_product IS NOT NULL OR (ps.mode = 'MTS' AND fp.active = 1)
-            ORDER BY cp.name IS NULL, cp.name, fp.name", [$weekStart, $weekStart, $weekEnd, $weekEnd, $soldDays]);
+            ORDER BY cp.name IS NULL, cp.name, fp.name", [$weekStart, $weekStart, $weekStart, $weekEnd, $weekEnd, $soldDays]);
     }
 
     /** [333] Cartons dont la dernière palette est $id. @return list<int> */
