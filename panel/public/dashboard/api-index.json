@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-24T17:32:04Z",
+ "genere": "2026-11-24T20:36:00Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1070,7 +1070,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:587",
+     "source": "panel/src/commandes_tournees.php:659",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1091,7 +1091,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:587",
+     "source": "panel/src/commandes_tournees.php:659",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1112,7 +1112,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:587",
+     "source": "panel/src/commandes_tournees.php:659",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1133,7 +1133,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:587",
+     "source": "panel/src/commandes_tournees.php:659",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1155,7 +1155,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:587",
+     "source": "panel/src/commandes_tournees.php:659",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1176,7 +1176,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:587",
+     "source": "panel/src/commandes_tournees.php:659",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]

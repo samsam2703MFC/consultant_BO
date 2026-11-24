@@ -305,3 +305,4 @@
 2026-11-24T17:24:39Z Dashboard magasin › Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer ; vues Liste et Tournées sur un interrupteur abricot (tables panel_tournee*)
 2026-11-24T17:32:35Z Dashboard magasin › Commandes : les vues Semaine et Mois, en plus du jour (Liste et Tournées)
 2026-11-24T17:34:10Z Commandes : un jour sans commande au panel (404 NO_ORDERS_FOR_PICKUP_DATE) est une liste vide, pas une panne
+2026-11-24T20:36:11Z Commandes : lecture des livraisons de TF Buddy (tournées, horaires, heure limite) avec les comptes du dashboard

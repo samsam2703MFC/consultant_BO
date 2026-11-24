@@ -593,6 +593,68 @@ function ep_commandes_bureaux(): array
     return ['shop' => $shop, 'n' => count($L), 'bureaux' => array_slice($L, 0, 30)];
 }
 
+/* ── Les livraisons de TF Buddy (24/11/2026, « le maximum sur TF Buddy ») ─────────────────────────────────────
+ * TF Buddy a les tournées (`/panel/shops/{shop}/franchise/delivery-routes`), les bureaux et leurs horaires avec l'heure
+ * limite (`…/delivery-hub`), l'heure limite de préparation (`…/preparation-settings`). Le cockpit les lit avec ses
+ * comptes : celui du cockpit (PanelApi), puis le compte admin de l'ERP (ErpApi) s'il est refusé — comme Mon équipe. */
+
+/** Un GET à TF Buddy : le compte du cockpit, puis l'admin de l'ERP sur un refus. [code, corps, compte]. */
+function pcoTfGet(string $chemin): array
+{
+    $r = class_exists('PanelApi') && PanelApi::configured() ? PanelApi::sondeGet($chemin, 25) : ['code' => 0, 'corps' => null];
+    $code = (int) ($r['code'] ?? 0);
+    if ($code >= 200 && $code < 300) { return [$code, $r['corps'] ?? null, 'cockpit']; }
+    if (class_exists('ErpApi') && ErpApi::disponible()) {
+        $e = ErpApi::sondeGet($chemin);
+        $ce = (int) ($e['code'] ?? 0);
+        if ($ce >= 200 && $ce < 300 || $code === 0) { return [$ce, $e['corps'] ?? null, 'admin']; }
+        return [$code ?: $ce, $r['corps'] ?? $e['corps'] ?? null, 'cockpit puis admin (' . $ce . ')'];
+    }
+    return [$code, $r['corps'] ?? null, 'cockpit'];
+}
+
+/** Le résumé d'une réponse de TF Buddy (fonction pure) : les listes comptées, les noms des champs de leur premier
+ *  élément (pas leurs valeurs), et les tournées et horaires à plat. Rien de nominatif d'un client. */
+function pcoTfResume(mixed $c): array
+{
+    if (is_array($c) && isset($c['data']) && is_array($c['data']) && !array_is_list($c['data'])) { $c = $c['data']; }
+    if (!is_array($c)) { return ['vide' => true]; }
+    $out = ['champs' => [], 'nombres' => []];
+    foreach ($c as $k => $v) {
+        if (is_array($v) && array_is_list($v)) {
+            $out['nombres'][$k] = count($v);
+            $out['champs'][$k] = is_array($v[0] ?? null) ? array_keys($v[0]) : [];
+        } elseif (!is_array($v)) { $out['valeurs'][$k] = is_string($v) && mb_strlen($v) > 80 ? mb_substr($v, 0, 80) . '…' : $v; }
+    }
+    $garde = static fn (array $x, array $cles) => array_intersect_key($x, array_flip($cles));
+    if (is_array($c['routes'] ?? null)) {
+        $out['tournees'] = array_map(static fn ($r) => is_array($r) ? $garde($r, ['id', 'name', 'short_name', 'vehicle', 'start_time', 'weekdays', 'driver', 'active', 'max_orders', 'max_offices', 'color']) + ['sites' => is_array($r['site_ids'] ?? null) ? count($r['site_ids']) : null] : [], array_slice($c['routes'], 0, 30));
+    }
+    if (is_array($c['schedules'] ?? null)) {
+        $out['horaires'] = array_map(static fn ($r) => is_array($r) ? $garde($r, ['id', 'route_id', 'weekday', 'start_time', 'end_time', 'cutoff_time', 'cutoff_days_before', 'capacity']) : [], array_slice($c['schedules'], 0, 60));
+    }
+    foreach (['cutoff_time', 'timezone', 'configured', 'depot_address'] as $k) { if (isset($c[$k]) && !is_array($c[$k])) { $out['valeurs'][$k] = $c[$k]; } }
+    return $out;
+}
+
+/** GET /dashboard/commandes/tfb?shop=&date= — les tournées de TF Buddy, leurs horaires et l'heure limite (lecture). */
+function ep_commandes_tfb(): array
+{
+    $shop = pcoShop();
+    if ($shop <= 0) { return pcoErreur(400, 'shop manquant'); }
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { $date = date('Y-m-d'); }
+    @set_time_limit(90);
+    $out = ['shop' => $shop, 'date' => $date];
+    foreach (['tournees' => '/panel/shops/' . $shop . '/franchise/delivery-routes?date=' . $date, 'bureaux' => '/panel/shops/' . $shop . '/franchise/delivery-hub',
+        'preparation' => '/panel/shops/' . $shop . '/franchise/preparation-settings'] as $k => $chemin) {
+        [$code, $corps, $compte] = pcoTfGet($chemin);
+        $out[$k] = ['code' => $code, 'compte' => $compte] + ($code >= 200 && $code < 300 ? pcoTfResume($corps)
+            : ['erreur' => is_array($corps) ? (string) ($corps['description'] ?? $corps['code'] ?? $corps['message'] ?? '') : '']);
+    }
+    return $out;
+}
+
 /** Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande. */
 function pcoRoute(string $method, string $path): ?array
 {
@@ -600,6 +662,7 @@ function pcoRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/dashboard/commandes/jour') { return ep_commandes_jour(); }
     if ($method === 'GET' && $path === '/dashboard/commandes/bureaux') { return ep_commandes_bureaux(); }
     if ($method === 'GET' && $path === '/dashboard/commandes/periode') { return ep_commandes_periode(); }
+    if ($method === 'GET' && $path === '/dashboard/commandes/tfb') { return ep_commandes_tfb(); }
     if ($path === '/dashboard/commandes/tournees') {
         if ($method === 'POST') { return wr_commandes_tournee_creer(); }
         if ($method === 'PUT') { return wr_commandes_tournee_modifier(); }
