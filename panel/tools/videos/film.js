@@ -8,6 +8,11 @@
  *   await f.cliquer(f.p.getByText('Semaine').first());      // le curseur y va, clique
  *   await f.fin();                                          // → sortie/01-decouvrir.mp4
  *
+ * Les vidéos par onglet (24/11/2026) : un fichier par onglet interne, ses fonctions en chapitres. Le scénario ouvre
+ * chaque chapitre (f.onglet(…), puis f.fonction(…) pour chaque geste) ; à la fin, sortie/<nom>.chapitres.json dit où
+ * chacun commence et finit dans le MP4 (tourner.js en fait une entrée du registre par chapitre : le lecteur joue le
+ * passage). Ces fichiers sortent plus légers : 1600 × 900, plus compressés, une image clé au début de chaque chapitre.
+ *
  * La page est filmée par le screencast de Chromium (images JPEG au fil des changements), puis ffmpeg en fait un MP4
  * H.264 à 30 i/s, en respectant le temps réel de chaque image. Le curseur, les sous-titres, les cadres et les cartons
  * sont dessinés DANS la page (calque au-dessus de tout, sans pointer-events) : ce qu'on voit est ce qui est filmé.
@@ -177,6 +182,7 @@ class Film {
     this.sortie = path.join(__dirname, 'sortie');
     this.images = []; this.souris = { x: W * 0.6, y: H * 0.55 };
     this.sous = []; this.t0 = null;
+    this.chapitres = [];   // f.onglet(), f.fonction() : les passages du MP4, une entrée du registre chacun
   }
   async _demarrer() {
     fs.rmSync(this.dossier, { recursive: true, force: true });
@@ -289,6 +295,38 @@ class Film {
       (retenir && retenir.length ? '<div class="droite"><p class="kick">À retenir</p><ol>' + retenir.map(x => '<li><span>' + x + '</span></li>').join('') + '</ol></div>' : '') + '</div>' +
       this.pied('Une question ? « Demande au bureau », en haut du dashboard', '') + '</div>';
     await this.diapo(html, ms, true);
+  }
+
+  /* --- les chapitres : un onglet, puis ses fonctions (24/11/2026) ------------------------------------------- */
+  _chapitre(c) {
+    const t = Date.now() / 1000;
+    this.chapitres.push(Object.assign({ t }, c));
+    return this.chapitres[this.chapitres.length - 1];
+  }
+  /** Ouvre le chapitre de l'onglet (sa vidéo, 1 à 2 min) : la couverture de marque, courte, avec au programme les
+   * fonctions qui suivent. `parent` : l'identifiant de la vidéo de la page (opts.parent de Film.ouvrir par défaut). */
+  async onglet({ id, titre, resume, accroche, programme, parent, vues, page, ms = 4200 }) {
+    if (!id || !titre) { throw new Error('onglet : id et titre'); }
+    const c = this._chapitre({ id, niveau: 'onglet', titre, resume: resume || '', parent: parent || this.opts.parent, vues });
+    this.page = page || this.opts.serie || '';
+    this.ongletCourant = { id, titre };
+    await this.couverture({ kicker: (this.page ? this.page + ' · ' : '') + 'l’onglet', titre: Film.esc(titre), accroche, programme, ms });
+    c.ecran = Date.now() / 1000;
+  }
+  /** Ouvre le chapitre d'une fonction (30 à 60 s) : un intercalaire papier, le titre et le pas à pas ; elle se range
+   * sous l'onglet ouvert. La fonction peut se jouer seule : on (re)montre l'écran utile juste après. */
+  async fonction({ id, titre, resume, points, parent, vues, ms }) {
+    if (!id || !titre) { throw new Error('fonction : id et titre'); }
+    const o = this.ongletCourant || {};
+    const c = this._chapitre({ id, niveau: 'fonction', titre, resume: resume || '', parent: parent || o.id, vues });
+    const e = Film.esc;
+    const html = '<div class="fd fd--papier"><div class="fd-tete"><img src="/assets/img/logo.png" alt="L’Atelier by"><div class="k">Dashboard magasin<br>' +
+      e([this.page, o.titre].filter(Boolean).join(' › ')) + '</div></div>' +
+      '<div class="fd-corps"><div class="bloc"><p class="kick">Pas à pas</p><h1>' + e(titre) + '</h1>' +
+      (points && points.length ? '<ol style="margin-top:18px">' + points.map(x => '<li><span>' + x + '</span></li>').join('') + '</ol>' : '') + '</div></div>' +
+      this.pied('Les écrans sont ceux du dashboard ; les chiffres et les noms sont fictifs', 'Fonction') + '</div>';
+    await this.diapo(html, ms || Math.max(2600, Math.round(this.duree(titre + ' ' + (points || []).join(' ')) * 0.75)));
+    c.ecran = Date.now() / 1000;
   }
 
   /** Le rectangle d'un élément (locator ou sélecteur), dans la fenêtre ; le fait défiler à vue s'il le faut. */
@@ -440,9 +478,24 @@ class Film {
     const liste = path.join(this.dossier, 'liste.txt');
     fs.writeFileSync(liste, lignes.join('\n') + '\n');
     const mp4 = path.join(this.sortie, this.nom + '.mp4');
+    // Les chapitres : leur place dans le MP4 (secondes depuis la première image), une image clé à chaque début.
+    const total = T[T.length - 1] - T[0] + Math.max(0.5, Math.min(15, (this.tFin || T[T.length - 1] + 1) - T[T.length - 1]));
+    const enVideo = t => Math.round(Math.max(0, Math.min(total, t - T[0])) * 100) / 100;
+    const chap = this.chapitres.map((c, i) => {
+      const debut = enVideo(c.t), fin = i + 1 < this.chapitres.length ? enVideo(this.chapitres[i + 1].t) : Math.round(total * 100) / 100;
+      return { id: c.id, niveau: c.niveau, parent: c.parent || null, titre: c.titre, resume: c.resume, vues: c.vues || null, debut, fin, ecran: enVideo(c.ecran || c.t) };
+    });
+    // Les vidéos par onglet sortent plus légères (1600 × 900, CRF 34 : le texte reste net, ≈ 1,25 Mo la minute) ; les vidéos de page restent en 1920 × 1080.
+    const leger = this.opts.leger != null ? this.opts.leger : chap.length > 0;
+    const cles = chap.length ? ['-force_key_frames', chap.map(c => c.debut.toFixed(2)).join(',')] : [];
     execFileSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', liste,
-      '-vf', 'scale=1920:1080:flags=lanczos,format=yuv420p', '-r', '25', '-c:v', 'libx264', '-preset', 'slow', '-crf', String(this.opts.crf || 28),
-      '-tune', 'stillimage', '-movflags', '+faststart', mp4], { cwd: this.dossier, stdio: 'inherit' });
+      '-vf', (leger ? 'scale=1600:900' : 'scale=1920:1080') + ':flags=lanczos,format=yuv420p', '-r', '25', '-c:v', 'libx264', '-preset', 'slow',
+      '-crf', String(this.opts.crf || (leger ? 34 : 28)), '-tune', 'stillimage', ...cles, '-movflags', '+faststart', mp4], { cwd: this.dossier, stdio: 'inherit' });
+    const fChap = path.join(this.sortie, this.nom + '.chapitres.json');
+    if (chap.length) {
+      fs.writeFileSync(fChap, JSON.stringify({ nom: this.nom, vues: this.opts.vue ? [this.opts.vue] : [], sources: this.opts.sources || [], chapitres: chap }, null, 2) + '\n');
+      chap.forEach(c => console.log('    ' + c.niveau.padEnd(8) + ' ' + c.debut.toFixed(1).padStart(6) + ' → ' + c.fin.toFixed(1).padStart(6) + '  ' + c.id));
+    } else { fs.rmSync(fChap, { force: true }); }
     const duree = imgs[imgs.length - 1].t - imgs[0].t + 1;
     console.log('  vidéo :', mp4, '·', imgs.length, 'images ·', duree.toFixed(1), 's', '· (filmé', fin.toFixed(1), 's)');
     return mp4;

@@ -282,6 +282,150 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "offres-en-cours",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Les offres en cours",
+      "resume": "Les offres envoyées ou à envoyer : les chiffres du haut, la recherche, une offre et sa marge.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 0,
+      "fin": 34.47,
+      "affiche": "offres-en-cours.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-modifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Modifier une offre",
+      "resume": "Changer une quantité ou un prix, puis enregistrer : l’offre change dans TF Buddy.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 34.47,
+      "fin": 63.27,
+      "affiche": "offres-modifier.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-envoyer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Envoyer une offre par e-mail",
+      "resume": "« Envoyer par e-mail » ouvre la Boîte mail sur l’e-mail au client, l’offre jointe en PDF.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 63.27,
+      "fin": 98.08,
+      "affiche": "offres-envoyer.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-convertir",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Convertir une offre en commande",
+      "resume": "Le client dit oui : l’heure du retrait, qui prépare, et la commande se crée dans TF Buddy.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 98.08,
+      "fin": 125.23,
+      "affiche": "offres-convertir.jpg",
+      "duree": "27 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-archiver",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Archiver une offre",
+      "resume": "Une offre restée sans suite quitte la liste et se range dans « Archivées » ; elle peut revenir.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 125.23,
+      "fin": 138.65,
+      "affiche": "offres-archiver.jpg",
+      "duree": "13 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-supprimer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Supprimer une offre",
+      "resume": "Pour une offre faite en double : elle disparaît de TF Buddy. Sinon, archivez-la plutôt.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 138.65,
+      "fin": 163.11,
+      "affiche": "offres-supprimer.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "primes",
       "genre": "tuto",
       "titre": "Les primes de l’équipe",

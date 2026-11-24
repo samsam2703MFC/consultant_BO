@@ -206,7 +206,9 @@
       .finally(() => { st.occupe = false; Promise.all([chargerListe(), chargerEtat()]); });
   }
   function chargerProduits() { if (st.produits || st.prodLecture) { return st.prodLecture; } st.prodLecture = lire('/exploitation/promos-magasin/produits').then(d => { st.produits = d.produits || []; }).catch(() => { st.produits = []; }); return st.prodLecture; }
-  function chargerOffres() { if (st.offres || st.ofLecture) { return st.ofLecture; } st.ofLecture = lire('/exploitation/offres-client').then(d => { st.offres = d.offres || []; }).catch(() => { st.offres = []; }).finally(() => { st.ofLecture = null; rendre(); }); return st.ofLecture; }
+  // Déjà lues : une promesse résolue (24/11/2026 — rendre null cassait « Envoyer par e-mail » depuis Offres : le modèle
+  // « Envoi de l'offre » ne se remplissait pas quand la liste était arrivée avant les modèles).
+  function chargerOffres() { if (st.offres) { return Promise.resolve(); } if (st.ofLecture) { return st.ofLecture; } st.ofLecture = lire('/exploitation/offres-client').then(d => { st.offres = d.offres || []; }).catch(() => { st.offres = []; }).finally(() => { st.ofLecture = null; rendre(); }); return st.ofLecture; }
 
   /* --- composer ------------------------------------------------------------------------------------------------- */
   function citation(m) {
