@@ -209,6 +209,26 @@ final class StockPalletRepository extends WorkshopRepository
             ORDER BY cp.name IS NULL, cp.name, fp.name", [$weekStart, $weekStart, $weekStart, $weekEnd, $weekEnd, $soldDays]);
     }
 
+    /**
+     * [430] Commandes ouvertes d'un produit fini (OpenOrders::demandSql, GRATIS compris), une ligne par commande : la
+     * fenêtre « Zamówione » de Stan ogólny (classées ensuite en retard / cette semaine / plus tard par le service).
+     */
+    public function productOpenOrders(int $productId): array
+    {
+        return $this->all("SELECT co.id, co.id_customer, co.expected_shipping_date, co.create_order_date, COALESCE(co.is_freebie, 0) AS is_freebie,
+                COALESCE(co.order_type, 'STANDARD') AS order_type, co.reference,
+                COALESCE(NULLIF(TRIM(cu.company), ''), NULLIF(TRIM(CONCAT(COALESCE(cu.name, ''), ' ', COALESCE(cu.surname, ''))), '')) AS customer,
+                SUM(cop.quantity_carton) AS cartons, MAX(fp.ppc) AS ppc
+            FROM customer_order co
+            JOIN customer_order_product cop ON cop.id_order = co.id
+            LEFT JOIN final_product fp ON fp.id = cop.id_product
+            LEFT JOIN customer cu ON cu.id = co.id_customer
+            WHERE " . OpenOrders::demandSql('co') . " AND cop.id_product = ?
+            GROUP BY co.id, co.id_customer, co.expected_shipping_date, co.create_order_date, co.is_freebie, co.order_type, co.reference, cu.company, cu.name, cu.surname
+            HAVING cartons > 0
+            ORDER BY co.expected_shipping_date IS NULL, co.expected_shipping_date, customer, co.id", [$productId]);
+    }
+
     /** [333] Cartons dont la dernière palette est $id. @return list<int> */
     public function palletCartonIds(int $id): array
     {
