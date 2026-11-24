@@ -496,7 +496,11 @@
 
   /* — Vue Mois (23/11/2026, « rajouter mois ») : une ligne par personne, une colonne par jour du mois (ses heures, le
    * matin ou l'après-midi), son total du mois ; dessous, chaque jour et chaque semaine face au budget. Un clic sur une
-   * case ouvre le service ou en ajoute un ; sur un jour, l'ouvre en grand ; sur une semaine, la montre. — */
+   * case ouvre le service ou en ajoute un ; sur un jour, l'ouvre en grand ; sur une semaine, la montre.
+   * Groupé par section (24/11/2026, « dans le tableau mensuel, groupé par section ») : les sections du planogramme du
+   * jour (groupes : le secteur de la personne, le comptoir, sinon son premier poste) ; la ligne de la section dit ses
+   * personnes, ses heures du mois et, chaque jour, combien d'entre elles sont au planning — 0 un jour d'ouverture : la
+   * section est vide ce jour-là (marquée). — */
   function rendMois(P) {
     const CJ = P.jours.map(J => calculJour(P, J, null)), b = P.budget;
     const somme = f => CJ.reduce((a, c) => a + f(c), 0);
@@ -514,7 +518,16 @@
       <div class="kpi"><div class="kpi__value">${hors.length}${hors.length ? '<span class="tag-warn">à revoir</span>' : ''}</div><div class="kpi__label">Jours au-dessus de la cible</div><div class="kpi__note">${hors.length ? (graves.length ? graves.length + ' au-dessus de ' + String(b.rouge).replace('.', ',') + ' %' : 'tous sous ' + String(b.rouge).replace('.', ',') + ' %') : (nSv ? 'tous dans la cible' : 'aucun service ce mois')}</div></div>
     </div></section>`;
     const tete = `<tr><th>Employé</th>${P.jours.map(J => { const d = dt(J.date); return `<th class="${cl(J, 'eqp-mj')}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le ${esc(long(J.date))}"><span>${LETTRE[d.getDay()]}</span><b>${d.getDate()}</b></button></th>`; }).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr>`;
-    const lignes = (P.employes || []).filter(e => e.actif !== false || CJ.some(c => c.sv.some(x => x.employe === e.id))).map(e => {
+    const visible = e => e.actif !== false || CJ.some(c => c.sv.some(x => x.employe === e.id));
+    const G = groupes(P, equipeDe(P)).map(([g, L]) => [g, L.filter(visible)]).filter(([, L]) => L.length);
+    const ligneSec = (g, L) => {
+      const ids = new Set(L.map(e => e.id)), hs = CJ.reduce((a, C) => a + C.sv.filter(x => ids.has(x.employe)).reduce((b, x) => b + (x.a - x.de) / 60, 0), 0);
+      const cs = CJ.reduce((a, C) => a + C.sv.filter(x => ids.has(x.employe)).reduce((b, x) => b + (x.a - x.de) / 60 * ((L.find(e => e.id === x.employe) || {}).taux || 0), 0), 0);
+      const cells = CJ.map((C, i) => { const n = new Set(C.sv.filter(x => ids.has(x.employe)).map(x => x.employe)).size, J = P.jours[i], trou = !n && g !== 'Sans poste' && C.ouv;
+        return `<td class="${cl(J, 'eqp-mc')}${trou ? ' trou' : ''}"${trou ? ` title="${esc(g)} : personne au planning ce jour-là"` : ''}>${n || (trou ? '0' : '')}</td>`; }).join('');
+      return `<tr class="eqp-msec"><td><b>${esc(g)}</b><span class="sub">${L.length} personne${L.length > 1 ? 's' : ''}</span></td>${cells}<td class="num">${hs ? fH(hs) : '—'}</td><td class="num">${hs ? fE(cs) : '—'}</td></tr>`;
+    };
+    const ligne = e => {
       let hp = 0, cp = 0;
       const cells = CJ.map((C, i) => {
         const J = P.jours[i], L = C.sv.filter(x => x.employe === e.id);
@@ -523,7 +536,8 @@
         return `<td class="${cl(J, 'eqp-mc')}${e.actif === false ? '' : ' cliquable'}${ouvert ? ' on' : ''}" data-eqp-cell="${J.date}" data-emp="${e.id}">${L.map(x => `<button type="button" class="eqp-ms ${x.de < 12 * 60 ? 'm' : 'a'}" data-eqp-svc="${x.id}" title="${esc(court(J.date))} · ${hh(x.de)}–${hh(x.a)}">${nb((x.a - x.de) / 60)}</button>`).join('')}</td>`;
       }).join('');
       return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
-    }).join('') || `<tr><td colspan="${P.jours.length + 3}" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
+    };
+    const lignes = G.map(([g, L]) => ligneSec(g, L) + L.map(ligne).join('')).join('') || `<tr><td colspan="${P.jours.length + 3}" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
     const parJour = `<tr class="tot"><td>Par jour<span class="sub">heures · budget</span></td>${CJ.map((C, i) => `<td class="${cl(P.jours[i], 'eqp-mc')}">${C.h ? nb(C.h) : '<span class="eqp-tiret">—</span>'}${C.pct != null && C.h > 0 ? `<i class="eqp-pt eqp-m-${niveau(P, C.pct)}" title="${fP(C.pct)} du CA prévu"></i>` : ''}</td>`).join('')}<td class="num">${fH(h)}</td><td class="num">${fE(cout)}</td></tr>`;
     const parSem = `<tr class="tot eqp-msem"><td>Par semaine</td>${semaines.map(w => {
       const C = w.i.map(i => CJ[i]), hw = C.reduce((a, c) => a + c.h, 0), caw = C.reduce((a, c) => a + (c.objectif || 0), 0), cw = C.reduce((a, c) => a + (c.objectif ? c.cout : 0), 0);
@@ -531,7 +545,7 @@
     }).join('')}<td></td><td></td></tr>`;
     const vide = nSv ? '' : `<div class="eqp-vide7"><b>Aucun service au planning ce mois.</b> Préparez-le semaine par semaine : un clic sur une semaine l’ouvre, puis « Préparer la semaine » (recopier la précédente, ou le shift maker).</div>`;
     return vide + kpis + (nSv ? jauge(P, 'Budget d’heures du mois', hCa || h, coutCa, ca) + jaugeEtp(P, 'mois', 'CA par ETP du mois', hCa, ca) : '') + `<section class="card eqp-tab eqp-moi"><div class="eqp-table"><table><thead>${tete}</thead><tbody>${lignes}${parJour}${parSem}</tbody></table></div></section>
-      <p class="eqp-note">Dans chaque case, les heures du service : <span class="eqp-ms m">8</span> le matin (avant midi), <span class="eqp-ms a">6</span> l’après-midi. Un clic sur une case l’ouvre (adapter, retirer, ajouter quelqu’un sur le shift) ou ajoute un service ; un clic sur un jour l’ouvre en grand ; sur une semaine, la montre. Les points sous chaque jour suivent les paliers du budget (cible ${String(b.cible).replace('.', ',')} %, orange au-dessus, rouge au-dessus de ${String(b.rouge).replace('.', ',')} %, noir au-dessus de ${String(b.noir).replace('.', ',')} %).</p>`;
+      <p class="eqp-note">Groupé par section : sur la ligne de chaque section, le nombre de ses personnes au planning ce jour-là ; un <b class="eqp-trou-n">0</b> : personne de la section un jour d’ouverture. Dans chaque case, les heures du service : <span class="eqp-ms m">8</span> le matin (avant midi), <span class="eqp-ms a">6</span> l’après-midi. Un clic sur une case l’ouvre (adapter, retirer, ajouter quelqu’un sur le shift) ou ajoute un service ; un clic sur un jour l’ouvre en grand ; sur une semaine, la montre. Les points sous chaque jour suivent les paliers du budget (cible ${String(b.cible).replace('.', ',')} %, orange au-dessus, rouge au-dessus de ${String(b.rouge).replace('.', ',')} %, noir au-dessus de ${String(b.noir).replace('.', ',')} %).</p>`;
   }
 
   /* ── La fenêtre d'un service (23/11/2026, « on clic je dois pouvoir adapter, rajouter et effacer une personne du

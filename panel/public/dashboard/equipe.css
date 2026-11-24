@@ -317,6 +317,14 @@ p.eqp-note .eqp-ms{cursor:default}
 .eqp-moi tr.tot td.eqp-mc{font-size:11px;color:var(--muted-2)}
 .eqp-moi tr.eqp-msem td{font-size:11px;white-space:nowrap;border-left:1px solid var(--row-line)}
 .eqp-moi tr.eqp-msem .linklike{padding:0;font-size:11px}
+/* Le mois groupé par section (24/11/2026) : la ligne de la section, puis ses personnes. */
+.eqp-moi tr.eqp-msec td{padding-top:12px;border-top:1px solid var(--line);background:#fff;font-size:11px;color:var(--muted-2)}
+.eqp-moi tr.eqp-msec td:first-child b{font-size:10.5px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+.eqp-moi tr.eqp-msec td:first-child .sub{font-size:10px}
+.eqp-moi tr.eqp-msec td.eqp-mc{font-variant-numeric:tabular-nums;color:var(--muted)}
+.eqp-moi tr.eqp-msec td.eqp-mc.trou{color:#C0281F;font-weight:700;background:rgba(192,40,31,.07)}
+.eqp-moi tr.eqp-msec:first-child td{border-top:0}
+.eqp-note .eqp-trou-n{color:#C0281F;padding:0 4px;border-radius:3px;background:rgba(192,40,31,.07)}
 .eqp-shift .mu{color:var(--muted);font-size:11.5px}
 /* La fenêtre d'un service (23/11/2026, la proposition 2 bis) : les créneaux avec leur effet, la ligne à tirer sur l'axe
    des heures (verte de 4 h à 8 h, rouge en dehors), qui est là à la même échelle, l'effet, ceux du même shift. */
