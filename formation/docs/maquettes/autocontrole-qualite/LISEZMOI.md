@@ -27,6 +27,31 @@ par `autocontrole.js`, qui se clique de bout en bout.
 | 09 | `09-fiche-apres.jpg` | Sur la fiche, l'état du jour remplace le bouton ; un défaut qui revient 3 fois en 7 jours est signalé, avec sa correction non reportée dans les Paramètres de cuisson. |
 | 10 | `10-parametrage.jpg` | Côté réseau : une grille par catégorie et des critères communs à tous les produits (photo de référence, planogramme), photo obligatoire / facultative / non par étape, corrections par réponse, surcharges par produit. |
 
+## Au design system
+
+Tout ce que la maquette ajoute suit `docs/DESIGN_SYSTEM.md` : jetons du §3 (papier, filets `#e6e0d8`, bordeaux réservé
+à l'action principale et à la sélection), Gotham en trait normal partout (le seul 700 est la valeur des chiffres clés
+du bilan), tailles de l'échelle du §4.2, aucune pilule (pastilles et badges à 6 px, étiquettes à 4 px, boutons à 8 px,
+cartes à 12 px), aucune ombre hors le curseur de l'interrupteur, icônes linéaires du §7.12 (`icones.js`, tracés du
+catalogue du §8.4 quand ils existent). Une réponse choisie est une **pastille de choix** (liseré bordeaux) ; son état se
+dit par un **mot** : « Conforme » (vert), « À surveiller » (étiquette or), « Non conforme » (étiquette d'arrêt). Le
+paramétrage (`parametrage.html`) charge la feuille commune (`shared/public/assets/ds/global.css`) avec la coquille du
+portail de formation : rail, barre supérieure, onglets de page, cartes, sélecteurs segmentés, tableau.
+
+Écarts signalés (le design system est écrit pour le poste de travail) :
+
+- **La tablette** : comme le comptoir du planogramme (`consultant/public/planogramme/plano.css`), les cibles tactiles
+  font 44 à 52 px et ce qui se touche est en 14–15 px (tailles de l'échelle).
+- **Dans l'app Cuisine**, `global.css` n'est pas chargée (elle restylerait l'app) : ses jetons et ses composants sont
+  repris sous le préfixe `aq-`, et Gotham y est déclarée sous le nom `Gotham DS` avec les deux fichiers du §4.1, parce
+  que l'app déclare déjà « Gotham » avec d'autres fichiers.
+- **L'app Cuisine elle-même** (dépôt `ThaiZu/TFB-Kitchen`) n'est pas au design system : titres en Vank, bouton
+  « Retour » en pilule, onglets bordeaux pleins, ombres. La maquette la montre telle qu'elle est ; l'aligner est un
+  travail à part.
+- **Les dessins** (teintes, volume, croûte, souplesse, forme, coupe) représentent le produit : ils gardent ses couleurs
+  (§10.5).
+- **L'entrée de rail « Autocontrôle qualité »** (groupe Opérationnel du portail de formation) est une proposition.
+
 ## Rapide, intuitif, complet
 
 - **Rapide** : une réponse = un toucher ; une réponse conforme fait défiler au critère suivant ; « Le reste est

@@ -4,10 +4,10 @@
   "niveaux": { "ok": "Conforme", "mineur": "À surveiller", "majeur": "Non conforme" },
   "decisions": { "vente": "Mettre en vente", "declasser": "Déclasser (vente du jour, prix réduit)", "jeter": "Jeter (encodé en pertes)" },
   "etapes": [
-    { "cle": "cuisson", "titre": "Cuisson", "icone": "bi-fire" },
-    { "cle": "structure", "titre": "Structure", "icone": "bi-rulers" },
-    { "cle": "organoleptique", "titre": "Organoleptique", "icone": "bi-emoji-smile" },
-    { "cle": "presentation", "titre": "Présentation", "icone": "bi-shop-window" }
+    { "cle": "cuisson", "titre": "Cuisson", "icone": "flamme" },
+    { "cle": "structure", "titre": "Structure", "icone": "regle" },
+    { "cle": "organoleptique", "titre": "Organoleptique", "icone": "gout" },
+    { "cle": "presentation", "titre": "Présentation", "icone": "vitrine" }
   ],
   "criteres_communs": [
     {
@@ -18,12 +18,12 @@
       "visuel": "comparaison",
       "aide": "Poser le produit à côté de la photo de la fiche : forme, couleur, taille, finition.",
       "options": [
-        { "cle": "identique", "libelle": "Identique", "niveau": "ok", "cible": true, "icone": "bi-check2-all" },
+        { "cle": "identique", "libelle": "Identique", "niveau": "ok", "cible": true, "icone": "double-coche" },
         {
           "cle": "proche",
           "libelle": "Proche, un détail diffère",
           "niveau": "mineur",
-          "icone": "bi-check2",
+          "icone": "coche",
           "cause": "Un point de la cuisson ou de la structure s'écarte de la référence (voir les écarts ci-dessus).",
           "maintenant": "Vendable.",
           "prochaine": "Comparer à la photo de la fiche avant d'enfourner et à la sortie du four.",
@@ -33,7 +33,7 @@
           "cle": "different",
           "libelle": "Différent",
           "niveau": "majeur",
-          "icone": "bi-x-lg",
+          "icone": "croix",
           "cause": "Le produit ne ressemble pas à ce que le client voit sur la photo (site, vitrine, catalogue).",
           "maintenant": "Ne pas mettre en vitrine : déclasser et prévenir le responsable.",
           "prochaine": "Reprendre le pas-à-pas de la fiche avec le responsable.",
