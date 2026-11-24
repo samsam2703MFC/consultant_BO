@@ -1,0 +1,389 @@
+{
+ "aConfirmer": [
+  "Halle, 24/11/2026 : les 7 postes du panel sont « sans secteur » ; la carte dit donc « 0 produits affectés » et « 469 à compléter ». La carte des responsabilités ne dit rien tant que les postes n’ont pas leur secteur au panel (réglage du siège, pas du magasin). À vérifier dans les autres magasins.",
+  "Les quatre options (Assistant de la semaine, Tâches dans les temps morts, Matrice A B C D et shift maker, Recopier la semaine précédente) sont éteintes à Halle : décrites d’après leurs libellés seulement, sans capture. Un article à part quand un magasin les allume ?",
+  "Écriture au panel : la routine ne capture qu’en lecture ; le droit d’écrire au planning et aux postes du panel avec le compte du cockpit n’est pas vérifié ici (panel/docs/maquettes/equipe-gestion/LISEZMOI.md le laisse « à vérifier en production »).",
+  "Le coût de chaque personne (heures × son taux) s’affiche dans la semaine : l’accès « responsable » (bouton Franchisé de la tablette) montre l’article au responsable ; à confirmer que le responsable voit aussi ces coûts au dashboard.",
+  "Les seuils (cible 17 %, 20 %, 22 % ; service vert de 4 h à 8 h) sont les valeurs de départ, réglables par le siège : l’article cite les libellés de l’écran, qui suivent le réglage.",
+  "Au téléphone : la page existe (même module, une colonne), pas décrite ni capturée.",
+  "Classement : sous-catégorie D5.1 (Organisation du PDV, compétence C-PLAN.Planning) ; formations FO-24 et FO-06. Durée (« 25 min ») estimée."
+ ],
+ "id": "art-dash-equipe",
+ "code": "",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "25 min de lecture, avec Mon équipe ouvert sur son magasin",
+ "titre": {
+  "fr": "Le dashboard : Mon équipe (responsabilités et horaires)",
+  "nl": "Het dashboard: Mon équipe (verantwoordelijkheden en uurroosters)"
+ },
+ "objectif": {
+  "fr": "Savoir qui s’occupe de quoi dans le magasin, faire et corriger les horaires de la semaine sur le planning du panel, et tenir le budget d’heures : la part du personnel dans le chiffre d’affaires, face à la cible du réseau de 17 %.",
+  "nl": "Weten wie wat doet in de winkel, de uurroosters van de week opmaken en verbeteren op de planning van het panel, en het urenbudget bewaken: het aandeel van het personeel in de omzet, tegenover de netwerkdoelstelling van 17 %."
+ },
+ "pour": {
+  "fr": "Franchisé, locataire gérant, manager et adjoint manager (P7 à P12), et chefs de section (P4 à P6) qui préparent les horaires. À lire après « Comprendre le dashboard magasin » (0.0.15), avec Mon équipe ouvert sur son magasin.",
+  "nl": "Franchisenemer, locataire-gérant, manager en adjunct-manager (P7 tot P12), en sectieverantwoordelijken (P4 tot P6) die de uurroosters voorbereiden. Te lezen na « Het winkeldashboard begrijpen » (0.0.15), met Mon équipe open op de eigen winkel."
+ },
+ "classement": {
+  "souscat": "D5.1",
+  "phases": [
+   "operationnel",
+   "formation"
+  ],
+  "postes": [
+   "P4",
+   "P5",
+   "P6",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PLAN.Planning",
+   "C-PILOTAGE.KPI"
+  ],
+  "formations": [
+   "FO-24",
+   "FO-06"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Avant de commencer",
+    "nl": "Voor je begint"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Où se trouve Mon équipe",
+      "nl": "Waar Mon équipe staat"
+     },
+     "texte": {
+      "fr": "Au dashboard, dans le rail : « La journée » › « Mon équipe », sous « Temps morts ».\nPour le franchisé et le responsable : faire les horaires et savoir qui s’occupe de quoi.\nDeux onglets : « Responsabilités » et « Planning » ; à droite, « Options ».\nTout est lu et écrit au panel TF Buddy : les postes de chacun et le planning sont ceux du panel.\n« ↻ Relire » relit la carte et le planning.",
+      "nl": "In het dashboard, in de rail: « La journée » › « Mon équipe », onder « Temps morts ».\nVoor de franchisenemer en de verantwoordelijke: de uurroosters opmaken en weten wie wat doet.\nTwee tabbladen: « Responsabilités » en « Planning »; rechts « Options ».\nAlles wordt gelezen en geschreven in het panel van TF Buddy: de posten van iedereen en de planning zijn die van het panel.\n« ↻ Relire » leest de kaart en de planning opnieuw."
+     },
+     "critique": false,
+     "photo": "art-dash-equipe-resp.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Responsabilités : qui s’occupe de quoi",
+    "nl": "Responsabilités: wie doet wat"
+   },
+   "etapes": [
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "La carte de l’équipe",
+      "nl": "De kaart van het team"
+     },
+     "texte": {
+      "fr": "En tête : « Qui s’occupe de quoi : les postes de chacun et les produits qui en dépendent, dans l’assortiment actif du magasin. »\nQuatre chiffres : « Employés actifs », « Postes occupés » (sur ceux du panel), « Produits affectés » (sur l’assortiment), « Produits sans responsable » (« à compléter », avec les secteurs vides et les produits sans secteur).\nLe tableau : une ligne par personne, une colonne par secteur (ses produits, « vide » si personne), puis « Autres postes » (sans produits).\nUne recherche (employé, poste ou produit) et un filtre « Tous les secteurs ».\nLes produits suivent le secteur du poste.\nLa carte montre les affectations permanentes, ni les qualifications ni la présence : la présence est dans l’onglet Planning.",
+      "nl": "Bovenaan: « Qui s’occupe de quoi : les postes de chacun et les produits qui en dépendent, dans l’assortiment actif du magasin. »\nVier cijfers: « Employés actifs », « Postes occupés » (op die van het panel), « Produits affectés » (op het assortiment), « Produits sans responsable » (« à compléter », met de lege sectoren en de producten zonder sector).\nDe tabel: één lijn per persoon, één kolom per sector (zijn producten, « vide » als niemand), daarna « Autres postes » (zonder producten).\nEen zoekveld (medewerker, post of product) en een filter « Tous les secteurs ».\nDe producten volgen de sector van de post.\nDe kaart toont de vaste toewijzingen, niet de kwalificaties of de aanwezigheid: de aanwezigheid staat in het tabblad Planning."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "La fiche d’une personne",
+      "nl": "De fiche van een persoon"
+     },
+     "texte": {
+      "fr": "Un clic sur une ligne ouvre sa fiche, à droite.\n« Son périmètre » : chaque poste → son secteur → le nombre de produits.\n« Ses produits » : les 18 premiers, puis « Voir les … produits ».\n« Semaine : … h · … services » mène au planning de la semaine.\n« Modifier ses postes » ouvre la fenêtre des affectations.",
+      "nl": "Een klik op een lijn opent zijn fiche, rechts.\n« Son périmètre »: elke post → zijn sector → het aantal producten.\n« Ses produits »: de eerste 18, dan « Voir les … produits ».\n« Semaine : … h · … services » leidt naar de planning van de week.\n« Modifier ses postes » opent het venster van de toewijzingen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Modifier les affectations",
+      "nl": "De toewijzingen wijzigen"
+     },
+     "texte": {
+      "fr": "Cocher les postes de la personne : « Postes de production », puis « Postes généraux ».\nAvant d’enregistrer, la fenêtre dit ce que ça donne : « Avec ces postes : … · … produits (+…) ».\nUn secteur qui n’avait personne : « … n’avait personne : il sera couvert. »\nTout décocher retire ses affectations.\n« Enregistrer » écrit au panel : « Postes enregistrés au panel. »\nSi quelqu’un a changé ses postes entre-temps : rien n’est écrit, la carte se relit.\nUn poste qui manque se crée au panel, dans Admin.",
+      "nl": "De posten van de persoon aanvinken: « Postes de production », dan « Postes généraux ».\nVóór het bewaren zegt het venster wat het geeft: « Avec ces postes : … · … produits (+…) ».\nEen sector die niemand had: « … n’avait personne : il sera couvert. »\nAlles uitvinken verwijdert zijn toewijzingen.\n« Enregistrer » schrijft in het panel: « Postes enregistrés au panel. »\nAls iemand intussen zijn posten gewijzigd heeft: niets wordt geschreven, de kaart wordt opnieuw gelezen.\nEen ontbrekende post wordt in het panel aangemaakt, in Admin."
+     },
+     "critique": false,
+     "photo": "art-dash-equipe-affect.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Planning : la semaine et le budget d’heures",
+    "nl": "Planning: de week en het urenbudget"
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "La semaine",
+      "nl": "De week"
+     },
+     "texte": {
+      "fr": "Onglet « Planning » : « Jour », « Semaine » ou « Mois » ; ‹ › pour changer de période.\n« Ajouter un service » et « Imprimer le planning » en haut à droite.\nQuatre chiffres : « Employés au planning », « Heures planifiées » (et le budget d’heures à 17 %), « Personnel / CA », « Jours avec un trou ».\nLe tableau : une ligne par personne, une case par jour ; chaque service avec sa petite barre sur la journée ; ses heures et son coût.\nUn clic sur un service l’ouvre ; un clic sur une case vide en crée un.",
+      "nl": "Tabblad « Planning »: « Jour », « Semaine » of « Mois »; ‹ › om van periode te veranderen.\n« Ajouter un service » en « Imprimer le planning » rechtsboven.\nVier cijfers: « Employés au planning », « Heures planifiées » (en het urenbudget op 17 %), « Personnel / CA », « Jours avec un trou ».\nDe tabel: één lijn per persoon, één vak per dag; elke dienst met zijn kleine balk over de dag; zijn uren en zijn kost.\nEen klik op een dienst opent ze; een klik op een leeg vak maakt er een aan."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Le budget d’heures",
+      "nl": "Het urenbudget"
+     },
+     "texte": {
+      "fr": "Le calcul : les frais de personnel du planning, divisés par le chiffre d’affaires.\nLe CA : la caisse (comptoir + B2B) pour les jours passés, la projection aujourd’hui, l’objectif ensuite.\nLe coût : les heures de chacun × son taux ; des heures sans taux sont signalées « sans taux ».\nLa cible du réseau : 17 %.\nAu-dessus de 17 % : orange. Au-dessus de 20 % : rouge. Au-dessus de 22 % : noir.\nAu-dessus de la cible, « Pour revenir à 17 % » donne deux leviers : retirer … h au coût moyen, ou un coût moyen de … €/h pour les mêmes heures.\nDans la cible : « encore … h possibles au coût moyen de … ».\nPas de CA pour la période : « le budget ne se calcule pas ».",
+      "nl": "De berekening: de personeelskosten van de planning, gedeeld door de omzet.\nDe omzet: de kassa (toonbank + B2B) voor de voorbije dagen, de projectie vandaag, de doelstelling daarna.\nDe kost: de uren van iedereen × zijn tarief; uren zonder tarief worden gemeld met « sans taux ».\nDe doelstelling van het netwerk: 17 %.\nBoven 17 %: oranje. Boven 20 %: rood. Boven 22 %: zwart.\nBoven de doelstelling geeft « Pour revenir à 17 % » twee hefbomen: … u schrappen aan de gemiddelde kost, of een gemiddelde kost van … €/u voor dezelfde uren.\nBinnen de doelstelling: « encore … h possibles au coût moyen de … ».\nGeen omzet voor de periode: « le budget ne se calcule pas »."
+     },
+     "critique": true,
+     "photo": "art-dash-equipe-semaine.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le jour : le planogramme",
+    "nl": "De dag: het planogram"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Lire la journée",
+      "nl": "De dag lezen"
+     },
+     "texte": {
+      "fr": "Cinq chiffres : « Au planning ce jour », « Heures du jour » (coût estimé), « Personnel / CA du jour », « Temps morts habituels », « Trous dans les linéaires » (« à vérifier »).\nUne ligne par personne, rangée par section ; ses services en barres sur l’axe des heures.\nDessous, « Les linéaires » : la présence face aux tickets (moyenne des mêmes jours d’avant), les temps morts (10 minutes et plus sans ticket), une ligne par secteur et le comptoir.\nLes heures d’ouverture viennent des premiers et derniers tickets des 4 dernières semaines.\nLes linéaires disent qui est là d’après les postes de chacun : une présence planifiée ne garantit pas que la production est faite.",
+      "nl": "Vijf cijfers: « Au planning ce jour », « Heures du jour » (geschatte kost), « Personnel / CA du jour », « Temps morts habituels », « Trous dans les linéaires » (« à vérifier »).\nEén lijn per persoon, gerangschikt per sectie; zijn diensten als balken op de urenas.\nDaaronder « Les linéaires »: de aanwezigheid tegenover de tickets (gemiddelde van dezelfde vorige dagen), de dode momenten (10 minuten en meer zonder ticket), één lijn per sector en de toonbank.\nDe openingsuren komen van de eerste en laatste tickets van de laatste 4 weken.\nDe linéaires zeggen wie er is volgens de posten van iedereen: een geplande aanwezigheid garandeert niet dat de productie gedaan is."
+     },
+     "critique": false,
+     "photo": "art-dash-equipe-jour.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Les gestes à la souris",
+      "nl": "De gebaren met de muis"
+     },
+     "texte": {
+      "fr": "Sur la ligne d’une personne au repos : tirer une ligne de l’heure de début à l’heure de fin crée un service.\nGlisser une barre la déplace ; tirer ses bords change ses heures, au quart d’heure.\nUn clic ouvre le service.\nRien n’est écrit au panel avant « Enregistrer » ou « Ajouter le service ».",
+      "nl": "Op de lijn van een persoon in rust: een lijn trekken van het beginuur tot het einduur maakt een dienst aan.\nEen balk verslepen verplaatst ze; aan de randen trekken verandert de uren, per kwartier.\nEen klik opent de dienst.\nNiets wordt in het panel geschreven vóór « Enregistrer » of « Ajouter le service »."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La fenêtre d’un service",
+    "nl": "Het venster van een dienst"
+   },
+   "etapes": [
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Tirer sa ligne",
+      "nl": "Zijn lijn trekken"
+     },
+     "texte": {
+      "fr": "En tête : la personne, ses postes, le jour et ses heures au planning.\nLes sections : « Toute l’équipe », « Comptoir », chaque secteur, avec qui est au planning sur le total ; ‹ › passe d’une personne à l’autre.\nLa ligne se tire sur l’axe des heures, au quart d’heure ; un bord se tire pour ajuster.\n« Verte de 4 h à 8 h · rouge sous 4 h ou au-dessus de 8 h. »\nDessous, à la même échelle : qui est là ce jour, et le comptoir.\nDeux services qui se chevauchent : « Chevauche son service de … à … : adaptez les heures. »",
+      "nl": "Bovenaan: de persoon, zijn posten, de dag en zijn uren in de planning.\nDe secties: « Toute l’équipe », « Comptoir », elke sector, met wie in de planning staat op het totaal; ‹ › gaat van de ene persoon naar de andere.\nDe lijn wordt op de urenas getrokken, per kwartier; een rand wordt getrokken om bij te stellen.\n« Verte de 4 h à 8 h · rouge sous 4 h ou au-dessus de 8 h. »\nDaaronder, op dezelfde schaal: wie er die dag is, en de toonbank.\nTwee diensten die overlappen: « Chevauche son service de … à … : adaptez les heures. »"
+     },
+     "critique": false,
+     "photo": "art-dash-equipe-service.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "Ce que ça change, avant d’enregistrer",
+      "nl": "Wat het verandert, vóór het bewaren"
+     },
+     "texte": {
+      "fr": "« Comptoir » : le trou comblé, ou « vide de … à … », ou « rien ne change ».\n« Budget du [jour] » : avant → après, l’écart en euros, la cible de 17 %.\n« Budget de la semaine » : avant → après, les heures ajoutées ou retirées.\n« [Prénom] cette semaine » : ses heures avant → après, ses jours de travail et de repos.\nPuis « Enregistrer » (ou « Ajouter le service »), « Annuler », ou « Retirer … du shift ».",
+      "nl": "« Comptoir »: het gat opgevuld, of « vide de … à … », of « rien ne change ».\n« Budget du [dag] »: voor → na, het verschil in euro, de doelstelling van 17 %.\n« Budget de la semaine »: voor → na, de toegevoegde of geschrapte uren.\n« [Voornaam] cette semaine »: zijn uren voor → na, zijn werk- en rustdagen.\nDan « Enregistrer » (of « Ajouter le service »), « Annuler », of « Retirer … du shift »."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Le shift, et retirer quelqu’un",
+      "nl": "De shift, en iemand verwijderen"
+     },
+     "texte": {
+      "fr": "« Sur ce shift » : ceux qui travaillent aux mêmes heures ; « Ouvrir » ou « Retirer » chacun.\n« + Ajouter une personne sur ce shift » : qui est libre, avec l’effet sur les heures, le coût et le budget du jour.\n« Retirer … du shift » : son service de ce jour est supprimé du planning, après confirmation.\n« Retirer de l’horaire de la semaine » (absent, en congé) : tous ses services de la semaine sont supprimés du planning du panel, après confirmation.",
+      "nl": "« Sur ce shift »: wie op dezelfde uren werkt; « Ouvrir » of « Retirer » voor elk.\n« + Ajouter une personne sur ce shift »: wie vrij is, met het effect op de uren, de kost en het budget van de dag.\n« Retirer … du shift »: zijn dienst van die dag wordt uit de planning geschrapt, na bevestiging.\n« Retirer de l’horaire de la semaine » (afwezig, met verlof): al zijn diensten van de week worden uit de planning van het panel geschrapt, na bevestiging."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le mois, l’impression, les options",
+    "nl": "De maand, het afdrukken, de opties"
+   },
+   "etapes": [
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Le mois et l’impression",
+      "nl": "De maand en het afdrukken"
+     },
+     "texte": {
+      "fr": "« Mois » : les heures de chacun jour par jour ; le week-end grisé.\nQuatre chiffres : « Employés au planning », « Heures du mois » (et son budget), « Personnel / CA », « Jours au-dessus de la cible » (« à revoir »).\nLa jauge du budget d’heures du mois.\n« Imprimer le planning » : « À partir du », « Une semaine » ou « Deux semaines ».\nPrésentation : « Tout le magasin, groupé par section » ou « Une page par section » ; A4 paysage ; « Télécharger le PDF ».",
+      "nl": "« Mois »: de uren van iedereen dag per dag; het weekend in grijs.\nVier cijfers: « Employés au planning », « Heures du mois » (en zijn budget), « Personnel / CA », « Jours au-dessus de la cible » (« à revoir »).\nDe meter van het urenbudget van de maand.\n« Imprimer le planning »: « À partir du », « Une semaine » of « Deux semaines ».\nVoorstelling: « Tout le magasin, groupé par section » of « Une page par section »; A4 liggend; « Télécharger le PDF »."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "Les options",
+      "nl": "De opties"
+     },
+     "texte": {
+      "fr": "« Options » : quatre modules à allumer pour ce magasin ; éteints au départ, ils ne se montrent pas.\n« Assistant de la semaine » : reprendre la semaine passée ou la matrice, qui adapter, les heures de trop et des propositions, puis créer la semaine au panel.\n« Tâches dans les temps morts » : les checklists sans heure fixe posées dans les creux habituels du comptoir, à quelqu’un du comptoir présent.\n« Matrice A B C D et shift maker » : quatre roulements sur deux semaines, la lettre de chacun dans sa fiche, les créneaux matin et après-midi, et le shift maker (test).\n« Recopier la semaine précédente » : la semaine d’avant reportée de sept jours, aperçu puis création.\nUne option allumée ajoute « Préparer la semaine ▾ » à la vue Semaine.",
+      "nl": "« Options »: vier modules om aan te zetten voor deze winkel; bij de start uit, dan worden ze niet getoond.\n« Assistant de la semaine »: de vorige week of de matrix hernemen, wie aanpassen, de uren te veel en voorstellen, dan de week in het panel aanmaken.\n« Tâches dans les temps morts »: de checklists zonder vast uur in de gewone dode momenten van de toonbank geplaatst, bij iemand van de toonbank die aanwezig is.\n« Matrice A B C D et shift maker »: vier roulementen over twee weken, de letter van iedereen in zijn fiche, de tijdsloten ochtend en namiddag, en de shift maker (test).\n« Recopier la semaine précédente »: de week ervoor zeven dagen verschoven, voorbeeld en dan aanmaak.\nEen ingeschakelde optie voegt « Préparer la semaine ▾ » toe aan de weekweergave."
+     },
+     "critique": false,
+     "photo": "art-dash-equipe-options.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Ce qui s’enregistre ici change le vrai planning et les vrais postes du panel : l’équipe le voit. Rien n’est écrit avant « Enregistrer » ou « Ajouter le service ».",
+   "nl": "Wat hier bewaard wordt, verandert de echte planning en de echte posten van het panel: het team ziet het. Niets wordt geschreven vóór « Enregistrer » of « Ajouter le service »."
+  },
+  {
+   "fr": "Le budget d’heures est un calcul : frais de personnel du planning ÷ CA (caisse les jours passés, objectif ensuite). Cible 17 % ; orange au-dessus, rouge au-dessus de 20 %, noir au-dessus de 22 %.",
+   "nl": "Het urenbudget is een berekening: personeelskosten van de planning ÷ omzet (kassa voor de voorbije dagen, doelstelling daarna). Doelstelling 17 %; oranje erboven, rood boven 20 %, zwart boven 22 %."
+  },
+  {
+   "fr": "Une présence au planning ne garantit pas que la production est faite : les linéaires et les trous sont des indices à vérifier.",
+   "nl": "Een aanwezigheid in de planning garandeert niet dat de productie gedaan is: de linéaires en de gaten zijn aanwijzingen om na te kijken."
+  },
+  {
+   "fr": "« Retirer de l’horaire de la semaine » supprime tous les services de la personne pour la semaine.",
+   "nl": "« Retirer de l’horaire de la semaine » schrapt alle diensten van de persoon voor de week."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Le budget d’heures de la semaine affiche 21 %. De quelle couleur est-il ?",
+    "nl": "Het urenbudget van de week toont 21 %. Welke kleur heeft het?"
+   },
+   "choix": {
+    "fr": [
+     "Orange",
+     "Rouge",
+     "Noir"
+    ],
+    "nl": [
+     "Oranje",
+     "Rood",
+     "Zwart"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Quel CA sert au budget d’heures d’un jour passé ?",
+    "nl": "Welke omzet dient voor het urenbudget van een voorbije dag?"
+   },
+   "choix": {
+    "fr": [
+     "La caisse : comptoir + B2B",
+     "L’objectif du jour",
+     "La moyenne des 4 dernières semaines"
+    ],
+    "nl": [
+     "De kassa: toonbank + B2B",
+     "De doelstelling van de dag",
+     "Het gemiddelde van de laatste 4 weken"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Au jour, une personne est au repos. Comment lui créer un service à la souris ?",
+    "nl": "Op de dag is iemand in rust. Hoe maak je met de muis een dienst aan?"
+   },
+   "choix": {
+    "fr": [
+     "Double-cliquer sur son nom",
+     "Passer par « Options »",
+     "Tirer une ligne sur sa ligne, de l’heure de début à l’heure de fin"
+    ],
+    "nl": [
+     "Dubbelklikken op zijn naam",
+     "Via « Options » gaan",
+     "Een lijn trekken op zijn lijn, van het beginuur tot het einduur"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Dans la fenêtre d’un service, la ligne est rouge. Pourquoi ?",
+    "nl": "In het venster van een dienst is de lijn rood. Waarom?"
+   },
+   "choix": {
+    "fr": [
+     "Le comptoir est vide",
+     "Le service dure moins de 4 h ou plus de 8 h",
+     "Le budget du jour dépasse 17 %"
+    ],
+    "nl": [
+     "De toonbank is leeg",
+     "De dienst duurt minder dan 4 u of meer dan 8 u",
+     "Het budget van de dag is hoger dan 17 %"
+    ]
+   },
+   "bonne": 1
+  }
+ ]
+}
