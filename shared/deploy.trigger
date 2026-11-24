@@ -302,3 +302,4 @@
 2026-11-24T15:51:47Z Mon équipe › Planning : les ETP planifiés, la jauge du CA par ETP (cible 13 000 €), le mois groupé par section
 2026-11-24T17:03:19Z Mon équipe : la fiche d'une personne (identité, contrat et taux modifiables, évaluations par service, ventes des 12 semaines, compétences, primes)
 2026-11-24T17:14:34Z Mon équipe › Planning : la jauge du CA par ETP au mois seulement ; vidéos 02 et 03 retournées
+2026-11-24T17:24:39Z Dashboard magasin › Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer ; vues Liste et Tournées sur un interrupteur abricot (tables panel_tournee*)
