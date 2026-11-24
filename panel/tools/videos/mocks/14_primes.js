@@ -1,4 +1,4 @@
-/* Vendre › Primes (vue=primes) : « Où en sont tes vendeuses », lu par panel/public/dashboard/dashboard.js (rendPrimes),
+/* Mon équipe › Primes (vue=primes ; dans Vendre jusqu'au 24/11/2026) : « Où en sont tes vendeuses », lu par panel/public/dashboard/dashboard.js (rendPrimes),
  * aux formes de panel/src/primes.php : GET /ventes/primes-equipe?shop=&m= (primesEquipe : les colonnes de
  * primesEquipeColonne, les cases de primesEquipeCase) et GET /ventes/primes-annee?y=&shop= (primesAnneeVue).
  * Six personnes de vente fictives (celles de Mon équipe, mocks/20_equipe.js), le mois en cours (novembre 2026, au
