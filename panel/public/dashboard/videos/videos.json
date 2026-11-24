@@ -35,7 +35,7 @@
       ],
       "fichier": "02-mon-equipe.mp4",
       "affiche": "02-mon-equipe.jpg",
-      "duree": "2 min 20",
+      "duree": "2 min 21",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/equipe.js",
@@ -43,8 +43,8 @@
         "panel/src/equipe.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "f2edb019a1e15ef6f24603401bf771201964efe1",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "formation-horaires",
@@ -57,7 +57,7 @@
       ],
       "fichier": "03-formation-planning.mp4",
       "affiche": "03-formation-planning.jpg",
-      "duree": "5 min 17",
+      "duree": "5 min 19",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/equipe.js",
@@ -65,8 +65,8 @@
         "panel/src/equipe.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "f2edb019a1e15ef6f24603401bf771201964efe1",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "taches",

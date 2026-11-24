@@ -537,6 +537,30 @@ function eqpDurees(): array
 }
 
 /**
+ * Les ETP et le CA par ETP (24/11/2026, Sam : « rajouter comme info les ETP et le CA par ETP ») : la règle du réseau,
+ * celle de GET /stores/etp et du Catalogue des KPI — 1 ETP = `heuresEtpMois` heures planifiées par mois (168 h au
+ * départ) ; le CA par ETP est « CA du mois ÷ ETP planifiés », cible = seuil d'alerte du KPI `ca-etp` (13 000 €), sous
+ * le seuil critique (10 000 €) c'est grave. L'écran ramène une semaine ou un jour au mois : CA ÷ heures × heuresMois.
+ */
+function eqpEtp(): array
+{
+    $h = function_exists('setting') ? setting('heuresEtpMois', 168) : 168;
+    $h = is_numeric($h) && (float) $h > 0 && (float) $h <= 744 ? (float) $h : 168.0;
+    $cible = 13000.0; $critique = 10000.0;
+    if (function_exists('kpiDefs')) {
+        try {
+            $d = kpiDefs()['ca-etp'] ?? null;
+            if (is_array($d)) {
+                if (is_numeric($d['seuil_alerte'] ?? null) && (float) $d['seuil_alerte'] > 0) { $cible = (float) $d['seuil_alerte']; }
+                if (is_numeric($d['seuil_critique'] ?? null) && (float) $d['seuil_critique'] > 0 && (float) $d['seuil_critique'] <= $cible) { $critique = (float) $d['seuil_critique']; }
+            }
+        } catch (Throwable $e) { /* le Catalogue ne se lit pas : les valeurs de départ */ }
+    }
+    if ($critique > $cible) { $critique = $cible; }
+    return ['heuresMois' => $h, 'caCible' => $cible, 'caCritique' => $critique];
+}
+
+/**
  * Le chiffre d'un jour pour les % du personnel (23/11/2026, Sam : « le chiffre du jour complet, comptoir + B2B, pour
  * calculer les % ») : un jour passé, ce que la caisse a fait (margin-heatmap : comptoir et B2B ensemble, TTC comme
  * l'objectif) ; aujourd'hui, la projection de fin de journée du Résultat du jour (le relevé /exploitation/jour gardé
@@ -634,6 +658,7 @@ function eqpPlanningDonnees(int $shop, string $du, int $n): array
         'objectif' => ['source' => $obj['source'], 'motif' => $obj['motif']],
         'budget' => function_exists('personnelPaliers') ? personnelPaliers() : ['cible' => 17.0, 'rouge' => 20.0, 'noir' => 22.0, 'source' => 'départ'],
         'durees' => eqpDurees(),
+        'etp' => eqpEtp(),
         'options' => $opts,
         'taches' => $opts['taches'] ? ['liste' => eqpTachesConfig(), 'fixes' => eqpTachesFixes(), 'places' => eqpTachesPlaces($shop, $jours[0], $jours[$n - 1])] : null,
         'nonLus' => $muets, 'ouvertures' => (object) eqpOuvertures($shop)];
