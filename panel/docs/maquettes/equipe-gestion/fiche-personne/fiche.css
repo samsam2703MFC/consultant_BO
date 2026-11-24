@@ -98,3 +98,19 @@
 .fp-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin:10px 0 0}
 .fp-ev-b{display:grid;grid-template-columns:150px 1fr;gap:18px;margin-bottom:12px}
 .fp-ev-b .fp-moy{font-size:34px}
+
+/* Onglet Ventes (24/11/2026) : les chiffres, puis le graphique des 12 semaines et sa bascule. */
+.fp-kpis{padding:0;margin:0 0 16px}
+.fp-kpis .kpi{min-width:120px;padding:11px 14px}
+.fp-kpis .kpi__value{font-size:21px}
+.fp-kpis .kpi__value .u{font-size:13px;font-weight:400;color:var(--muted);margin-left:3px}
+.fp-gr-tete{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.fp-gr-tete h4{margin:0 0 2px;font-size:10.5px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fp-gr-tete .sp{flex:1}
+.fp-gr-tete .linklike{font-size:12px}
+.fp-gr{position:relative}
+.fp-gr svg{display:block;width:100%;height:auto;font-family:'Gotham',system-ui,sans-serif;font-size:11px;fill:var(--muted)}
+.fp-gr svg text.lab{fill:var(--ink);font-size:12px}
+.fp-gr svg text.ref{font-size:11px}
+.fp-tip{position:absolute;display:grid;gap:2px;width:288px;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:11.5px;color:var(--muted-2);pointer-events:none}
+.fp-tip b{font-weight:400;color:var(--ink);font-size:12px}

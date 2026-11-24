@@ -2,7 +2,11 @@
  * chaque membre du personnel, évaluation, coût… fais une maquette (2) screenshot »).
  * Posée sur le vrai dashboard servi avec la fausse API des vidéos (données FICTIVES : Magasin démo, Camille Roussel).
  * Les champs sont ceux que TF Buddy garde (swagger : Employee, EmployeeWrite, EmployeeEvaluationRaw) ; rien de plus.
- *   window.FP.monter('a-identite' | 'a-evaluations' | 'b-page') */
+ * Onglet Ventes (24/11/2026, « rajouter un onglet avec ses KPI de vente et un graphique sur les 12 dernières semaines,
+ * toggle ventes en euros / panier moyen / pièces par ticket ») : les barres pour un total (les ventes), la courbe pour
+ * une moyenne (panier, pièces) avec deux repères nommés sur la ligne (moyenne de l'équipe, cible du réseau) ; une seule
+ * série, pas de légende ; couleurs du design system (--chart-real, --chart-goal), validées.
+ *   window.FP.monter('a-identite' | 'a-evaluations' | 'a-ventes-euros' | 'a-ventes-panier' | 'a-ventes-pieces' | 'b-page') */
 (function () {
   const et = (n, gros) => `<span class="fp-et${gros ? ' gros' : ''}">${'★'.repeat(n)}<i>${'★'.repeat(5 - n)}</i></span>`;
   const P = {
@@ -13,7 +17,7 @@
   const tete = (fermer) => `<div class="fp-tete"><span class="fp-av">${P.ini}</span><div><div class="fp-nm">${P.nom}</div>
       <div class="fp-sous"><span class="chip chip--neutral">${P.fonction}</span><span class="chip chip--neutral">Contrat de travail</span><span class="chip chip--ok">Active</span><span class="chip chip--neutral">App employés : accès prêt</span></div></div>
       ${fermer ? '<button class="fp-x" aria-label="Fermer">×</button>' : ''}</div>`;
-  const onglets = on => `<nav class="page-tabs" aria-label="La fiche">${[['identite', 'Identité et contrat'], ['cout', 'Heures et coût'], ['evaluations', 'Évaluations <span class="page-tabs__count">3 à noter</span>'], ['competences', 'Compétences et postes'], ['ventes', 'Ventes et primes']]
+  const onglets = on => `<nav class="page-tabs" aria-label="La fiche">${[['identite', 'Identité et contrat'], ['cout', 'Heures et coût'], ['evaluations', 'Évaluations <span class="page-tabs__count">3 à noter</span>'], ['competences', 'Compétences et postes'], ['ventes', 'Ventes'], ['primes', 'Primes']]
     .map(([k, l]) => `<button type="button" class="page-tabs__tab${k === on ? ' is-on' : ''}">${l}</button>`).join('')}</nav>`;
 
   /* ── A · la fenêtre, onglet Identité et contrat ── */
@@ -61,6 +65,68 @@
           <div class="fp-li"><div class="d">Dim. 8 novembre<small>07:15–13:45</small></div><div>${et(3)}</div><div class="c">« Ouverture en retard de 10 min. »<small>notée par le franchisé</small></div></div>
         </div>
       </div></div>`;
+
+  /* ── A · la fenêtre, onglet Ventes : ses chiffres et ses 12 dernières semaines ── */
+  const SEM = ['31/8', '7/9', '14/9', '21/9', '28/9', '5/10', '12/10', '19/10', '26/10', '2/11', '9/11', '16/11'];
+  const SEM_L = ['31 août', '7 sept.', '14 sept.', '21 sept.', '28 sept.', '5 oct.', '12 oct.', '19 oct.', '26 oct.', '2 nov.', '9 nov.', '16 nov.'];
+  const VTE = [1720, 1810, 1765, 1890, 1840, 1955, 2010, 1930, 2085, 1980, 2140, 2210];
+  const TK = [124, 129, 125, 133, 128, 135, 139, 132, 141, 136, 145, 148];
+  const PCS = [2.08, 2.12, 2.10, 2.18, 2.15, 2.21, 2.19, 2.24, 2.27, 2.22, 2.29, 2.33];
+  const HRS = [25, 26, 25.5, 26.5, 26, 26, 27, 25.5, 26.5, 26, 26.5, 26];
+  const PAN = VTE.map((v, i) => v / TK[i]);
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const fE0 = n => Math.round(n).toLocaleString('fr-BE').replace(/\s/g, ' ') + ' €';
+  const fD = (n, d) => n.toFixed(d).replace('.', ',');
+  const EQUIPE = { panier: 14.05, pieces: 2.14 }, CIBLE = { panier: 13, pieces: 3.6 };
+  function graphe(mode) {
+    const W = 936, H = 268, g = 58, d = 150, h = 18, b = 236, pw = W - g - d, bande = pw / 12, x = i => g + bande * (i + 0.5);
+    const val = mode === 'euros' ? VTE : mode === 'panier' ? PAN : PCS;
+    const [lo, hi, pas] = mode === 'euros' ? [0, 3000, 500] : mode === 'panier' ? [12, 16, 1] : [2, 3.8, 0.4];
+    const y = v => b - (v - lo) / (hi - lo) * (b - h);
+    const fmt = v => mode === 'euros' ? fE0(v) : mode === 'panier' ? fD(v, 2) + ' €' : fD(v, 2);
+    let s = '';
+    for (let v = lo; v <= hi + 1e-9; v += pas) { s += `<line x1="${g}" x2="${W - d}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="${v === lo ? '#d8d1c6' : 'rgba(34,34,34,.07)'}"/><text x="${g - 8}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${mode === 'euros' ? fE0(v) : fD(v, mode === 'panier' ? 0 : 1) + (mode === 'panier' ? ' €' : '')}</text>`; }
+    SEM.forEach((l, i) => { s += `<text x="${x(i).toFixed(1)}" y="${b + 18}" text-anchor="middle">${l}</text>`; });
+    const sel = 11;
+    if (mode === 'euros') {
+      const bw = bande * 0.56;
+      val.forEach((v, i) => { const x0 = x(i) - bw / 2, y0 = y(v), r = 4;
+        s += `<path d="M${x0.toFixed(1)},${b} V${(y0 + r).toFixed(1)} Q${x0.toFixed(1)},${y0.toFixed(1)} ${(x0 + r).toFixed(1)},${y0.toFixed(1)} H${(x0 + bw - r).toFixed(1)} Q${(x0 + bw).toFixed(1)},${y0.toFixed(1)} ${(x0 + bw).toFixed(1)},${(y0 + r).toFixed(1)} V${b} Z" fill="#B03048" opacity="${i === sel ? 1 : 0.78}"/>`; });
+      s += `<text class="lab" x="${(x(sel) + bande * 0.36).toFixed(1)}" y="${(y(val[sel]) + 4).toFixed(1)}">${fE0(val[sel])}</text>`;
+      const moy = sum(VTE) / 12;
+      s += `<line x1="${g}" x2="${W - d}" y1="${y(moy).toFixed(1)}" y2="${y(moy).toFixed(1)}" stroke="#7a736a" stroke-width="1.5" stroke-dasharray="5 4"/><text class="ref" x="${W - d + 8}" y="${(y(moy) + 4).toFixed(1)}">sa moyenne ${fE0(moy)}</text>`;
+    } else {
+      const ref = (v, c, t) => `<line x1="${g}" x2="${W - d}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="${c}" stroke-width="1.5" stroke-dasharray="5 4"/><text class="ref" x="${W - d + 8}" y="${(y(v) + 4).toFixed(1)}" fill="${c}">${t}</text>`;
+      s += ref(EQUIPE[mode], '#7a736a', 'équipe ' + fmt(EQUIPE[mode]));
+      s += ref(CIBLE[mode], '#1B6FA8', 'cible du réseau ' + fmt(CIBLE[mode]));
+      s += `<line x1="${x(sel).toFixed(1)}" x2="${x(sel).toFixed(1)}" y1="${h}" y2="${b}" stroke="#d8d1c6"/>`;
+      s += `<polyline fill="none" stroke="#B03048" stroke-width="2" stroke-linejoin="round" points="${val.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ')}"/>`;
+      val.forEach((v, i) => { s += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === sel ? 5 : 4}" fill="#B03048" stroke="#fff" stroke-width="2"/>`; });
+    }
+    // L'infobulle de la semaine survolée : à gauche du trait, dans une zone vide du graphique (au-dessus des barres ;
+    // sous la cible pour le panier ; entre la courbe et la cible pour les pièces) — elle ne cache aucune donnée.
+    const haut = mode === 'euros' ? y(2960) : mode === 'panier' ? y(CIBLE.panier) + 5 : y(3.35);
+    const tip = `<div class="fp-tip" style="left:${((x(sel) - 300) / W * 100).toFixed(2)}%;top:${(haut / H * 100).toFixed(2)}%"><b>Semaine du ${SEM_L[sel]} · ${fE0(VTE[sel])}</b><span>${TK[sel]} tickets · ${fD(HRS[sel], 0)} h · panier ${fD(PAN[sel], 2)} € · ${fD(PCS[sel], 2)} pièces</span></div>`;
+    return `<div class="fp-gr"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${mode === 'euros' ? 'Ventes en euros' : mode === 'panier' ? 'Panier moyen' : 'Pièces par ticket'}, 12 dernières semaines">${s}</svg>${tip}</div>`;
+  }
+  const aVentes = mode => {
+    const v = sum(VTE), t = sum(TK), h = sum(HRS), pan = v / t, pcs = sum(PCS.map((p, i) => p * TK[i])) / t;
+    const titre = { euros: 'Ventes en euros, par semaine', panier: 'Panier moyen, par semaine', pieces: 'Pièces par ticket, par semaine' }[mode];
+    return `<section class="card eqp-kpis fp-kpis"><div class="kpi-row">
+        <div class="kpi"><div class="kpi__value">${fE0(v)}</div><div class="kpi__label">Vendu · 12 semaines</div><div class="kpi__note">+18 % sur les 12 d’avant</div></div>
+        <div class="kpi"><div class="kpi__value">${fD(pan, 2)} €</div><div class="kpi__label">Panier moyen</div><div class="kpi__note">équipe ${fD(EQUIPE.panier, 2)} € · cible ${fD(CIBLE.panier, 0)} €</div></div>
+        <div class="kpi"><div class="kpi__value">${fD(pcs, 2)}</div><div class="kpi__label">Pièces par ticket</div><div class="kpi__note">équipe ${fD(EQUIPE.pieces, 2)} · cible ${fD(CIBLE.pieces, 1)}</div></div>
+        <div class="kpi"><div class="kpi__value">${t.toLocaleString('fr-BE').replace(/\s/g, ' ')}</div><div class="kpi__label">Tickets</div><div class="kpi__note">${fD(t / 12, 0)} par semaine</div></div>
+        <div class="kpi"><div class="kpi__value">${fE0(v / h)}<span class="u">/ h</span></div><div class="kpi__label">Vendu par heure</div><div class="kpi__note">équipe 71 € / h · ${fD(h, 0)} h au planning</div></div>
+        <div class="kpi"><div class="kpi__value">2<sup>e</sup><span class="u">/ 6</span></div><div class="kpi__label">Rang dans l’équipe</div><div class="kpi__note">au vendu par heure</div></div>
+      </div></section>
+      <div class="fp-gr-tete"><div><h4>${titre}</h4><span class="fp-api">les 12 dernières semaines complètes, du 31 août au 22 novembre</span></div><span class="sp"></span>
+        <div class="seg" role="group" aria-label="Mesure">${[['euros', 'Ventes en €'], ['panier', 'Panier moyen'], ['pieces', 'Pièces par ticket']].map(([k, l]) => `<button type="button" class="${k === mode ? 'is-on' : ''}">${l}</button>`).join('')}</div>
+        <button class="linklike" type="button">Voir en tableau</button></div>
+      ${graphe(mode)}
+      <p class="fp-api" style="margin:6px 0 0">${mode === 'euros' ? 'Le trait gris : sa moyenne sur les 12 semaines. La dernière semaine est survolée.' : 'Les traits : la moyenne de l’équipe (gris) et la cible du réseau (bleu). La dernière semaine est survolée.'} Pièces par ticket = lignes par ticket, la règle du cockpit.</p>`;
+  };
+  const piedVt = `<div class="fp-pied"><span class="fp-api">Lu dans TF Buddy : <code>GET /shops/{id}/statistics/sales/employees/{date}</code> (vendu, tickets, jour par jour) et la moisson des tickets du cockpit (lignes par ticket, depuis août 2026)</span><span class="sp"></span><button class="btn" type="button">Fermer</button></div>`;
 
   const fenetre = (on, corps, pied) => `<div class="fp-voile" id="fp"><div class="card fp-mod" role="dialog" aria-label="Fiche de ${P.nom}">${tete(true)}${onglets(on)}<div class="fp-corps">${corps}</div>${pied}</div></div>`;
   const piedId = `<div class="fp-pied"><button class="linklike danger" type="button">Désactiver Camille</button><span class="fp-api">Écrit dans TF Buddy (<code>PATCH /employees/{id}</code>) · rien n’est envoyé avant « Enregistrer »</span><span class="sp"></span><button class="btn" type="button">Annuler</button><button class="btn btn--primary" type="button">Enregistrer</button></div>`;
@@ -128,6 +194,7 @@
       const eqp = document.querySelector('.eqp');
       if (etat === 'a-identite') { document.body.insertAdjacentHTML('beforeend', fenetre('identite', aIdentite(), piedId)); }
       if (etat === 'a-evaluations') { document.body.insertAdjacentHTML('beforeend', fenetre('evaluations', aEvaluations(), piedEv)); }
+      if (etat.startsWith('a-ventes-')) { document.body.insertAdjacentHTML('beforeend', fenetre('ventes', aVentes(etat.slice(9)), piedVt)); }
       if (etat === 'b-page' && eqp) {
         [...eqp.children].forEach(c => { if (!c.matches('nav')) { c.style.display = 'none'; } });
         eqp.querySelectorAll('nav .page-tabs__tab').forEach(t => t.classList.toggle('is-on', /Responsabilit/.test(t.textContent)));

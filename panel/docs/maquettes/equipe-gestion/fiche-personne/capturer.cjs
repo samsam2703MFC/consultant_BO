@@ -8,7 +8,9 @@ const fs = require('fs'), path = require('path');
 const { DEMO, nouveauContexte } = require('../../../../tools/videos/mock');
 const OUT = process.argv[2] || __dirname;
 const CSS = fs.readFileSync(path.join(__dirname, 'fiche.css'), 'utf8'), JS = fs.readFileSync(path.join(__dirname, 'fiche.js'), 'utf8');
-const ETATS = [['a-identite', 'a1-fenetre-identite-et-contrat'], ['a-evaluations', 'a2-fenetre-evaluations'], ['b-page', 'b-page-de-la-personne']];
+const ETATS = [['a-identite', 'a1-fenetre-identite-et-contrat'], ['a-evaluations', 'a2-fenetre-evaluations'],
+  ['a-ventes-euros', 'a3-fenetre-ventes-euros'], ['a-ventes-panier', 'a4-fenetre-ventes-panier-moyen'], ['a-ventes-pieces', 'a5-fenetre-ventes-pieces-par-ticket'],
+  ['b-page', 'b-page-de-la-personne']];
 (async () => {
   const b = await chromium.launch({ args: ['--no-proxy-server'] });
   for (const [etat, nom] of ETATS) {

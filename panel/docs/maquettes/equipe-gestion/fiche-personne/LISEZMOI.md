@@ -1,7 +1,9 @@
 # Mon équipe : la fiche d'une personne (maquette, 24/11/2026)
 
 Demande : « dans Mon équipe je n'ai pas accès à l'édition de chaque membre du personnel, évaluation, coût… qu'est-ce que
-tu sais récupérer dans les repos GitHub et dans le swagger ? », puis « fais une maquette (2) screenshot ».
+tu sais récupérer dans les repos GitHub et dans le swagger ? », puis « fais une maquette (2) screenshot », puis
+« rajouter un onglet avec ses KPI de vente et un graphique sur les 12 dernières semaines (toggle ventes en euros /
+panier moyen / pièces par ticket) ».
 
 ## Captures
 
@@ -9,6 +11,9 @@ tu sais récupérer dans les repos GitHub et dans le swagger ? », puis « fais 
 |---|---|
 | `a1-fenetre-identite-et-contrat.png` | **A · une fenêtre à onglets**, ouverte d'un clic sur une personne (Responsabilités, Planning). Onglet « Identité et contrat » : le taux horaire changé montre son effet (coût du mois, personnel / CA) avant « Enregistrer » |
 | `a2-fenetre-evaluations.png` | A · onglet « Évaluations » : la moyenne, la répartition des notes, les services passés **à noter** (une note de 1 à 5 et un mot), l'historique |
+| `a3-fenetre-ventes-euros.png` | A · onglet « Ventes » : six chiffres (vendu sur 12 semaines, panier moyen, pièces par ticket, tickets, vendu par heure, rang dans l'équipe), puis le graphique des 12 dernières semaines complètes ; **Ventes en €** : une barre par semaine, sa moyenne en trait |
+| `a4-fenetre-ventes-panier-moyen.png` | la bascule sur **Panier moyen** : une courbe, la moyenne de l'équipe (gris) et la cible du réseau (bleu, 13 €) |
+| `a5-fenetre-ventes-pieces-par-ticket.png` | la bascule sur **Pièces par ticket** : la courbe, l'équipe et la cible du réseau (3,6) |
 | `b-page-de-la-personne.png` | **B · une page par personne** (Mon équipe › Camille Roussel) : six chiffres (taux, heures, coût, note, vendu, primes), puis identité et contrat, heures et coût semaine par semaine, compétences et postes, évaluations, ventes et primes |
 
 **Comment elles sont faites** (`capturer.cjs`) : le vrai dashboard servi en local avec la fausse API des vidéos
@@ -24,7 +29,16 @@ démo, Camille Roussel) ; aucune donnée réelle, aucune écriture.
 | Compétences, poste et niveau | `GET /employees/{id}/competencies`, `…/positions`, `GET /position-levels/{id}/requirements` | `PUT /employees/{id}/competencies`, `PUT …/positions` |
 | Postes de travail | dans la fiche | `PUT /employees/{id}/workstations` (déjà utilisé par Mon équipe) |
 | Heures et coût | le planning de Mon équipe (`/shops/{id}/schedule`) × `money_per_hour` | — |
-| Vendu, primes | `/shops/{id}/statistics/sales/employees/{date}`, la page des primes (`panel/src/primes.php`) | — |
+| Vendu, tickets, panier (onglet Ventes) | `/shops/{id}/statistics/sales/employees/{date}`, jour par jour (`panelVentesMois`, `shared/src/panel_ventes.php`) | — |
+| Pièces par ticket | la moisson des tickets du cockpit (`/transactions/{id}?include=products`, gravée par jour depuis août 2026, `pvSemainesReseau`) : des **lignes** par ticket, la règle du cockpit, pas la somme des quantités | — |
+| Primes | la page des primes (`panel/src/primes.php`) | — |
+
+## Le graphique (skill dataviz)
+
+Barres pour un total (les ventes), courbe pour une moyenne (panier, pièces) ; une seule série à la fois, donc pas de
+légende (le titre la nomme) ; les repères nommés au bout de leur trait ; couleurs du design system `--chart-real`
+(#B03048) et `--chart-goal` (#1B6FA8), passées au validateur (lisibles aussi pour les daltoniens) ; la semaine survolée
+dans une infobulle posée dans une zone vide ; « Voir en tableau » pour la lecture sans graphique.
 
 ## Ce qui reste à vérifier ou n'existe pas
 
