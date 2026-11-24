@@ -183,6 +183,50 @@
 .pco-jours i { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; font-style: normal; font-size: 9.5px; background: #fff; border: 1px solid var(--line); color: var(--faint); }
 .pco-jours i.is-on { background: var(--green); border-color: var(--green); color: #fff; }
 
+/* La semaine et le mois (24/11/2026) */
+.pco-per button { margin: 0; padding: 6px 11px; border: 0; border-radius: 7px; background: transparent; color: var(--muted-2); font: 400 12.5px 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.pco-per button.is-on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.pco-up { color: var(--green); font-size: 11.5px; }
+.pco-down { color: var(--stop); font-size: 11.5px; }
+.pco-tiret { color: var(--faint); }
+.pco-mini { display: inline-flex; gap: 1px; width: 90px; height: 6px; border-radius: 999px; overflow: hidden; background: var(--chip); vertical-align: middle; }
+.pco-mini i { display: block; height: 100%; }
+.pco-per-table td, .pco-per-table th { white-space: nowrap; }
+.pco-per-table td .tag-warn { display: table; margin: 4px 0 0 auto; }
+.pco-per-table .is-auj { background: rgba(141, 29, 44, 0.04); }
+.pco-per-table th.is-auj { color: var(--accent); }
+.pco-ligne.is-auj td { background: rgba(141, 29, 44, 0.04); }
+.pco-per-table td[data-act] { cursor: pointer; }
+.pco-per-table td[data-act]:hover { background: var(--table-head); }
+.pco-nr { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(34, 34, 34, 0.025) 6px 12px); }
+.pco-nr .pco-tiret { font-size: 11px; }
+.pco-pied-aide { margin: 0; padding: 10px 14px; border-top: 1px solid var(--row-line); }
+.pco-tete-tab { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 14px 8px; }
+.pco-tete-tab .pco-h2 { margin: 0; gap: 14px; }
+.pco-bleg { display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); }
+.pco-bleg span { display: inline-flex; align-items: center; gap: 6px; }
+.pco-bc { text-align: center !important; }
+.pco-bc i, .pco-bleg i { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; font-style: normal; font-size: 11px; }
+.pco-bleg i { width: 16px; height: 16px; font-size: 9.5px; }
+i.is-oui { background: var(--green); color: #fff; }
+i.is-non { background: #fff; border: 1px solid var(--line); }
+i.is-hors { border: 1px dashed var(--line); }
+.pco-cal { padding: 0; overflow: hidden; }
+.pco-cal table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.pco-cal th { padding: 9px 10px; background: var(--table-head); font-weight: 400; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); text-align: left; }
+.pco-cal td { height: 96px; padding: 8px 10px; vertical-align: top; border-top: 1px solid var(--row-line); border-left: 1px solid var(--row-line); }
+.pco-cal td:first-child { border-left: 0; }
+.pco-cal-j { cursor: pointer; }
+.pco-cal-j:hover { background: var(--table-head); }
+.pco-cal-j.is-auj { box-shadow: inset 0 0 0 2px rgba(141, 29, 44, 0.45); }
+.pco-cal-j.is-vide .pco-cal-t span:first-child { color: var(--muted); }
+.pco-cal-hors { background: var(--paper); }
+.pco-cal-s { background: var(--total-line); }
+.pco-cal-t { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.pco-cal-n { margin-top: 8px; font-size: 12px; color: var(--muted-2); }
+.pco-cal-ca { margin: 2px 0 6px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pco-cal .pco-mini { display: flex; width: auto; }
+
 /* Le téléphone et les écrans étroits : une colonne */
 @media (max-width: 960px) {
   .pco-grille { grid-template-columns: minmax(0, 1fr); }
@@ -194,6 +238,9 @@
 }
 @media (max-width: 600px) {
   .pco-faxe span:not(:nth-child(3n+1)) { display: none; }
+  .pco-cal td { height: 64px; padding: 5px; }
+  .pco-cal-ca, .pco-cal .pco-mini, .pco-cal th:last-child, .pco-cal td.pco-cal-s { display: none; }
+  .pco-cal th { padding: 6px 4px; font-size: 9px; letter-spacing: 0; }
   .pco-part-leg span:last-child, .pco-part-leg .pco-sp { display: none; }
   .pco-fbloc { padding: 2px 4px; }
 }

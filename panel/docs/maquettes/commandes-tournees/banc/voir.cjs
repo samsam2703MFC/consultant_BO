@@ -1,6 +1,7 @@
 /* Les captures du vrai dashboard (site assemblé, servi en local sur 8098) : les routes /dashboard/commandes/* vont au banc
  * (BANC, module réel, base locale, panel réel ou simulé) ; les autres lectures sont relayées à la production (GET seulement).
- *   BANC=http://127.0.0.1:8097/api/cockpit TZID=America/Denver BANC_Q=hain DSF=2 node voir.cjs <sortie> <shop> [date] [préfixe] */
+ *   PERIODES=1 BANC=http://127.0.0.1:8097/api/cockpit TZID=America/Denver BANC_Q=hain DSF=2 node voir.cjs <sortie> <shop> [date] [préfixe]
+ * (PERIODES : aussi la semaine et le mois, Liste et Tournées.) */
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('/opt/node22/lib/node_modules/playwright'); }
 const path = require('path');
 const [OUT, SHOP, DATE, PRE] = [process.argv[2], process.argv[3] || '3', process.argv[4] || '', process.argv[5] || ''];
@@ -27,6 +28,15 @@ const PROD = 'http://185.180.206.46/consulant_bo/api/cockpit', BANC = process.en
   await p.waitForTimeout(1500);
   const tard = await p.$('text=Plus tard'); if (tard) { await tard.click(); await p.waitForTimeout(300); }
   const plein = async nom => { const h = await p.evaluate(() => document.documentElement.scrollHeight); await p.setViewportSize({ width: 1440, height: Math.max(940, h) }); await p.waitForTimeout(300); await p.screenshot({ path: path.join(OUT, PRE + nom + '.png') }); await p.setViewportSize({ width: 1440, height: 940 }); };
+  // La semaine et le mois (24/11/2026) : Liste puis Tournées, avant de revenir au jour.
+  if (process.env.PERIODES) {
+    for (const per of ['semaine', 'mois']) {
+      await p.click(`.pco-per [data-v="${per}"]`); await p.waitForSelector('.pco-kpis'); await p.waitForTimeout(400);
+      await p.click('.pco-bascule [data-v="liste"]'); await p.waitForTimeout(300); await plein(per + '-liste');
+      await p.click('.pco-bascule [data-v="tournees"]'); await p.waitForTimeout(300); await plein(per + '-tournees');
+    }
+    await p.click('.pco-per [data-v="jour"]'); await p.click('.pco-bascule [data-v="liste"]'); await p.waitForSelector('.pco-table'); await p.waitForTimeout(400);
+  }
   await p.evaluate(() => { const b = document.querySelector('[data-act="vue"][data-v="liste"]'); if (b) { b.click(); } });
   await p.waitForTimeout(300); await plein('liste');
   await p.click('.pco-bascule [data-v="tournees"]'); await p.waitForTimeout(400); await plein('tournees');

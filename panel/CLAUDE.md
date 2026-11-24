@@ -23,7 +23,8 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   identité, contrat et taux modifiables, évaluations par service, ventes des 12 semaines, compétences, primes. Les modules ajoutés (assistant, tâches des creux, matrice et shift maker, recopie) sont des options, éteintes par défaut (Mon équipe › Options).
 - **Commandes** (`src/commandes_tournees.php`, `public/dashboard/commandes.js`, 24/11/2026) : les commandes du jour
   (webshop, comptoir, bureau) liées aux tournées et aux bureaux à livrer ; deux vues, Liste et Tournées, sur un
-  interrupteur à l'Abricot de la marque (Sam : « A et B on toggle (apricot) »). Les commandes se lisent au panel, jamais
+  interrupteur à l'Abricot de la marque (Sam : « A et B on toggle (apricot) »), au jour, à la semaine et au mois
+  (« faire une vue semaine et mois (en plus) »). Les commandes se lisent au panel, jamais
   gardées ; les tournées et leurs bureaux n'existent pas au panel : tables `panel_tournee*`.
 - **Vidéos d'instruction** (23/11/2026) : le carré du rail, à côté d'Assistant IA (`public/dashboard/tutos.js`), le registre
   `public/dashboard/videos/videos.json`, le tournage `panel/tools/videos/` (données fictives). Une nouvelle fonction du
