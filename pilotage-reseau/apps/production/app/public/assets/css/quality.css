@@ -153,3 +153,50 @@ svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width:
 .err { color: var(--danger); font-size: 17px; min-height: 22px; margin: 0; }
 .lang { border: 1px solid var(--line); background: #fff; border-radius: 8px; height: 64px; min-width: 64px; padding: 0 16px; font-size: 18px; color: var(--muted-2); }
 .person:disabled { color: var(--muted); }
+
+/* --- [432] Obchód chłodni (makieta « Obchód chłodni », ekrany A i B) --------------------------------------------- */
+.actions .btn:not(.btn--primary) { font-size: 19px; padding: 0 14px; gap: 10px; }
+.cold .places { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; flex: 0 1 auto; min-height: 0; overflow: auto; align-content: start; }
+.pl { padding: 18px 20px; display: flex; gap: 16px; align-items: center; text-align: left; width: 100%; min-height: 96px; }
+.pl > svg.i { font-size: 56px; color: var(--muted-2); }
+.pl .t { flex: 1; min-width: 0; }
+.pl .t b { display: block; font-size: 24px; }
+.pl .t small { display: block; font-size: 16px; color: var(--muted); margin-top: 3px; }
+.pl.is-done { border-color: var(--green); }
+.pl.is-done > svg.i { color: var(--green); }
+.pl.is-now { border: 2px solid var(--accent); }
+.cold .actions { margin-top: 16px; }
+.cold-place .fr-card { overflow: auto; flex: 1; min-height: 0; }
+.fr-row { display: grid; grid-template-columns: 1.5fr .8fr 1.6fr 1.5fr; gap: 12px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--row-line); font-size: 19px; }
+.fr-row:first-child { border-top: 0; }
+.fr-head { background: var(--table-head); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); position: sticky; top: 0; z-index: 1; }
+.fr-row .nm { border: 0; background: transparent; padding: 0; text-align: left; font-size: 21px; line-height: 1.2; }
+.fr-row .nm small { display: block; font-size: 14px; color: var(--muted); margin-top: 2px; }
+.fr-row .erp { font-size: 17px; color: var(--muted-2); text-align: right; }
+.fr-head .erp { font-size: inherit; color: inherit; }
+.qty { display: flex; align-items: center; gap: 8px; }
+.qty .btn { width: 56px; height: 56px; padding: 0; flex: none; }
+.qty .btn svg.i { font-size: 22px; }
+.qty .vbtn { flex: 1; border: 0; background: transparent; padding: 0; min-height: 56px; }
+.qty .v { font-size: 26px; font-weight: 700; }
+.qty .v small { font-size: 15px; font-weight: 400; color: var(--muted); }
+.qty .v.empty { color: var(--faint); font-weight: 400; }
+.flags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.flags .btn { height: 48px; font-size: 15px; padding: 0 12px; }
+.flags .hint { font-size: 15px; }
+.flags .btn.on-ok { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+.flags .btn.on-w { border-color: var(--prize); color: var(--prize-ink); background: var(--prize-soft); }
+.flags .btn.on-s { border-color: var(--stop); color: var(--stop); background: var(--stop-soft); }
+.fr-bottom { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin-top: 14px; flex: none; }
+.fr-clean { padding: 12px 18px; display: flex; align-items: center; gap: 14px; }
+.fr-clean > svg.i { font-size: 34px; color: var(--muted-2); }
+.fr-clean .q { flex: 1; font-size: 20px; }
+.fr-clean .btn { height: 56px; font-size: 18px; padding: 0 18px; }
+.fr-clean .btn svg.i { font-size: 24px; }
+.fr-add { padding: 16px 18px; display: flex; align-items: center; gap: 10px; font-size: 18px; text-align: left; width: 100%; }
+.fr-add svg.i { font-size: 30px; color: var(--muted-2); }
+.loss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.reasons { display: flex; flex-wrap: wrap; gap: 8px; }
+.reasons .btn { height: 56px; font-size: 17px; padding: 0 14px; }
+.reasons .btn.is-on, .seg .btn.is-on { border-color: var(--accent); background: rgba(141, 29, 44, 0.05); color: var(--accent); }
+.list .li:disabled { color: var(--muted); }
