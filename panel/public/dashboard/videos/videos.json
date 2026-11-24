@@ -426,6 +426,503 @@
       "tourne_le": "2026-11-24"
     },
     {
+      "id": "offres-converties",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Les offres converties",
+      "resume": "Les offres devenues commandes dans TF Buddy : les chiffres, la recherche, une offre convertie et ce qui ne se fait plus.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-02-converties.mp4",
+      "debut": 0,
+      "fin": 64.12,
+      "affiche": "offres-converties.jpg",
+      "duree": "1 min 04",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-archivees",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Les offres archivées",
+      "resume": "Les offres mises de côté : elles quittent « En cours » sans disparaître de TF Buddy, et peuvent revenir.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-03-archivees.mp4",
+      "debut": 0,
+      "fin": 54.68,
+      "affiche": "offres-archivees.jpg",
+      "duree": "55 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-remettre-en-cours",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-archivees",
+      "titre": "Remettre une offre en cours",
+      "resume": "Le client revient : l’offre archivée repasse « en cours » dans TF Buddy, prête à être envoyée ou convertie.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-03-archivees.mp4",
+      "debut": 54.68,
+      "fin": 89.9,
+      "affiche": "offres-remettre-en-cours.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-toutes",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Toutes les offres",
+      "resume": "Les huit offres du magasin, tous états confondus : chacune avec son badge d’état, la recherche sur tout, « relire ».",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-04-toutes.mp4",
+      "debut": 0,
+      "fin": 55.72,
+      "affiche": "offres-toutes.jpg",
+      "duree": "56 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-formulaire",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Le formulaire de l’offre",
+      "resume": "Nouvelle offre ou offre modifiée : le formulaire prend les deux tiers de l’écran, la liste se resserre, la marge se calcule pendant qu’on écrit.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-05-formulaire.mp4",
+      "debut": 0,
+      "fin": 69.58,
+      "affiche": "offres-formulaire.jpg",
+      "duree": "1 min 10",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-creer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-formulaire",
+      "titre": "Créer une offre",
+      "resume": "Le nom, le client, le jour, les produits du catalogue : « Créer l’offre dans TF Buddy », elle y prend son numéro.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-05-formulaire.mp4",
+      "debut": 69.58,
+      "fin": 119.36,
+      "affiche": "offres-creer.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-livraison",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-formulaire",
+      "titre": "Prévoir une livraison",
+      "resume": "De « Retrait en magasin » à « Livraison » : l’adresse, le code postal, la ville et les frais. Le total TTC les ajoute, la marge les laisse de côté.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-05-formulaire.mp4",
+      "debut": 119.36,
+      "fin": 166.14,
+      "affiche": "offres-livraison.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-campagnes",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Newsletter : les campagnes",
+      "resume": "Les campagnes du magasin à ses clients : le mode test, les contacts opt-in, les bases, les filtres et le tableau des envois.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-06-campagnes.mp4",
+      "debut": 0,
+      "fin": 59.83,
+      "affiche": "offres-nl-campagnes.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-envoyer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-campagnes",
+      "titre": "Envoyer maintenant une campagne programmée",
+      "resume": "« envoyer maintenant » avance l’envoi d’une campagne programmée à tout de suite ; en mode test, rien ne part.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-06-campagnes.mp4",
+      "debut": 59.83,
+      "fin": 91.18,
+      "affiche": "offres-nl-envoyer.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-retirer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-campagnes",
+      "titre": "Retirer une campagne programmée",
+      "resume": "« retirer × » sous une campagne du magasin pas encore envoyée : elle quitte le tableau. Une campagne envoyée reste dans l’historique.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-06-campagnes.mp4",
+      "debut": 91.18,
+      "fin": 120.47,
+      "affiche": "offres-nl-retirer.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-retrospective",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Newsletter : la rétrospective",
+      "resume": "Les résultats d’une campagne envoyée — envois, ouvertures, clics, vouchers — et son parcours comparé à la campagne précédente.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-07-retrospective.mp4",
+      "debut": 0,
+      "fin": 53.68,
+      "affiche": "offres-nl-retrospective.jpg",
+      "duree": "54 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-test-ab",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-retrospective",
+      "titre": "Dupliquer une campagne pour un test A/B",
+      "resume": "La même campagne avec un autre objet : l’assistant s’ouvre à l’étape Texte, même segment, même modèle, l’objet suivi de « (B) » ; « Programmer l’envoi » l’ajoute au tableau.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-07-retrospective.mp4",
+      "debut": 53.68,
+      "fin": 103.81,
+      "affiche": "offres-nl-test-ab.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-templates",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Newsletter : les templates",
+      "resume": "Les modèles prêts de la newsletter : un visuel, un texte court, un seul bouton, le même pied de page ; « Utiliser » part d’un modèle.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-08-templates.mp4",
+      "debut": 0,
+      "fin": 59.12,
+      "affiche": "offres-nl-templates.jpg",
+      "duree": "59 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-expediteur",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Newsletter : l’expéditeur",
+      "resume": "Le nom et l’adresse d’où partent les campagnes du magasin, l’état du domaine, l’envoi autorisé, et les droits de la marque et du franchisé.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-09-expediteur.mp4",
+      "debut": 0,
+      "fin": 46.23,
+      "affiche": "offres-nl-expediteur.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-changer-expediteur",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-expediteur",
+      "titre": "Changer l’adresse d’expéditeur",
+      "resume": "Le nom ou l’adresse d’expéditeur du magasin, sur sa ligne : on le change, on sort du champ, c’est enregistré.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-09-expediteur.mp4",
+      "debut": 46.23,
+      "fin": 80.5,
+      "affiche": "offres-nl-changer-expediteur.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-segment",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Nouvelle campagne · 1 Segment",
+      "resume": "À qui on écrit : la base, le segment, le nombre de destinataires opt-in, les langues d’envoi.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-10-segment.mp4",
+      "debut": 0,
+      "fin": 70.91,
+      "affiche": "offres-nl-segment.jpg",
+      "duree": "1 min 11",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-template",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Nouvelle campagne · 2 Template",
+      "resume": "Le type de mail : cinq modèles prêts ou une page blanche ; l’aperçu mobile, à droite, suit chaque choix.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-11-template.mp4",
+      "debut": 0,
+      "fin": 67.46,
+      "affiche": "offres-nl-template.jpg",
+      "duree": "1 min 07",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-texte",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Nouvelle campagne · 3 Texte",
+      "resume": "Le canal (e-mail, SMS ou les deux), une version par langue, l’objet, le texte et ses insertions, le lien du bouton, le SMS.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-12-texte.mp4",
+      "debut": 0,
+      "fin": 86.18,
+      "affiche": "offres-nl-texte.jpg",
+      "duree": "1 min 26",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-envoi",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Nouvelle campagne · 4 Envoi",
+      "resume": "Quand part le mail : la date et l’heure (envoi unique pour un magasin), l’expéditeur, le contrôle anti-spam, les vouchers et le récapitulatif.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-13-envoi.mp4",
+      "debut": 0,
+      "fin": 64.48,
+      "affiche": "offres-nl-envoi.jpg",
+      "duree": "1 min 04",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-envoyer-test",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-envoi",
+      "titre": "Envoyer un test",
+      "resume": "« Envoyer un test à 3 adresses » : le mail part aux adresses de test de la marque, même en mode test ; le contrôle anti-spam se coche.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-13-envoi.mp4",
+      "debut": 64.48,
+      "fin": 97.57,
+      "affiche": "offres-nl-envoyer-test.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-programmer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-envoi",
+      "titre": "Programmer une campagne",
+      "resume": "La date et l’heure, les vouchers, l’anti-spam : « Programmer l’envoi », et la campagne rejoint le tableau. En mode test, rien ne part.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-13-envoi.mp4",
+      "debut": 97.57,
+      "fin": 141.36,
+      "affiche": "offres-nl-programmer.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "primes",
       "genre": "tuto",
       "titre": "Les primes de l’équipe",
