@@ -27,6 +27,30 @@
   "sha": "b1885855a17059c47ae9e26ef43374d51637de390feec47ebb28af8e2cfd4a94",
   "u": "u/20261123-0ce48ac0e482.jpg"
  },
+ "art-dash-equipe-affect.jpg": {
+  "sha": "5e9aefc39394894f4dd7d896d73764941c57ebef522350bf3f168f6adfcf3fa0",
+  "u": "u/20261124-24b6a2cb14fe.jpg"
+ },
+ "art-dash-equipe-jour.jpg": {
+  "sha": "8dc632fb1f536e9f9cd26c1e17439a58bb954b5cf72c8795a55413d71925866c",
+  "u": "u/20261124-731eafeda88f.jpg"
+ },
+ "art-dash-equipe-options.jpg": {
+  "sha": "a5ae7ccb0c38b5b8cb4a45f070811527ebf335b3fb815e4342acbac1249d959e",
+  "u": "u/20261124-f7d6d1d35d88.jpg"
+ },
+ "art-dash-equipe-resp.jpg": {
+  "sha": "cf3b5322120bbcf1451bdc6b5276cb35ebae30225549f66cede9f036b20e082b",
+  "u": "u/20261124-eed69292ef79.jpg"
+ },
+ "art-dash-equipe-semaine.jpg": {
+  "sha": "378b1290fc92917a4c894564437b6487a46bd00702d07a411e523414910035ca",
+  "u": "u/20261124-d9a7b9b0cc3e.jpg"
+ },
+ "art-dash-equipe-service.jpg": {
+  "sha": "936a1a4075f429e1f7782110ec0edc1c4037db3f0b96ac49c43052f5d3cd9c15",
+  "u": "u/20261124-8d98563f9fc2.jpg"
+ },
  "art-dash-formation-accueil.jpg": {
   "sha": "473ebe605b53851c719223c5213efe93f311b5456846c8bb5875be1e801267cb",
   "u": "u/20261123-facdff7193d6.jpg"
@@ -62,6 +86,18 @@
  "art-dash-frais-tuiles.jpg": {
   "sha": "60c6fc6bcb59d6099ea452eb631d0110078b06380cf0b6e41552d3c49a7e0503",
   "u": "u/20261122-05702008571c.jpg"
+ },
+ "art-dash-videos-carre.jpg": {
+  "sha": "95d1006da8feafd0202f0ec787caf9d19b89c14597fc43cf5b383d37df8ebb4b",
+  "u": "u/20261124-a5dac472a24c.jpg"
+ },
+ "art-dash-videos-lecteur.jpg": {
+  "sha": "c4fed09fa9d1975b9dcc460c287373cfd8cbb10e5f08858d953faa8fc2a9dfeb",
+  "u": "u/20261124-f15ac623e28f.jpg"
+ },
+ "art-dash-videos-videotheque.jpg": {
+  "sha": "ffb1dd34ee98d0e095118f8a2fbd15af215a13a2515f748c93ef4a17e21caacf",
+  "u": "u/20261124-c4d03ce1d3b2.jpg"
  },
  "art-demandes-bureau-bouton.jpg": {
   "sha": "4cf06bc576327615d8c19d2655b4f64523b191017ef8d0d64be79606048dee29",

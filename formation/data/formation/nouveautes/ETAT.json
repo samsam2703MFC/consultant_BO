@@ -115,9 +115,15 @@
         "c9827f06 Mise en ligne : étiquettes des temps morts courts",
         "11cdb559 Mise en ligne : le tableau de la semaine et la fenêtre d'un service"
       ],
-      "etat": "propose",
+      "etat": "encode",
       "proposeLe": "2026-11-24",
-      "note": "6 photos, noms et initiales des employés floutés (captures_equipe_videos.js) ; options éteintes à Halle, non capturées"
+      "note": "6 photos, noms et initiales des employés floutés (captures_equipe_videos.js) ; options éteintes à Halle, non capturées ; publication (PATCH statut) refusée par le contrôle des permissions de la session, reste « à valider »",
+      "valideLe": "2026-11-24",
+      "reponse": "Push all online",
+      "encodeLe": "2026-11-24",
+      "code": "0.0.66",
+      "version": "1.0",
+      "statut": "a_valider"
     },
     {
       "n": 7,
@@ -131,9 +137,15 @@
         "0ab1c2cb Mise en ligne : l'annonce d'une nouvelle vidéo en bulle minimaliste",
         "9819715d Mise en ligne : une vidéo d'instruction par entrée du rail"
       ],
-      "etat": "propose",
+      "etat": "encode",
       "proposeLe": "2026-11-24",
-      "note": "3 photos"
+      "note": "3 photos ; classement refusé par le serveur (422, compétence C-ID.FB inconnue du référentiel v25) : la fiche est sans classement ; pas publiée",
+      "valideLe": "2026-11-24",
+      "reponse": "Push all online",
+      "encodeLe": "2026-11-24",
+      "code": "0.0.67",
+      "version": "1.0",
+      "statut": "a_valider"
     }
   ],
   "ecartes": [

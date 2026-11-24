@@ -1543,3 +1543,12 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
 - **À savoir** : l'éditeur du Manuel exige le néerlandais pour publier une nouvelle version ; une FC créée par le
   formulaire du siège démarre avec une étape « À rédiger » à compléter dans l'éditeur (FR et NL).
 - Tests : `php formation/bin/tests_formation_continue.php` (37 points).
+
+### Passe du 24/11/2026 (réponse de Sam : « Push all online »)
+
+- 0.0.66 « Le dashboard : Mon équipe (responsabilités et horaires) » — à valider, v1.0 (13 parties, 6 photos, noms
+  floutés). La publication demandée n'a pas été faite : le PATCH du statut a été refusé par le contrôle des permissions
+  de la session.
+- 0.0.67 « Le dashboard : les vidéos d'instruction » — à valider, v1.0 (7 parties, 3 photos). Classement refusé par le
+  serveur (422 : « codes inconnus du référentiel v25 », compétence `C-ID.FB`) : la fiche est encodée sans classement ;
+  pas publiée.
