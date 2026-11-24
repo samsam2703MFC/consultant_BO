@@ -266,3 +266,28 @@
 2026-11-22T18:59:17Z Dashboard : les paramètres dans une roue à gauche de Mon coffre-fort (fenêtre qui monte : recherche, boîte mail, rappel la veille du retrait, équipe, alertes de stock, ton de l'assistant) ; le groupe Paramètres quitte le rail
 2026-11-22T19:27:41Z [376] matryca wszystkich stanowisk + [377] partie i kontrola dnia
 2026-11-22T19:34:33Z [378] faktury i ksef dnia
+2026-11-23T05:08:06Z Manuels du 22/11/2026 (documentation seulement) : boîte mail, prix de vente, fiche du ticket, étiquettes NL, canal Marketing (PR #235)
+2026-11-23T06:28:46Z [379]-[385] asystenci: reklamacje, haccp, palety, powiadomienia, poczta, nowe produkty, dane klientow
+2026-11-23T09:18:22Z [386] plan zespolu do zrobienia w dniach
+2026-11-23T09:35:43Z [388] plan zespolu stan osobno
+2026-11-23T09:49:11Z [389] plan zamowione minus stan
+2026-11-23T10:09:51Z [390] plan zespolu uklad listy produkcyjnej
+2026-11-23T10:32:32Z [391-396] reklamacje kwoty, poczta, plan zespolu MTS, zakupy KP, zakres KP ; [387] rutyny AI (wylaczone)
+2026-11-23T12:07:16Z [397-399] PPWR miesiaca, Intrastat miesiaca, na zapas do min
+2026-11-23T14:08:34Z Mon équipe (dashboard franchisé) : carte des responsabilités, planogramme des horaires (linéaires, temps morts, budget d'heures 17/20/22 %), modifier sur la barre, recopier la semaine précédente, matrice A B C D et shift maker (test)
+2026-11-23T14:19:31Z Mon équipe : le compte admin de l'ERP relit et réécrit ce que le panel refuse au compte du cockpit (employés du magasin)
+2026-11-23T14:24:53Z Mon équipe : étiquettes des temps morts courts (infobulle)
+2026-11-23T15:29:07Z Mon équipe : le tableau de la semaine, la fenêtre d'un service au clic (adapter, ajouter, retirer une personne du shift)
+2026-11-23T16:06:39Z Mon équipe : tracer un service à la souris, le planning imprimé fait par le cockpit, Semaine fondue avec le planogramme, vue Mois, « À compléter » et « au repos » retirés
+2026-11-23T16:42:06Z Mon équipe : la fenêtre d'un service (tirer sa ligne, verte de 4 h à 8 h), parcourir le jour, le CA du jour (comptoir + B2B) pour les %
+2026-11-23T17:02:38Z Mon équipe : l'assistant de la semaine (reprendre, qui adapter, les heures de trop, créer), le planning imprimé groupé par section
+2026-11-23T17:26:06Z Mon équipe : les options (éteintes par défaut : assistant, tâches dans les temps morts, matrice et shift maker, recopie), les tâches dans les temps morts, retirer quelqu’un de l’horaire de la semaine, badges en rectangles arrondis
+2026-11-23T19:00:24Z Demandes des franchisés : une demande annulée ou résolue quitte la liste tout de suite et ne revient plus au rechargement
+2026-11-23T19:06:40Z [407] plan zespolu klienci zamowienia
+2026-11-23T19:28:06Z [408] gratis w ilosciach produkcji i zaladunku
+2026-11-23T19:29:19Z Dashboard magasin : vidéos d'instruction ouvertes par une bulle (« Nouveau » pour une nouvelle fonction, « Vidéo » sinon) — Découvrir le dashboard, Mon équipe : faire ses horaires, et le module de formation « Construire le planning de la semaine »
+2026-11-23T19:30:33Z [400-406] 7 asystentow Kierownika produkcji
+2026-11-23T20:01:05Z Dashboard magasin : le bouton des vidéos devient un petit carré à côté d'Assistant IA (Ruby avec le nombre de nouveautés, annonce dans une bulle accrochée au carré), plus rien en bas à droite ; vidéo « Découvrir le dashboard » retournée
+2026-11-23T20:36:49Z Vidéothèque dans le catalogue de formation (toutes les vidéos d'instruction par genre, avec lecteur) ; « Plus tard » sur l'annonce d'une nouvelle vidéo la range pour la journée
+2026-11-23T20:44:20Z Dashboard magasin : l'annonce d'une nouvelle vidéo devient une bulle minimaliste (Nouveau, le titre, deux liens)
+2026-11-23T21:59:28Z Dashboard magasin : une vidéo d'instruction par entrée du rail (21 nouveaux modes d'emploi, dont « Éditer mon catalogue »), dans le carré des vidéos et la vidéothèque du catalogue de formation

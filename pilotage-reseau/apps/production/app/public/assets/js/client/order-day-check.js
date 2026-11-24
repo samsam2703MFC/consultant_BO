@@ -19,6 +19,8 @@
     const type = (o) => (o.type === 'SUPPLEMENT' ? tw.pill('domówienie', 'warn') : 'zwykłe') + (o.freebie ? ' ' + tw.pill('gratis') : '');
     const flagged = () => D.orders.filter(o => o.flags.length);
     const canFinish = () => !!D.can_finish;
+    // [387] Propositions de l'IA du matin (aiProp, ai-proposals.js) : rien si D.ai est vide.
+    const ai = window.aiProp || null;
 
     function dayLabel(d) {
         const days = ['niedz.', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.'];
@@ -53,7 +55,7 @@
         const need = d.result === 'contact';
         const saved = o.check ? `<small>${tw.pill(o.check.label, RES_CLS[o.check.result] ?? '')} ${esc(o.check.at || '')}${o.check.by ? ' · ' + esc(o.check.by) : ''}</small>` : '';
         const dirty = !o.check || o.check.result !== d.result || (o.check.note || '') !== d.note;
-        return `<div style="display:grid;gap:6px;min-width:330px"><div class="tw-seg" style="justify-self:start">${seg}</div>
+        return `<div style="display:grid;gap:6px;min-width:330px">${ai && !o.check ? ai.box(D.ai, o.id) : ''}<div class="tw-seg" style="justify-self:start">${seg}</div>
             <div style="display:flex;gap:6px"><input class="form-control form-control-sm" data-od-note="${o.id}" maxlength="500" value="${esc(d.note)}"
                 placeholder="${need ? 'Notatka (wymagana) : z kim, co ustalono' : 'Notatka (opcjonalnie)'}" style="min-height:36px;border-radius:9px">
             <button type="button" class="tw-btn ghost sm" data-od-save="${o.id}" ${!d.result || !dirty || busy ? 'disabled' : ''}>Zapisz</button></div>${saved}</div>`;
@@ -67,7 +69,7 @@
             ship(o), nf(o.cartons, o.cartons % 1 ? 1 : 0),
             o.flags.map(f => `<div style="display:flex;gap:6px;align-items:baseline;margin:2px 0"><i class="bi bi-exclamation-circle tw-red"></i><span>${esc(f.reason)}</span></div>`).join(''),
             resultCell(o)]}));
-        return `<p class="tw-lead">Sygnały automatyczne. Dla każdego zamówienia zapisz wynik : <b>OK — sprawdzone</b>, <b>Kontakt z klientem</b> (z notatką) albo <b>Zmienione</b>.
+        return `${ai ? ai.banner(D.ai) : ''}<p class="tw-lead">Sygnały automatyczne. Dla każdego zamówienia zapisz wynik : <b>OK — sprawdzone</b>, <b>Kontakt z klientem</b> (z notatką) albo <b>Zmienione</b>.
                 Krok 3 otworzy się, gdy wszystkie mają wynik.</p>
             ${tw.tiles([{label: 'Do wyjaśnienia', value: String(t.flagged), sub: 'zamówienia z sygnałem'}, {label: 'Z wynikiem', value: `${t.resolved} z ${t.flagged}`, sub: t.waiting ? `zostało ${t.waiting}` : 'wszystkie wyjaśnione', cls: t.waiting ? 'warn' : 'ok'},
                 {label: 'Kontakt z klientem', value: String(t.contact), sub: 'z notatką'}, {label: 'Zmienione', value: String(t.changed_result), sub: 'zamówienie poprawione'}])}
@@ -99,6 +101,14 @@
     }
 
     tw.bind(app, (n) => { step = n === -1 ? Math.max(1, step - 1) : n; render(); });
+    // « Przyjmij » / « Popraw » : la proposition remplit le brouillon (résultat et note) ; l'enregistrement reste « Zapisz ».
+    if (ai) ai.bind(app, {ai: () => D.ai, render, apply: (p, edit) => {
+        const id = Number(p.ref);
+        draft[id] = {result: p.decision, note: p.note || ''};
+        render();
+        const n = app.querySelector(`[data-od-note="${id}"]`);
+        if (n && edit) { n.focus(); n.select(); }
+    }});
     app.addEventListener('input', (e) => {
         const n = e.target.closest('[data-od-note]');
         if (!n) return;

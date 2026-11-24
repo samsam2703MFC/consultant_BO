@@ -89,7 +89,7 @@ $order(160, 2, '2026-11-20 09:00:00', '2026-11-25', [10 => 12], ['type' => 'STAN
 $order(202, 1, '2026-11-23 10:00:00', '2026-11-25', [10 => 4], ['parent' => 150, 'ref' => 'DOM-1']); // reliée à OF-…-001 → w planie
 $order(203, 2, '2026-11-23 16:30:00', '2026-11-25', [10 => 3]);                                       // après la validation du plan → poza planem
 $order(204, 3, '2026-11-24 13:10:00', '2026-11-25', [11 => 2]);                                       // MTS ; passée après 12:00 la veille
-$order(205, 1, '2026-11-23 11:00:00', '2026-11-25', [10 => 1], ['freebie' => 1]);                      // gratis → hors quantités
+$order(205, 1, '2026-11-23 11:00:00', '2026-11-25', [10 => 1], ['freebie' => 1]);                      // gratis → [408] compté comme les autres : plan validé après → w planie
 $order(206, 2, '2026-11-23 12:00:00', '2026-12-02', [10 => 6]);                                       // semaine sans plan → proposition sur le vif
 $order(207, 3, '2026-11-23 13:00:00', null, [10 => 2], ['push' => 'pending']);                         // sans date
 $order(208, 1, '2026-11-23 14:00:00', '2026-11-26', [12 => 2]);                                       // produit inactif ; plan validé après → w planie
@@ -145,22 +145,22 @@ $check($state(202) === 'in_plan' && str_contains($by[202]['production']['detail'
     && $by[202]['products'][0]['of'] === 'OF-20261125-001 (zwolnione)', 'linked production order (cancelled order ignored)');
 $check($state(203) === 'missing' && str_contains($by[203]['production']['detail'], 'przed domówieniem') && str_contains($by[203]['production']['detail'], 'pon. 23.11, 15:00'),
     'plan validated before the supplement: not in production');
-$check($state(204) === 'stock' && $state(205) === 'freebie' && $state(206) === 'live' && $state(207) === 'missing' && $state(209) === 'unplanned' && $state(211) === 'shipped'
+$check($state(204) === 'stock' && $state(205) === 'in_plan' && $state(206) === 'live' && $state(207) === 'missing' && $state(209) === 'unplanned' && $state(211) === 'shipped'
     && $state(208) === 'in_plan' && str_contains($by[208]['production']['detail'], 'po domówieniu') && $state(210) === 'in_plan',
-    'states: MTS stock, freebie, live proposal, no date, no planning card, shipped, plan validated after');
+    'states: MTS stock, [408] freebie in the plan like any order, live proposal, no date, no planning card, shipped, plan validated after');
 $check(array_column($by[209]['products'], 'state') === ['unplanned', 'unplanned'] && str_contains($by[209]['production']['detail'], 'Ciasto drożdżowe'), 'no card and card without settings: unplanned');
 $check($by[202]['parent']['id'] === 150 && $by[202]['parent']['kind'] === 'linked' && $by[202]['parent']['same_day'] === true
     && $by[203]['parent']['id'] === 160 && $by[203]['parent']['kind'] === 'same_day' && $by[204]['parent']['id'] === 213 && $by[206]['parent'] === null, 'main order: linked (parent_order_id), same day for the customer, none');
 $check($by[214]['push']['status'] === 'failed' && $by[207]['push']['status'] === 'pending' && $by[202]['push']['label'] === 'w systemie sklepu', 'shop panel push shown as information');
 $check($flags(203) === ['not_in_production'] && str_contains($by[203]['flags'][0]['reason'], 'śr. 25.11'), 'flag: not in production, shipping on the next working day');
-$check($flags(205) === ['not_in_production'] && $flags(209) === ['not_in_production'], 'flag: freebie and unplanned products count as not transmitted');
+$check($flags(205) === [] && $flags(209) === ['not_in_production'], '[408] flag: a freebie is no longer « not transmitted » (counted in the plan) ; unplanned products are');
 $check($flags(204) === ['late_cutoff'] && str_contains($by[204]['flags'][0]['reason'], 'po godzinie 12:00 dnia wt. 24.11'), 'flag: after the 12:00 cutoff of the day before shipping');
 $check($flags(207) === ['date_missing'] && $flags(210) === ['date_past'] && $flags(208) === ['product_inactive'] && str_contains($by[208]['flags'][0]['reason'], 'Tarta jabłkowa'),
     'flags: missing date, past date, inactive product');
 $check($flags(202) === [] && $flags(206) === [] && $flags(211) === [] && $flags(214) === [], 'no flag: in plan, live proposal far away, shipped, MTS');
 $t = $d['totals'];
-$check($t['supplements'] === 11 && $t['new'] === 10 && $t['upcoming'] === 6 && $t['shipped'] === 1 && $t['in_production'] === 6 && $t['not_in_production'] === 4
-    && $t['push_failed'] === 1 && $t['flagged'] === 7 && $t['waiting'] === 7 && $d['can_finish'] === false, 'tiles: 11 supplements, 6 in production, 7 to clarify, step 3 closed');
+$check($t['supplements'] === 11 && $t['new'] === 10 && $t['upcoming'] === 6 && $t['shipped'] === 1 && $t['in_production'] === 7 && $t['not_in_production'] === 3
+    && $t['push_failed'] === 1 && $t['flagged'] === 6 && $t['waiting'] === 6 && $d['can_finish'] === false, 'tiles: 11 supplements, 7 in production (freebie included), 6 to clarify, step 3 closed');
 $check($t['cartons'] == 4 + 3 + 2 + 1 + 6 + 2 + 2 + 3 + 1 + 2 + 1, 'tile: cartons');
 
 // Réglages : heure limite 13:30 → 204 (13:10) n'est plus en retard ; valeur invalide → 12:00.
@@ -174,7 +174,7 @@ $pdo->exec("UPDATE n_prod_param SET value = '12:00' WHERE code = 'orders.supplem
 // --- Étape 2 : résultats (lecture seule : commandes et plan inchangés jusqu'à la fin)
 $sum = fn() => json_encode($pdo->query('CHECKSUM TABLE customer_order, customer_order_product, n_prod_plan, n_prod_order, n_prod_order_demand')->fetchAll());
 $before = $sum();
-$check(str_contains($err(fn() => $svc->finish(1, $today)), 'custom:422') && str_contains($err(fn() => $svc->finish(1, $today)), '7 domówień'), 'finish refused while flagged supplements have no result');
+$check(str_contains($err(fn() => $svc->finish(1, $today)), 'custom:422') && str_contains($err(fn() => $svc->finish(1, $today)), '6 domówień'), 'finish refused while flagged supplements have no result');
 $check(str_contains($err(fn() => $svc->saveResult(['id_order' => 203, 'result' => 'contact', 'note' => ''], 1, $today)), 'notatk')
     && str_contains($err(fn() => $svc->saveResult(['id_order' => 203, 'result' => 'moved', 'note' => 'ab'], 1, $today)), 'notatk'), 'contact or moved without a note (≥ 3 chars): refused');
 $check(str_contains($err(fn() => $svc->saveResult(['id_order' => 203, 'result' => 'maybe'], 1, $today)), 'custom:422'), 'unknown result: refused');
@@ -187,7 +187,7 @@ $check(count($row) === 1 && $row[0]['result'] === 'sent' && $row[0]['day'] === $
     'one row per supplement per day (upsert), with flags and production state');
 $st = $tasks->state(SupplementsDayCheckService::CODE, $today . ' 00:00:00', '2026-11-25 00:00:00', $today);
 $check($st['done'] === false && $st['step'] === 2 && $st['step_label'] === '1 domówienie wyjaśnione', 'task in progress: step 2, 1 supplement clarified');
-foreach ([204 => ['sent', ''], 205 => ['sent', 'Gratis dopisany do listy pakowania'], 207 => ['contact', 'Tel. z p. Nowak : wysyłka pt.'], 208 => ['moved', 'Tarta wycofana — odrzucone'],
+foreach ([204 => ['sent', ''], 207 => ['contact', 'Tel. z p. Nowak : wysyłka pt.'], 208 => ['moved', 'Tarta wycofana — odrzucone'],
     209 => ['sent', 'Ciasto z bieżącej produkcji']] as $id => [$res, $note]) {
     $svc->saveResult(['id_order' => $id, 'result' => $res, 'note' => $note], 2, $today);
 }
@@ -196,7 +196,7 @@ $check($d['totals']['waiting'] === 1 && $d['can_finish'] === false && str_contai
 $svc->saveResult(['id_order' => 210, 'result' => 'moved', 'note' => 'Wysyłka przesunięta na śr. 25.11'], 1, $today);
 $d = $svc->data($today);
 $by = array_column($d['orders'], null, 'id');
-$check($d['can_finish'] === true && $d['summary'] === '11 domówień · 7 do wyjaśnienia · 4 przekazane do produkcji · 1 kontakt · 2 przesunięte / odrzucone', 'all clarified: step 3 open — ' . $d['summary']);
+$check($d['can_finish'] === true && $d['summary'] === '11 domówień · 6 do wyjaśnienia · 3 przekazane do produkcji · 1 kontakt · 2 przesunięte / odrzucone', 'all clarified: step 3 open — ' . $d['summary']);
 $check($by[207]['check']['by'] === 'piotr' && $by[203]['check']['by'] === 'Anna K.' && $by[203]['check']['label'] === 'Przekazane do produkcji', 'result shown with label and author');
 // --- Étape 3 : Zakończ
 $r = $svc->finish(1, $today);

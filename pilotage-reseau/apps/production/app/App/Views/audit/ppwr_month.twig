@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}PPWR i opakowania{% endblock %}
+
+{% block content %}
+{# [397] Assistant « PPWR i opakowania » : App\Services\Organization\Wizards\PpwrMonthService — écran dans
+   assets/js/ppwr_month/ppwr-month.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois du
+   Kierownik produkcji se valide seule après « Zakończ ». Aucune donnée PPWR / BDO n'est changée ici (liens vers les écrans
+   existants), aucun e-mail envoyé (texte de la demande au fournisseur à copier). #}
+<section class="section">
+    <div id="pmApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="pmBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/ppwr_month/ppwr-month.js?v={{ asset_v() }}"></script>
+{% endblock %}

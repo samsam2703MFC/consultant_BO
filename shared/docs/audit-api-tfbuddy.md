@@ -287,6 +287,8 @@ Le cockpit a déjà ses sondes. Elles passent par le compte consultant configur�
 
 - `GET /api/cockpit/diagnostic/panel-consultant?shop=4` : un jeu fixe de routes
   consultant.
+- `GET /api/cockpit/diagnostic/marketing-service` (siège) : le canal vers le module Marketing (jeton de service), par
+  une lecture sans effet (`/campaign-types`) ; rend `{jetonLisible, code, erreur, types, ok}`, jamais le jeton.
 - `GET /api/cockpit/exploitation/invendus/sonde?shop=4&q=/shops/4/reports/sales/daily?date=2026-11-02,…`
   : des chemins libres, limités aux produits, au stock et aux rapports.
 - `ep_pwa_probe()` (`GET /pwa/probe?paths=…`) existe dans `endpoints.php`,

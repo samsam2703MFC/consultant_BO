@@ -52,11 +52,33 @@ final class PlanningRepository extends WorkshopRepository
                     cop.id_product, SUM(cop.quantity_carton) AS cartons
              FROM customer_order co
              JOIN customer_order_product cop ON cop.id_order = co.id
-             WHERE ' . OpenOrders::quantitySql('co') . '
+             WHERE ' . OpenOrders::demandSql('co') . '
                AND co.expected_shipping_date BETWEEN ? AND ?
              GROUP BY co.id, co.expected_shipping_date, co.create_order_date, co.id_customer, cop.id_product
              HAVING cartons > 0',
             [$from, $to]
+        );
+    }
+
+    /**
+     * [407] Commandes ouvertes d'un produit fini sur une période (mêmes règles que openOrderLines : OpenOrders::demandSql,
+     * gratuits compris [408]), une ligne par commande avec le client : la fenêtre « Zamówienie » de la feuille d'équipe.
+     */
+    public function productOrders(int $finalProductId, string $from, string $to): array
+    {
+        return $this->all(
+            "SELECT co.id AS customer_order_id, co.expected_shipping_date, co.id_customer,
+                    COALESCE(NULLIF(TRIM(cu.company), ''), NULLIF(TRIM(CONCAT(COALESCE(cu.name, ''), ' ', COALESCE(cu.surname, ''))), '')) AS customer,
+                    SUM(cop.quantity_carton) AS cartons
+             FROM customer_order co
+             JOIN customer_order_product cop ON cop.id_order = co.id
+             LEFT JOIN customer cu ON cu.id = co.id_customer
+             WHERE " . OpenOrders::demandSql('co') . "
+               AND co.expected_shipping_date BETWEEN ? AND ? AND cop.id_product = ?
+             GROUP BY co.id, co.expected_shipping_date, co.id_customer, cu.company, cu.name, cu.surname
+             HAVING cartons > 0
+             ORDER BY co.expected_shipping_date, customer IS NULL, customer, co.id",
+            [$from, $to, $finalProductId]
         );
     }
 

@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Nowe produkty{% endblock %}
+
+{% block content %}
+{# [384] Assistant « Nowe produkty » : App\Services\Organization\Wizards\LaunchesReviewService — écran dans
+   assets/js/product/launches-review.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du mois du
+   Kierownik produkcji se valide seule après « Zakończ ». Rien n'est changé dans les produits, les recettes, les prix ni
+   n_mgr_launch (la décision se reporte dans le module Kierownik produkcji), aucun envoi. #}
+<section class="section">
+    <div id="lrApp"><p class="at-empty">{{ data is null ? 'Brak dostępu do produktów.' : 'Ładowanie…' }}</p></div>
+</section>
+{% if data is not null %}<script type="application/json" id="lrBoot">{{ data|json_encode|raw }}</script>{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/product/launches-review.js?v={{ asset_v() }}"></script>
+{% endblock %}

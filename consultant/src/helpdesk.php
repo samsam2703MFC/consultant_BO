@@ -74,6 +74,11 @@ function hdkTable(): void
     foreach (['delai_jours INT NULL', 'echeance DATE NULL', "echeance_par VARCHAR(120) NOT NULL DEFAULT ''", 'echeance_le DATETIME NULL'] as $col) { hdkColonne('con_hdk_demande', $col); }
     // La demande urgente (21/11/2026) : cochée par le franchisé dans le formulaire.
     hdkColonne('con_hdk_demande', 'urgent TINYINT NOT NULL DEFAULT 0');
+    // Le statut que le cockpit vient de poser (23/11/2026) : gardé un quart d'heure, voir hdkStatutsPoses.
+    Db::exec('CREATE TABLE IF NOT EXISTS con_hdk_statut (
+        case_id INT PRIMARY KEY,
+        statut VARCHAR(16) NOT NULL,
+        pose_le DATETIME NOT NULL)');
     $fait = true;
 }
 
@@ -135,7 +140,7 @@ function ep_helpdesk_demandes(): array
     PanelApi::$lastError = null;
     $r = PanelApi::get('/cases');
     if (!is_array($r)) { return ['indispo' => true, 'motif' => 'Le helpdesk du panel n’a pas répondu (' . (PanelApi::$lastError ?? 'pas de réponse') . ').' . ($admin ? '' : ' Le compte administrateur du cockpit (Paramètres › ERP) n’est pas configuré : seules les demandes d’un magasin se lisent.')]; }
-    $D = array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array')));
+    $D = hdkStatutsPoses(array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array'))));
     usort($D, static fn ($a, $b) => strcmp($b['cree'], $a['cree']));
     $M = hdkMissions(array_column($D, 'id'));
     $E = hdkEcheances(array_column($D, 'id'));
@@ -187,9 +192,56 @@ function hdkEnvoi(string $m, string $route, array $corps): array
 {
     PanelApi::$lastError = null;
     [$ok, $res] = PanelApi::envoi($m, $route, $corps);
-    if ($ok) { return ['ok' => true, 'res' => $res]; }
+    if ($ok) {
+        if ($m === 'PATCH' && preg_match('#^/cases/(\d+)/status$#', $route, $x) && isset(HDK_STATUTS[$corps['status'] ?? ''])) { hdkStatutPose((int) $x[1], (string) $corps['status']); }
+        return ['ok' => true, 'res' => $res];
+    }
     $msg = is_array($res) ? (string) ($res['description'] ?? ($res['message'] ?? '')) : '';
     return ['ok' => false, 'error' => 'Le panel a refusé ' . $m . ' ' . $route . ($msg !== '' ? ' : ' . $msg : '') . ' (' . (PanelApi::$lastError ?? 'pas de réponse') . ')'];
+}
+
+/*
+ * Le statut posé, gardé un quart d'heure (23/11/2026, Sam : « quand je rends une demande annulée ou résolue, elle ne
+ * disparaît pas ; quand je recharge la page, elle revient ») : le panel répond OK au PATCH /cases/{id}/status et garde
+ * le statut (relu en ligne : les demandes annulées l'étaient bien), mais sa liste (GET /cases, GET /shops/{id}/cases)
+ * peut rendre l'ancien quelques instants. Le cockpit garde donc ce qu'il a posé et le préfère à la liste tant qu'elle
+ * ne l'a pas rattrapé, quinze minutes au plus ; au-delà, si la liste ne l'a toujours pas, le journal le dit.
+ */
+const HDK_STATUT_GARDE_S = 900;
+
+function hdkStatutPose(int $id, string $st): void
+{
+    try {
+        hdkTable();
+        Db::exec('DELETE FROM con_hdk_statut WHERE case_id = ?', [$id]);
+        Db::exec('INSERT INTO con_hdk_statut (case_id, statut, pose_le) VALUES (?, ?, ?)', [$id, $st, date('Y-m-d H:i:s')]);
+    } catch (Throwable $e) { /* sans la table, la liste du panel fait foi */ }
+}
+
+/** Les demandes de la liste, avec le statut que le cockpit vient de poser ; la liste qui l'a rattrapé lève la garde. */
+function hdkStatutsPoses(array $D): array
+{
+    try {
+        hdkTable();
+        $P = [];
+        foreach (Db::rows('SELECT case_id, statut, pose_le FROM con_hdk_statut') as $r) { $P[(int) $r['case_id']] = $r; }
+    } catch (Throwable $e) { return $D; }
+    if ($P === []) { return $D; }
+    $limite = date('Y-m-d H:i:s', time() - HDK_STATUT_GARDE_S);
+    foreach ($D as &$d) {
+        $p = $P[$d['id']] ?? null;
+        if ($p === null) { continue; }
+        if ($p['statut'] === $d['statut']) { Db::exec('DELETE FROM con_hdk_statut WHERE case_id = ?', [$d['id']]); continue; }
+        if ((string) $p['pose_le'] < $limite) {
+            Db::exec('DELETE FROM con_hdk_statut WHERE case_id = ?', [$d['id']]);
+            hdkJournal('Demande ' . ($d['ref'] ?: $d['id']) . ' : le panel rend toujours « ' . $d['statutNom'] . ' » un quart d’heure après « ' . (HDK_STATUTS[$p['statut']] ?? $p['statut']) . ' »');
+            continue;
+        }
+        $d['statut'] = (string) $p['statut']; $d['statutNom'] = HDK_STATUTS[$d['statut']] ?? $d['statut'];
+        $d['ouverte'] = in_array($d['statut'], ['NEW', 'IN_PROGRESS'], true); $d['statutAttente'] = true;
+    }
+    unset($d);
+    return $D;
 }
 
 function hdkJournal(string $quoi): void
@@ -258,7 +310,7 @@ function wr_helpdesk_statut(int $id): array
     if (!hdkAdmin()) { return ['ok' => false, 'error' => 'Le compte administrateur du cockpit (Paramètres › ERP) n’est pas configuré.']; }
     $r = hdkEnvoi('PATCH', '/cases/' . $id . '/status', ['status' => $st]);
     if ($r['ok']) { hdkJournal('Demande ' . $id . ' : ' . HDK_STATUTS[$st]); }
-    return $r['ok'] ? ['ok' => true] : $r;
+    return $r['ok'] ? ['ok' => true, 'statut' => $st, 'statutNom' => HDK_STATUTS[$st], 'ouverte' => in_array($st, ['NEW', 'IN_PROGRESS'], true)] : $r;
 }
 
 /** POST /helpdesk/demandes/{id}/consultant {consultant} */
@@ -444,7 +496,7 @@ function ep_helpdesk_magasin(): array
     $r = PanelApi::get('/shops/' . $shop . '/cases');
     if (!is_array($r) && hdkAdmin()) { $r = PanelApi::get('/shops/' . $shop . '/cases'); }
     if (!is_array($r)) { return ['domaines' => HDK_DOMAINES, 'demandes' => [], 'erreur' => 'Vos demandes n’ont pas pu être lues (' . (PanelApi::$lastError ?? 'pas de réponse') . ').']; }
-    $D = array_values(array_filter(array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array'))), static fn ($d) => $d['shop'] === '' || $d['shop'] === (string) $shop));
+    $D = hdkStatutsPoses(array_values(array_filter(array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array'))), static fn ($d) => $d['shop'] === '' || $d['shop'] === (string) $shop)));
     usort($D, static fn ($a, $b) => strcmp($b['cree'], $a['cree']));
     $M = hdkMissions(array_column($D, 'id'));
     $E = hdkEcheances(array_column($D, 'id'));

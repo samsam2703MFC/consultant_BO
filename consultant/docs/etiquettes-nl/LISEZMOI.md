@@ -23,6 +23,8 @@ cockpit (Paramètres › ERP, `ErpApi`). Périmètre validé le 21/11/2026 :
 - **100 traductions FR / NL** des produits sans aucun point à vérifier : `PATCH /products/{id}/aliases` pour les 11
   produits du panel retrouvés sans ambiguïté par les fiches techniques, et `PATCH /materials/{id}/aliases` pour la
   matière qui porte exactement le nom du produit de l'ERP. Les 294 autres attendent une relecture.
+  Les noms ne portent plus « ⌀ 22 cm » ni « ⌀ 26 cm » (plan du 21/11/2026, version `2026-11-21b`) : « Tarte au riz »,
+  par exemple ; les autres tailles (12, 18, 19, 27, 28 cm) restent.
 - **Pas la soupe aux courgettes** : la fusion (1002223 garde ; 2580062 à désactiver ; recette eau, courgettes, sel,
   poivre ; aucun des 14 allergènes) se fait dans l'ERP de production. Le script la rappelle seulement.
 
@@ -40,8 +42,17 @@ php consultant/bin/envoi_etiquettes_nl.php --appliquer --rapport=/tmp/etiquettes
 ```
 
 Options : `--seulement=allergenes` ou `--seulement=traductions` ; `--sans-matieres` (traductions des produits du panel
-seulement) ; `--plan=…` pour un autre plan ; `--racine=…` quand le script arrive par l'entrée standard (c'est ainsi que
-`.github/workflows/sonde-etiquettes-nl.yml` lance l'essai à blanc sur le serveur, sans option d'écriture).
+seulement) ; `--plan=…` pour un autre plan ; `--racine=…` quand le script arrive par l'entrée standard.
+
+Depuis GitHub, sans se connecter au serveur :
+
+- **Envoi** (`.github/workflows/envoi-etiquettes-nl.yml`) : Actions › « Envoi — étiquettes NL à TF Buddy » › Run
+  workflow. Champ `confirmer` : `essai` par défaut (essai à blanc) ; taper `ECRIRE` pour écrire. Il lance le script et
+  le plan déployés ; le rapport reste sur le serveur, dans `/var/lib/consulant_bo/prive/etiquettes-nl/` (`essai_…` ou
+  `envoi_…`). Le job est vert en sortie 0 ou 1, rouge en sortie 2 ; deux envois ne tournent jamais en même temps.
+- **Sonde** (`.github/workflows/sonde-etiquettes-nl.yml`) : lecture seule. Un push du script, de la sonde ou du plan
+  sur la branche `claude/dreamy-pascal-cd6566` (ou Run workflow) montre la forme des réponses de l'API, puis fait un
+  essai à blanc avec le script et le plan de la branche (`--racine=`, `--plan=`).
 
 Garde-fous : un nom introuvable ou présent plusieurs fois n'est jamais deviné (signalé, sauté ; un retrait d'allergène
 sur un nom porté par plusieurs matières est sauté) ; un allergène déjà en place n'est pas renvoyé ; chaque
@@ -53,5 +64,7 @@ l'écriture (détail dans le rapport) ; 2 compte admin indisponible, plan illisi
 
 Le contrat des réponses de l'API n'est pas documenté au swagger : il a été relevé par la sonde du 21/11
 (`consultant/tools/sonde_etiquettes_nl.php`) — `/allergens` est un objet indexé par id, les listes sont à la racine, une
-fiche matière porte `allergens`, les traductions se lisent `{fk_id, lang_code, alias_value}`. Les identifiants de l'ERP ne
+fiche matière porte `allergens`, les traductions se lisent une langue à la fois
+(`GET /…/aliases?lang_code=fr|nl&alias_type=default`, l'anglais sans `lang_code` ; une traduction absente rend
+`alias_value` null) — la relecture et le contrôle « déjà en place » lisent le français puis le néerlandais. Les identifiants de l'ERP ne
 sont pas ceux des produits de l'API : les traductions passent par le nom exact (27 matières et 9 produits sur 100).

@@ -192,7 +192,7 @@ final class StockPalletRepository extends WorkshopRepository
             LEFT JOIN (SELECT id_product, SUM(status = 1) AS free, SUM(status = 2) AS pallet FROM carton_stock
                        WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs ON cs.id_product = fp.id
             LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co
-                       JOIN customer_order_product cop ON cop.id_order = co.id WHERE " . OpenOrders::quantitySql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
+                       JOIN customer_order_product cop ON cop.id_order = co.id WHERE " . OpenOrders::demandSql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
             LEFT JOIN (SELECT sl.id_product, SUM(sl.cartons) AS cartons FROM (" . WdtSalesRepository::linesSql() . ") sl
                        WHERE sl.sale_date >= CURDATE() - INTERVAL ? DAY AND sl.sale_date < CURDATE() GROUP BY sl.id_product) w ON w.id_product = fp.id
             WHERE cs.id_product IS NOT NULL OR oo.id_product IS NOT NULL OR (ps.mode = 'MTS' AND fp.active = 1)

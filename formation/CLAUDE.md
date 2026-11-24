@@ -10,4 +10,7 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   `formation/tools/formation/` (à lancer depuis `formation/`).
 - **Lu par les autres domaines** : `GET /formation/ref`, `/formation/v25`, `/formation/referentiel`,
   `/formation/procedure` (jeton de service pour les autres portails).
+- **Vidéothèque** (23/11/2026) : le catalogue des manuels (`public/formation/catalogue/`, `#/videos`) liste les vidéos
+  d'instruction du dashboard magasin, lues dans leur registre `panel/public/dashboard/videos/videos.json` (fichier public,
+  à l'adresse du cockpit) : rien à faire ici quand une vidéo s'ajoute (`panel/src/LISEZMOI.md`).
 - **Tests** : `php formation/bin/tests_formation.php`, `php formation/bin/tests_manuel_chiffres.php`.

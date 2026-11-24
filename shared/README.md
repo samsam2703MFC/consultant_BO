@@ -421,7 +421,7 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
 - **Sur tablette** (561 à 1100 px), la page du bureau ; les onglets du haut
   passent à la ligne au lieu de se serrer.
 
-- **Valeur du magasin** : sur la barre du haut, en un mot et un chiffre ; tout
+- **Valeur du magasin** : sur la barre du haut (sauf dans la Boîte mail, depuis le 21/11/2026), en un mot et un chiffre ; tout
   le détail attend dans le tiroir qu'on déplie. Le calcul : le CA mensuel moyen
   des **18 derniers mois clos**, ramené à l'année (× 12) puis divisé par **6**
   — soit deux mois de chiffre d'affaires. Le **mois en cours est écarté** :

@@ -6,6 +6,7 @@ namespace App\Controllers\Web\Shipping;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
+use App\Services\Ai\MorningRoutineService;
 use App\Services\Organization\PageAccessService;
 use App\Services\Organization\Wizards\InvoicesKsefDayService;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,6 +17,8 @@ use Symfony\Component\HttpFoundation\Request;
  * de chaque expédition —, le même que l'écran « Wysyłki i dokumenty » où l'on renvoie un document, accordé à
  * Administracja par la migration 182) ; les appels ajax vérifient le même droit (App ne contrôle que les pages).
  * Lecture seule hors de n_invoice_ksef_check et n_wizard_done ; rien n'est envoyé à KSeF, aucun e-mail ni SMS.
+ * [387] Propositions de la routine IA du matin (`ai`, null sans proposition) : seulement affichées ; le résultat
+ * enregistré marque la proposition acceptée (identique) ou modifiée.
  */
 final class InvoicesKsefDayController extends BaseController
 {
@@ -23,20 +26,20 @@ final class InvoicesKsefDayController extends BaseController
 
     public const PATH = InvoicesKsefDayService::PATH;
 
-    public function __construct(private InvoicesKsefDayService $ksef, private PageAccessService $access)
+    public function __construct(private InvoicesKsefDayService $ksef, private PageAccessService $access, private MorningRoutineService $routines)
     {
     }
 
     public function index()
     {
-        $this->view('shipping/invoices_ksef_day', ['data' => $this->ksef->data()]);
+        $this->view('shipping/invoices_ksef_day', ['data' => $this->withAi($this->ksef->data())]);
     }
 
     public function data()
     {
         try {
             $this->guard();
-            return $this->json(['data' => $this->ksef->data()]);
+            return $this->json(['data' => $this->withAi($this->ksef->data())]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
@@ -47,8 +50,10 @@ final class InvoicesKsefDayController extends BaseController
     {
         try {
             $this->guard();
-            $data = $this->ksef->saveResult($this->getJson(Request::createFromGlobals()), $this->userId());
-            return $this->json(['message' => 'Zapisano.', 'data' => $data]);
+            $in = $this->getJson(Request::createFromGlobals());
+            $data = $this->ksef->saveResult($in, $this->userId());
+            $this->routines->recordOutcome(InvoicesKsefDayService::CODE, (string) (int) ($in['id_shipment'] ?? 0), (string) ($in['result'] ?? ''), $in['note'] ?? null, $data, $this->userId());
+            return $this->json(['message' => 'Zapisano.', 'data' => $this->withAi($data)]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
@@ -60,10 +65,17 @@ final class InvoicesKsefDayController extends BaseController
         try {
             $this->guard();
             $r = $this->ksef->finish($this->userId());
-            return $this->json(['message' => 'Faktury i KSeF dnia sprawdzone — ' . $r['summary'] . '.', 'result' => ['summary' => $r['summary']], 'data' => $r['data']]);
+            return $this->json(['message' => 'Faktury i KSeF dnia sprawdzone — ' . $r['summary'] . '.', 'result' => ['summary' => $r['summary']], 'data' => $this->withAi($r['data'])]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
+    }
+
+    /** [387] Propositions de l'IA du jour (noms réels remis ici seulement). */
+    private function withAi(array $d): array
+    {
+        $d['ai'] = $this->routines->forPage(InvoicesKsefDayService::CODE, $d);
+        return $d;
     }
 
     private function guard(): void

@@ -11,7 +11,8 @@ final class ViesClient
     private const API_BASE_PATH = '/api';
 
 
-    private const VIES_COUNTRY_CODES = [
+    /** Préfixes VAT des pays de l'UE (VIES) ; public : l'assistant « Intrastat miesiąca » [398] y reconnaît un vendeur de l'UE. */
+    public const VIES_COUNTRY_CODES = [
         'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES', 'FI', 'FR',
         'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO',
         'SE', 'SI', 'SK', 'XI',

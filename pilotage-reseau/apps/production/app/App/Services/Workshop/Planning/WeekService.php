@@ -161,7 +161,7 @@ final class WeekService
     /**
      * Arkusz tygodnia (cała produkcja na jednej kartce) : jeden wiersz na kartę — produkty z ilością w tygodniu
      * i produkty « na magazyn » zawsze (stan, dostępne, min., maks.), zamówienia, uzupełnienie (dostępne < min. →
-     * do maks.), do produkcji = tydzień produktu w pełnych partiach, sztuk w partii, partie (📌 na przypiętych dniach,
+     * do min.), do produkcji = tydzień produktu w pełnych partiach, sztuk w partii, partie (📌 na przypiętych dniach,
      * reszta czeka), godziny, dni ; grupy :
      * dostępne godziny i osoby (ETP = godziny ÷ week.fte_hours po stronie widoku).
      */
@@ -320,6 +320,24 @@ final class WeekService
         $data = $this->data($data['start'], $context, $now);
         $movable = array_filter($data['products'], fn($p) => $context->canInGroup('prod.gantt.move', $p['group_id']));
 
+        ['writes' => $writes, 'placed' => $placed] = $this->placement($data, $movable, $days);
+
+        $this->tx->execute(function () use ($writes, $data, $context, $reset, $placed) {
+            foreach ($writes as $id => $byDay) foreach ($byDay as $day => $qty) $this->repo->setSlot($data['start'], (int) $id, $day, $qty, $context->userId);
+            $this->audit->record($context, 'distribute', 'week', $data['start'], null, ['reset' => $reset, 'slots' => $placed]);
+        });
+        return $this->present($this->data($data['start'], $context, $now), $context, $now);
+    }
+
+    /**
+     * [386] Répartition de « Do rozplanowania » sur les jours (calcul seul, sans écriture) : parts « na wysyłkę » au plus
+     * tard le dernier jour de production avant leur départ, puis le reste « na magazyn » sur les jours de stock, en pleines
+     * partie, dans les heures libres des groupes. Utilisé par distribute() (qui enregistre) et par la feuille d'équipe
+     * (qui montre ce qu'il reste à produire, jour par jour, sans rien enregistrer).
+     * @return array{writes: array<int, array<string, float>>, added: array<int, array<string, float>>, placed: int}
+     */
+    private function placement(array $data, array $movable, array $days): array
+    {
         // Godziny już zajęte w dniach (wszystkie grupy, także te, których użytkownik nie przesuwa).
         $used = [];
         foreach ($data['products'] as $id => $p) {
@@ -328,6 +346,7 @@ final class WeekService
             }
         }
         $writes = [];
+        $added = [];
 
         // Zadania : części « na wysyłkę » (każdy termin osobno), potem reszta « na magazyn » — w pełnych partiach
         // produkcyjnych, gdy produkt ma partię (WeekSplit).
@@ -360,17 +379,28 @@ final class WeekService
                 foreach (WeekSplit::place($task['qty'], $win, $unit, $free, fn(float $q) => $this->hours($data['routings'], $id, $q)) as $day => $qty) {
                     $slots[$id][$day] = ($slots[$id][$day] ?? 0.0) + $qty;
                     $writes[$id][$day] = $slots[$id][$day];
+                    $added[$id][$day] = ($added[$id][$day] ?? 0.0) + $qty;
                     $used[$g][$day] = ($used[$g][$day] ?? 0.0) + $this->hours($data['routings'], $id, $qty);
                     $placed++;
                 }
             }
         }
 
-        $this->tx->execute(function () use ($writes, $data, $context, $reset, $placed) {
-            foreach ($writes as $id => $byDay) foreach ($byDay as $day => $qty) $this->repo->setSlot($data['start'], (int) $id, $day, $qty, $context->userId);
-            $this->audit->record($context, 'distribute', 'week', $data['start'], null, ['reset' => $reset, 'slots' => $placed]);
-        });
-        return $this->present($this->data($data['start'], $context, $now), $context, $now);
+        return ['writes' => $writes, 'added' => $added, 'placed' => $placed];
+    }
+
+    /**
+     * [386] Ce qu'il reste à produire, jour par jour : la répartition que ferait « Rozdziel na dni » (sans reset), calculée
+     * pour tous les groupes à partir d'aujourd'hui, sans rien enregistrer. Feuille d'équipe : colonnes des jours.
+     * @return array<int, array<string, float>> item_id => [jour => quantité proposée]
+     */
+    public function suggested(string $date, ApiContext $context, ?int $now = null): array
+    {
+        $now ??= time();
+        $data = $this->data($this->weekStart($date), $context, $now);
+        $days = array_values(array_filter($data['days'], fn($d) => $d >= $data['today']));
+        if (!$days) return [];
+        return $this->placement($data, $data['products'], $days)['added'];
     }
 
     /** Dane tygodnia : dni, źródło, produkty z przydziałami, zdolność grup, wykonanie. */
@@ -845,6 +875,13 @@ final class WeekService
         if ($qty <= self::EPS) return 0.0;
         if (isset($this->batchHours[$itemId])) return $qty / $this->batchHours[$itemId][0] * $this->batchHours[$itemId][1];
         return StandardTime::routing($routings[$itemId] ?? [], $qty)['totals']['labour_s'] / 3600;
+    }
+
+    /** [407] Granice tygodnia produkcji zawierającego datę (pierwszy dzień + 6 dni), bez liczenia planu. */
+    public function bounds(string $date): array
+    {
+        $start = $this->weekStart($date);
+        return ['start' => $start, 'end' => date('Y-m-d', strtotime($start . ' +6 days'))];
     }
 
     /** Pierwszy dzień tygodnia produkcji (week.start_day) zawierającego datę. */

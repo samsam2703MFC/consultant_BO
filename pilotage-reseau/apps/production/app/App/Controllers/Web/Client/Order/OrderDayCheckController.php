@@ -6,6 +6,7 @@ namespace App\Controllers\Web\Client\Order;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
+use App\Services\Ai\MorningRoutineService;
 use App\Services\Client\Order\OrderSmsService;
 use App\Services\Organization\PageAccessService;
 use App\Services\Organization\Wizards\OrdersDayCheckService;
@@ -14,7 +15,8 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Asystent « Zamówienia dnia » [369] : nouvelles et modifiées, à vérifier (résultat par commande), validation.
  * La page est sous /client-orders (droit « orders ») ; les appels ajax vérifient le même droit (App ne contrôle
- * que les pages).
+ * que les pages). [387] Propositions de la routine IA du matin (`ai`, null sans proposition) : seulement affichées ;
+ * le résultat enregistré par l'utilisateur marque la proposition acceptée (identique) ou modifiée.
  */
 final class OrderDayCheckController extends BaseController
 {
@@ -22,7 +24,8 @@ final class OrderDayCheckController extends BaseController
 
     public const PATH = '/client-orders/day-check';
 
-    public function __construct(private OrdersDayCheckService $check, private PageAccessService $access, private OrderSmsService $sms)
+    public function __construct(private OrdersDayCheckService $check, private PageAccessService $access, private OrderSmsService $sms,
+        private MorningRoutineService $routines)
     {
     }
 
@@ -46,8 +49,10 @@ final class OrderDayCheckController extends BaseController
     {
         try {
             $this->guard();
-            $data = $this->withSms($this->check->saveResult($this->getJson(Request::createFromGlobals()), $this->userId()));
-            return $this->json(['message' => 'Zapisano.', 'data' => $data]);
+            $in = $this->getJson(Request::createFromGlobals());
+            $saved = $this->check->saveResult($in, $this->userId());
+            $this->routines->recordOutcome(OrdersDayCheckService::CODE, (string) (int) ($in['id_order'] ?? 0), (string) ($in['result'] ?? ''), $in['note'] ?? null, $saved, $this->userId());
+            return $this->json(['message' => 'Zapisano.', 'data' => $this->withSms($saved)]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
@@ -72,6 +77,8 @@ final class OrderDayCheckController extends BaseController
         foreach ($d['orders'] as &$row) $row['sms'] = $last[$row['id']] ?? null;
         unset($row);
         $d['sms_delivers'] = $this->sms->delivers();
+        // [387] Propositions de l'IA du jour (noms réels remis ici seulement).
+        $d['ai'] = $this->routines->forPage(OrdersDayCheckService::CODE, $d);
         return $d;
     }
 

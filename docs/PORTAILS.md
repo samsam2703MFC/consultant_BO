@@ -157,14 +157,15 @@ Chaque étape est mise en ligne séparément, après accord.
 | 0c. Table commune des clés : `erp_cles` (remplace `master_variable_keys`) | fait le 7 nov. 2026 — Recrutement, Marketing (Social compris) et Pilotage y lisent et écrivent leurs clés ; plus aucune lecture croisée de tables (Scouting du Recrutement dans `crm_scouting_*`, réglages dans `crm_settings`, boutiques par l'API du Cockpit) |
 | 3 à 7 | à faire |
 
-### Écart ouvert : le cockpit écrit encore dans les tables du Marketing
+### Écart ouvert : le cockpit écrit encore dans les tables reprises du Marketing
 
-Le cockpit lit et écrit des tables `mar_` dans ~40 000 lignes : une ancienne copie de l'API du
-module (`public/api/marketing/`, retirée le 21/11/2026), la mesure des campagnes (`src/mesure.php`), le contrôle des posts
-(`src/brand_guard.php`, `src/fbcontrole.php`), les posts sociaux (`src/social_publication.php`), la
-newsletter clients (`src/newsletter*.php`), les objectifs produits, le brief (`src/mkt_brief.php`) et
-des lectures dans `src/endpoints.php` / `src/writes.php` (les écritures du fonds et des types de campagne passent
-par l'API du module depuis le 21/11/2026). Chaque bloc passe dans le Marketing (écran +
+Depuis le 21/11/2026, le cockpit ne lit ni n'écrit plus les tables propres au module (fonds, campagnes, types,
+leviers, boutiques des campagnes, agences : par son API, `marketingAppel`) ; l'ancienne copie de l'API du module
+(`public/api/marketing/`) est retirée. Il lit et écrit encore des tables `mar_` reprises du cockpit : la mesure des
+campagnes (`src/mesure.php` : `mar_campagne_mesure`, `…_snapshot`, `…_releve`), les objectifs
+(`mar_campagne_objectif`, `mar_campagne_produit`), le contrôle des posts (`src/brand_guard.php`, `src/fbcontrole.php`),
+les posts sociaux (`src/social_publication.php`, `mar_social_*`), la newsletter clients (`src/newsletter*.php`) et les
+avis (`mar_avis*`). Chaque bloc passe dans le Marketing (écran +
 API) ; le cockpit garde, au besoin, une lecture par `/api/v1/integration/marketing/…`. Jusque-là, le
 cockpit ne crée plus ces tables : c'est la migration 045 du Marketing qui les définit.
 

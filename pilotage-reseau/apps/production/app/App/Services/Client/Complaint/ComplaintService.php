@@ -486,6 +486,20 @@ class ComplaintService
         ];
     }
 
+    /**
+     * [391] Fenêtre de détail sans montants (profils autres que Finanse et CEO, règle [312], décision du 23.11.2026) :
+     * on garde pièces et cartons, on retire prix du carton, valeurs et totaux des lignes envoyées.
+     */
+    public static function withoutAmounts(array $d): array
+    {
+        $d['carton_price'] = null;
+        $d['value'] = null;
+        $d['accepted_value'] = null;
+        $d['shipped'] = array_map(fn($l) => ['price_carton' => null, 'total' => null] + $l, $d['shipped'] ?? []);
+        $d['values'] = false;
+        return $d;
+    }
+
     public function getComplaints()
     {
         $res = $this->complaintRepository->getAll();

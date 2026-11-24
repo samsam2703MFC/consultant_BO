@@ -236,17 +236,22 @@
                 ${d.blocks.map(block).join('')}
                 ${d.deliveries.map(x => `<div class="tfb-team-delivery"><i class="bi bi-truck"></i> <strong>${esc(x.supplier)}</strong><div class="small">${esc(x.materials.join(', '))}</div></div>`).join('')}
                 ${d.blocks.length || d.deliveries.length ? '' : '<span class="small text-muted">—</span>'}</div>`).join('')}</div>`;
+        // [390] Même présentation que la Lista produkcyjna : W magazynie (kart. / szt.), Zamówienie (kart. / szt.), Do produkcji.
+        const ctn = (r, v) => v > 0 && r.ppc ? esc(n(v / r.ppc, v % r.ppc ? 1 : 0)) : '-';
+        const pcs = (r, v) => v > 0 ? esc(n(v / (r.factor || 1), r.factor > 1 ? 2 : 0)) : '-';
+        // [393] Do produkcji = zamówienie − w magazynie (jak dawna Lista produkcyjna) ; uzupełnienie stanu osobno (« Na zapas »).
+        const make = (r) => r.direct > 0 ? `<strong>${esc(qty(r.direct, r.unit, r.factor))}</strong>` : '-';
         const products = tm.products.length ? `<div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-team-table">
-                <thead><tr><th>${esc(t('col_product'))}</th><th class="text-end">${esc(t('col_total'))}</th><th class="text-end">${esc(t('batches'))}</th><th class="text-end">h</th>
-                    <th class="text-end">${esc(t('col_ship'))}</th><th class="text-end">${esc(t('col_stock'))}</th>
-                    ${tm.days.map(d => `<th class="text-center ${d.today ? 'is-today' : ''}">${esc(t('weekday_' + d.weekday))}<div class="small">${esc(day(d.date))}</div></th>`).join('')}</tr></thead>
-                <tbody>${tm.products.map(r => `<tr><td><strong>${esc(r.name)}</strong>${r.unassigned_qty > 0 ? `<div class="small text-danger">${esc(t('waiting', {qty: qty(r.unassigned_qty, r.unit, r.factor)}))}</div>` : ''}
-                    ${Math.abs(r.need - r.quantity) > 0.5 ? `<div class="small text-muted" title="${esc(t('need_help'))}">${esc(t('need', {qty: qty(r.need, r.unit, r.factor)}))}</div>` : ''}</td>
-                    <td class="text-end text-nowrap">${esc(qty(r.quantity, r.unit, r.factor))}${r.cartons ? `<div class="small text-muted">${esc(n(r.cartons, 1))} ${esc(t('cartons'))}</div>` : ''}</td>
+                <thead><tr><th rowspan="2">${esc(t('col_product'))}</th><th colspan="2" class="text-center text-muted">${esc(t('col_on_hand'))}</th><th colspan="2" class="text-center">${esc(t('col_ordered'))}</th>
+                    <th class="text-center">${esc(t('col_total'))}</th><th class="text-center text-muted">${esc(t('col_stock'))}</th><th rowspan="2" class="text-end">${esc(t('batches'))}</th><th rowspan="2" class="text-end">h</th>
+                    ${tm.days.map(d => `<th rowspan="2" class="text-center ${d.today ? 'is-today' : ''}">${esc(t('weekday_' + d.weekday))}<div class="small">${esc(day(d.date))}</div></th>`).join('')}</tr>
+                    <tr><th class="text-end text-muted">${esc(t('cartons_short'))}</th><th class="text-end text-muted">${esc(t('pieces_short'))}</th><th class="text-end">${esc(t('cartons_short'))}</th><th class="text-end">${esc(t('pieces_short'))}</th><th class="text-end">${esc(t('pieces_short'))}</th><th class="text-end text-muted">${esc(t('pieces_short'))}</th></tr></thead>
+                <tbody>${tm.products.map(r => `<tr><td><button type="button" class="btn btn-link p-0 text-start text-reset fw-bold text-decoration-none tfb-team-orders" data-orders="${r.item_id}" data-orders-name="${esc(r.name)}" title="${esc(t('orders_hint'))}">${esc(r.name)} <i class="bi bi-people small text-muted"></i></button>${r.mts ? `<div class="small text-muted">${esc(t('mts', {min: r.mts.min !== null ? n(r.mts.min / (r.factor || 1), 0) : '—', max: n(r.mts.max / (r.factor || 1), 0)}))}</div>` : ''}${r.unassigned_qty > 0 ? `<div class="small text-danger">${esc(t('waiting', {qty: qty(r.unassigned_qty, r.unit, r.factor)}))}</div>` : ''}</td>
+                    <td class="text-end text-muted">${ctn(r, r.on_hand)}</td><td class="text-end text-muted">${pcs(r, r.on_hand)}</td>
+                    <td class="text-end">${ctn(r, r.ordered)}</td><td class="text-end text-nowrap">${pcs(r, r.ordered)}${r.ordered > 0 && r.ordered_due ? `<div class="small text-muted">${esc(t('due', {day: day(r.ordered_due)}))}</div>` : ''}</td>
+                    <td class="text-end text-nowrap">${make(r)}</td><td class="text-end text-nowrap text-muted">${r.stock > 0 ? esc(qty(r.stock, r.unit, r.factor)) : '-'}${r.mts ? `<div class="small">${esc(t('room', {qty: n(r.mts.room / (r.factor || 1), 0)}))}</div>` : ''}</td>
                     <td class="text-end">${r.batches ? esc(n(r.batches, 2)) : '—'}</td><td class="text-end">${esc(n(r.hours, 1))}</td>
-                    <td class="text-end text-nowrap">${r.direct > 0 ? esc(qty(r.direct, r.unit, r.factor)) + (r.due_date ? `<div class="small text-muted">${esc(t('due', {day: day(r.due_date)}))}</div>` : '') : '—'}</td>
-                    <td class="text-end text-nowrap">${r.stock > 0 ? esc(qty(r.stock, r.unit, r.factor)) : '—'}</td>
-                    ${tm.days.map(d => { const x = r.days[d.date]; return `<td class="text-center text-nowrap ${d.today ? 'is-today' : ''}">${x ? (x.time ? `<div class="small text-muted">${esc(x.time)}</div>` : '') + esc(n(x.quantity / (r.factor || 1), r.factor > 1 ? 2 : 1)) : ''}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`
+                    ${tm.days.map(d => { const x = r.days[d.date]; const v = x ? esc(n(x.quantity / (r.factor || 1), r.factor > 1 ? 2 : 1)) : ''; return `<td class="text-center text-nowrap ${d.today ? 'is-today' : ''}">${x ? (x.time ? `<div class="small text-muted">${esc(x.time)}</div>` : '') + (x.proposed ? `<em title="${esc(t('proposed_title'))}">${v}</em>` : v) : ''}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div><p class="small text-muted mb-0 mt-1">${esc(t('columns_note'))}</p>${tm.proposed ? `<p class="small text-muted fst-italic mb-0 mt-1">${esc(t('proposed_note'))}</p>` : ''}`
             : `<p class="text-muted mb-0">${esc(t('empty_team'))}</p>`;
         const deliveries = tm.deliveries.length ? `<h6 class="tfb-team-title mt-3">${esc(t('deliveries'))}</h6><div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-team-table">
                 <thead><tr><th>${esc(t('col_date'))}</th><th>${esc(t('col_supplier'))}</th><th>${esc(t('col_material'))}</th><th class="text-end">${esc(t('col_quantity'))}</th>
@@ -284,6 +289,37 @@
         }
     }
 
+    // [407] Clic sur un produit : clients et quantités commandées dans la semaine (mêmes commandes que la colonne « Zamówienie »).
+    let ordersModal = null;
+    async function orders(itemId, name) {
+        if (!ordersModal) {
+            document.body.insertAdjacentHTML('beforeend', `<div class="modal fade" id="tfbTeamOrders" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+                <div class="modal-header"><div><h5 class="modal-title" data-o-title></h5><div class="small text-muted" data-o-sub></div></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body" data-o-body></div></div></div></div>`);
+            ordersModal = new window.bootstrap.Modal(document.getElementById('tfbTeamOrders'));
+        }
+        const m = document.getElementById('tfbTeamOrders');
+        const body = m.querySelector('[data-o-body]');
+        m.querySelector('[data-o-title]').textContent = t('orders_title', {name});
+        m.querySelector('[data-o-sub]').textContent = '';
+        body.innerHTML = `<div class="text-muted small">${esc(t('loading'))}</div>`;
+        ordersModal.show();
+        try {
+            const o = await api.get(`/planning/team-sheet/orders?item_id=${itemId}&date=${state.date}`);
+            const root = (el.dataset.root || '').replace(/\/$/, '');
+            m.querySelector('[data-o-sub]').textContent = t('orders_sub', {from: day(o.week_start), to: day(o.week_end), customers: o.customers, cartons: n(o.total_cartons, 0), qty: n(o.total_quantity, 0)});
+            body.innerHTML = o.orders.length ? `<div class="table-responsive"><table class="table table-sm align-middle mb-0">
+                <thead><tr><th>${esc(t('col_customer'))}</th><th>${esc(t('col_due'))}</th><th class="text-end">${esc(t('cartons_short'))}</th><th class="text-end">${esc(t('pieces_short'))}</th><th class="text-end">${esc(t('col_order'))}</th></tr></thead>
+                <tbody>${o.orders.map(x => `<tr><td><strong>${esc(x.customer || t('customer_unknown', {id: x.customer_id ?? '—'}))}</strong></td><td>${esc(day(x.due))}</td>
+                    <td class="text-end">${esc(n(x.cartons, x.cartons % 1 ? 1 : 0))}</td><td class="text-end">${esc(n(x.quantity, 0))}</td>
+                    <td class="text-end"><a href="${root}/client-orders/${x.order_id}/edit" target="_blank" rel="noopener">#${x.order_id}</a></td></tr>`).join('')}</tbody>
+                <tfoot><tr class="fw-bold"><td colspan="2">${esc(t('orders_total'))}</td><td class="text-end">${esc(n(o.total_cartons, o.total_cartons % 1 ? 1 : 0))}</td><td class="text-end">${esc(n(o.total_quantity, 0))}</td><td></td></tr></tfoot></table></div>`
+                : `<p class="text-muted mb-0">${esc(t('orders_empty'))}</p>`;
+        } catch (err) {
+            body.innerHTML = `<div class="alert alert-danger mb-0">${esc(errText(err))}</div>`;
+        }
+    }
+
     function bind() {
         el.querySelectorAll('[data-week]').forEach(b => b.addEventListener('click', () => {
             const k = Number(b.dataset.week);
@@ -291,6 +327,7 @@
             load();
         }));
         el.querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => { state.group = Number(b.dataset.group) || null; draw(); }));
+        el.querySelectorAll('[data-orders]').forEach(b => b.addEventListener('click', () => orders(Number(b.dataset.orders), b.dataset.ordersName)));
         el.querySelectorAll('[data-pdf]').forEach(b => b.addEventListener('click', () => pdf(Number(b.dataset.pdf) || null, b)));
         el.querySelector('[data-tablet]')?.addEventListener('click', () => { tablet = !tablet; draw(); });
         el.querySelector('[data-copy]')?.addEventListener('click', async () => {
