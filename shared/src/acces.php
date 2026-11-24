@@ -52,7 +52,10 @@ const ACCES_FRANCHISE = ['/exploitation', '/ventes', '/fidelite', '/analyse', '/
     '/formation/recherche',
     // La formation continue (22/11/2026) : SON dossier de formation (« Formations et suivi ») ; la photo (multipart) revérifie
     // le magasin (fcShopOk).
-    '/formation/continue/magasin'];
+    '/formation/continue/magasin',
+    // L'autocontrôle qualité (24/11/2026) : la tablette contrôle les produits de SA boutique ; les photos revérifient le
+    // magasin du contrôle (aqShopOk). Les grilles et les résultats du réseau restent au siège.
+    '/autocontrole/magasin'];
 
 /** Les paramètres qui désignent un magasin, dans l'adresse ou dans le corps JSON. */
 const ACCES_CLES_MAGASIN = ['shop', 'shops', 'shopId', 'shop_id', 'magasin', 'magasins', 'magasinId'];

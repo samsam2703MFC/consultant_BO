@@ -1,0 +1,358 @@
+<body>
+
+    <div class="app-topbar">
+        <div class="container">
+            <div class="app-topbar-inner">
+                                                <a href="#" class="app-brand">
+                    <img src="../../../../shared/public/assets/img/logo.png" alt="L'Atelier" class="app-brand-logo">
+                    <span class="app-brand-module">Cuisine</span>
+                </a>
+
+                <div class="d-flex align-items-center gap-2 app-topbar-actions">
+                    <div id="tabletWorkerStatus">
+                                            <button type="button" class="badge rounded-pill app-shift-status app-shift-status--anonymous border-0" data-shift-action="login">
+                            <i class="bi bi-person-plus" aria-hidden="true"></i>
+                            Mode anonyme
+                            <i class="bi bi-chevron-right app-shift-status-chevron" aria-hidden="true"></i>
+                        </button>
+                                        </div>
+                    <button type="button" id="productionSectorButton" class="badge rounded-pill app-shift-status border-0" data-bs-toggle="modal" data-bs-target="#productionSectorModal">Tous les ateliers</button>
+                                        <button class="app-hamburger" id="appHamburger" aria-label="Menu" aria-expanded="false" aria-controls="appNavSheet">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+<main class="app-content">
+    <div class="container py-3">
+                <a href="#" class="fiche-back">
+        <i class="bi bi-arrow-left"></i>
+        <span>Retour à la liste des produits</span>
+    </a>
+
+        
+
+
+
+
+
+                    
+    
+
+
+
+
+
+                            
+                <div class="fiche-wrap mb-4">
+
+                <div class="fiche-hero">
+                            <img src="contexte/cougnou.jpg" alt="Cougnou Nature - 400 g." class="fiche-zoomable">
+                <span class="fiche-hero-zoom" aria-hidden="true"><i class="bi bi-arrows-fullscreen"></i></span>
+                    </div>
+
+                <div class="fiche-header">
+            <div class="fiche-header-left">
+                                    <div class="fiche-category-label">
+                        Cougnou
+                    </div>
+                                <h1 class="fiche-product-name">Cougnou Nature - 400 g.</h1>
+
+                                                    <p class="fiche-product-desc">
+                        <i class="bi bi-thermometer-half me-1"></i>À température ambiante
+                                            </p>
+                
+                                <div class="fiche-badges">
+                                                                                                                                <span class="fiche-badge fiche-badge-dlc">
+                                <i class="bi bi-clock me-1"></i>DLC
+                                10h                                 · SSL                            </span>
+                                                                            <span class="fiche-badge fiche-badge-price">
+                                <i class="bi bi-tag me-1"></i>5.80 €
+                            </span>
+                                                                                                                                                    <span class="fiche-badge fiche-badge-label">
+                                <i class="bi bi-upc me-1"></i>small
+                            </span>
+                                                            </div>
+            </div>
+
+        </div>
+
+        <div class="fiche-tabs" role="tablist" aria-label="Informations produit">
+            <button type="button" role="tab" id="ficheGeneralTab" aria-controls="ficheGeneralPanel" aria-selected="true" tabindex="0">Paramètres généraux</button>
+            <button type="button" role="tab" id="ficheBakingTab" aria-controls="ficheBakingPanel" aria-selected="false" tabindex="-1">Paramètres de cuisson</button>
+        </div>
+        <div id="ficheGeneralPanel" role="tabpanel" aria-labelledby="ficheGeneralTab" data-fiche-general="">
+                <div class="fiche-main">
+            <div class="fiche-sec">
+
+                                <h4 class="fiche-section-title">
+                    <i class="bi bi-journal-text me-1"></i>Composition
+                </h4>
+                                    <div class="ingredient-chips">
+                                                                                    <span class="ingredient-chip has-allergen">
+                                    Cougnou - Nature 400 g. - Cru
+                                </span>
+                                                                        </div>
+                
+                                <h4 class="fiche-section-title">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Allergènes
+                </h4>
+                                    <div class="allergen-chips">
+                                                    <span class="allergen-chip">Œufs</span>
+                                                    <span class="allergen-chip">Céréales contenant du gluten</span>
+                                            </div>
+                    <p class="allergen-note">→ Vérifier les ingrédients avant de servir aux personnes allergiques</p>
+                
+                                                <h4 class="fiche-section-title">
+                    <i class="bi bi-thermometer-half me-1"></i>Conditions de stockage et de service
+                </h4>
+                <div class="fiche-note-box">
+                    <p>
+                                                    <strong>Comptoir Sec- 1</strong>
+                             — À température ambiante                                                                            <br>🌡️ Température de stockage: <strong>20°C</strong>
+                                                                                                    <br>📍 Positionnement: <strong>Voir plan de magasin</strong>
+                                                                        </p>
+                </div>
+
+                                <h4 class="fiche-section-title mt-3">
+                    <i class="bi bi-info-circle me-1"></i>Détails du produit
+                </h4>
+                                    <div class="fiche-info-row">
+                        <span class="fiche-info-label">Poids unitaire</span>
+                        <span class="fiche-info-value">400 g</span>
+                    </div>
+                                                    <div class="fiche-info-row">
+                        <span class="fiche-info-label">Rendement</span>
+                        <span class="fiche-info-value">1 pcs</span>
+                    </div>
+                                                                    <details class="fiche-admin">
+                        <summary>Données de gestion</summary>
+                                                    <div class="fiche-info-row">
+                                <span class="fiche-info-label">Quantité par étiquette</span>
+                                <span class="fiche-info-value">1</span>
+                            </div>
+                                                                    </details>
+                                
+            </div>
+
+            <div class="fiche-sec">
+
+                                                    <div class="prep-types">
+                                                    <span class="prep-type-chip">
+                                <i class="bi bi-stopwatch"></i>
+                                Mise en place
+                                                                    <strong>1 min</strong>
+                                                            </span>
+                                            </div>
+                
+                                                
+                                                    <h4 class="fiche-section-title">
+                        <i class="bi bi-diagram-3 me-1"></i>Quantités des ingrédients
+                    </h4>
+                                                                        <div class="fiche-info-row">
+                                <span class="fiche-info-label">Cougnou - Nature 400 g. - Cru</span>
+                                <span class="fiche-info-value">1 pcs</span>
+                            </div>
+                                                            
+                                
+            </div>
+
+        </div>
+                <div class="fiche-plano">
+            <div class="fiche-plano-header">
+                <span class="fiche-plano-title">
+                    <i class="bi bi-images me-1"></i>Présentation &amp; Emballage
+                </span>
+                            </div>
+
+            <div class="row g-3">
+
+                                                <div class="col-12 col-md-6">
+                    <div class="plano-photo" style="height:120px; flex-direction:column; gap:6px;">
+                        <i class="bi bi-easel" style="font-size:1.8rem; color:#ced4da"></i>
+                        <span style="font-size:0.78rem; color:#adb5bd">Présentation</span>
+                        <span style="font-size:0.68rem; color:#ced4da; font-style:italic">Bientôt disponible</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="plano-photo" style="height:120px; flex-direction:column; gap:6px;">
+                        <i class="bi bi-layout-wtf" style="font-size:1.8rem; color:#ced4da"></i>
+                        <span style="font-size:0.78rem; color:#adb5bd">Exposition</span>
+                        <span style="font-size:0.68rem; color:#ced4da; font-style:italic">Bientôt disponible</span>
+                    </div>
+                </div>
+
+                                
+                                                    <div class="col-12 text-center text-muted py-3">
+                        <i class="bi bi-image" style="font-size:2rem"></i>
+                        <p class="mt-2 small">Pas de photos ni de matériaux d'emballage disponibles</p>
+                    </div>
+                
+            </div>
+        </div>
+
+        </div>        <div id="ficheBakingPanel" role="tabpanel" aria-labelledby="ficheBakingTab" hidden="">
+                <p class="bk-note" role="alert">Impossible de charger les paramètres de cuisson. Actualisez la page pour réessayer.</p>
+        </div>
+    </div>
+
+                            <div class="fiche-wrap mb-4" data-fiche-general="">
+        <div class="fiche-plano">
+            <div class="fiche-plano-header">
+                <span class="fiche-plano-title">
+                    <i class="bi bi-images me-1"></i>Photos
+                </span>
+            </div>
+            <div class="plano-photos">
+                                                                                    <div class="plano-photo">
+                        <img src="contexte/cougnou.jpg" alt="Cougnou Nature - 400 g. - main" class="fiche-zoomable">
+                        <span class="fiche-photo-label">Photo principale</span>
+                    </div>
+                            </div>
+        </div>
+    </div>
+    
+        <div class="fiche-lightbox" id="ficheLightbox">
+        <span class="fiche-lightbox-close">×</span>
+        <img id="ficheLightboxImg" src="" alt="">
+    </div>
+
+
+            </div>
+</main>
+
+<div id="snackbar"></div>
+
+
+
+
+<div class="app-nav-backdrop" id="appNavBackdrop" aria-hidden="true"></div>
+
+<div class="app-nav-sheet" id="appNavSheet" role="dialog" aria-modal="true" aria-label="Menu">
+
+    <div class="app-nav-sheet-header">
+        <p class="app-nav-sheet-title">Menu</p>
+        <button class="app-nav-sheet-close" id="appNavClose" aria-label="Fermer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+    </div>
+
+    <div class="app-nav-grid">
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path></svg></span>
+                <span class="app-nav-card-label">Livraisons</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M12.59 2.59A2 2 0 0 0 11.17 2H4a2 2 0 0 0-2 2v7.17a2 2 0 0 0 .59 1.41l8.7 8.7a2.43 2.43 0 0 0 3.42 0l6.58-6.58a2.43 2.43 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".7"></circle></svg></span>
+                <span class="app-nav-card-label">Étiquettes produits</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg></span>
+                <span class="app-nav-card-label">Plan de production</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg></span>
+                <span class="app-nav-card-label">Journée de production</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"></rect><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg></span>
+                <span class="app-nav-card-label">Inventaire des matières premières</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 21v-8h6v8"></path></svg></span>
+                <span class="app-nav-card-label">Tableau de bord cuisine</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card is-active " aria-current="page">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path></svg></span>
+                <span class="app-nav-card-label">Fiches de production</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"></rect><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg></span>
+                <span class="app-nav-card-label">Listes de contrôle</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1z"></path><path d="M8 7h8"></path><path d="M8 11h8"></path><path d="M8 15h5"></path></svg></span>
+                <span class="app-nav-card-label">Commandes</span>
+                            </a>
+                                                                    <a href="#" class="app-nav-card  " aria-current="false">
+                <span class="app-nav-card-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg></span>
+                <span class="app-nav-card-label">Réclamations</span>
+                            </a>
+            </div>
+
+                    <a href="#" class="app-nav-profile ">
+        <span class="app-nav-profile-avatar" aria-hidden="true">K</span>
+        <span class="app-nav-profile-txt">
+            <span class="app-nav-profile-name">Kitchen</span>
+            <span class="app-nav-profile-sub">Mon profil</span>
+        </span>
+        <span class="app-nav-profile-chev"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></span>
+    </a>
+
+    <a href="#" class="app-nav-logout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>
+        <span>Déconnexion</span>
+    </a>
+
+    <div class="app-nav-sheet-handle"></div>
+</div>
+
+
+
+                <nav class="app-tabbar-bar" aria-label="Menu">
+                                <a href="#" class="app-tab " aria-current="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 21v-8h6v8"></path></svg>
+                                <span>Accueil</span>
+            </a>
+                                        <a href="#" class="app-tab " aria-current="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+                                <span>Journée de production</span>
+            </a>
+                                        <a href="#" class="app-tab is-active" aria-current="page">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path></svg>
+                                <span>Fiches de production</span>
+            </a>
+                                        <a href="#" class="app-tab " aria-current="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"></rect><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                                <span>Checklists</span>
+            </a>
+                                        <a href="#" class="app-tab " aria-current="false">
+                                    <span class="app-tab-ic">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1z"></path><path d="M8 7h8"></path><path d="M8 11h8"></path><path d="M8 15h5"></path></svg>
+                                                <span class="app-tab-count" id="ordersCount" hidden=""></span>
+                    </span>
+                                <span>Commandes</span>
+            </a>
+                                        <a href="#" class="app-tab " aria-current="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lc-icon" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path></svg>
+                                <span>Livraisons</span>
+            </a>
+                        <a href="#" class="app-tab app-tab-profile ">
+        <span class="app-tab-avatar" aria-hidden="true">K</span>
+        <span>Profil</span>
+    </a>
+</nav>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
