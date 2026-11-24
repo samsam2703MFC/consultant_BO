@@ -1,0 +1,273 @@
+{
+ "aConfirmer": [
+  "Les vidéos sont en français seulement ; la vidéothèque le dit en NL (« De video’s zijn in het Frans »). Des vidéos NL sont-elles prévues ?",
+  "« Vu » et « Plus tard » sont gardés sur l’appareil (le navigateur) : sur une autre tablette, ou après un nettoyage du navigateur, l’annonce revient. Rien n’est noté au serveur : le consultant ne peut pas savoir qui a vu quelle vidéo.",
+  "Les vidéos se montrent au bureau (rail) ; rien au téléphone. L’accès de la vidéothèque (catalogue de formation, /formation/catalogue/#/videos) depuis la tablette du magasin n’est pas vérifié.",
+  "Le nombre de vidéos change à chaque tournage : l’article ne cite pas de nombre (24 au 23/11/2026 : 1 formation, 1 nouvelle fonction, 22 modes d’emploi).",
+  "Classement : sous-catégorie D3.4 (Communication interne, compétence C-ID.FB) ; D6.3 (Formation) serait possible. Formations FO-36 et FO-05. Accès « responsable » (le dashboard est celui du franchisé) : « tous » si l’équipe doit aussi les voir. Durée estimée."
+ ],
+ "id": "art-dash-videos",
+ "code": "",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "10 min de lecture, avec le dashboard ouvert au bureau",
+ "titre": {
+  "fr": "Le dashboard : les vidéos d’instruction",
+  "nl": "Het dashboard: de instructievideo’s"
+ },
+ "objectif": {
+  "fr": "Trouver et regarder la vidéo d’une page du dashboard, reconnaître l’annonce d’une nouvelle fonction et la traiter, et retrouver toutes les vidéos dans la vidéothèque du catalogue de formation.",
+  "nl": "De video van een pagina van het dashboard vinden en bekijken, de aankondiging van een nieuwe functie herkennen en behandelen, en alle video’s terugvinden in de videotheek van de opleidingscatalogus."
+ },
+ "pour": {
+  "fr": "Franchisé, locataire gérant, manager et adjoint manager (P7 à P12), et chef de section vente (P4). À lire après « Comprendre le dashboard magasin » (0.0.15).",
+  "nl": "Franchisenemer, locataire-gérant, manager en adjunct-manager (P7 tot P12), en sectieverantwoordelijke verkoop (P4). Te lezen na « Het winkeldashboard begrijpen » (0.0.15)."
+ },
+ "classement": {
+  "souscat": "D3.4",
+  "phases": [
+   "operationnel",
+   "formation"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-ID.FB",
+   "C-PILOTAGE.KPI"
+  ],
+  "formations": [
+   "FO-36",
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Le carré des vidéos",
+    "nl": "Het vierkantje van de video’s"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Où se trouve le carré",
+      "nl": "Waar het vierkantje staat"
+     },
+     "texte": {
+      "fr": "Dans le rail du dashboard, un petit carré à côté d’« Assistant IA » (à côté de « Boîte mail » quand l’assistant n’est pas ouvert au magasin).\nAu repos : abricot.\nRubis, avec un chiffre : le nombre de nouvelles vidéos pas encore vues.\nAu téléphone, le rail n’est pas affiché : ni carré ni annonce.",
+      "nl": "In de rail van het dashboard, een klein vierkantje naast « Assistant IA » (naast « Boîte mail » als de assistent niet open is voor de winkel).\nIn rust: abrikoos.\nRobijnrood, met een cijfer: het aantal nieuwe video’s die nog niet bekeken zijn.\nOp de telefoon wordt de rail niet getoond: geen vierkantje en geen aankondiging."
+     },
+     "critique": false,
+     "photo": "art-dash-videos-carre.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Trois sortes de vidéos",
+      "nl": "Drie soorten video’s"
+     },
+     "texte": {
+      "fr": "« Nouvelle fonction » : une fonction qui vient d’arriver ; elle est annoncée.\n« Mode d’emploi » : comment se sert une page ; chaque entrée du rail a la sienne.\n« Formation » : un module complet, à suivre en session de formation (objectifs, démonstration pas à pas, mises en pratique et quiz).\nLes écrans filmés sont ceux du dashboard ; les chiffres et les noms sont fictifs.",
+      "nl": "« Nouvelle fonction »: een functie die net aangekomen is; ze wordt aangekondigd.\n« Mode d’emploi »: hoe een pagina gebruikt wordt; elke ingang van de rail heeft de zijne.\n« Formation »: een volledige module, te volgen in een opleidingssessie (doelstellingen, demonstratie stap voor stap, oefeningen en quiz).\nDe gefilmde schermen zijn die van het dashboard; de cijfers en de namen zijn fictief."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Le clic sur le carré",
+      "nl": "De klik op het vierkantje"
+     },
+     "texte": {
+      "fr": "Le carré ouvre la vidéo de la page ouverte : sa nouveauté d’abord, sinon son mode d’emploi.\nUne page sans vidéo : la nouveauté, sinon le mode d’emploi du dashboard.\nLes pages hors du rail (Jour, Trimestre, Frais) ouvrent la vidéo de leur page parente.\nLe geste : ouvrir la page dont on a besoin, puis cliquer sur le carré.",
+      "nl": "Het vierkantje opent de video van de open pagina: eerst haar nieuwigheid, anders haar handleiding.\nEen pagina zonder video: de nieuwigheid, anders de handleiding van het dashboard.\nDe pagina’s buiten de rail (Jour, Trimestre, Frais) openen de video van hun hoofdpagina.\nHet gebaar: de nodige pagina openen, dan op het vierkantje klikken."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "L’annonce d’une nouvelle fonction",
+    "nl": "De aankondiging van een nieuwe functie"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "La bulle « Nouveau »",
+      "nl": "De ballon « Nouveau »"
+     },
+     "texte": {
+      "fr": "Une nouvelle fonction pas encore vue s’annonce dans une bulle accrochée au carré : « Nouveau », son titre, « Voir la vidéo · [durée] », « Plus tard ».\nElle s’annonce pendant 60 jours après sa sortie.\n« Voir la vidéo » ouvre le lecteur ; la vidéo est alors vue et l’annonce ne revient plus.\n« Plus tard » range l’annonce pour la journée : elle revient le lendemain, tant que la vidéo n’est pas vue.",
+      "nl": "Een nieuwe functie die nog niet bekeken is, wordt aangekondigd in een ballon aan het vierkantje: « Nouveau », haar titel, « Voir la vidéo · [duur] », « Plus tard ».\nZe wordt aangekondigd gedurende 60 dagen na haar verschijnen.\n« Voir la vidéo » opent de speler; de video is dan bekeken en de aankondiging komt niet meer terug.\n« Plus tard » bergt de aankondiging op voor de dag: ze komt de volgende dag terug, zolang de video niet bekeken is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Vu, plus tard : gardés sur l’appareil",
+      "nl": "Bekeken, later: bewaard op het toestel"
+     },
+     "texte": {
+      "fr": "« Vu » et « Plus tard » sont gardés sur l’appareil, pas au serveur.\nSur un autre ordinateur ou un autre navigateur, l’annonce revient.\nRien n’est noté : regarder une vidéo ne compte pas comme une formation suivie.",
+      "nl": "« Bekeken » en « Plus tard » worden op het toestel bewaard, niet op de server.\nOp een andere computer of een andere browser komt de aankondiging terug.\nNiets wordt genoteerd: een video bekijken telt niet als een gevolgde opleiding."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le lecteur et la vidéothèque",
+    "nl": "De speler en de videotheek"
+   },
+   "etapes": [
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Le lecteur",
+      "nl": "De speler"
+     },
+     "texte": {
+      "fr": "Une fenêtre : la sorte et la durée, le titre, la vidéo, son résumé.\nDessous, « Les autres vidéos » : un clic en ouvre une autre ; « Nouveau » marque celles pas encore vues.\n« Toute la vidéothèque ↗ » ouvre la vidéothèque dans un nouvel onglet.\n✕, Échap ou un clic à côté ferment le lecteur.",
+      "nl": "Een venster: de soort en de duur, de titel, de video, de samenvatting.\nDaaronder « Les autres vidéos »: een klik opent een andere; « Nouveau » duidt de nog niet bekeken aan.\n« Toute la vidéothèque ↗ » opent de videotheek in een nieuw tabblad.\n✕, Escape of een klik ernaast sluiten de speler."
+     },
+     "critique": false,
+     "photo": "art-dash-videos-lecteur.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "La vidéothèque",
+      "nl": "De videotheek"
+     },
+     "texte": {
+      "fr": "Dans le catalogue de formation : « Vidéothèque », à côté des manuels (« Regarder », et son QR code).\nTrois groupes : « Modules de formation », « Nouvelles fonctions », « Modes d’emploi ».\nChaque vidéo : son affiche, sa durée, son titre, son résumé ; un clic la lit.\nFR ou NL pour la page ; les vidéos sont en français.\nUne vidéo ajoutée au dashboard y entre d’elle-même.",
+      "nl": "In de opleidingscatalogus: « Vidéothèque », naast de handboeken (« Bekijken », en zijn QR-code).\nDrie groepen: « Modules de formation », « Nouvelles fonctions », « Modes d’emploi ».\nElke video: haar affiche, haar duur, haar titel, haar samenvatting; een klik speelt ze af.\nFR of NL voor de pagina; de video’s zijn in het Frans.\nEen video die aan het dashboard toegevoegd wordt, komt er vanzelf in."
+     },
+     "critique": false,
+     "photo": "art-dash-videos-videotheque.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Le carré ouvre la vidéo de la page ouverte : ouvrir d’abord la page, puis cliquer sur le carré.",
+   "nl": "Het vierkantje opent de video van de open pagina: eerst de pagina openen, dan op het vierkantje klikken."
+  },
+  {
+   "fr": "« Plus tard » ne vaut que pour la journée : l’annonce revient le lendemain tant que la vidéo n’est pas vue.",
+   "nl": "« Plus tard » geldt alleen voor de dag: de aankondiging komt de volgende dag terug zolang de video niet bekeken is."
+  },
+  {
+   "fr": "Regarder une vidéo n’est noté nulle part : ce n’est pas une formation validée.",
+   "nl": "Een video bekijken wordt nergens genoteerd: het is geen gevalideerde opleiding."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Le carré des vidéos est rubis avec un « 1 ». Qu’est-ce que ça veut dire ?",
+    "nl": "Het vierkantje van de video’s is robijnrood met een « 1 ». Wat betekent dat?"
+   },
+   "choix": {
+    "fr": [
+     "Une nouvelle vidéo pas encore vue",
+     "Une vidéo en erreur",
+     "Une formation à valider"
+    ],
+    "nl": [
+     "Een nieuwe video die nog niet bekeken is",
+     "Een video met een fout",
+     "Een opleiding om te valideren"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Un clic sur « Plus tard » dans la bulle. Quand l’annonce revient-elle ?",
+    "nl": "Een klik op « Plus tard » in de ballon. Wanneer komt de aankondiging terug?"
+   },
+   "choix": {
+    "fr": [
+     "Jamais",
+     "Dans une heure",
+     "Le lendemain, tant que la vidéo n’est pas vue"
+    ],
+    "nl": [
+     "Nooit",
+     "Over een uur",
+     "De volgende dag, zolang de video niet bekeken is"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Sur la page Trimestre, quelle vidéo ouvre le carré ?",
+    "nl": "Op de pagina Trimestre, welke video opent het vierkantje?"
+   },
+   "choix": {
+    "fr": [
+     "Toujours « Découvrir le dashboard »",
+     "Celle de sa page parente",
+     "Aucune"
+    ],
+    "nl": [
+     "Altijd « Découvrir le dashboard »",
+     "Die van zijn hoofdpagina",
+     "Geen"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Où retrouver toutes les vidéos, groupées par sorte ?",
+    "nl": "Waar vind je alle video’s terug, gegroepeerd per soort?"
+   },
+   "choix": {
+    "fr": [
+     "Dans Mon coffre-fort",
+     "Dans la vidéothèque du catalogue de formation",
+     "Dans l’Assistant IA"
+    ],
+    "nl": [
+     "In Mon coffre-fort",
+     "In de videotheek van de opleidingscatalogus",
+     "In de Assistant IA"
+    ]
+   },
+   "bonne": 1
+  }
+ ]
+}
