@@ -19,7 +19,7 @@
   document.body.innerHTML = new DOMParser().parseFromString(corps, 'text/html').body.innerHTML;
   const G = await (await fetch('grilles.json')).json();
 
-  const PID = '1700400';
+  const PID = '6700139';
   const PRODUIT = G.produits[PID];
   const CAT = G.categories.find(c => c.cle === PRODUIT.categorie);
   // Les critères de la catégorie, puis ceux de tous les produits (photo de référence, planogramme).

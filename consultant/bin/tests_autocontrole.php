@@ -48,7 +48,7 @@ function accesMagasins(): array { return ['4' => 'Halle', '5' => 'Sombreffe']; }
 function ep_prod_catalogue(): array
 {
     return [
-        ['pwaId' => 1700400, 'ref' => '1700400', 'nom' => 'Cougnou Nature - 400 g.', 'categorie' => 'Cougnou', 'groupe' => 'Saison'],
+        ['pwaId' => 6700139, 'ref' => '6700139', 'nom' => 'Cougnou Nature - 400 g.', 'categorie' => 'Cougnou', 'groupe' => 'Saison'],
         ['pwaId' => 1610004, 'ref' => '1610004', 'nom' => 'Pain au Chocolat', 'categorie' => 'Viennoiserie', 'groupe' => 'Boulangerie'],
         ['pwaId' => 1300003, 'ref' => '1300003', 'nom' => 'Pain gris 800 g', 'categorie' => 'Pains', 'groupe' => 'Boulangerie'],
         ['pwaId' => 3100001, 'ref' => '3100001', 'nom' => 'Miel - Tilleul', 'categorie' => 'Épicerie', 'groupe' => 'Épicerie'],
@@ -64,7 +64,7 @@ $im = imagecreatetruecolor(2, 2); ob_start(); imagepng($im); $png = 'data:image/
 
 $graine = aqGraine();
 $brioche = $graine['categories'][0];
-$grille = aqGrilleProduit($brioche, $graine['communs'], $graine['produits']['1700400']['surcharges']);
+$grille = aqGrilleProduit($brioche, $graine['communs'], $graine['produits']['6700139']['surcharges']);
 $crit = []; foreach ($grille['criteres'] as $c) { $crit[$c['cle']] = $c; }
 // Le contrôle des maquettes : cinq écarts dont un non conforme (retombé).
 $ecarts = ['coloration_dessus' => 'dore', 'coloration_dessous' => 'dore', 'dorure' => 'irreguliere', 'cuisson_coeur' => 'cuit',
@@ -123,7 +123,7 @@ verifie('grille vide : refusée', in_array('La grille n\'a aucun critère.', aqV
 
 echo "Catégorie d'un produit\n";
 $cat = fn (array $p) => aqCategorieDe($graine, $p)['cle'] ?? null;
-verifie('Cougnou : brioches & cougnous', $cat(['id' => 1700400, 'nom' => 'Cougnou Nature - 400 g.', 'categorie' => 'Cougnou']) === 'brioche');
+verifie('Cougnou : brioches & cougnous', $cat(['id' => 6700139, 'nom' => 'Cougnou Nature - 400 g.', 'categorie' => 'Cougnou']) === 'brioche');
 verifie('pain au chocolat : viennoiserie, pas pain', $cat(['id' => 1, 'nom' => 'Pain au Chocolat', 'categorie' => 'Boulangerie']) === 'viennoiserie');
 verifie('pain gris : pains', $cat(['id' => 2, 'nom' => 'Pain gris 800 g', 'categorie' => 'Pains']) === 'pain');
 verifie('épicerie : aucune grille (les critères communs seulement)', $cat(['id' => 3, 'nom' => 'Miel - Tilleul', 'categorie' => 'Épicerie']) === null);
@@ -143,7 +143,7 @@ echo "Grilles publiées\n";
 verifie('rien de publié : les tablettes lisent l\'exemple, marqué à valider', !empty(aqGrilles()['aValider']) && count(aqGrilles()['categories']) === 5);
 
 echo "Enregistrer un contrôle\n";
-$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1700400, 'fournee' => '07:40', 'pieces' => 30, 'auteur' => 'Nathan',
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 6700139, 'fournee' => '07:40', 'pieces' => 30, 'auteur' => 'Nathan',
     'reponses' => $ecarts + ['inconnu' => 'x'], 'photos' => ['cuisson' => $png, 'structure' => $png], 'decision' => 'declasser', 'prevenir' => true];
 $r = wr_aq_controle();
 verifie('le contrôle est enregistré', ($r['ok'] ?? false) === true && ($r['id'] ?? 0) > 0, json_encode($r, JSON_UNESCAPED_UNICODE));
@@ -156,26 +156,26 @@ verifie('deux photos rangées dans le dossier privé', count($photos) === 2 && i
 verifie('le journal du siège le note', str_contains((string) ($GLOBALS['journal'][0][3] ?? ''), 'déclassé · 5 écart(s) · responsable prévenu'));
 
 $avant = (int) Db::row('SELECT COUNT(*) n FROM con_aq_controle')['n'];
-$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1700400, 'reponses' => $sans, 'photos' => ['cuisson' => $png]];
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 6700139, 'reponses' => $sans, 'photos' => ['cuisson' => $png]];
 verifie('critère obligatoire sans réponse : refusé', (wr_aq_controle()['manquants'] ?? []) === ['sonne_creux']);
-$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1700400, 'reponses' => $ecarts, 'photos' => []];
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 6700139, 'reponses' => $ecarts, 'photos' => []];
 verifie('photo de cuisson obligatoire : refusé', str_contains((string) (wr_aq_controle()['error'] ?? ''), 'obligatoire'));
-$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1700400, 'reponses' => $ecarts, 'photos' => ['cuisson' => 'data:image/png;base64,AAAA']];
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 6700139, 'reponses' => $ecarts, 'photos' => ['cuisson' => 'data:image/png;base64,AAAA']];
 verifie('photo illisible : refusée', str_contains((string) (wr_aq_controle()['error'] ?? ''), 'photo illisible'));
 $GLOBALS['corps'] = ['shop' => '4', 'produit' => 999, 'reponses' => $ecarts];
 verifie('produit inconnu du catalogue : refusé', (wr_aq_controle()['error'] ?? '') === 'produit inconnu du catalogue');
 $GLOBALS['mode'] = 'ferme'; $GLOBALS['identite'] = ['role' => 'franchise', 'shops' => ['5']];
-$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1700400, 'reponses' => $ecarts, 'photos' => ['cuisson' => $png]];
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 6700139, 'reponses' => $ecarts, 'photos' => ['cuisson' => $png]];
 verifie('un franchisé ne contrôle pas un autre magasin', (wr_aq_controle()['error'] ?? '') === 'magasin non autorisé');
 verifie('refus : rien d\'écrit', (int) Db::row('SELECT COUNT(*) n FROM con_aq_controle')['n'] === $avant);
 $GLOBALS['identite'] = ['role' => 'franchise', 'shops' => ['4']];
-$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1700400, 'reponses' => $tout, 'photos' => ['cuisson' => $png], 'essai' => true];
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 6700139, 'reponses' => $tout, 'photos' => ['cuisson' => $png], 'essai' => true];
 $essai = wr_aq_controle();
 verifie('son magasin : un contrôle d\'essai est accepté, sans journal', ($essai['essai'] ?? false) === true && count($GLOBALS['journal']) === 1);
 $GLOBALS['mode'] = 'ouvert'; $GLOBALS['identite'] = null;
 
 echo "Lire\n";
-$_GET = ['shop' => '4', 'produit' => '1700400'];
+$_GET = ['shop' => '4', 'produit' => '6700139'];
 $p = ep_aq_produit();
 verifie('le produit : sa grille (17 critères), son historique sans les essais', count($p['grille']['criteres'] ?? []) === 17 && count($p['historique'] ?? []) === 1 && ($p['historique'][0]['nbEcarts'] ?? 0) === 5);
 verifie('le produit : grilles d\'exemple signalées, pas de planogramme hors du cockpit', ($p['aValider'] ?? false) === true && array_key_exists('planogramme', $p) && $p['planogramme'] === null);

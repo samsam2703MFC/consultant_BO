@@ -190,7 +190,7 @@
           <td>${Object.entries(x.surcharges || {}).map(([k, v]) => `<div class="gq-ed-g" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:6px"><span class="chip chip--draft">${esc(k)}</span>
             ${champ('produits.' + id + '.surcharges.' + k + '.cible', v.cible ?? '', ' type="number" data-nombre="1" placeholder="cible"')}${champ('produits.' + id + '.surcharges.' + k + '.tolerance', v.tolerance ?? '', ' type="number" data-nombre="1" placeholder="tolérance"')}</div>`).join('') || '<span class="muted">—</span>'}</td>
           <td class="etroit"><button type="button" class="btn btn--danger btn--sm" data-retirer-produit="${esc(id)}">${ICO('croix')}</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="gq-vide">Aucune surcharge.</p>'}
-      <div class="gq-filtres" style="margin-top:12px"><input id="np-id" placeholder="Id du produit (1700400)" inputmode="numeric"><input id="np-nom" placeholder="Nom"><input id="np-cle" placeholder="Critère mesuré (poids)">
+      <div class="gq-filtres" style="margin-top:12px"><input id="np-id" placeholder="Id du produit (6700139)" inputmode="numeric"><input id="np-nom" placeholder="Nom"><input id="np-cle" placeholder="Critère mesuré (poids)">
         <button type="button" class="btn btn--sm" data-act="produit">${ICO('ajouter')}Ajouter</button></div></section>`;
   }
 

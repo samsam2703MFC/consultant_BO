@@ -2,7 +2,7 @@
 /**
  * Bouchon d'API pour relever la fiche « Cougnou Nature 400 g » de l'app Cuisine (figer.js).
  *
- * Sert la fiche technique du produit 1700400 et sa photo, avec les valeurs de la capture d'écran du 24/11/2026 ;
+ * Sert la fiche technique du produit 6700139 et sa photo, avec les valeurs de la capture d'écran du 24/11/2026 ;
  * tout le reste part au bouchon du dépôt Cuisine (ThaiZu/TFB-Kitchen, tools/mock-api), dont le dossier est donné
  * par KITCHEN_DIR. Poste de développement uniquement : aucune authentification.
  *
@@ -14,11 +14,11 @@ $photo = 'http://' . $_SERVER['HTTP_HOST'] . '/photo/cougnou.jpg';
 $rendre = function ($d) { header('Content-Type: application/json'); echo json_encode($d); exit; };
 
 if ($chemin === '/photo/cougnou.jpg') { header('Content-Type: image/jpeg'); readfile(__DIR__ . '/cougnou.jpg'); exit; }
-if (preg_match('#^/products/1700400/webshop-image#', $chemin)) { $rendre(['image' => ['url' => $photo]]); }
-if (preg_match('#^/products/1700400/technical-sheet/raw#', $chemin)) {
+if (preg_match('#^/products/6700139/webshop-image#', $chemin)) { $rendre(['image' => ['url' => $photo]]); }
+if (preg_match('#^/products/6700139/technical-sheet/raw#', $chemin)) {
     $rendre([
         'object' => [
-            'id' => 1700400, 'name' => 'Cougnou Nature - 400 g.', 'category_name' => 'Cougnou',
+            'id' => 6700139, 'name' => 'Cougnou Nature - 400 g.', 'category_name' => 'Cougnou',
             'storage_name' => 'Comptoir Sec- 1', 'storage_description' => 'À température ambiante',
             'storage_temperature' => '20', 'positioning_name' => 'Voir plan de magasin',
             'shelf_life_minutes' => 600, 'shelf_life_category' => 'SSL', 'suggested_sale_price' => '5.80',

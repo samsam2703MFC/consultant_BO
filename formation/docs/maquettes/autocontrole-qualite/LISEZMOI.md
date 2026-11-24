@@ -67,7 +67,7 @@ portail de formation : rail, barre supérieure, onglets de page, cartes, sélect
 ## La grille (`grilles.json`)
 
 Une grille par **catégorie** (Brioches & cougnous, Pains, Viennoiseries, Pâtisseries & tartes, Traiteur chaud &
-snacking), surchargée au besoin par **produit** (`produits.1700400.surcharges.poids` : 400 g, 380 à 420 g).
+snacking), surchargée au besoin par **produit** (`produits.6700139.surcharges.poids` : 400 g, 380 à 420 g).
 
 - `photos` : par étape, `obligatoire`, `facultative` ou `non` (les « photos oui / non » de la demande) ;
 - `criteres[]` : `etape` (`cuisson`, `structure`, `organoleptique`, `presentation`), `type` (`echelle`, `oui_non`,
@@ -82,25 +82,25 @@ Les critères, niveaux, corrections et l'emplacement au planogramme sont **des e
 production** (les voisins de vitrine sont de vrais produits du catalogue, placés pour l'exemple) ; aucune valeur de four
 (température, programme) n'est écrite : les corrections restent relatives (« +1 min », « −10 °C »).
 
-## Ce qu'il faudra pour le faire vraiment (à décider)
+## Construit dans le cockpit consultant (24/11/2026)
 
-- **App Cuisine** (`ThaiZu/TFB-Kitchen`) : le bouton dans `knowledge/product/detail.twig`, l'écran plein écran, la
-  photo par `<input type="file" accept="image/*" capture="environment">`. Elle ne parle qu'à l'API de l'ERP
-  (`KITCHEN_API_BASE`).
-- **API** (proposition) : `GET /products/{id}/quality-grid` (grille de la catégorie + surcharges du produit),
-  `POST /shops/{id}/quality-checks` (fournée, personne, réponses, photos, décision, suites),
-  `GET /shops/{id}/quality-checks?product=&days=7` (historique et défauts récurrents). La décision « jeter » passe par
-  l'encodage des pertes existant (`/shops/{id}/waste-reports`) ; la réclamation par le module Réclamations de l'app
-  (`Complaint`).
-- **Où vivent les grilles** : avec la fiche technique et les paramètres de cuisson (ERP), ou dans le domaine Formation
-  du cockpit, à côté du manuel « Fiches techniques ». Le cockpit (consultant, dashboard du franchisé) lirait les
-  résultats par l'API, jamais dans les tables.
-- **Planogramme** : l'emplacement vient du planogramme standard du cockpit (domaine Pilotage, `GET /planogramme`,
-  tables `con_pla_*`, photos de présentation par `GET /planogramme/photos`). L'app Cuisine ne le lit pas aujourd'hui
-  (la fiche dit seulement « Voir plan de magasin ») : il faut une route d'intégration du cockpit (jeton de service) ou
-  un relais par l'ERP, qui rende la case du produit pour le magasin.
-- **Photos de référence** : les vignettes de teinte sont la photo du produit filtrée, les autres visuels des dessins ;
-  à remplacer par de vraies photos de défauts, prises une fois par la production centrale.
+Sam : « construire dans cockpit consultant, avec un lien test tablette ».
+
+- **Le module** `consultant/src/autocontrole.php` : les grilles (brouillon du siège et version publiée, réglages
+  `autocontroleGrilles` / `autocontroleGrillesPubliees` ; tant que rien n'est publié, les tablettes lisent les grilles
+  d'exemple `consultant/src/data/autocontrole_grilles.json`, marquées « à valider ») ; la grille d'un produit (catalogue
+  du cockpit, catégorie par mots-clés ou donnée par le siège, surcharges) ; sa place au **planogramme standard** du jour
+  et sa **photo de référence** ; les contrôles (`con_aq_controle`, bilan recalculé au serveur) et leurs photos
+  (`con_aq_photo`, dossier privé, servies au seul magasin du contrôle et au siège). Tests :
+  `php consultant/bin/tests_autocontrole.php`.
+- **La tablette** `/consulant_bo/autocontrole/?shop=4` : la liste des produits rangés par grille, puis le parcours en
+  quatre étapes de ces maquettes ; `&produit=6700139` ouvre directement le Cougnou Nature 400 g, `&essai=1` enregistre
+  à part (ni historique, ni résultats, ni journal), `&qui=` préremplit la personne.
+- **Le siège** `/consulant_bo/autocontrole/grilles.html` (entrée « Autocontrôle qualité ↗ » des Applications du
+  cockpit) : les résultats des magasins et les défauts qui reviennent ; l'éditeur des grilles, la publication.
+- **Reste à faire** : le bouton de la fiche dans l'app Cuisine (dépôt `ThaiZu/TFB-Kitchen`), un simple lien vers la
+  tablette avec `&produit=` ; la validation des grilles par la production ; de vraies photos de défauts à la place des
+  teintes et des dessins.
 
 ## Régénérer
 

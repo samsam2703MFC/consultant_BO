@@ -1542,5 +1542,7 @@ dur, grosseur de la croûte, retombé après cuisson) ; rapide, intuitif et comp
   planogramme ») : deux critères communs à tous les produits, la photo de la fiche à côté de celle du produit, et la
   case du produit sur le module du planogramme standard du cockpit (`GET /planogramme`), que l'app Cuisine ne lit pas
   encore.
-- **Rien n'est construit** : le bouton et l'écran iront dans l'app Cuisine, les grilles et les résultats derrière
-  l'API de l'ERP ou dans ce domaine (à décider, voir le LISEZMOI).
+- **Construit dans le cockpit consultant** (même jour, Sam : « construire dans cockpit consultant, avec un lien test
+  tablette ») : `consultant/src/autocontrole.php`, la tablette `/consulant_bo/autocontrole/?shop=` et le siège
+  `/consulant_bo/autocontrole/grilles.html` (voir `consultant/CLAUDE.md`). Le bouton de la fiche de l'app Cuisine reste
+  à poser dans son dépôt : un lien vers la tablette avec `&produit=`.

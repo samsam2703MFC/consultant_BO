@@ -26,7 +26,7 @@ const POLICES = '../../../../../shared/public/assets/ds/fonts/'; // vu depuis co
   await p.fill('input[name="password"]', '1234');
   await p.click('button[type="submit"]');
   await p.waitForTimeout(2500);
-  await p.goto(APP + '/knowledge/products/1700400');
+  await p.goto(APP + '/knowledge/products/6700139');
   await p.waitForTimeout(1500);
 
   const { css, corps } = await p.evaluate(() => {

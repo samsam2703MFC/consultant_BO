@@ -1,6 +1,6 @@
 /* L'autocontrôle qualité à la tablette du magasin (24/11/2026) — API : consultant/src/autocontrole.php.
  *
- * Adresse : /consulant_bo/autocontrole/?shop=4[&produit=1700400][&qui=Nathan][&essai=1]
+ * Adresse : /consulant_bo/autocontrole/?shop=4[&produit=6700139][&qui=Nathan][&essai=1]
  *   shop    : le magasin (un franchisé n'ouvre que les siens : garde.js) ;
  *   produit : ouvre directement ce produit (le lien de la fiche de l'app Cuisine) ; sans lui, la liste du catalogue ;
  *   qui     : la personne qui contrôle, préremplie ;
