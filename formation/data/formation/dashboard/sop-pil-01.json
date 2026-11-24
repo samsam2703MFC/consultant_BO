@@ -458,8 +458,8 @@
       "nl": "De kosten van de maand en hun btw"
      },
      "texte": {
-      "fr": "Ouvrir Les chiffres › Frais, le mois clos.\nChaque poste en orange : indiquer « TVA comprise ? » Oui ou Non, et le taux.\nUn doute sur un poste : la facture du fournisseur dit si le montant contient la TVA.\nSans cela, le poste compte TVA comprise et le résultat du P&L est trop bas.",
-      "nl": "Les chiffres › Frais openen, de afgesloten maand.\nElke oranje post: « TVA comprise ? » aanduiden, Oui (ja) of Non (nee), en het tarief.\nTwijfel over een post: de factuur van de leverancier zegt of het bedrag btw bevat.\nZonder dat telt de post met btw en is het resultaat van de W&V te laag."
+      "fr": "Ouvrir Les chiffres › Trésorerie, onglet Frais, le mois clos.\nChaque poste en orange : indiquer « TVA comprise ? » Oui ou Non, et le taux.\nUn doute sur un poste : la facture du fournisseur dit si le montant contient la TVA.\nSans cela, le poste compte TVA comprise et le résultat du P&L est trop bas.",
+      "nl": "De cijfers › Thesaurie openen, tabblad Frais, de afgesloten maand.\nElke oranje post: « TVA comprise ? » aanduiden, Oui (ja) of Non (nee), en het tarief.\nTwijfel over een post: de factuur van de leverancier zegt of het bedrag btw bevat.\nZonder dat telt de post met btw en is het resultaat van de W&V te laag."
      },
      "critique": false,
      "photo": "dash-frais.jpg",
