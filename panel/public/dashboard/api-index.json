@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-24T17:20:02Z",
+ "genere": "2026-11-24T17:24:28Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1166,7 +1166,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:73"
+    "equipe.js:77"
    ],
    "magasin": true,
    "routes": [
@@ -1187,8 +1187,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1168",
-    "equipe.js:1204"
+    "equipe.js:1172",
+    "equipe.js:1208"
    ],
    "magasin": true,
    "routes": [
@@ -1209,8 +1209,93 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:276",
-    "equipe.js:87"
+    "equipe.js:280",
+    "equipe.js:91"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/equipe…",
+     "handler": "eqpRoute",
+     "source": "panel/src/equipe.php:135",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/equipe/personne",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "equipe.js:1246",
+    "equipe.js:1288"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/equipe…",
+     "handler": "eqpRoute",
+     "source": "panel/src/equipe.php:135",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/equipe/personne/evaluation",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "equipe.js:1298"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/equipe…",
+     "handler": "eqpRoute",
+     "source": "panel/src/equipe.php:135",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/equipe/personne/evaluations",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "equipe.js:1253"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/equipe…",
+     "handler": "eqpRoute",
+     "source": "panel/src/equipe.php:135",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/equipe/personne/ventes",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "equipe.js:1254"
    ],
    "magasin": true,
    "routes": [
@@ -1231,7 +1316,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:79"
+    "equipe.js:83"
    ],
    "magasin": true,
    "routes": [
@@ -1252,7 +1337,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:293"
+    "equipe.js:297"
    ],
    "magasin": true,
    "routes": [
@@ -1273,7 +1358,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:235"
+    "equipe.js:239"
    ],
    "magasin": true,
    "routes": [
@@ -1294,7 +1379,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1211"
+    "equipe.js:1215"
    ],
    "magasin": true,
    "routes": [
@@ -1315,7 +1400,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1003"
+    "equipe.js:1007"
    ],
    "magasin": true,
    "routes": [
@@ -1336,8 +1421,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1100",
-    "equipe.js:819"
+    "equipe.js:1104",
+    "equipe.js:823"
    ],
    "magasin": true,
    "routes": [
@@ -1358,8 +1443,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1099",
-    "equipe.js:818"
+    "equipe.js:1103",
+    "equipe.js:822"
    ],
    "magasin": true,
    "routes": [
@@ -1380,7 +1465,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:653"
+    "equipe.js:657"
    ],
    "magasin": true,
    "routes": [
@@ -1401,8 +1486,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1080",
-    "equipe.js:820"
+    "equipe.js:1084",
+    "equipe.js:824"
    ],
    "magasin": true,
    "routes": [
@@ -1423,7 +1508,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:796"
+    "equipe.js:800"
    ],
    "magasin": true,
    "routes": [
