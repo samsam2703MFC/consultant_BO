@@ -1,5 +1,5 @@
 {
-  "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). sources : les fichiers dont l'écran est filmé ; tourne_sur / tourne_le : le commit et le jour du tournage (écrits par tourner.js). node panel/tools/videos/a_refaire.js dit quelles vidéos refaire. Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
+  "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). sources : les fichiers dont l'écran est filmé ; tourne_sur / tourne_le : le commit et le jour du tournage (écrits par tourner.js). niveau : page (par défaut), onglet ou fonction ; parent : la vidéo sous laquelle elle se range (la page pour un onglet, l'onglet pour une fonction) ; debut / fin : le passage du MP4 de l'onglet, en secondes (un fichier par onglet, ses fonctions en chapitres). node panel/tools/videos/a_refaire.js dit quelles vidéos refaire. Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
   "videos": [
     {
       "id": "decouvrir",
