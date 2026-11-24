@@ -291,3 +291,4 @@
 2026-11-23T20:36:49Z Vidéothèque dans le catalogue de formation (toutes les vidéos d'instruction par genre, avec lecteur) ; « Plus tard » sur l'annonce d'une nouvelle vidéo la range pour la journée
 2026-11-23T20:44:20Z Dashboard magasin : l'annonce d'une nouvelle vidéo devient une bulle minimaliste (Nouveau, le titre, deux liens)
 2026-11-23T21:59:28Z Dashboard magasin : une vidéo d'instruction par entrée du rail (21 nouveaux modes d'emploi, dont « Éditer mon catalogue »), dans le carré des vidéos et la vidéothèque du catalogue de formation
+2026-11-24T06:01:12Z Manuels du 23/11/2026 : l'annonce des vidéos sans croix, les tables de Mon équipe, le statut des demandes gardé (documentation seulement)
