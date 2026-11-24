@@ -155,7 +155,16 @@ final class OutputService
     public function uploadPhoto(array $body, ApiContext $context): array
     {
         $this->groupId($context);
-        $photo = $this->decodePhoto($body['photo'] ?? null);
+        return $this->storePhoto($body['photo'] ?? null, $context);
+    }
+
+    /**
+     * [415] Zdjęcie z tabletu bez grupy (tablet jakości : wygląd partii) : te same reguły i ten sam magazyn zdjęć
+     * (n_prod_lot_photo, kiosk.lot_photo_max_kb) co zdjęcia etykiet i strat.
+     */
+    public function storePhoto(mixed $photo, ApiContext $context): array
+    {
+        $photo = $this->decodePhoto($photo);
         $id = $this->repo->insertPhoto($photo[0], $photo[1], $context->deviceId, $context->employeeId);
         return ['id' => $id, 'bytes' => strlen($photo[1])];
     }
@@ -601,6 +610,36 @@ final class OutputService
                 'material_lot_id' => $lotId ?: null, 'missing_reason' => $reason, 'photo' => $photoId]);
         });
         return $this->batch($id, $context);
+    }
+
+    /**
+     * [409] Licznik « zrobione » tabletu hali (Co robię dziś) : ilość zrobiona produktu w dniu = $made, bez zatwierdzania
+     * linii. Więcej → najnowsza partia dnia rośnie (jedna partia na produkt i dzień, numery surowców zostają przy niej ;
+     * brak partii → nowa), mniej → zdjęte z najnowszych partii (jak validateLine). Nie mniej niż straty dnia.
+     */
+    public function setMade(int $itemId, float $made, ApiContext $context): array
+    {
+        $groupId = $this->groupId($context);
+        $item = $this->repo->item($itemId) ?? throw ApiException::validation([['field' => 'item_id', 'code' => 'NOT_FOUND_REF']]);
+        $day = $this->day0(null);
+        $current = $this->dayOf($groupId, $day, $context->translator->lang());
+        $this->assertDayOpen($current);
+        $made = round($made, 3);
+        $row = array_values(array_filter($current['items'], fn($i) => $i['item_id'] === $itemId))[0] ?? null;
+        if ((float) ($row['waste'] ?? 0) > $made + 1e-6) throw new ApiException('WASTE_EXCEEDS_PRODUCED', 409, [], ['good' => 0]);
+        $this->tx->execute(function () use ($groupId, $day, $item, $made, $context) {
+            $live = $this->repo->liveBatches($day, $groupId, (int) $item['id']);
+            $current = round(array_sum(array_map(fn($b) => (float) $b['quantity'], $live)), 3);
+            if ($made > $current + 1e-6 && $live) {
+                $b = $live[0];
+                $q = round((float) $b['quantity'] + $made - $current, 3);
+                $this->repo->update((int) $b['id'], ['quantity' => $q]);
+                $this->audit->record($context, 'update', 'output', (int) $b['id'], ['quantity' => (float) $b['quantity']], ['quantity' => $q, 'from' => 'hala']);
+                return;
+            }
+            $this->setProduced($groupId, $day, $item, $made, $context, null);
+        });
+        return $this->dayOf($groupId, $day, $context->translator->lang());
     }
 
     // ---------------------------------------------------------------------------------------------

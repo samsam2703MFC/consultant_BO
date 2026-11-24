@@ -9,6 +9,8 @@ return function (RouteCollector $r) {
     // Karty stanowisk (fiches de poste) : widok, edycja, zatwierdzenie, pracownicy produkcji, PDF.
     $r->addRoute('GET', '/organization/positions/{id:\d+}', ['controller' => $c, 'method' => 'sheet']);
     $r->addRoute('GET', '/organization/positions/{id:\d+}/sheet.pdf', ['controller' => $c, 'method' => 'sheetPdf']);
+    // [422] Wszystkie karty aktywnych stanowisk w jednym PDF (to samo uprawnienie co strona stanowisk).
+    $r->addRoute('GET', '/organization/positions/sheets.pdf', ['controller' => $c, 'method' => 'allSheetsPdf']);
     $r->addRoute('PUT', '/ajax/organization/positions/{id:\d+}/sheet', ['controller' => $c, 'method' => 'saveSheet']);
     $r->addRoute('POST', '/ajax/organization/positions/{id:\d+}/sheet/validate', ['controller' => $c, 'method' => 'validateSheet']);
     $r->addRoute('PUT', '/ajax/organization/positions/{id:\d+}/employees', ['controller' => $c, 'method' => 'sheetEmployees']);

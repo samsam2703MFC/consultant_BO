@@ -111,13 +111,23 @@ class TCPDFService extends TCPDF
         $y += 0.8;
         foreach ($meta as $pair) {
             [$label, $value] = $pair;
+            // [422] Valeur longue (« v3 · zatwierdzona 12.11.2026 ») : la colonne de la valeur s'élargit vers la gauche, au
+            // plus jusqu'au libellé + 2 mm ; avant, elle était serrée à 48 mm et collait au libellé. Valeur courte : inchangé.
+            $this->SetFont('dejavusans', 'B', 9);
+            $valueW = 48.0;
+            $need = $this->GetStringWidth((string) $value) + 2;
+            if ($need > $valueW) {
+                $this->SetFont('dejavusans', '', 7.5);
+                $valueW = min($need, 92 - $this->GetStringWidth((string) $label) - 2);
+                $valueW = max(48.0, $valueW);
+            }
             $this->SetFont('dejavusans', '', 7.5);
             $this->SetTextColorArray(self::MUTED);
             $this->SetXY($lm + $w - 92, $y);
-            $this->Cell(44, 4.6, (string) $label, 0, 0, 'R');
+            $this->Cell(92 - $valueW, 4.6, (string) $label, 0, 0, 'R');
             $this->SetFont('dejavusans', 'B', 9);
             $this->SetTextColorArray(self::INK);
-            $this->Cell(48, 4.6, (string) $value, 0, 1, 'R', false, '', 1);
+            $this->Cell($valueW, 4.6, (string) $value, 0, 1, 'R', false, '', 1);
             $y = $this->GetY();
         }
         $y = max($y, $bottom) + 2.5;
