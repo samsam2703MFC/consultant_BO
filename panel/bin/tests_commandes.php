@@ -154,6 +154,26 @@ verifie('un autre jour que aujourd’hui : pas de « demain », pas d’heure', 
 $J5 = pcoJournee($brut, $tournees, [], '2026-11-24', '2026-11-24 11:20');
 verifie('midi partie à 11:15 : en route', $J5['tournees'][1]['etat'] === 'route', $J5['tournees'][1]['etat']);
 
+echo "La semaine (lundi 23 au dimanche 29/11)\n";
+$brutP = array_merge($brut, [cmd(50, '2026-11-17 08:00', ['total_value' => 40.0, 'is_webshop' => true]), cmd(51, '2026-11-20 12:00', ['total_value' => 60.0], $pro(300, 'Hainaut')),
+    cmd(52, '2026-11-28 10:00', ['total_value' => 12.0])]);
+$P = pcoPeriode($brutP, $tournees, ['2026-11-24' => [6 => 2]], '2026-11-23', '2026-11-29', '2026-11-24 10:40');
+verifie('sept jours, du lundi au dimanche', count($P['jours']) === 7 && $P['jours'][0]['date'] === '2026-11-23' && $P['jours'][6]['date'] === '2026-11-29');
+verifie('la semaine : 8 + 2 + 1 + 1 commandes (l’annulée dehors)', $P['totaux']['total']['n'] === 12, json_encode($P['totaux']['total']));
+verifie('le mardi : 8 commandes, 590,15 €', $P['jours'][1]['total'] === ['n' => 8, 'ca' => 590.15], json_encode($P['jours'][1]['total']));
+verifie('le mardi, la livraison webshop placée à la main : à livrer, pas « sans tournée »', $P['jours'][1]['livrer']['n'] === 5 && $P['jours'][1]['sansTournee'] === 0, json_encode($P['jours'][1]['livrer']));
+$tm = array_values(array_filter($P['tournees'], static fn ($t) => $t['id'] === 1))[0];
+verifie('la tournée du matin roule 5 jours sur 7', $tm['roule'] === 5 && !isset($tm['parJour']['2026-11-28']));
+verifie('la tournée du matin : mardi 2 arrêts, 2 bureaux servis ; mercredi 1', $tm['parJour']['2026-11-24']['n'] === 2 && $tm['parJour']['2026-11-24']['servis'] === 2 && $tm['parJour']['2026-11-25']['n'] === 1, json_encode($tm['parJour']));
+$ts = array_values(array_filter($P['tournees'], static fn ($t) => $t['id'] === 3))[0];
+verifie('la tournée du samedi : un jour, sans commande (le client du samedi n’est pas un bureau)', $ts['roule'] === 1 && $ts['total']['n'] === 0);
+$bx = []; foreach ($P['bureaux'] as $b) { $bx[$b['client']] = $b; }
+verifie('Fiduciaire : 2 commandes (mardi, mercredi), la dernière mercredi', $bx[100]['total']['n'] === 2 && $bx[100]['dernier'] === '2026-11-25' && count($bx[100]['parJour']) === 2);
+verifie('Lefèvre, sur une tournée, sans commande : listé à 0', isset($bx[400]) && $bx[400]['total']['n'] === 0);
+verifie('les bureaux, le plus gros d’abord', $P['bureaux'][0]['total']['ca'] >= $P['bureaux'][1]['total']['ca']);
+verifie('la semaine d’avant : 16 au 22/11, deux commandes, 100 €', $P['avant']['du'] === '2026-11-16' && $P['avant']['total'] === ['n' => 2, 'ca' => 100.0], json_encode($P['avant']));
+verifie('la semaine d’avant par canal : webshop 1, bureau 0 (Hainaut au comptoir)', $P['avant']['webshop']['n'] === 1 && $P['avant']['comptoir']['n'] === 1, json_encode($P['avant']));
+
 echo "Une tournée lue, les clients pro\n";
 [$t, $e] = pcoTourneeLue(['nom' => ' Midi ', 'depart' => '11:15', 'retour' => '12:40', 'jours' => '5321x3', 'livreur' => 'Nadia']);
 verifie('les jours rangés, sans doublon', $t !== null && $t['jours'] === '1235' && $t['nom'] === 'Midi', json_encode([$t, $e], JSON_UNESCAPED_UNICODE));

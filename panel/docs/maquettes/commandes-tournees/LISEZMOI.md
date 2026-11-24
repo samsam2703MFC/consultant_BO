@@ -17,6 +17,18 @@ base, à 10:21) :
   (sa livraison se change) ; `code-tournee.png` : une tournée en modification (bureaux dans l'ordre, consignes, recherche
   d'un client pro) ; `code-telephone.png` : les deux vues au téléphone.
 
+**Semaine et Mois, en plus du jour** (24/11/2026, « faire une vue semaine et mois (en plus) ») : un sélecteur Jour ·
+Semaine · Mois dans la barre ; l'interrupteur abricot garde son sens. `GET /dashboard/commandes/periode?du=&au=`.
+- `code-semaine-liste.png` : la semaine jour par jour (commandes, webshop, comptoir, bureau, livraisons, retraits, la part
+  des canaux), face à la semaine d'avant ; un clic sur un jour l'ouvre ;
+- `code-semaine-tournees.png` : chaque tournée jour par jour (arrêts, montant, bureaux servis), puis les bureaux à livrer
+  jour par jour (une case verte par commande, blanche quand sa tournée roule sans commande, en pointillé sans tournée) ;
+- `code-mois-liste.png` : le calendrier du mois (chaque jour : commandes, montant, la barre des canaux ; le total de
+  chaque semaine), face au mois d'avant ;
+- `code-mois-tournees.png` : les tournées et les bureaux semaine par semaine, le panier moyen d'une tournée, la dernière
+  commande d'un bureau (« Pas de commande ce mois »).
+Les deux mois de la journée fictive (octobre et novembre) sont inventés par `banc/sim.js`.
+
 Écarts à la maquette, une fois codé :
 - **les tournées se créent au dashboard** (« Gérer les tournées ») : le panel n'en a pas ;
 - **une commande se place** : un clic l'ouvre, sa livraison se choisit (automatique : la tournée de son bureau ; une
@@ -137,7 +149,7 @@ quand on régénère en fin d'après-midi en Belgique.
 node panel/docs/maquettes/commandes-tournees/banc/sim.js /tmp/sim.json
 COCKPIT_DB_HOST=127.0.0.1 COCKPIT_DB_NAME=… COCKPIT_DB_USER=… COCKPIT_DB_PASSWORD=… BANC_SIM=/tmp/sim.json php -d date.timezone=America/Denver -S 127.0.0.1:8097 panel/docs/maquettes/commandes-tournees/banc/banc.php
 php shared/bin/assembler_public.php /tmp/site && php -S 127.0.0.1:8098 -t /tmp/site /tmp/site/router.php
-BANC=http://127.0.0.1:8097/api/cockpit TZID=America/Denver BANC_Q=hain DSF=2 node panel/docs/maquettes/commandes-tournees/banc/voir.cjs <sortie> 3 "" code-
+PERIODES=1 BANC=http://127.0.0.1:8097/api/cockpit TZID=America/Denver BANC_Q=hain DSF=2 node panel/docs/maquettes/commandes-tournees/banc/voir.cjs <sortie> 3 "" code-
 ```
 
 Les tournées de la journée fictive se créent par l'API du banc (`POST /dashboard/commandes/tournees`, puis

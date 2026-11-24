@@ -3335,6 +3335,7 @@ A et B retenues sur un interrupteur abricot). Serveur : `panel/src/commandes_tou
 (`/dashboard`), pour son magasin ; le `shop` de la requête et du corps est vérifié.
 
     GET    /dashboard/commandes/jour?shop=&date=       la journée (défaut : aujourd'hui)
+    GET    /dashboard/commandes/periode?shop=&du=&au=  la semaine ou le mois (31 jours au plus), face à la période d'avant
     GET    /dashboard/commandes/bureaux?shop=&q=       les clients pro du magasin (30 au plus), pour composer une tournée
     POST   /dashboard/commandes/tournees               {shop, nom, depart, retour, livreur, vehicule, jours}   → {ok, id}
     PUT    /dashboard/commandes/tournees               {shop, id, …les mêmes champs}                           → {ok, id}
@@ -3373,6 +3374,20 @@ La journée :
       totaux: { total, webshop, comptoir, bureau, livrer, retirer: {n, ca}, aPreparer, sansTournee },
       demain: { date, coupure, ouvert (avant 16:00), commandes: {n, ca}, tournees: [{id, nom, depart, bureaux: [{client, nom, commande: bool}]}] } | null,
       toutes: [ les tournées du magasin, avec leurs bureaux ] }
+
+La semaine et le mois (24/11/2026, « faire une vue semaine et mois (en plus) ») : les commandes de la période et de la
+période d'avant (la même longueur, juste avant) en une lecture du panel ; chaque jour se range comme la journée (les
+tournées qui roulent ce jour-là, le choix du magasin, la fenêtre de la tournée).
+
+    { shop, panel, motif, du, au, aujourdhui,
+      jours:    [ { date, total, webshop, comptoir, bureau, livrer, retirer: {n, ca}, sansTournee } ],
+      totaux:   { total, webshop, comptoir, bureau, livrer, retirer: {n, ca}, sansTournee },
+      avant:    { du, total, webshop, comptoir, bureau: {n, ca} },   la période d'avant
+      tournees: [ { id, nom, depart, retour, livreur, vehicule, jours, bureaux (leur nombre), roule (jours roulés),
+                    parJour: { date: {n, ca, servis (bureaux servis)} } (les jours où elle roule), total: {n, ca} } ],
+      bureaux:  [ { client, nom, tournees: [id…], parJour: { date: {n, ca} }, total: {n, ca}, dernier } ],   les bureaux des
+                tournées et les clients qui commandent par le canal bureau, le plus gros d'abord ; un bureau sans commande reste, à 0
+      toutes:   [ les tournées du magasin, avec leurs bureaux ] }
 
 Les clients pro (`/bureaux`) : la liste `/shops/{id}/clients` du panel (2,4 Mo à Gosselies : 1 332 fiches), réduite aux
 fiches pro actives avec un nom de société — `{id, nom, ville, cp}`, rien d'autre (la fiche du panel porte aussi des

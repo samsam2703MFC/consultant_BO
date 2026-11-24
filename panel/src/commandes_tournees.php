@@ -20,12 +20,16 @@ declare(strict_types=1);
  *   DELETE {shop, id} ; POST /dashboard/commandes/tournees/bureaux {shop, tournee, bureaux: [{client, nom, consigne}]} ;
  *   POST /dashboard/commandes/affecter {shop, commande, date, tournee: id | 0 (au magasin) | null (automatique)} ;
  *   GET /dashboard/commandes/bureaux?shop=&q= (les clients pro du magasin, pour composer une tournée).
+ * - LA SEMAINE ET LE MOIS (24/11/2026, « faire une vue semaine et mois (en plus) ») : les mêmes commandes, jour par jour,
+ *   par tournée et par bureau, face à la période d'avant (la même longueur, juste avant).
+ *   GET /dashboard/commandes/periode?shop=&du=&au= (31 jours au plus)
  */
 
 const PCO_COUPURE = '16:00';        // commander jusqu'à la veille 16 h (les modèles du portail Commercial)
 const PCO_BUREAUX_CACHE_H = 6;      // les clients pro d'un magasin : six heures (nom de société, ville ; rien d'autre)
 const PCO_TOURNEES_MAX = 30;        // tournées par magasin
 const PCO_BUREAUX_MAX = 60;         // bureaux par tournée
+const PCO_PERIODE_MAX = 31;         // une période lue : un mois au plus
 
 function ensureCommandesTables(): void
 {
@@ -259,6 +263,77 @@ function pcoJournee(array $brut, array $tournees, array $manuels, string $date, 
         'totaux' => $totaux, 'demain' => $dem];
 }
 
+/**
+ * Une période assemblée (pure) : la semaine ou le mois, jour par jour, par tournée et par bureau. `$brut` : les commandes
+ * du panel de la période d'avant et de la période ; `$manuels` : [jour => [id commande => id tournée]] ; `$now` :
+ * « AAAA-MM-JJ HH:MM ». Chaque jour se range comme la journée (pcoAffecter) : une tournée ne compte que les jours où elle
+ * roule ; un bureau, ce sont les bureaux des tournées et les clients qui commandent par le canal bureau.
+ */
+function pcoPeriode(array $brut, array $tournees, array $manuels, string $du, string $au, string $now): array
+{
+    $n = (int) round((strtotime($au . ' 12:00:00') - strtotime($du . ' 12:00:00')) / 86400) + 1;
+    $avDu = date('Y-m-d', strtotime($du . ' 12:00:00 -' . $n . ' days'));
+    $vide = static fn () => ['n' => 0, 'ca' => 0.0];
+    $ajoute = static function (array &$x, float $m): void { $x['n']++; $x['ca'] = round($x['ca'] + $m, 2); };
+    $parJour = []; $avant = ['total' => $vide(), 'webshop' => $vide(), 'comptoir' => $vide(), 'bureau' => $vide()];
+    foreach ($brut as $c) {
+        if (!is_array($c)) { continue; }
+        $x = pcoNormaliser($c, $now);
+        if ($x === null) { continue; }
+        if ($x['jour'] >= $du && $x['jour'] <= $au) { $parJour[$x['jour']][] = $x; }
+        elseif ($x['jour'] >= $avDu && $x['jour'] < $du) { $ajoute($avant['total'], $x['montant']); $ajoute($avant[$x['canal']], $x['montant']); }
+    }
+    $T = []; $B = [];
+    foreach ($tournees as $t) {
+        $T[(int) $t['id']] = ['id' => (int) $t['id'], 'nom' => $t['nom'], 'depart' => $t['depart'], 'retour' => $t['retour'], 'livreur' => $t['livreur'],
+            'vehicule' => $t['vehicule'], 'jours' => $t['jours'], 'bureaux' => count($t['bureaux'] ?? []), 'roule' => 0, 'parJour' => [], 'total' => $vide()];
+        foreach ($t['bureaux'] ?? [] as $b) {
+            $k = (int) $b['client'];
+            $B[$k] ??= ['client' => $k, 'nom' => (string) $b['nom'], 'tournees' => [], 'parJour' => [], 'total' => $vide(), 'dernier' => null];
+            $B[$k]['tournees'][] = (int) $t['id'];
+        }
+    }
+    $jours = []; $tot = ['total' => $vide(), 'webshop' => $vide(), 'comptoir' => $vide(), 'bureau' => $vide(), 'livrer' => $vide(), 'retirer' => $vide()];
+    $sansT = 0;
+    for ($i = 0; $i < $n; $i++) {
+        $d = date('Y-m-d', strtotime($du . ' 12:00:00 +' . $i . ' days'));
+        $L = $parJour[$d] ?? [];
+        usort($L, static fn ($a, $b) => [$a['heure'], $a['id']] <=> [$b['heure'], $b['id']]);
+        $roulent = array_values(array_map(static fn ($t) => $t + ['clients' => array_map(static fn ($b) => (int) $b['client'], $t['bureaux'] ?? [])],
+            array_filter($tournees, static fn ($t) => pcoTourneeRoule($t, $d))));
+        foreach ($roulent as $t) { $T[(int) $t['id']]['roule']++; $T[(int) $t['id']]['parJour'][$d] = ['n' => 0, 'ca' => 0.0, 'servis' => 0]; }
+        $aff = pcoAffecter($L, $roulent, $manuels[$d] ?? []);
+        $j = ['date' => $d, 'total' => $vide(), 'webshop' => $vide(), 'comptoir' => $vide(), 'bureau' => $vide(), 'livrer' => $vide(), 'retirer' => $vide(), 'sansTournee' => 0];
+        $servis = [];
+        foreach ($L as $c) {
+            $a = $aff[$c['id']] ?? ['t' => null, 'mode' => null];
+            $sans = $a['t'] === null && $a['mode'] !== 'manuel' && ($c['livraison'] || $a['mode'] === 'hors');
+            foreach (['total', $c['canal'], $a['t'] !== null || $sans ? 'livrer' : 'retirer'] as $k) { $ajoute($j[$k], $c['montant']); $ajoute($tot[$k], $c['montant']); }
+            if ($sans) { $j['sansTournee']++; $sansT++; }
+            if ($a['t'] !== null) {
+                $ajoute($T[$a['t']]['total'], $c['montant']);
+                $pj = &$T[$a['t']]['parJour'][$d]; $pj['n']++; $pj['ca'] = round($pj['ca'] + $c['montant'], 2); unset($pj);
+                $servis[$a['t']][(int) $c['client']['id']] = true;
+            }
+            $k = (int) $c['client']['id'];
+            if ($k > 0 && (isset($B[$k]) || $c['canal'] === 'bureau')) {
+                $B[$k] ??= ['client' => $k, 'nom' => $c['client']['nom'], 'tournees' => [], 'parJour' => [], 'total' => $vide(), 'dernier' => null];
+                $B[$k]['parJour'][$d] ??= $vide();
+                $ajoute($B[$k]['parJour'][$d], $c['montant']); $ajoute($B[$k]['total'], $c['montant']);
+                $B[$k]['dernier'] = $d;
+            }
+        }
+        foreach ($servis as $t => $cl) { $T[$t]['parJour'][$d]['servis'] = count($cl); }
+        $jours[] = $j;
+    }
+    $B = array_values($B);
+    usort($B, static fn ($a, $b) => [-$a['total']['ca'], $a['nom']] <=> [-$b['total']['ca'], $b['nom']]);
+    $T = array_values($T);
+    usort($T, static fn ($a, $b) => [$a['depart'], $a['id']] <=> [$b['depart'], $b['id']]);
+    return ['du' => $du, 'au' => $au, 'jours' => $jours, 'totaux' => $tot + ['sansTournee' => $sansT], 'avant' => ['du' => $avDu] + $avant,
+        'tournees' => $T, 'bureaux' => $B, 'aujourdhui' => substr($now, 0, 10)];
+}
+
 /* ── Lectures et écritures ──────────────────────────────────────────────────────────────────────────────────── */
 
 function pcoErreur(int $code, string $msg, array $plus = []): array { http_response_code($code); return ['error' => $msg] + $plus; }
@@ -305,6 +380,35 @@ function ep_commandes_jour(): array
     $j = pcoJournee($brut, $tournees, $manuels, $date, date('Y-m-d H:i'));
     return ['shop' => $shop, 'panel' => $panel, 'motif' => $motif, 'coupure' => PCO_COUPURE]
         + $j + ['toutes' => $tournees];
+}
+
+/** GET /dashboard/commandes/periode?shop=&du=&au= — la semaine ou le mois : jour par jour, par tournée, par bureau, face à
+ *  la période d'avant. */
+function ep_commandes_periode(): array
+{
+    $shop = pcoShop();
+    if ($shop <= 0) { return pcoErreur(400, 'shop manquant'); }
+    $du = (string) ($_GET['du'] ?? ''); $au = (string) ($_GET['au'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) || $au < $du) { return pcoErreur(422, 'du et au : AAAA-MM-JJ, au après du'); }
+    $n = (int) round((strtotime($au . ' 12:00:00') - strtotime($du . ' 12:00:00')) / 86400) + 1;
+    if ($n > PCO_PERIODE_MAX) { return pcoErreur(422, PCO_PERIODE_MAX . ' jours au plus'); }
+    $avDu = date('Y-m-d', strtotime($du . ' 12:00:00 -' . $n . ' days'));
+    try { $tournees = pcoTournees($shop); }
+    catch (Throwable $e) { return pcoErreur(500, 'les tournées ne se lisent pas'); }
+    $manuels = [];
+    try {
+        foreach (Db::rows('SELECT commande_id, jour, tournee_id FROM panel_tournee_commande WHERE shop_id = ? AND jour BETWEEN ? AND ?', [(string) $shop, $du, $au]) as $r) {
+            $manuels[(string) $r['jour']][(int) $r['commande_id']] = (int) $r['tournee_id'];
+        }
+    } catch (Throwable $e) { /* sans choix du magasin */ }
+    $brut = []; $panel = PanelApi::configured(); $motif = null;
+    if ($panel) {
+        @set_time_limit(90);
+        $r = PanelApi::sondeGet('/shops/' . $shop . '/client-orders?date_from=' . $avDu . '&date_to=' . $au, 40);
+        if ((int) ($r['code'] ?? 0) === 200) { $brut = analyseListe($r['corps'] ?? null); }
+        else { $panel = false; $motif = 'le panel ne rend pas les commandes (' . (int) ($r['code'] ?? 0) . ')'; }
+    } else { $motif = 'le compte du panel n’est pas configuré'; }
+    return ['shop' => $shop, 'panel' => $panel, 'motif' => $motif] + pcoPeriode($brut, $tournees, $manuels, $du, $au, date('Y-m-d H:i')) + ['toutes' => $tournees];
 }
 
 /** Une tournée lue dans un corps de requête, vérifiée : [champs, null] ou [null, message]. */
@@ -479,12 +583,13 @@ function ep_commandes_bureaux(): array
     return ['shop' => $shop, 'n' => count($L), 'bureaux' => array_slice($L, 0, 30)];
 }
 
-/** Les routes de la page Commandes : la journée, les clients pro, les tournées et leurs bureaux, la tournée d'une commande. */
+/** Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande. */
 function pcoRoute(string $method, string $path): ?array
 {
     if ($path !== '/dashboard/commandes' && !str_starts_with($path, '/dashboard/commandes/')) { return null; }
     if ($method === 'GET' && $path === '/dashboard/commandes/jour') { return ep_commandes_jour(); }
     if ($method === 'GET' && $path === '/dashboard/commandes/bureaux') { return ep_commandes_bureaux(); }
+    if ($method === 'GET' && $path === '/dashboard/commandes/periode') { return ep_commandes_periode(); }
     if ($path === '/dashboard/commandes/tournees') {
         if ($method === 'POST') { return wr_commandes_tournee_creer(); }
         if ($method === 'PUT') { return wr_commandes_tournee_modifier(); }
