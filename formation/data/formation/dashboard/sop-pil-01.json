@@ -9,7 +9,7 @@
  "poste": "vente",
  "moment": "ouverture",
  "acces": "responsable",
- "duree": "10 min chaque matin · 2 × 3 min en journée · 5 min le soir · 30 min le lundi · 1 h le premier jour ouvré du mois",
+ "duree": "10 min chaque matin · 2 × 3 min en journée · 10 min le soir · 30 min le lundi · 1 h le premier jour ouvré du mois",
  "titre": {
   "fr": "Analyser le dashboard magasin : la routine",
   "nl": "Het winkeldashboard analyseren: de routine"
@@ -44,7 +44,9 @@
   "formations": [
    "FO-05"
   ],
-  "checklists": []
+  "checklists": [
+   "5.2.01"
+  ]
  },
  "sections": [
   {
@@ -88,8 +90,8 @@
       "nl": "Controles met foto"
      },
      "texte": {
-      "fr": "Revenir sur aujourd’hui : tous les contrôles d’ouverture sont-ils rendus ?\n« Non rendues » : faire déposer la photo maintenant.\n« À contrôler » : les regarder et corriger sur place ce qui ne va pas.",
-      "nl": "Terug naar vandaag: zijn alle openingscontroles ingediend?\n« Niet ingediend »: de foto nu laten opladen.\n« Te controleren »: ze bekijken en ter plaatse corrigeren wat niet klopt."
+      "fr": "Revenir sur aujourd’hui : les pastilles des checklists d’ouverture sont-elles complètes (par exemple 1/1) ?\n« Non rendues » : faire déposer la photo maintenant.\n« À contrôler » : les regarder et corriger sur place ce qui ne va pas.",
+      "nl": "Terug naar vandaag: zijn de bolletjes van de openingschecklists volledig (bijvoorbeeld 1/1)?\n« Niet ingediend »: de foto nu laten opladen.\n« Te controleren »: ze bekijken en ter plaatse corrigeren wat niet klopt."
      },
      "critique": false,
      "photo": "dash-controles.jpg",
@@ -191,8 +193,8 @@
   },
   {
    "titre": {
-    "fr": "Le soir, à la fermeture — 5 min",
-    "nl": "’s Avonds, bij de sluiting — 5 min"
+    "fr": "Le soir, à la fermeture — 10 min",
+    "nl": "’s Avonds, bij de sluiting — 10 min"
    },
    "etapes": [
     {
@@ -202,8 +204,8 @@
       "nl": "Het resultaat van de dag"
      },
      "texte": {
-      "fr": "Lire le P&L court : chiffre d’affaires, marge brute, résultat.\nCoût matière au-dessus de son seuil (celui de Budget › Paramètres) ou main-d’œuvre au-dessus du sien : noter la cause probable.",
-      "nl": "De korte W&V lezen: omzet, brutomarge, resultaat.\nGrondstofkost boven zijn drempel (die van Budget › Parameters) of personeelskost boven de zijne: de waarschijnlijke oorzaak noteren."
+      "fr": "Lire le P&L court, hors TVA : chiffre d’affaires hors TVA, marge brute, résultat.\nCoût matière au-dessus de son seuil (la cible food cost du réseau) ou main-d’œuvre au-dessus du sien (la cible personnel) : noter la cause probable.",
+      "nl": "De korte W&V lezen, exclusief btw: omzet exclusief btw, brutomarge, resultaat.\nGrondstofkost boven zijn drempel (de food-cost-doelstelling van het netwerk) of personeelskost boven de zijne (de personeelsdoelstelling): de waarschijnlijke oorzaak noteren."
      },
      "critique": false,
      "photo": "dash-pl.jpg",
@@ -230,11 +232,25 @@
       "nl": "De taken van de dag"
      },
      "texte": {
-      "fr": "Vérifier qu’aucune tâche bloquante ne reste ouverte ; sinon, la confier pour demain matin.",
-      "nl": "Nakijken dat er geen blokkerende taak openstaat; anders ze voor morgenvroeg toevertrouwen."
+      "fr": "Onglet Tâches : les checklists du jour encore « pas faite » ou « en partie ».\nUne tâche obligatoire qui reste ouverte : la faire avant de partir, ou la confier pour demain matin.",
+      "nl": "Tabblad Taken: de checklists van de dag die nog « niet gedaan » of « gedeeltelijk » zijn.\nEen verplichte taak die openblijft: ze doen vóór je vertrekt, of ze toevertrouwen voor morgenochtend."
      },
      "critique": false,
-     "photo": "dash-taches.jpg",
+     "photo": "dash-checklists-jour.jpg",
+     "video": null
+    },
+    {
+     "numero": "3.4",
+     "titre": {
+      "fr": "La revue du soir",
+      "nl": "De avondronde"
+     },
+     "texte": {
+      "fr": "Toucher « Revue du soir » en tête du dashboard, choisir son nom, « Commencer ».\nPour chaque checklist pas finie : donner la raison d’un bouton.\nRépondre aux points de gestion ; un point en ✗ se règle avant de partir ou se note pour demain.\nAller jusqu’à l’écran de fin : la revue est clôturée, « Revue du soir · faite ».",
+      "nl": "« Avondronde » bovenaan het dashboard aantikken, je naam kiezen, « Beginnen ».\nVoor elke checklist die niet af is: de reden geven met een knop.\nDe beheerpunten beantwoorden; een punt in ✗ wordt vóór vertrek geregeld of voor morgen genoteerd.\nDoorgaan tot het eindscherm: de ronde is afgesloten, « Avondronde · gedaan »."
+     },
+     "critique": false,
+     "photo": "dash-revue.jpg",
      "video": null
     }
    ]
@@ -266,8 +282,8 @@
       "nl": "Het resultaat"
      },
      "texte": {
-      "fr": "Noter : CA, atteinte de l’objectif, résultat net, record.\nAtteinte sous 90 % : identifier les jours rouges dans « Le CA de chaque jour ».",
-      "nl": "Noteren: omzet, bereikte doelstelling, nettoresultaat, record.\nBereikt onder 90 %: de rode dagen opzoeken in « De omzet van elke dag »."
+      "fr": "Noter : CA, atteinte de l’objectif, résultat hors TVA, le jour au plus haut et le jour au plus bas.\nAtteinte sous 90 % : repérer dans « Les jours » les jours restés sous le trait de leur objectif.",
+      "nl": "Noteren: omzet, bereikte doelstelling, resultaat exclusief btw, de hoogste en de laagste dag.\nBereikt onder 90 %: in « Les jours » de dagen zoeken die onder de streep van hun doelstelling bleven."
      },
      "critique": false,
      "photo": "dash-resultat.jpg",
@@ -280,8 +296,8 @@
       "nl": "Tegenover het netwerk"
      },
      "texte": {
-      "fr": "Lire son rang et l’écart à la médiane sur le CA, les clients, le panier et l’atteinte.\nLe chiffre où l’on est le plus loin de la médiane devient la priorité de la semaine.",
-      "nl": "De rang en het verschil met de mediaan lezen voor omzet, klanten, ticket en bereikte doelstelling.\nHet cijfer waar je het verst van de mediaan zit, wordt de prioriteit van de week."
+      "fr": "Ouvrir « Ma place dans le réseau » ▾, sous la page.\nLire son rang et l’écart à la médiane sur le CA, les clients, le panier et l’atteinte.\nLe chiffre où l’on est le plus loin de la médiane devient la priorité de la semaine.",
+      "nl": "Het bolletje « Ma place dans le réseau » ▾ openen, onderaan de pagina.\nDe rang en het verschil met de mediaan lezen voor omzet, klanten, ticket en bereikte doelstelling.\nHet cijfer waar je het verst van de mediaan zit, wordt de prioriteit van de week."
      },
      "critique": false,
      "photo": "dash-reseau.jpg",
@@ -294,11 +310,11 @@
       "nl": "Taken en controles"
      },
      "texte": {
-      "fr": "Lire le % de tâches faites et les jours sous 40 %.\nUn jour sous 40 % : voir avec l’équipe de ce jour-là ce qui a bloqué.",
-      "nl": "Het % uitgevoerde taken en de dagen onder 40 % lezen.\nEen dag onder 40 %: met het team van die dag bekijken wat blokkeerde."
+      "fr": "Onglet Tâches, semaine passée : la part des tâches obligatoires faites, jour par jour ; onglet Semaine, « Tâches et contrôles » ▾ : les jours sous 40 %.\nUn jour bas : voir avec l’équipe de ce jour-là ce qui a bloqué (les raisons données dans la revue du soir).\nRetours du contrôle qualité : chaque note sous 4 est-elle reprise ?",
+      "nl": "Tabblad Taken, vorige week: het aandeel uitgevoerde verplichte taken, dag per dag; tabblad Week, « Tâches et contrôles » ▾: de dagen onder 40 %.\nEen lage dag: met het team van die dag bekijken wat blokkeerde (de redenen gegeven in de avondronde).\nFeedback van de kwaliteitscontrole: is elke score onder 4 hersteld?"
      },
      "critique": false,
-     "photo": "dash-taches.jpg",
+     "photo": "dash-onglet-taches.jpg",
      "video": null
     },
     {
@@ -308,8 +324,8 @@
       "nl": "Onverkocht"
      },
      "texte": {
-      "fr": "Lire les pièces jetées, le coût de production et la valeur de vente perdue.\nLes trois références les plus jetées : baisser leur production ou changer leur heure de cuisson.",
-      "nl": "De weggegooide stuks, de productiekost en de verloren verkoopwaarde lezen.\nDe drie meest weggegooide referenties: hun productie verlagen of hun bakuur veranderen."
+      "fr": "Ouvrir « Invendus » ▾ : lire les pièces jetées, le coût de production et la valeur de vente perdue.\nLes trois références les plus jetées : baisser leur production ou changer leur heure de cuisson.",
+      "nl": "« Invendus » ▾ openen: de weggegooide stuks, de productiekost en de verloren verkoopwaarde lezen.\nDe drie meest weggegooide referenties: hun productie verlagen of hun bakuur veranderen."
      },
      "critique": false,
      "photo": "dash-invendus.jpg",
@@ -322,8 +338,8 @@
       "nl": "De uren en de planning"
      },
      "texte": {
-      "fr": "Lire l’heure la plus rentable et la moins rentable, et la journée type.\nUne heure en rouge (marge nette négative) plusieurs jours : ajuster le planning de la semaine suivante.",
-      "nl": "Het meest en het minst rendabele uur lezen, en de typedag.\nEen uur in het rood (negatieve nettomarge) meerdere dagen: de planning van de volgende week bijsturen."
+      "fr": "Dans « Les heures — une journée type », lire l’heure qui rapporte le plus et celle qui rapporte le moins ; « Le détail heure par heure » ▾ pour la journée type en tableau.\nUne heure en rouge (marge nette négative) plusieurs jours : ajuster le planning de la semaine suivante.\nOnglet Temps morts, jour par jour : les heures souvent sans client sont celles où le planning peut s’alléger.",
+      "nl": "In « Les heures — une journée type » het uur lezen dat het meest opbrengt en het uur dat het minst opbrengt; « Le détail heure par heure » ▾ voor de typedag in een tabel.\nEen uur in het rood (negatieve nettomarge) meerdere dagen: de planning van de volgende week bijsturen.\nTabblad Dode tijd, dag per dag: de uren die vaak zonder klant zijn, zijn die waar de planning lichter kan."
      },
      "critique": false,
      "photo": "dash-heures-semaine.jpg",
@@ -358,8 +374,8 @@
       "nl": "De zes hefbomen"
      },
      "texte": {
-      "fr": "Onglet Mois, puis ‹ pour revenir au mois clos.\nTraiter d’abord les pastilles au-delà du seuil critique (food cost, labour cost, overhead cost, trafic, récurrence, note Google).",
-      "nl": "Tabblad Maand, daarna ‹ om naar de afgesloten maand terug te gaan.\nEerst de bolletjes boven de kritieke drempel behandelen (food cost, labour cost, overhead cost, traffic, terugkeer, Google-score)."
+      "fr": "Onglet Mois, puis ‹ pour revenir au mois clos ; ouvrir « Les six leviers » ▾.\nTraiter d’abord les pastilles au-delà du seuil critique (food cost, labour cost, overhead cost, trafic, récurrence, note Google).",
+      "nl": "Tabblad Maand, daarna ‹ om naar de afgesloten maand terug te gaan; « Les six leviers » ▾ openen.\nEerst de bolletjes boven de kritieke drempel behandelen (food cost, labour cost, overhead cost, traffic, terugkeer, Google-score)."
      },
      "critique": false,
      "photo": "dash-leviers.jpg",
@@ -372,8 +388,8 @@
       "nl": "Het resultaat van de maand"
      },
      "texte": {
-      "fr": "Noter : CA face au budget, atteinte, marge brute, résultat net.\nLire la rentabilité jour par jour et le profil des jours : quel jour freine le mois ?",
-      "nl": "Noteren: omzet tegenover het budget, bereikt, brutomarge, nettoresultaat.\nDe rendabiliteit dag per dag en het profiel van de dagen lezen: welke dag remt de maand af?"
+      "fr": "Noter : CA face au budget, atteinte, marge brute, résultat hors TVA (« Le résultat »).\nOuvrir « Le calendrier du mois » ▾ : le profil des jours dit quel jour freine le mois.",
+      "nl": "Noteren: omzet tegenover het budget, bereikt, brutomarge, resultaat exclusief btw (« Le résultat »).\n« Le calendrier du mois » ▾ openen: het profiel van de dagen zegt welke dag de maand afremt."
      },
      "critique": false,
      "photo": "dash-rentab.jpg",
@@ -386,8 +402,8 @@
       "nl": "De omzet van elke dag"
      },
      "texte": {
-      "fr": "Repérer les jours sous 75 % de l’objectif et chercher la cause (météo, rupture, équipe, travaux).",
-      "nl": "De dagen onder 75 % van de doelstelling opzoeken en de oorzaak zoeken (weer, breuk in de voorraad, team, werken)."
+      "fr": "Dans « Les jours — le CA face à l’objectif », repérer les jours sous 75 % de l’objectif et chercher la cause (météo, rupture, équipe, travaux).",
+      "nl": "In « Les jours — le CA face à l’objectif » de dagen onder 75 % van de doelstelling opzoeken en de oorzaak zoeken (weer, breuk in de voorraad, team, werken)."
      },
      "critique": false,
      "photo": "dash-cal-mois.jpg",
@@ -410,6 +426,20 @@
     {
      "numero": "5.5",
      "titre": {
+      "fr": "Les charges face au modèle",
+      "nl": "De kosten tegenover het model"
+     },
+     "texte": {
+      "fr": "Avec le consultant, au cockpit : Budget › Paramètres › Répartition des charges.\nPoste par poste : le % du réseau (le Compte de résultat du CRM fait foi) et le € réel du magasin.\nLe seuil du coût matière du dashboard n’en vient plus : c’est la cible food cost du réseau (Table KPI).\nUn poste au-dessus du modèle : en chercher la cause et la noter pour la visite.",
+      "nl": "Met de consultant, in de cockpit: Budget › Parameters › Verdeling van de kosten.\nPost per post: het % van het netwerk (de resultatenrekening van de CRM is bindend) en de werkelijke € van de winkel.\nDe drempel van de grondstofkost in het dashboard komt er niet meer uit: het is de food-cost-doelstelling van het netwerk (KPI-tabel).\nEen post boven het model: de oorzaak zoeken en noteren voor het bezoek."
+     },
+     "critique": false,
+     "photo": "dash-charges.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.6",
+     "titre": {
       "fr": "Préparer la visite du consultant",
       "nl": "Het bezoek van de consultant voorbereiden"
      },
@@ -419,6 +449,20 @@
      },
      "critique": false,
      "photo": "dash-valeur.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.7",
+     "titre": {
+      "fr": "Les frais du mois et leur TVA",
+      "nl": "De kosten van de maand en hun btw"
+     },
+     "texte": {
+      "fr": "Ouvrir Les chiffres › Frais, le mois clos.\nChaque poste en orange : indiquer « TVA comprise ? » Oui ou Non, et le taux.\nUn doute sur un poste : la facture du fournisseur dit si le montant contient la TVA.\nSans cela, le poste compte TVA comprise et le résultat du P&L est trop bas.",
+      "nl": "Les chiffres › Frais openen, de afgesloten maand.\nElke oranje post: « TVA comprise ? » aanduiden, Oui (ja) of Non (nee), en het tarief.\nTwijfel over een post: de factuur van de leverancier zegt of het bedrag btw bevat.\nZonder dat telt de post met btw en is het resultaat van de W&V te laag."
+     },
+     "critique": false,
+     "photo": "dash-frais.jpg",
      "video": null
     }
    ]
@@ -436,8 +480,8 @@
       "nl": "Het kwartaal"
      },
      "texte": {
-      "fr": "Onglet Trimestre : lire l’écart au plan de développement et les clients manquants.\nÉcrire l’annotation du franchisé et suivre le rituel du trimestre avec le consultant.",
-      "nl": "Tabblad Kwartaal: het verschil met het ontwikkelingsplan en de ontbrekende klanten lezen.\nDe notitie van de franchisenemer schrijven en het kwartaalritueel met de consultant volgen."
+      "fr": "Onglet Année, toucher le trimestre : lire l’écart au plan de développement et les clients manquants.\nÉcrire l’annotation du franchisé et suivre le rituel du trimestre avec le consultant.",
+      "nl": "Tabblad Jaar, op het kwartaal tikken: het verschil met het ontwikkelingsplan en de ontbrekende klanten lezen.\nDe notitie van de franchisenemer schrijven en het kwartaalritueel met de consultant volgen."
      },
      "critique": false,
      "photo": "dash-annotations.jpg",
@@ -450,8 +494,8 @@
       "nl": "Het jaar"
      },
      "texte": {
-      "fr": "Onglet Année : lire la projection de fin d’année face à l’objectif et la heatmap des mois.\nUn écart qui se creuse deux trimestres de suite : revoir le plan avec le consultant.",
-      "nl": "Tabblad Jaar: de projectie voor het einde van het jaar tegenover de doelstelling en de heatmap van de maanden lezen.\nEen verschil dat twee kwartalen na elkaar groter wordt: het plan met de consultant herzien."
+      "fr": "Onglet Année : lire la projection de fin d’année face à l’objectif et « Les 12 mois ».\nUn écart qui se creuse deux trimestres de suite : revoir le plan avec le consultant.",
+      "nl": "Tabblad Jaar: de projectie voor het einde van het jaar tegenover de doelstelling en « De 12 maanden » lezen.\nEen verschil dat twee kwartalen na elkaar groter wordt: het plan met de consultant herzien."
      },
      "critique": false,
      "photo": "dash-heatmap.jpg",
@@ -510,8 +554,8 @@
    "nl": "Het onverkochte moet elke avond in de kassa aangegeven worden, anders is het resultaat fout."
   },
   {
-   "fr": "Le dashboard est en lecture seule : on corrige à la source, puis on relit.",
-   "nl": "Het dashboard is alleen-lezen: je corrigeert aan de bron, daarna herlees je."
+   "fr": "Le dashboard ne corrige aucun chiffre : on corrige à la source (caisse, panel, cockpit), puis on relit.",
+   "nl": "Het dashboard corrigeert geen enkel cijfer: je corrigeert aan de bron (kassa, panel, cockpit), daarna herlees je."
   }
  ],
  "quiz": [
@@ -587,6 +631,44 @@
      "Niemand",
      "De consultant (business coach)",
      "De leverancier"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "À la fermeture, la revue du soir montre 1.4.01 « en partie ». Que faire ?",
+    "nl": "Bij de sluiting toont de avondronde 1.4.01 « gedeeltelijk ». Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Fermer la revue sans répondre",
+     "Cocher les tâches à la place de l’équipe",
+     "Donner la raison d’un bouton, puis régler ce qui manque ou le confier pour demain"
+    ],
+    "nl": [
+     "De ronde sluiten zonder te antwoorden",
+     "De taken aanvinken in plaats van het team",
+     "De reden geven met een knop, daarna regelen wat ontbreekt of het voor morgen toevertrouwen"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Dans l’onglet Frais, un poste est en orange. Que faire ?",
+    "nl": "In het tabblad Frais staat een post in het oranje. Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Rien : il est déjà compté juste dans le P&L",
+     "Indiquer si le montant saisi contient la TVA, et son taux : en attendant, il compte tel que saisi",
+     "Le supprimer au panel"
+    ],
+    "nl": [
+     "Niets: hij telt al juist mee in de W&V",
+     "Aanduiden of het ingegeven bedrag btw bevat, en het tarief: tot dan telt hij zoals ingegeven",
+     "Hem in het panel verwijderen"
     ]
    },
    "bonne": 1

@@ -913,7 +913,9 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
 - **Journal** : 07/11/2026 — v1.0 des deux documents encodées et publiées, NL « à relire » ; réservés au responsable ;
   v1.1 (précision) : captures du P&L, du résultat et du téléphone refaites avec le seuil matière de Budget › Paramètres.
   Article v1.2 : partie 27 (Primes), le franchisé reste dans le tableau, en gris, hors primes ; capture `dash-primes` recadrée
-  sur sa ligne.
+  sur sa ligne. SOP v1.2 : étape 5.5 « Les charges face au modèle » (Budget › Paramètres › Répartition des charges, le
+  Compte de résultat du CRM fait foi ; capture `dash-charges`, prise au cockpit — plan `cockpit` + `defile` de
+  `captures_dashboard.js`), « Préparer la visite du consultant » passe en 5.6.
 - **Réservés au franchisé et au responsable** (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste
   (mot de passe) : celui du franchisé ou du responsable magasin ; pour le moment 1111 ; un petit cadenas, couleur or ») :
   colonne `for_sop.acces` (`tous` | `responsable`, posée par `ensureSop()`, réglable par `PATCH /formation/sop/fiche/{id}
@@ -924,6 +926,24 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   est le réglage `foPinResponsable` ; tant qu'il n'est pas posé, **1111, provisoire, à changer en fin de développement**
   (`FO_PIN_RESPONSABLE_PROVISOIRE`). Le portail (fiche, éditeur, PDF) n'est pas concerné. ART-PIL-01 et SOP-PIL-01 sont
   réservés (`"acces": "responsable"` dans leur fichier ; `encoder_sop.py` pose l'accès).
+- **10/11/2026 — v1.3 des deux documents** (commits du dashboard du 07/11 après `85d41cdb` au 09/11, `3fbd5c7d`) :
+  article (35 parties) — « Les onglets » (dix onglets, la revue du soir), « Ouvrir le dashboard » (seuls la revue du
+  soir et le relevé terrain enregistrent), Heure par heure (jusqu'à 20 h), Contrôles en photo (par checklist, carrousel,
+  obligatoire / facultative), Commandes et canaux (pro en paiement différé, remise déduite), téléphone (Tâches) ; sections
+  nouvelles « Tâches — les checklists du jour » (5 parties) et « Concurrence et Temps morts » (2) ; quiz de 7 questions.
+  SOP (30 étapes) — 1.3, 3.3, **3.4 « La revue du soir » (nouvelle, encodée sur accord du client)**, 4.4, 4.6 ; soir 10 min ;
+  quiz de 5 questions ; classement : la checklist 5.2.01 gardée (posée au serveur par la nomenclature). Captures nouvelles :
+  dash-onglet-taches, -organisation, -checklists-jour, -retours, -revue, -concurrence, -temps-morts ; refaites : dash-entete,
+  -frise, -heures, -controles, -mobile. NL à relire.
+- **10/11/2026 — ART-CHK-01 « Les checklists du magasin : la structure »** (client : « un article dans le manuel opératoire
+  avec l'explication des structures des checklists ») : source `formation/data/formation/checklists/` (9 parties, 3 questions,
+  photos du Document du cockpit — `formation/tools/formation/captures_checklists.js` — et du dashboard), créé en v1.0 « à valider »,
+  accès à tous, classé D5.1, FO-01, pré-ouverture, postes P1 à P12 (à confirmer).
+- **22/11/2026 — ART-PIL-01 v1.9, SOP-PIL-01 v1.6** (dashboard jusqu'à `77fd5176` du 21/11) : la source reprise dans
+  `formation/` depuis le serveur (v1.8 / v1.5 du matin, absentes du dépôt) ; captures refaites sur le dashboard au rail ;
+  parties 1, 2 (le rail et la barre du haut), 4, 7, 29 à 31 (l'onglet Trimestre rejoint l'Année, « Les 12 mois ») ;
+  SOP 6.1 et 6.2. La v1.5 de l'article (74 parties, écrasée le 16/11 par la v1.6) est gardée dans
+  `formation/data/formation/dashboard/archives/`. NL à relire.
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
