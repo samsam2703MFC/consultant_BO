@@ -10,6 +10,7 @@ use App\Core\Api\Workshop\Validator;
 use App\Repositories\Logistics\LogisticsBoardRepository;
 use App\Services\Logistics\LogisticsBoardService;
 use App\Services\Logistics\LogisticsService;
+use App\Services\Workshop\Quality\LotHoldService;
 
 /**
  * Tablet pakowania (28/10/2026), dwa tryby : pakowanie — produkty do spakowania (kartony, sztuki, czas), osoby, koniec
@@ -18,7 +19,8 @@ use App\Services\Logistics\LogisticsService;
  */
 final class PackingController
 {
-    public function __construct(private LogisticsBoardService $board, private LogisticsService $logistics, private LogisticsBoardRepository $repo)
+    public function __construct(private LogisticsBoardService $board, private LogisticsService $logistics, private LogisticsBoardRepository $repo,
+                                private LotHoldService $holds)
     {
     }
 
@@ -38,14 +40,14 @@ final class PackingController
 
     public function pallets(ApiRequest $request): ApiResult
     {
-        return new ApiResult($this->board->pallets($this->date($request->query('date')), $this->int($request->query('vehicle_id')), $this->int($request->query('customer_id'))));
+        return new ApiResult($this->withHolds($this->board->pallets($this->date($request->query('date')), $this->int($request->query('vehicle_id')), $this->int($request->query('customer_id')))));
     }
 
     public function addPallet(ApiRequest $request): ApiResult
     {
-        $v = (new Validator($request->body()))->only(['date', 'customer_id', 'product_id', 'cartons', 'employee_id', 'vehicle_id'])
+        $v = (new Validator($request->body()))->only(['date', 'customer_id', 'product_id', 'cartons', 'employee_id', 'vehicle_id', 'held_confirmed'])
             ->date('date', true, false)->integer('customer_id', true, 1)->integer('product_id', true, 1)->integer('cartons', true, 1, 999)
-            ->integer('employee_id', false, 1, null, true)->integer('vehicle_id', false, 1, null, true);
+            ->integer('employee_id', false, 1, null, true)->integer('vehicle_id', false, 1, null, true)->boolean('held_confirmed');
         $v->throwIfInvalid();
         $date = (string) $v->value('date');
         $customer = (int) $v->value('customer_id');
@@ -57,16 +59,44 @@ final class PackingController
         if ($employee !== null && !$this->board->employeeActive($employee)) {
             throw ApiException::validation([['field' => 'employee_id', 'code' => 'REFERENCE_NOT_FOUND', 'params' => ['id' => $employee]]]);
         }
+        // [416] Partia wstrzymana przez Jakość (kartony w magazynie / na palecie) : wpis dopiero po potwierdzeniu operatora, że
+        // kładzie kartony z innych dni etykiety (stany kartonów bez zmian ; skany kartonów robi system magazynu).
+        $held = $this->holds->heldStock([$product])[$product] ?? [];
+        if ($held && $v->value('held_confirmed') !== true) {
+            throw new ApiException('PALLET_PRODUCT_HELD', 409, [], ['product' => $this->productName($product), 'days' => implode(', ', array_column($held, 'days')),
+                'cartons' => array_sum(array_column($held, 'cartons'))]);
+        }
         $this->board->addPalletEntry($date, $customer, $product, (int) $v->value('cartons'), $employee, $request->context->deviceId, null);
         $vehicle = $v->value('vehicle_id');
-        return new ApiResult($this->board->pallets($date, $vehicle !== null ? (int) $vehicle : null, $customer), 201);
+        return new ApiResult($this->withHolds($this->board->pallets($date, $vehicle !== null ? (int) $vehicle : null, $customer)), 201);
     }
 
     /** Cofnięcie wpisu z tabletu ; ?vehicle_id= : widok do odświeżenia. */
     public function deletePallet(ApiRequest $request): ApiResult
     {
         $entry = $this->board->deletePalletEntry($request->id()) ?? throw ApiException::notFound('pallet_entry', $request->id());
-        return new ApiResult($this->board->pallets($entry['date'], $this->int($request->query('vehicle_id')), $entry['customer_id']));
+        return new ApiResult($this->withHolds($this->board->pallets($entry['date'], $this->int($request->query('vehicle_id')), $entry['customer_id'])));
+    }
+
+    /** [416] Wiersze produktów z partią wstrzymaną (held : dni etykiet, kartony w magazynie / na palecie) — czerwona etykieta na tablecie. */
+    private function withHolds(array $data): array
+    {
+        $ids = [];
+        foreach ($data['clients'] ?? [] as $c) foreach ($c['lines'] ?? [] as $l) $ids[(int) $l['product_id']] = true;
+        $held = $ids ? $this->holds->heldStock(array_keys($ids)) : [];
+        foreach ($data['clients'] ?? [] as $ci => $c) {
+            foreach ($c['lines'] ?? [] as $li => $l) {
+                $h = $held[(int) $l['product_id']] ?? [];
+                $data['clients'][$ci]['lines'][$li]['held'] = $h ? ['days' => implode(', ', array_column($h, 'days')), 'cartons' => array_sum(array_column($h, 'cartons'))] : null;
+            }
+        }
+        return $data;
+    }
+
+    private function productName(int $productId): string
+    {
+        foreach ($this->holds->heldStock([$productId])[$productId] ?? [] as $h) if (!empty($h['product'])) return (string) $h['product'];
+        return '#' . $productId;
     }
 
     private function int(?string $v): ?int

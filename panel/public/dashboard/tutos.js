@@ -33,11 +33,23 @@
   const ICO_VIDEO = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m10.2 9.3 4.6 2.7-4.6 2.7z"/></svg>';
   const ICO_X = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
   const GENRES = { nouveau: 'Nouvelle fonction', tuto: 'Mode d’emploi', formation: 'Formation' };
-  const T = { videos: [], vue: vueDeLAdresse(), lecteur: null, annonce: null, minuterie: null, attente: null };
+  // `memo` : « vu » et « plus tard » gardés aussi en mémoire de la page (24/11/2026, Sam : « si je pousse plus tard, la
+  // bulle doit partir ») — quand le navigateur refuse d'écrire (stockage plein ou bloqué : plusieurs applications
+  // partagent l'adresse du serveur), la bulle part quand même et ne revient pas avant le rechargement.
+  const T = { videos: [], vue: vueDeLAdresse(), lecteur: null, annonce: null, minuterie: null, attente: null, memo: { [CLE_VUS]: {}, [CLE_TARD]: {} } };
 
   function vueDeLAdresse() { return new URLSearchParams(location.search).get('vue') || 'ops'; }
-  function lireSet(cle) { try { return JSON.parse(localStorage.getItem(cle) || '{}') || {}; } catch (e) { return {}; } }
-  function ecrireSet(cle, o) { try { localStorage.setItem(cle, JSON.stringify(o)); } catch (e) { /* stockage indisponible : l'annonce reviendra */ } }
+  /** Ce qui est gardé : l'appareil (localStorage), l'onglet (sessionStorage, en secours) et la page (T.memo). */
+  function lireSet(cle) {
+    const lu = st => { try { return JSON.parse(st.getItem(cle) || '{}') || {}; } catch (e) { return {}; } };
+    return Object.assign({}, lu(window.sessionStorage), lu(window.localStorage), T.memo[cle] || {});
+  }
+  function ecrireSet(cle, o) {
+    T.memo[cle] = Object.assign(T.memo[cle] || {}, o);
+    const txt = JSON.stringify(o);
+    try { localStorage.setItem(cle, txt); return; } catch (e) { /* plein ou bloqué : l'onglet, sinon la page seule */ }
+    try { sessionStorage.setItem(cle, txt); } catch (e) { /* la page seule */ }
+  }
   function vue(id) { return !!lireSet(CLE_VUS)[id]; }
   function marquerVue(id) { const o = lireSet(CLE_VUS); o[id] = new Date().toISOString().slice(0, 10); ecrireSet(CLE_VUS, o); }
   /** Le jour local (AAAA-MM-JJ) : « plus tard » vaut pour la journée. */

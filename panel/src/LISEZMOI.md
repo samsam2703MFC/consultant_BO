@@ -59,7 +59,9 @@ autre) », « une vidéo type formative, à utiliser en formation », les pages 
   bulle accrochée au carré (minimaliste depuis le 23/11/2026 : un filet fin, « Nouveau », le titre et deux liens, « Voir la vidéo · durée » et
   « Plus tard », sans croix ; « Plus tard » la range pour la journée : elle revient le lendemain tant que la vidéo n'est
   pas vue). « Vu » et « plus tard » restent sur l'appareil
-  (localStorage `db.videos.vues`, `db.videos.plusTard`) : aucune route, aucune table. Au téléphone, pas de rail : ni
+  (localStorage `db.videos.vues`, `db.videos.plusTard` ; si le navigateur refuse d'écrire — stockage plein ou bloqué,
+  plusieurs applications partageant l'adresse du serveur —, l'onglet puis la page les gardent : « Plus tard » ferme toujours la
+  bulle) : aucune route, aucune table. Au téléphone, pas de rail : ni
   carré ni annonce (décision du 23/11/2026). La page ouverte vient de `?vue=` puis de l'évènement `dashboard:vue`
   (`urlMaj`). Rien en mode incorporé (`?embed=`). `window.DashTutos.ouvrir(id)` ouvre une vidéo.
 - **La vidéothèque** (« la liste des vidéos doit aussi être dans la vidéothèque, dans le catalogue de formation ») : le

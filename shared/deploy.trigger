@@ -292,3 +292,5 @@
 2026-11-23T20:44:20Z Dashboard magasin : l'annonce d'une nouvelle vidéo devient une bulle minimaliste (Nouveau, le titre, deux liens)
 2026-11-23T21:59:28Z Dashboard magasin : une vidéo d'instruction par entrée du rail (21 nouveaux modes d'emploi, dont « Éditer mon catalogue »), dans le carré des vidéos et la vidéothèque du catalogue de formation
 2026-11-24T06:01:12Z Manuels du 23/11/2026 : l'annonce des vidéos sans croix, les tables de Mon équipe, le statut des demandes gardé (documentation seulement)
+2026-11-24T06:01:15Z [409-427] tablet hali, tablet jakosci, karty stanowisk, Jakosc w KP
+2026-11-24T07:52:40Z Dashboard magasin : « Plus tard » ferme toujours la bulle des vidéos, même quand le navigateur refuse d'écrire
