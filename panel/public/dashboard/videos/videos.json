@@ -261,6 +261,199 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "promos-constat",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Le constat",
+      "resume": "L’étape 1 du Coach Vente : votre marge de base, chaque produit en marge et en ventes, ce qui fait le volume et ce qui rapporte.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-01-constat.mp4",
+      "debut": 0,
+      "fin": 84.77,
+      "affiche": "promos-constat.jpg",
+      "duree": "1 min 25",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-couples",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Les couples",
+      "resume": "L’étape 2 du Coach Vente : chaque couple séparé puis en bundle, la marge du ticket, le gain par mois, le moment ; choisir le couple à lancer.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-02-couples.mp4",
+      "debut": 0,
+      "fin": 69.99,
+      "affiche": "promos-couples.jpg",
+      "duree": "1 min 10",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-prix",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Le prix",
+      "resume": "L’étape 3 du Coach Vente : la marge du bundle selon son prix, la remise conseillée de 8 à 12 %, les quatre tuiles et le garde-fou.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-03-prix.mp4",
+      "debut": 0,
+      "fin": 63.5,
+      "affiche": "promos-prix.jpg",
+      "duree": "1 min 04",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-fiche",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "La fiche",
+      "resume": "L’étape 4 du Coach Vente : la fiche du bundle, déjà encodée ; vous vérifiez le nom, où et quand, puis vous validez.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-04-fiche.mp4",
+      "debut": 0,
+      "fin": 75.02,
+      "affiche": "promos-fiche.jpg",
+      "duree": "1 min 15",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-lancer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "promos-fiche",
+      "titre": "Valider et lancer le bundle",
+      "resume": "« Valider et lancer » : la promotion est créée au panel, en caisse le lundi qui suit, et l’équipe reçoit sa fiche.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-04-fiche.mp4",
+      "debut": 75.02,
+      "fin": 112,
+      "affiche": "promos-lancer.jpg",
+      "duree": "37 s",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-lancement",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Le lancement",
+      "resume": "L’étape 5 du Coach Vente : le bundle lancé, où en est la promotion, à qui la fiche est partie, et le suivi des bundles lancés.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-05-lancement.mp4",
+      "debut": 0.01,
+      "fin": 53.35,
+      "affiche": "promos-lancement.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-renvoyer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "promos-lancement",
+      "titre": "Renvoyer la fiche à l’équipe",
+      "resume": "« Renvoyer à l’équipe » : la fiche du bundle repart par e-mail, depuis la boîte du magasin.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-05-lancement.mp4",
+      "debut": 53.35,
+      "fin": 83.05,
+      "affiche": "promos-renvoyer.jpg",
+      "duree": "30 s",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-coefficient",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Le coefficient de marge",
+      "resume": "Où les promotions sont utilisées, puis la fenêtre du coefficient de marge : le lot le plus serré, avec et sans la promotion, produit par produit.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-06-coefficient.mp4",
+      "debut": 0.01,
+      "fin": 89.6,
+      "affiche": "promos-coefficient.jpg",
+      "duree": "1 min 30",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "marketing/src/promos_magasin.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "offres",
       "genre": "tuto",
       "titre": "Les offres de prix",
