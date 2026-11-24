@@ -1,6 +1,7 @@
-# Les commandes du magasin, liées aux tournées et aux bureaux à livrer — trois maquettes
+# Les commandes du magasin, liées aux tournées et aux bureaux à livrer — maquettes
 
-**Statut : maquette, à choisir.** Rien n'est codé.
+**Statut : A et B retenues ensemble, sur un interrupteur abricot** (Sam, 24/11/2026 : « A et B on toggle (apricot) »).
+C reste à décider. Rien n'est codé.
 
 Demande du 24/11/2026 : « dans le dashboard franchisé, faire un panel pour les commandes (webshop, comptoir, bureau),
 liées avec les tournées et les offices à livrer ; faire une maquette screenshot, 2 ou 3 versions, avec le shop
@@ -19,6 +20,25 @@ numéro 3 ». Magasin 3 : **Atelier by Max & Sandra - Gosselies** (rue du Pircha
   veille avant 16 h » des modèles du portail Commercial), qui ne commande pas ce jour-là. « Relancer » reprendrait le
   modèle de relance du portail Commercial (`commercial/src/commercial.php`).
 
+## A et B : une page, un interrupteur abricot
+
+La page Commandes a deux vues, **Liste** (A) et **Tournées** (B), et un interrupteur en haut à droite, à la place
+d'une entrée de rail de plus. Il est à l'Abricot de la marque, comme l'Assistant IA du rail et les boutons abricot du
+coffre : fond `#FFF8F1`, filet `#F2C9A0`, texte `#7A3E12` ; la vue allumée en `#F2C9A0`, texte Ruby (`--accent`). Chaque
+vue porte son compte (Liste 20, Tournées 3). Le reste de la barre ne bouge pas : la date, Jour · Semaine, « Nouvelle
+commande ». Proposé pour le codage : la vue choisie se garde d'une visite à l'autre, par magasin (`localStorage`).
+
+Pas de gras sur la vue allumée : le §4.3 du design system le réserve à sa liste fermée (le bouton abricot de
+`formation.css` est en 700, c'est un écart déjà en ligne, pas repris ici).
+
+| Fichier | Ce que c'est |
+|---|---|
+| `bascule-liste.png`, `bascule-tournees.png` | l'interrupteur de près, dans ses deux positions |
+| `ecran-a.png` | la page, interrupteur sur Liste |
+| `ecran-b.png` | la page, interrupteur sur Tournées |
+
+## Les trois versions de départ
+
 | | Écran | L'idée |
 |---|---|---|
 | **A** | `ecran-a.png` — **la liste du jour** | Une seule liste, de la première livraison à la dernière, avec un filet « Maintenant ». Le bandeau donne les trois canaux (nombre, montant, part). Filtres : canal, à livrer ou à retirer. À droite, les trois tournées (état, arrêts livrés ou prêts) et demain : les bureaux qui n'ont pas encore commandé. |
@@ -26,9 +46,8 @@ numéro 3 ». Magasin 3 : **Atelier by Max & Sandra - Gosselies** (rue du Pircha
 | **C** | `ecran-c.png` — **la feuille de route** | Une tournée choisie : son plan schématique, ses arrêts dans l'ordre (heure, bureau, étage, consigne, montant, paiement, statut), le chargement au départ, l'encaissement à rapporter, et la livraison proposée en plus. Dessous, les bureaux de la tournée : leur semaine (L M M J V), leur habitude, leur panier moyen et demain. « Imprimer la feuille de route », « Envoyer à Nadia ». |
 | | `planche.jpg` | Les trois côte à côte. |
 
-**Recommandation : A pour entrer, C au clic sur une tournée.** A répond à « qu'est-ce qui sort aujourd'hui, par quel
-canal » ; C répond à « qu'est-ce que la camionnette emporte et qui n'a pas commandé ». Le sélecteur « Tournées · Toutes
-les commandes » de C relie les deux. B vaut pour un magasin qui fait plusieurs tournées par jour.
+Recommandation de départ : A pour entrer, C au clic sur une tournée. Retenu : A et B sur l'interrupteur. C peut
+rester la page d'une tournée, ouverte par « Feuille de route » depuis l'une ou l'autre vue.
 
 ## Réel, illustratif
 
@@ -82,5 +101,6 @@ node panel/docs/maquettes/commandes-tournees/capturer.js
 ```
 
 Aucun serveur à lancer : le navigateur lit les fichiers sur le disque (polices `shared/public/assets/ds/fonts/`, logo
-`panel/public/tablette/img/logo.png`). `index.html?v=a`, `?v=b`, `?v=c` ; `planche.html` assemble les trois captures.
+`panel/public/tablette/img/logo.png`). `index.html?v=a` (Liste), `?v=b` (Tournées), `?v=c` ; `planche.html` assemble les trois captures ; le script recadre
+l'interrupteur (`bascule-*.png`).
 Les données sont dans `donnees.js`, le dessin dans `maquette.js`, les styles (design system et rail) dans `mq.css`.

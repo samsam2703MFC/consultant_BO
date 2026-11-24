@@ -215,3 +215,11 @@ td.num .sub { white-space: nowrap; }
 .c-bureaux td:nth-child(2) { white-space: nowrap; }
 .t-carte__nom { font-size: 14px; }
 .etape__nom .tag-warn { margin-left: 6px; vertical-align: 1px; }
+
+/* L'interrupteur abricot Liste / Tournées : l'Abricot de la marque (#F2C9A0), texte Ruby, comme l'Assistant IA du rail
+ * et les boutons abricot du coffre (coffre.css : fond #FFF8F1, filet #F2C9A0, texte #7A3E12 ; allumé #F2C9A0). */
+.bascule { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: #FFF8F1; border: 1px solid #F2C9A0; }
+.bascule span { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 8px; color: #7A3E12; font-size: 13px; }
+.bascule span.is-on { background: #F2C9A0; color: var(--accent); }
+.bascule span em { font-style: normal; font-size: 11.5px; opacity: 0.75; }
+.bascule .ic { width: 15px; height: 15px; }

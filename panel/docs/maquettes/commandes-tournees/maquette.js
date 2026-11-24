@@ -34,6 +34,7 @@
     imprimer: 'M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z',
     envoyer: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',
     plus: 'M12 5v14M5 12h14',
+    liste: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
     g: 'M15 18l-6-6 6-6', d: 'M9 18l6-6-6-6',
     bureau: 'M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M2 21h20M8 7h4M8 11h4M8 15h4',
   };
@@ -72,8 +73,14 @@
       </div></nav>`;
   }
 
-  function tete(lib) {
-    return `<div class="tete"><div><p class="tete__kicker">${esc(D.MAGASIN.nom)}</p><h1>Commandes</h1></div><span class="tete__version">${lib}</span></div>`;
+  function tete(droite) {
+    return `<div class="tete"><div><p class="tete__kicker">${esc(D.MAGASIN.nom)}</p><h1>Commandes</h1></div>${droite}</div>`;
+  }
+  /* L'interrupteur abricot (24/11/2026, « A et B on toggle, apricot ») : la même page, deux vues — la liste, les tournées. */
+  function bascule(on) {
+    return `<div class="bascule" role="tablist" aria-label="Vue des commandes">
+      <span role="tab" aria-selected="${on === 'liste'}" class="${on === 'liste' ? 'is-on' : ''}">${ic('liste')}Liste <em>${D.COMMANDES.length}</em></span>
+      <span role="tab" aria-selected="${on === 'tournees'}" class="${on === 'tournees' ? 'is-on' : ''}">${ic('camion')}Tournées <em>${D.TOURNEES.length}</em></span></div>`;
   }
   function barreJour(principal = true, seg = '<span class="is-on">Jour</span><span>Semaine</span>') {
     return `<div class="barre-jour"><span class="btn btn--icon btn--sm">${ic('g')}</span><span class="date">${D.JOUR.long}</span><span class="btn btn--icon btn--sm">${ic('d')}</span>
@@ -130,7 +137,7 @@
       <div style="font-size:13px">Commandes jusqu’à ${D.JOUR.coupure} : ${nOui} bureaux ont commandé. <span class="muted">Ceux qui commandent d’habitude, pas encore :</span></div>
       <ul>${pasEncore.map(([k, r]) => `<li><span class="q">${esc(D.BUREAUX[k].nom)}<span class="sub">${r.freq === 'chaque jour' ? 'commande chaque jour' : 'dernière commande ' + r.dern} · tournée ${esc(D.TOURNEES.find(t => t.bureaux.includes(k)).court)}</span></span><span class="btn btn--sm">Relancer</span></li>`).join('')}</ul></div>`;
 
-    return `${tete('Version A · la liste du jour')}${barreJour()}
+    return `${tete(bascule('liste'))}${barreJour()}
       <div class="card" style="padding:6px 0 10px"><div class="kpi-row">
         <div class="kpi"><div class="kpi__value">${D.COMMANDES.length}</div><div class="kpi__label">Commandes du jour</div><div class="kpi__note">${eur(total)}</div></div>
         ${kpiCanal('webshop')}${kpiCanal('comptoir')}${kpiCanal('bureau')}
@@ -197,7 +204,7 @@
         <div class="arret__l3" style="margin-left:0">${statut(c)}<span class="compte">${D.PAIEMENTS[c.pay]}</span></div></div>`).join('')}</div>
       <div class="col__pied"><span>${R.length} commandes · ${eur(D.somme(R))}</span></div></div>`;
 
-    return `${tete('Version B · le tableau des tournées')}${barreJour()}${frise}${alerte}
+    return `${tete(bascule('tournees'))}${barreJour()}${frise}${alerte}
       <div class="colonnes">${D.TOURNEES.map(colonne).join('')}${colRetrait}</div>`;
   }
 
@@ -268,7 +275,7 @@
         <td>${dem}</td>
         <td class="num">${r.relance ? '<span class="btn btn--sm">Relancer</span>' : ''}</td></tr>`; }).join('');
 
-    return `${tete('Version C · la feuille de route')}${barreJour(false, '<span class="is-on">Tournées</span><span>Toutes les commandes</span>')}
+    return `${tete('<span class="tete__version">Version C · la feuille de route</span>')}${barreJour(false, '<span class="is-on">Tournées</span><span>Toutes les commandes</span>')}
       <div class="c-grille">${liste}
         <div>
           <div class="card"><div class="fdr-tete"><div><div class="fdr-tete__nom">${esc(t.nom)}</div>

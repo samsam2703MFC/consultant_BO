@@ -12,6 +12,11 @@ const ICI = 'file://' + __dirname + '/';
     await p.goto(ICI + 'index.html?v=' + v, { waitUntil: 'load' }); await p.evaluate(() => document.fonts.ready);
     await p.screenshot({ path: path.join(__dirname, 'ecran-' + v + '.png'), fullPage: true });
     console.log('✓ écran', v);
+    // L'interrupteur abricot de A et B, de près : la barre du titre et la barre du jour.
+    if (v !== 'c') {
+      const r = await p.evaluate(() => { const a = document.querySelector('.tete').getBoundingClientRect(), b = document.querySelector('.barre-jour').getBoundingClientRect(); return { x: a.left - 8, y: a.top - 8, width: a.width + 16, height: b.bottom - a.top + 16 }; });
+      await p.screenshot({ path: path.join(__dirname, 'bascule-' + (v === 'a' ? 'liste' : 'tournees') + '.png'), clip: r });
+    }
   }
   const q = await b.newPage({ viewport: { width: 2400, height: 1000 }, deviceScaleFactor: 1 });
   await q.goto(ICI + 'planche.html', { waitUntil: 'load' }); await q.evaluate(() => document.fonts.ready);
