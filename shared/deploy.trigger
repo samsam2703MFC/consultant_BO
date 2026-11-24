@@ -298,3 +298,4 @@
 2026-11-24T08:20:13Z [429] stan ogolny zalegle osobno
 2026-11-24T10:02:32Z [430] stan ogolny okno zamowien
 2026-11-24T12:24:01Z Autocontrôle qualité : la tablette du magasin (autocontrole/?shop=, &produit=, &essai=1), les résultats et les grilles au siège (autocontrole/grilles.html)
+2026-11-24T15:31:13Z Dashboard magasin : les primes passent dans Mon équipe, troisième onglet après le planning (?vue=primes ; plus dans Vendre)
