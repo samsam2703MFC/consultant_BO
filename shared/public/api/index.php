@@ -133,6 +133,7 @@ require __DIR__ . '/../../../consultant/src/coffre.php';
 require __DIR__ . '/../../../consultant/src/coffre_dates.php';
 require __DIR__ . '/../../../consultant/src/ca_net_mois.php';
 require __DIR__ . '/../../../consultant/src/controles_qualite.php';
+require __DIR__ . '/../../../consultant/src/autocontrole.php';             // L'autocontrôle qualité des produits, à la tablette du magasin (24/11/2026)
 require __DIR__ . '/../../../consultant/src/kpi_table.php';
 require __DIR__ . '/../../../panel/src/tablette.php';
 require __DIR__ . '/../../../panel/src/tablette_objectifs.php';
@@ -426,6 +427,8 @@ function route(string $method, string $path): mixed
     if (str_starts_with($path, '/audits/')) { return auRoute($method, $path); }
     // Franchisés › Suivi des franchisés › Fil du franchisé (19/11/2026, src/fil_franchise.php).
     if ($path === '/fil' || str_starts_with($path, '/fil/')) { return filRoute($method, $path); }
+    // L'autocontrôle qualité (24/11/2026, consultant/src/autocontrole.php) : la tablette du magasin et les grilles du siège.
+    if (($c = aqRoute($method, $path)) !== null) { return $c; }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
