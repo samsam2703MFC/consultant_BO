@@ -178,10 +178,15 @@ final class StockPalletRepository extends WorkshopRepository
      * [334] Stan ogólny : par produit en stock ou commandé — cartons au magasin (1), sur palette (2), commandes ouvertes
      * (OpenOrders, comme Stan magazynu), stocks min. / max. en vigueur (pièces, StockLevels) et pièces par carton.
      */
-    public function generalStock(int $soldDays = 42): array
+    public function generalStock(int $soldDays = 42, ?string $weekStart = null, ?string $weekEnd = null): array
     {
+        // [428] Commandes ouvertes découpées par date de départ : en retard (avant la semaine), cette semaine (même fenêtre
+        // que la feuille d'équipe), plus tard ou sans date. Sans semaine : toute commande datée compte, les commandes sans date à part.
+        $weekStart ??= '0000-01-01';
+        $weekEnd ??= '9999-12-31';
         return $this->all("SELECT fp.id, fp.name, COALESCE(cp.name, 'Bez kategorii') AS category, fp.ppc,
                 COALESCE(cs.free, 0) AS free, COALESCE(cs.pallet, 0) AS pallet, COALESCE(oo.cartons, 0) AS ordered,
+                COALESCE(oo.late, 0) AS ordered_late, COALESCE(oo.week, 0) AS ordered_week, COALESCE(oo.later, 0) AS ordered_later,
                 i.id AS item_id, COALESCE(ps.mode, 'MTO') AS mode, COALESCE(w.cartons, 0) AS sold,
                 " . StockLevels::columns('ps') . "
             FROM final_product fp
@@ -191,12 +196,16 @@ final class StockPalletRepository extends WorkshopRepository
             " . StockLevels::join('i') . "
             LEFT JOIN (SELECT id_product, SUM(status = 1) AS free, SUM(status = 2) AS pallet FROM carton_stock
                        WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs ON cs.id_product = fp.id
-            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co
+            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons,
+                              SUM(CASE WHEN DATE(co.expected_shipping_date) < ? THEN cop.quantity_carton ELSE 0 END) AS late,
+                              SUM(CASE WHEN DATE(co.expected_shipping_date) BETWEEN ? AND ? THEN cop.quantity_carton ELSE 0 END) AS week,
+                              SUM(CASE WHEN co.expected_shipping_date IS NULL OR DATE(co.expected_shipping_date) > ? THEN cop.quantity_carton ELSE 0 END) AS later
+                       FROM customer_order co
                        JOIN customer_order_product cop ON cop.id_order = co.id WHERE " . OpenOrders::demandSql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
             LEFT JOIN (SELECT sl.id_product, SUM(sl.cartons) AS cartons FROM (" . WdtSalesRepository::linesSql() . ") sl
                        WHERE sl.sale_date >= CURDATE() - INTERVAL ? DAY AND sl.sale_date < CURDATE() GROUP BY sl.id_product) w ON w.id_product = fp.id
             WHERE cs.id_product IS NOT NULL OR oo.id_product IS NOT NULL OR (ps.mode = 'MTS' AND fp.active = 1)
-            ORDER BY cp.name IS NULL, cp.name, fp.name", [$soldDays]);
+            ORDER BY cp.name IS NULL, cp.name, fp.name", [$weekStart, $weekStart, $weekEnd, $weekEnd, $soldDays]);
     }
 
     /** [333] Cartons dont la dernière palette est $id. @return list<int> */

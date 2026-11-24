@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Services\Logistics;
 
 use App\Repositories\Logistics\StockPalletRepository;
+use App\Repositories\Workshop\ParamRepository;
+use App\Services\Workshop\Planning\WeekStart;
 use App\Exceptions\CustomException;
 use DateTimeImmutable;
 
@@ -24,7 +26,7 @@ final class StockPalletService
     /** Couches dessinées : les N produits les plus nombreux, le reste en une couche. */
     public const LAYERS = 5;
 
-    public function __construct(private StockPalletRepository $repo)
+    public function __construct(private StockPalletRepository $repo, private ?ParamRepository $params = null)
     {
     }
 
@@ -108,14 +110,21 @@ final class StockPalletService
      * (bez maks. : « ustaw maks. ») ; na zamówienie (MTO) — tylko pokrycie zamówień, bez min. / maks. Sprzedane = kartony
      * WDT z 6 ostatnich tygodni (bez dnia dzisiejszego), średnio na tydzień w podpowiedzi. Produkty MTS bez stanu też.
      */
-    public function generalStock(): array
+    public function generalStock(?string $today = null): array
     {
+        // [428] « Zamówione » = ce qui part d'ici la fin de la semaine de production (week.start_day, même fenêtre que la
+        // feuille d'équipe) + les commandes en retard encore ouvertes ; plus tard / sans date : à part, hors « Zostaje ».
+        $today ??= date('Y-m-d');
+        $start = WeekStart::of($today, $this->params ? WeekStart::day($this->params) : 1);
+        $end = date('Y-m-d', strtotime($start . ' +6 days'));
         $cats = [];
-        $tot = ['stock' => 0, 'ordered' => 0, 'pallet' => 0, 'left' => 0, 'sold' => 0, 'mts' => 0, 'mto' => 0];
-        foreach ($this->repo->generalStock(self::SOLD_WEEKS * 7) as $r) {
+        $tot = ['stock' => 0, 'ordered' => 0, 'ordered_late' => 0, 'ordered_later' => 0, 'pallet' => 0, 'left' => 0, 'sold' => 0, 'mts' => 0, 'mto' => 0];
+        foreach ($this->repo->generalStock(self::SOLD_WEEKS * 7, $start, $end) as $r) {
             $ppc = (int) $r['ppc'];
             $stock = (int) $r['free'] + (int) $r['pallet'];
-            $ordered = (int) round((float) $r['ordered']);
+            $late = (int) round((float) $r['ordered_late']);
+            $later = (int) round((float) $r['ordered_later']);
+            $ordered = $late + (int) round((float) $r['ordered_week']);
             $left = $stock - $ordered;
             $mts = $r['mode'] === 'MTS';
             $max = $mts && $r['stock_max'] !== null && $ppc > 0 ? (int) round((float) $r['stock_max'] / $ppc) : null;
@@ -123,7 +132,7 @@ final class StockPalletService
             $sold = (int) round((float) $r['sold']);
             $state = $left < 0 ? 'short' : (!$mts ? 'ok' : (!$max ? 'nomax' : ($left > $max ? 'over' : ($min !== null && $left < $min ? 'low' : 'ok'))));
             $row = ['id' => (int) $r['id'], 'item_id' => $r['item_id'] !== null ? (int) $r['item_id'] : null, 'name' => (string) $r['name'], 'ppc' => $ppc ?: null,
-                'mode' => $mts ? 'MTS' : 'MTO', 'stock' => $stock, 'ordered' => $ordered, 'pallet' => (int) $r['pallet'],
+                'mode' => $mts ? 'MTS' : 'MTO', 'stock' => $stock, 'ordered' => $ordered, 'ordered_late' => $late, 'ordered_later' => $later, 'pallet' => (int) $r['pallet'],
                 'left' => $left, 'max' => $max ?: null, 'min' => $min, 'period' => $mts ? $r['stock_period'] : null,
                 'sold' => $sold, 'sold_week' => round($sold / self::SOLD_WEEKS, 1),
                 'pct' => $max ? (int) round(max(0, $left) / $max * 100) : null,
@@ -132,10 +141,11 @@ final class StockPalletService
                 'state' => $state];
             $cats[$r['category']] ??= ['name' => (string) $r['category'], 'rows' => []];
             $cats[$r['category']]['rows'][] = $row;
-            foreach (['stock', 'ordered', 'pallet', 'left', 'sold'] as $k) $tot[$k] += $row[$k];
+            foreach (['stock', 'ordered', 'ordered_late', 'ordered_later', 'pallet', 'left', 'sold'] as $k) $tot[$k] += $row[$k];
             $tot[$mts ? 'mts' : 'mto']++;
         }
-        return ['categories' => array_values($cats), 'totals' => $tot, 'sold_weeks' => self::SOLD_WEEKS];
+        return ['categories' => array_values($cats), 'totals' => $tot, 'sold_weeks' => self::SOLD_WEEKS, 'week_start' => $start, 'week_end' => $end,
+            'week_label' => date('d.m', strtotime($start)) . ' – ' . date('d.m', strtotime($end))];
     }
 
     /**
