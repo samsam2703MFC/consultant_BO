@@ -944,6 +944,10 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   parties 1, 2 (le rail et la barre du haut), 4, 7, 29 à 31 (l'onglet Trimestre rejoint l'Année, « Les 12 mois ») ;
   SOP 6.1 et 6.2. La v1.5 de l'article (74 parties, écrasée le 16/11 par la v1.6) est gardée dans
   `formation/data/formation/dashboard/archives/`. NL à relire.
+- **24/11/2026 — ART-PIL-01 v1.10, SOP-PIL-01 v1.7** (dashboard jusqu'à `8165154f` du 23/11) : les Frais deviennent un
+  onglet de la Trésorerie ; le rail du 23/11 (Mon équipe, Se former, la roue des Paramètres et Mon coffre-fort en bas, le
+  carré des vidéos) ; les vignettes sur l'Opérationnel seulement. Parties 1, 2, 4, 28 ; SOP 5.7 (le chemin de l'onglet
+  Frais). Captures dash-entete, dash-valeur, dash-frais. NL à relire.
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
