@@ -3328,6 +3328,56 @@ et `po` (`po_hash`) ; sa clé de mémo devient `coCmd3:`. La ligne « Commandes 
 (`/exploitation/canaux`, `liste[].differe`) fait le même rapprochement sur le relevé pro gravé du jour (sans appel) :
 une commande réglée en différé n'est plus « à vérifier », ni « à préparer ».
 
+### `/dashboard/commandes/*` — la page Commandes : webshop, comptoir, bureau, liées aux tournées (24/11/2026)
+
+La page Commandes du dashboard (La journée › Commandes, `commandes.js`, maquettes `panel/docs/maquettes/commandes-tournees/`,
+A et B retenues sur un interrupteur abricot). Serveur : `panel/src/commandes_tournees.php`. Ouvert à une session de magasin
+(`/dashboard`), pour son magasin ; le `shop` de la requête et du corps est vérifié.
+
+    GET    /dashboard/commandes/jour?shop=&date=       la journée (défaut : aujourd'hui)
+    GET    /dashboard/commandes/bureaux?shop=&q=       les clients pro du magasin (30 au plus), pour composer une tournée
+    POST   /dashboard/commandes/tournees               {shop, nom, depart, retour, livreur, vehicule, jours}   → {ok, id}
+    PUT    /dashboard/commandes/tournees               {shop, id, …les mêmes champs}                           → {ok, id}
+    DELETE /dashboard/commandes/tournees               {shop, id}  (ses bureaux et les choix qui la nomment s'effacent)
+    POST   /dashboard/commandes/tournees/bureaux       {shop, tournee, bureaux: [{client, nom, consigne}]}  (la liste remplace l'ancienne, dans l'ordre de passage)
+    POST   /dashboard/commandes/affecter               {shop, commande, date, tournee: id | 0 (au magasin) | null (automatique)}
+
+**Les commandes** se lisent au panel à chaque appel (`/shops/{id}/client-orders?date_from=&date_to=`, le jour et le
+lendemain), sans être gardées : elles portent le nom du client (la société d'un client pro ; pour un particulier, le
+prénom et l'initiale du nom). Canal : **bureau** si `office_offer_id` ou `id_client_department` est posé, ou si
+`fulfilment_mode` dit `office` ; **webshop** si `is_webshop` ; sinon **comptoir**. Une commande annulée
+(`non_collection_id_reason`) ne compte pas. État : `fait` (remise ou livrée : `issuing_timestamp`, `picked_up`, ou
+encaissée en caisse et l'heure passée), `prete` (`completed`), `prep` (`in_production`), `nonretiree` (`unpicked`), sinon
+`afaire` ; l'heure de la remise ne se montre que si le panel l'a notée à ± 90 min de l'heure prévue. Paiement :
+`caisse` (encaissée), `enligne` (`payment_status` paid), `facture` (client à paiement différé, « Sur facture · 14 j »),
+`attente`, `aencaisser`.
+
+**Les tournées** n'existent pas au panel (mesuré le 24/11/2026 : aucune route de tournée, de bureau ni de département ;
+`office_id` et `department_id` vides sur toutes les fiches clients). Elles se tiennent au cockpit : `panel_tournee`
+(magasin, nom, départ, retour, livreur, véhicule, jours ISO « 12345 »), `panel_tournee_bureau` (tournée, client pro du
+panel, nom, consigne, ordre de passage), `panel_tournee_commande` (le choix du magasin pour une commande : une tournée, ou
+0 = gardée au magasin). Une commande va d'elle-même dans la tournée de son bureau qui roule ce jour-là et dont la fenêtre
+(départ − 60 min → retour + 30 min) couvre son heure (la plus proche du départ s'il y en a plusieurs) ; hors de cette
+fenêtre, elle est « à placer » (`sansTournee`, `mode: "hors"`), comme une commande que le panel dit livrée sans tournée.
+Les arrêts suivent l'ordre des heures. 30 tournées par magasin, 60 bureaux par tournée.
+
+La journée :
+
+    { shop, panel (les commandes du panel ont-elles été lues), motif, coupure: "16:00", date, maintenant (HH:MM, aujourd'hui seulement),
+      commandes: [ { id, jour, heure, canal: webshop|comptoir|bureau, livraison (le panel dit « livrée »),
+                     client: {id, nom, pro}, note, montant, statut, fait (HH:MM | null), paiement: {code, lib},
+                     tournee (id | null), mode: auto|manuel|hors|null, arret (n | null), sansTournee } ],
+      tournees: [ { id, nom, depart, retour, livreur, vehicule, jours, etat: terminee|route|prep|afaire|vide,
+                    commandes: [id…] (dans l'ordre des arrêts), bureaux: [{client, nom, consigne, commande: id | null}],
+                    sansCommande, total: {n, ca} } ],   les tournées qui roulent ce jour
+      totaux: { total, webshop, comptoir, bureau, livrer, retirer: {n, ca}, aPreparer, sansTournee },
+      demain: { date, coupure, ouvert (avant 16:00), commandes: {n, ca}, tournees: [{id, nom, depart, bureaux: [{client, nom, commande: bool}]}] } | null,
+      toutes: [ les tournées du magasin, avec leurs bureaux ] }
+
+Les clients pro (`/bureaux`) : la liste `/shops/{id}/clients` du panel (2,4 Mo à Gosselies : 1 332 fiches), réduite aux
+fiches pro actives avec un nom de société — `{id, nom, ville, cp}`, rien d'autre (la fiche du panel porte aussi des
+secrets) — et gardée six heures (`ceo_app_setting`, `pcoBur:{shop}`). Tests : `php panel/bin/tests_commandes.php`.
+
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 
 `?shop=4&mois=2026-10&n=6` (`n` de 2 à 12, 6 par défaut ; un mois futur est ramené au mois en cours). Pour la carte

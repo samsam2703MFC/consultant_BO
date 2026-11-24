@@ -1,7 +1,34 @@
 # Les commandes du magasin, liées aux tournées et aux bureaux à livrer — maquettes
 
-**Statut : A et B retenues ensemble, sur un interrupteur abricot** (Sam, 24/11/2026 : « A et B on toggle (apricot) »).
-C reste à décider. Rien n'est codé.
+**Statut : A et B codées le 24/11/2026, sur un interrupteur abricot** (Sam : « A et B on toggle (apricot) », puis
+« code la A et B »). C reste à décider.
+
+- **Serveur** : `panel/src/commandes_tournees.php` — `GET /dashboard/commandes/jour`, `GET …/bureaux`,
+  `POST|PUT|DELETE …/tournees`, `POST …/tournees/bureaux`, `POST …/affecter` ; tables `panel_tournee`,
+  `panel_tournee_bureau`, `panel_tournee_commande`. Contrat dans `shared/docs/contrat-api.md`, tests dans
+  `php panel/bin/tests_commandes.php`.
+- **Dashboard** : La journée › Commandes (`?vue=commandes`), `panel/public/dashboard/commandes.js` et `commandes.css` ;
+  le compteur du rail : les commandes à préparer aujourd'hui.
+
+Captures du code (le vrai dashboard, site assemblé servi en local ; le cadre — rail, objectif du jour, note Google — est
+celui de Gosselies en production ; la journée est celle de la maquette, fictive, passée par le vrai module et une vraie
+base, à 10:21) :
+- `code-liste.png` : la vue Liste ; `code-tournees.png` : la vue Tournées ; `code-commande.png` : une commande ouverte
+  (sa livraison se change) ; `code-tournee.png` : une tournée en modification (bureaux dans l'ordre, consignes, recherche
+  d'un client pro) ; `code-telephone.png` : les deux vues au téléphone.
+
+Écarts à la maquette, une fois codé :
+- **les tournées se créent au dashboard** (« Gérer les tournées ») : le panel n'en a pas ;
+- **une commande se place** : un clic l'ouvre, sa livraison se choisit (automatique : la tournée de son bureau ; une
+  autre tournée ; retrait au magasin) ;
+- **un bureau qui commande hors de la fenêtre de ses tournées** (départ − 60 min → retour + 30 min) est « à placer »,
+  comme une livraison du webshop sans tournée — mesuré à Gosselies le 13/11 : un bureau livré le matin recommande pour
+  11:30 ;
+- **pas de « Nouvelle commande », ni de « Relancer »** : ni l'un ni l'autre n'est branché (la commande se crée au panel ;
+  la relance du portail Commercial n'est pas ouverte au dashboard) ; demain dit qui n'a pas encore commandé ;
+- **le compteur du rail** se met à jour quand la page Commandes est ouverte (toutes les deux minutes tant qu'elle l'est) ;
+- **l'heure de la remise** ne se montre que si le panel l'a notée à ± 90 min de l'heure prévue (à Gosselies, une
+  livraison de 07:30 est marquée remise à 11:41, à l'encaissement).
 
 Demande du 24/11/2026 : « dans le dashboard franchisé, faire un panel pour les commandes (webshop, comptoir, bureau),
 liées avec les tournées et les offices à livrer ; faire une maquette screenshot, 2 ou 3 versions, avec le shop
@@ -96,9 +123,25 @@ Ce qu'on lit au panel pour Gosselies, et qui compte pour coder :
 
 ## Régénérer
 
+Les maquettes :
+
 ```
 node panel/docs/maquettes/commandes-tournees/capturer.js
 ```
+
+Les captures du code (`banc/`) : une base MariaDB locale, le banc (le vrai module, les commandes de la maquette au format
+du panel), le site assemblé, puis le script de captures. Le fuseau `America/Denver` met le banc et le navigateur au matin
+quand on régénère en fin d'après-midi en Belgique.
+
+```
+node panel/docs/maquettes/commandes-tournees/banc/sim.js /tmp/sim.json
+COCKPIT_DB_HOST=127.0.0.1 COCKPIT_DB_NAME=… COCKPIT_DB_USER=… COCKPIT_DB_PASSWORD=… BANC_SIM=/tmp/sim.json php -d date.timezone=America/Denver -S 127.0.0.1:8097 panel/docs/maquettes/commandes-tournees/banc/banc.php
+php shared/bin/assembler_public.php /tmp/site && php -S 127.0.0.1:8098 -t /tmp/site /tmp/site/router.php
+BANC=http://127.0.0.1:8097/api/cockpit TZID=America/Denver BANC_Q=hain DSF=2 node panel/docs/maquettes/commandes-tournees/banc/voir.cjs <sortie> 3 "" code-
+```
+
+Les tournées de la journée fictive se créent par l'API du banc (`POST /dashboard/commandes/tournees`, puis
+`…/tournees/bureaux`), avec les `tournees` que `sim.js` écrit dans son fichier.
 
 Aucun serveur à lancer : le navigateur lit les fichiers sur le disque (polices `shared/public/assets/ds/fonts/`, logo
 `panel/public/tablette/img/logo.png`). `index.html?v=a` (Liste), `?v=b` (Tournées), `?v=c` ; `planche.html` assemble les trois captures ; le script recadre

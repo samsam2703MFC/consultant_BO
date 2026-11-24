@@ -179,6 +179,7 @@ require __DIR__ . '/../../../panel/src/offres_newsletter.php';  // Vendre › Of
 require __DIR__ . '/../../../panel/src/boite_mail.php';         // Boîte mail du magasin : IMAP/SMTP de sa boîte OVH, modèles, messages automatiques (15/11/2026)
 require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
 require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe : la carte des responsabilités, le planning et son budget d'heures (23/11/2026)
+require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
 require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
@@ -413,6 +414,8 @@ function route(string $method, string $path): mixed
     if (($c = daRoute($method, $path)) !== null) { return $c; }
     // Mon équipe (23/11/2026) : la carte des responsabilités, le planogramme des horaires, le budget d'heures (panel/src/equipe.php).
     if (($c = eqpRoute($method, $path)) !== null) { return $c; }
+    // Commandes (24/11/2026) : les commandes du jour par canal, les tournées et leurs bureaux (panel/src/commandes_tournees.php, tables panel_tournee*).
+    if (($c = pcoRoute($method, $path)) !== null) { return $c; }
     // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
     if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.

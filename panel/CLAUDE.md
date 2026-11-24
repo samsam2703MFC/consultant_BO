@@ -8,7 +8,7 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   magasin (`/production`), le résultat au téléphone, l'app employés (`/employee`), les primes et les grands prix. Le
   pointage (l'app, `/borne`, la caisse) est retiré le 19/11/2026 ; ses tables `panel_mot_pointage` et `_borne` restent.
 - **Tables** : `panel_*` (`panel_aia_*` pour l'assistant, `panel_mot_*` pour l'app employés et les primes,
-  `panel_boite_*` pour la boîte mail, `panel_equipe_*` pour Mon équipe : la matrice A B C D, les roulements, les options du magasin, les tâches posées dans les temps morts).
+  `panel_boite_*` pour la boîte mail, `panel_equipe_*` pour Mon équipe : la matrice A B C D, les roulements, les options du magasin, les tâches posées dans les temps morts ; `panel_tournee*` pour les tournées de la page Commandes).
 - **Code** : `src/` (les anciens `panel/src/*` et les modules propres au dashboard), `panel/apps/employee/` (l'app
   employés, dépendances commises dans `vendor/`), écrans `public/`. L'index de l'API du dashboard :
   `panel/public/dashboard/api-index.json`, régénéré par `python3 panel/tools/dashboard-api-index.py` après chaque route.
@@ -20,6 +20,10 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   mesure : le planogramme, les linéaires (qui est là, quand ; le comptoir ; les secteurs), les temps morts et le budget
   d'heures (17 %, orange, rouge au-dessus de 20 %, noir au-dessus de 22 %) servent à construire et corriger le planning,
   pas à le commenter. Ce qui n'aide pas à faire les horaires passe après. Les modules ajoutés (assistant, tâches des creux, matrice et shift maker, recopie) sont des options, éteintes par défaut (Mon équipe › Options).
+- **Commandes** (`src/commandes_tournees.php`, `public/dashboard/commandes.js`, 24/11/2026) : les commandes du jour
+  (webshop, comptoir, bureau) liées aux tournées et aux bureaux à livrer ; deux vues, Liste et Tournées, sur un
+  interrupteur à l'Abricot de la marque (Sam : « A et B on toggle (apricot) »). Les commandes se lisent au panel, jamais
+  gardées ; les tournées et leurs bureaux n'existent pas au panel : tables `panel_tournee*`.
 - **Vidéos d'instruction** (23/11/2026) : le carré du rail, à côté d'Assistant IA (`public/dashboard/tutos.js`), le registre
   `public/dashboard/videos/videos.json`, le tournage `panel/tools/videos/` (données fictives). Une nouvelle fonction du
   dashboard peut y annoncer sa vidéo (genre `nouveau`) ; un écran filmé qui change se retourne. Détail : `src/LISEZMOI.md`.

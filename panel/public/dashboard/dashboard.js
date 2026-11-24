@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'assistant', 'coffre', 'formation', 'equipe'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'assistant', 'coffre', 'formation', 'equipe', 'commandes'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -164,6 +164,8 @@
     if (S.vue === 'formation') { rendre(); if (force && window.DashFormation) { window.DashFormation.relire(); } return; }
     // Mon équipe (23/11/2026) : le module lit et écrit lui-même (equipe.js) ; « ↻ Relire » relit la carte et le planning.
     if (S.vue === 'equipe') { rendre(); if (force && window.DashEquipe) { window.DashEquipe.relire(); } return; }
+    // Commandes (24/11/2026) : le module lit et écrit lui-même (commandes.js) ; « ↻ Relire » relit la journée.
+    if (S.vue === 'commandes') { rendre(); if (force && window.DashCommandes) { window.DashCommandes.relire(); } return; }
     // L'assistant en pleine page (17/11/2026) : il lit ses questions et ses modèles ; les chiffres, il les lit à la question.
     if (S.vue === 'assistant') { if (!IA.modeles) { iaModelesLire(); } rendre(); return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
@@ -7627,12 +7629,15 @@
     formation: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6',
     // Mon équipe (23/11/2026) : deux personnes.
     equipe: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+    // Commandes (24/11/2026) : le bloc-notes d'une commande.
+    commandes: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2 2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2M9 12h6M9 16h4',
   };
   const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
   // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
   const RAIL = [
     // Mon équipe (23/11/2026, « adapter le module équipe du panel ») : la carte des responsabilités et le planogramme des horaires.
-    ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal'], ['equipe', 'Mon équipe', 'equipe']]],
+    // Commandes (24/11/2026, maquettes docs/maquettes/commandes-tournees/) : webshop, comptoir, bureau, liées aux tournées.
+    ['La journée', [['ops', 'Opérationnel', 'tdb'], ['commandes', 'Commandes', 'commandes'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal'], ['equipe', 'Mon équipe', 'equipe']]],
     ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
     // Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy (offres.js).
     // Analyse (15/11/2026, « go E et F, A en entrée ») : le magasin, ses familles et ses produits, question par question (analyse.js).
@@ -7673,6 +7678,15 @@
     if (id === 'db-mod-mob') { p.appendChild(el); } else { p.replaceWith(el); }
   }
   /** Mon équipe (23/11/2026) : le module dans l'élément `id` ; « Demander au bureau » ouvre la demande au bureau. */
+  /** Commandes (24/11/2026) : l'élément du module (commandes.js), gardé d'un rendu à l'autre ; il dit au rail combien de
+   *  commandes sont à préparer aujourd'hui. */
+  function pcoMonter(id) {
+    const p = document.getElementById(id);
+    if (!p) { return; }
+    if (!window.DashCommandes) { p.innerHTML = '<div class="db-err">Le module Commandes n’a pas été chargé.</div>'; return; }
+    const el = window.DashCommandes.racine(S.shop, { apiBase: API, date: S.date, onCompte: n => { if (S.cmdN !== n) { S.cmdN = n; railMaj(avecRail()); } } });
+    if (id === 'db-mod-mob') { p.appendChild(el); } else { p.replaceWith(el); }
+  }
   function eqpMonter(id) {
     const p = document.getElementById(id);
     if (!p) { return; }
@@ -7748,7 +7762,7 @@
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
       <div class="sidebar__groups"><div class="sidebar__group db-rail-boite${railIaOuvert() ? '' : ' db-rail-tu'}"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button>${railIaOuvert() ? '' : railTuto()}</div>${railIa()}${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
-        : `<button type="button" class="sidebar__item${railOn(v) ? ' is-active' : ''}" data-vue="${v}"${railOn(v) ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}${v === 'formation' && fcNouveaux() ? `<span class="sidebar__count">${fcNouveaux()} nouv.</span>` : ''}</button>`).join('')}</div>`).join('')}</div>${railCoffre()}`;
+        : `<button type="button" class="sidebar__item${railOn(v) ? ' is-active' : ''}" data-vue="${v}"${railOn(v) ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}${v === 'commandes' && S.cmdN ? `<span class="sidebar__count" title="À préparer aujourd’hui">${S.cmdN}</span>` : ''}${v === 'formation' && fcNouveaux() ? `<span class="sidebar__count">${fcNouveaux()} nouv.</span>` : ''}</button>`).join('')}</div>`).join('')}</div>${railCoffre()}`;
   }
   /* --- Les paramètres (22/11/2026, Sam : « Mails et automatisations sont des paramètres : pour gagner de la place dans
    * le rail, une roue dans une icône carrée à gauche du Coffre-fort ; au clic, tous les paramètres dans une fenêtre type
@@ -7945,10 +7959,10 @@
   }
   /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
   function navPeriode() {
-    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'actions', 'campagne'];
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'commandes', 'actions', 'campagne'];
     return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'commandes', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
   /** L'icône de « Relire » (15/11/2026, « soigner l'icône ») : un cercle ouvert et sa flèche, au trait des autres vignettes. */
@@ -8009,12 +8023,12 @@
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
-      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches', 'coffre', 'formation', 'equipe'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches', 'coffre', 'formation', 'equipe', 'commandes'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
       // Le coffre-fort et Formations et suivi (22/11/2026) : la même page qu'au bureau, en une colonne, sous l'en-tête du téléphone.
-      if (S.vue === 'coffre' || S.vue === 'formation' || S.vue === 'equipe') {
-        $.innerHTML = mbEntete({ boutons: 'relire', sous: S.vue === 'coffre' ? 'Mon coffre-fort' : S.vue === 'equipe' ? 'Mon équipe' : 'Formations et suivi' }) + '<div class="mb-sc"><div id="db-mod-mob" style="flex:1 0 auto;padding:12px"></div></div>' + mbOnglets();
+      if (S.vue === 'coffre' || S.vue === 'formation' || S.vue === 'equipe' || S.vue === 'commandes') {
+        $.innerHTML = mbEntete({ boutons: 'relire', sous: S.vue === 'coffre' ? 'Mon coffre-fort' : S.vue === 'equipe' ? 'Mon équipe' : S.vue === 'commandes' ? 'Commandes' : 'Formations et suivi' }) + '<div class="mb-sc"><div id="db-mod-mob" style="flex:1 0 auto;padding:12px"></div></div>' + mbOnglets();
         $.classList.add('mob'); brancher();
-        if (S.vue === 'formation') { fcMonter('db-mod-mob'); } else if (S.vue === 'equipe') { eqpMonter('db-mod-mob'); } else { const p = document.getElementById('db-mod-mob'); if (p && window.DashCoffre) { p.appendChild(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } }
+        if (S.vue === 'formation') { fcMonter('db-mod-mob'); } else if (S.vue === 'equipe') { eqpMonter('db-mod-mob'); } else if (S.vue === 'commandes') { pcoMonter('db-mod-mob'); } else { const p = document.getElementById('db-mod-mob'); if (p && window.DashCoffre) { p.appendChild(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } }
         return;
       }
       // Les tâches et les checklists (08/11/2026) : la même page qu'au bureau, en une colonne.
@@ -8058,9 +8072,9 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button><button class="db-btn db-btn-fc" data-fcouvrir="1">🎓 Mon dossier de formation${fcAFaire() ? `<span class="n">${fcAFaire()}</span>` : ''}</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia${S.vue === 'assistant' ? ' on' : ''}" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['equipe', 'Mon équipe'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${railOn(o[0]) ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['commandes', 'Commandes'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['equipe', 'Mon équipe'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${railOn(o[0]) ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'commandes'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'commandes'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${S.vue !== 'promos' && S.vue !== 'assistant' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && S.vue !== 'coffre' && S.vue !== 'formation' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
     }
@@ -8086,6 +8100,7 @@
     // Formations et suivi (22/11/2026) : l'élément du module ; le Professeur s'ouvre sur la page (modale).
     if (S.vue === 'formation') { h += '<div id="db-formation"></div>'; $.innerHTML = h; brancher(); fcMonter('db-formation'); return; }
     if (S.vue === 'equipe') { h += '<div id="db-equipe"></div>'; $.innerHTML = h; brancher(); eqpMonter('db-equipe'); return; }
+    if (S.vue === 'commandes') { h += '<div id="db-commandes"></div>'; $.innerHTML = h; brancher(); pcoMonter('db-commandes'); return; }
     // Mon coffre-fort (22/11/2026) : l'élément du module, gardé d'un rendu à l'autre.
     if (S.vue === 'coffre') { h += '<div id="db-coffre"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-coffre'); if (p && window.DashCoffre) { p.replaceWith(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du coffre-fort n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
