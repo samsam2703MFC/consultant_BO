@@ -340,6 +340,26 @@ function pcoErreur(int $code, string $msg, array $plus = []): array { http_respo
 
 function pcoShop(?array $b = null): int { return (int) (($b ?? $_GET)['shop'] ?? 0); }
 
+/**
+ * Les commandes du panel entre deux dates de retrait : [liste, lue ?, motif]. Un jour sans commande, le panel répond
+ * 404 `NO_ORDERS_FOR_PICKUP_DATE` (mesuré le 24/11/2026 à Gosselies) : c'est une liste vide, pas une panne.
+ */
+function pcoLireCommandes(int $shop, string $du, string $au, int $timeout): array
+{
+    if (!PanelApi::configured()) { return [[], false, 'le compte du panel n’est pas configuré']; }
+    $r = PanelApi::sondeGet('/shops/' . $shop . '/client-orders?date_from=' . $du . '&date_to=' . $au, $timeout);
+    $code = (int) ($r['code'] ?? 0);
+    if ($code === 200) { return [analyseListe($r['corps'] ?? null), true, null]; }
+    if (pcoAucuneCommande($code, $r['corps'] ?? null)) { return [[], true, null]; }
+    return [[], false, 'le panel ne rend pas les commandes (' . $code . ')'];
+}
+
+/** Le 404 du panel qui veut dire « aucune commande ce jour-là ». Fonction pure. */
+function pcoAucuneCommande(int $code, mixed $corps): bool
+{
+    return $code === 404 && is_array($corps) && str_contains(strtoupper((string) ($corps['description'] ?? $corps['code'] ?? $corps['error'] ?? '')), 'NO_ORDERS');
+}
+
 /** Les tournées d'un magasin, avec leurs bureaux dans l'ordre. */
 function pcoTournees(int $shop): array
 {
@@ -370,13 +390,8 @@ function ep_commandes_jour(): array
             $manuels[(int) $r['commande_id']] = (int) $r['tournee_id'];
         }
     } catch (Throwable $e) { /* sans choix du magasin */ }
-    $brut = []; $panel = PanelApi::configured(); $motif = null;
-    if ($panel) {
-        @set_time_limit(60);
-        $r = PanelApi::sondeGet('/shops/' . $shop . '/client-orders?date_from=' . $date . '&date_to=' . $demain, 25);
-        if ((int) ($r['code'] ?? 0) === 200) { $brut = analyseListe($r['corps'] ?? null); }
-        else { $panel = false; $motif = 'le panel ne rend pas les commandes (' . (int) ($r['code'] ?? 0) . ')'; }
-    } else { $motif = 'le compte du panel n’est pas configuré'; }
+    @set_time_limit(60);
+    [$brut, $panel, $motif] = pcoLireCommandes($shop, $date, $demain, 25);
     $j = pcoJournee($brut, $tournees, $manuels, $date, date('Y-m-d H:i'));
     return ['shop' => $shop, 'panel' => $panel, 'motif' => $motif, 'coupure' => PCO_COUPURE]
         + $j + ['toutes' => $tournees];
@@ -401,13 +416,8 @@ function ep_commandes_periode(): array
             $manuels[(string) $r['jour']][(int) $r['commande_id']] = (int) $r['tournee_id'];
         }
     } catch (Throwable $e) { /* sans choix du magasin */ }
-    $brut = []; $panel = PanelApi::configured(); $motif = null;
-    if ($panel) {
-        @set_time_limit(90);
-        $r = PanelApi::sondeGet('/shops/' . $shop . '/client-orders?date_from=' . $avDu . '&date_to=' . $au, 40);
-        if ((int) ($r['code'] ?? 0) === 200) { $brut = analyseListe($r['corps'] ?? null); }
-        else { $panel = false; $motif = 'le panel ne rend pas les commandes (' . (int) ($r['code'] ?? 0) . ')'; }
-    } else { $motif = 'le compte du panel n’est pas configuré'; }
+    @set_time_limit(90);
+    [$brut, $panel, $motif] = pcoLireCommandes($shop, $avDu, $au, 40);
     return ['shop' => $shop, 'panel' => $panel, 'motif' => $motif] + pcoPeriode($brut, $tournees, $manuels, $du, $au, date('Y-m-d H:i')) + ['toutes' => $tournees];
 }
 
