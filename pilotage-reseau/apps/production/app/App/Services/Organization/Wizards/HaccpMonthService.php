@@ -33,7 +33,9 @@ use App\Services\Organization\TaskWizards;
  *        - [410] hala_chill_warm : schładzanie du tablet hali hors limites (n_hala_chill : au cœur au-dessus de la limite, ou
  *          mesuré / pas encore mesuré après le délai — limites copiées au départ, HalaService::chillState) ;
  *        - [409] hala_clean_missing : jour de production d'un groupe (avant aujourd'hui) avec des strefy sprzątania non
- *          faites (n_hala_clean_zone / n_hala_clean_record), groupe avec l'étape « Sprzątanie ».
+ *          faites (n_hala_clean_zone / n_hala_clean_record), groupe avec l'étape « Sprzątanie » ;
+ *        - [432] cold_dirty : obchód chłodni (tablette qualité) — miejsce zapisane « Czysto i porządek ? Nie » avec photo
+ *          (n_cold_visit_place.clean = 'no').
  *      Les événements HACCP non signalés du mois sont listés pour information. Source sans table, ou sans aucune ligne
  *      (personne n'y enregistre rien) → « brak danych ».
  *   2. Do wyjaśnienia : une décision par élément signalé (n_haccp_month_review, par mois examiné) — Wyjaśnione / zamknięte
@@ -53,11 +55,12 @@ final class HaccpMonthService
     /** Décisions qui demandent une note (au moins 3 caractères). */
     public const NOTE_REQUIRED = ['corrective'];
     public const KINDS = ['haccp_event' => 'Zdarzenie HACCP', 'sop_review' => 'Przegląd SOP', 'sop_run' => 'Odchylenie SOP', 'delivery_temp' => 'Temperatura w dostawie',
-        'hala_chill' => 'Schładzanie (tablet hali)', 'hala_clean' => 'Sprzątanie (tablet hali)'];
+        'hala_chill' => 'Schładzanie (tablet hali)', 'hala_clean' => 'Sprzątanie (tablet hali)', 'cold_clean' => 'Porządek w chłodni (obchód chłodni)'];
     /** Signaux, dans l'ordre de priorité. */
     public const SIGNALS = ['haccp_untreated' => 'nieobsłużone przerwanie łańcucha chłodniczego', 'haccp_unfavorable' => 'wynik negatywny',
         'haccp_below' => 'audyt poniżej progu', 'sop_deviation_haccp' => 'odchylenie na etapie HACCP', 'delivery_temp' => 'problem z temperaturą przy dostawie',
         'hala_chill_warm' => 'schładzanie poza limitem', 'sop_deviation' => 'odchylenie przy wykonaniu SOP', 'hala_clean_missing' => 'strefy niesprzątnięte',
+        'cold_dirty' => 'nieporządek w chłodni',
         'sop_review_late' => 'przegląd SOP po terminie', 'sop_review_missing' => 'SOP bez daty przeglądu'];
     /** Libellés du module Kierownik produkcji (resources/lang/ui/pl/manager.json, haccp.*). */
     public const HACCP_KINDS = ['official_control' => 'Kontrola urzędowa', 'cold_chain_break' => 'Przerwanie łańcucha chłodniczego',
@@ -70,6 +73,9 @@ final class HaccpMonthService
     public const NC_LINK = '/purchasing/nc#new';
     /** [409] Réglage des strefy et des étapes des groupes (tablet hali). */
     public const HALA_LINK = '/production/hala';
+    /** [432] Obchód chłodni : son résumé (dernier obchód, porządek) est dans Zakupy tygodnia ; la photo dans le suivi des lots. */
+    public const COLD_LINK = '/workshop/buy';
+    public const PHOTO_LINK = '/workshop/traceability/photo/';
     private const PARAMS = ['backlog' => ['haccp_month.backlog_months', 12], 'trend' => ['haccp_month.trend_months', 3]];
     private const DAY_ABBR = [1 => 'pon.', 2 => 'wt.', 3 => 'śr.', 4 => 'czw.', 5 => 'pt.', 6 => 'sob.', 7 => 'niedz.'];
 
@@ -126,6 +132,8 @@ final class HaccpMonthService
         // Sprzątanie : jours terminés seulement (aujourd'hui, la journée est en cours).
         $cleaning = $this->repo->halaCleaningGaps($from, self::addDays($today, -1));
         foreach ($cleaning ?? [] as $c) $items[] = $this->cleanItem($c, $period);
+        // [432] Obchód chłodni : porządek « Nie » (photo).
+        foreach ($this->repo->coldDirty($from, $today) ?? [] as $c) $items[] = $this->coldItem($c, $period);
 
         // Décisions : celle du mois examiné ; sinon, pour un élément ponctuel, une décision d'une revue précédente.
         $dec = $this->repo->decisions(array_column($items, 'key'));
@@ -269,6 +277,7 @@ final class HaccpMonthService
             'temp' => $src($this->repo->sourceRows('n_delivery_incident'), 'brak zgłoszeń z tabletu kierowcy', 'n_delivery_incident'),
             'hala_chill' => $src($this->repo->sourceRows('n_hala_chill'), 'brak pomiarów schładzania z tabletu hali', 'n_hala_chill'),
             'hala_clean' => $src($this->repo->sourceRows('n_hala_clean_record'), 'brak zapisów sprzątania z tabletu hali', 'n_hala_clean_record'),
+            'cold_clean' => $src($this->repo->sourceRows('n_cold_visit_place'), 'brak obchodów chłodni z tabletu jakości', 'n_cold_visit_place'),
         ];
     }
 
@@ -317,6 +326,20 @@ final class HaccpMonthService
             'sub' => (int) $c['done'] . ' z ' . (int) $c['zones'] . ' stref', 'text' => null, 'by' => null, 'haccp' => true,
             'signals' => [self::sig('hala_clean_missing', 'niesprzątnięte : ' . $c['missing'] . ' (' . max(1, $missing) . ' ' . self::pl(max(1, $missing), 'strefa', 'strefy', 'stref') . ')')],
             'link' => ['href' => self::HALA_LINK, 'label' => 'Tablet hali : kroki i strefy']];
+    }
+
+    /** [432] Obchód chłodni : miejsce « Czysto i porządek ? Nie » (photo obligatoire sur la tablette). */
+    private function coldItem(array $c, callable $period): array
+    {
+        $date = substr((string) $c['saved_at'], 0, 10);
+        $note = trim((string) ($c['note'] ?? ''));
+        $who = trim((string) ($c['employee_name'] ?? ''));
+        return ['key' => 'cold_clean:' . (int) $c['id'], 'kind' => 'cold_clean', 'kind_label' => self::KINDS['cold_clean'], 'source_id' => (int) $c['id'],
+            'date' => $date, 'date_label' => self::label($date) . ', ' . self::hm((string) $c['saved_at']), 'period' => $period($date),
+            'title' => (string) $c['place_name'], 'sub' => 'obchód chłodni #' . (int) $c['id_visit'] . ($who !== '' ? ' · ' . $who : ''), 'text' => $note !== '' ? mb_substr($note, 0, 200) : null,
+            'by' => $who !== '' ? $who : null, 'haccp' => true, 'photo' => $c['id_photo'] !== null ? self::PHOTO_LINK . (int) $c['id_photo'] : null,
+            'signals' => [self::sig('cold_dirty', 'porządek : nie' . ($c['id_photo'] !== null ? ' (zdjęcie)' : ''))],
+            'link' => ['href' => self::COLD_LINK, 'label' => 'Zakupy tygodnia › Obchód chłodni']];
     }
 
     private function presentDecision(array $d): array
@@ -375,6 +398,7 @@ final class HaccpMonthService
         if ($k['delivery_temp']) $parts[] = $k['delivery_temp'] . ' ' . self::pl($k['delivery_temp'], 'temperatura w dostawie', 'temperatury w dostawie', 'temperatur w dostawie');
         if (!empty($k['hala_chill'])) $parts[] = $k['hala_chill'] . ' ' . self::pl($k['hala_chill'], 'schładzanie poza limitem', 'schładzania poza limitem', 'schładzań poza limitem');
         if (!empty($k['hala_clean'])) $parts[] = $k['hala_clean'] . ' ' . self::pl($k['hala_clean'], 'dzień bez pełnego sprzątania', 'dni bez pełnego sprzątania', 'dni bez pełnego sprzątania');
+        if (!empty($k['cold_clean'])) $parts[] = $k['cold_clean'] . ' ' . self::pl($k['cold_clean'], 'nieporządek w chłodni', 'nieporządki w chłodniach', 'nieporządków w chłodniach');
         $s = $month . ' : ' . ($parts ? implode(' · ', $parts) : 'brak sygnałów HACCP');
         if ($t['review'] > 0) {
             $s .= ' · ' . $t['review'] . ' do wyjaśnienia';

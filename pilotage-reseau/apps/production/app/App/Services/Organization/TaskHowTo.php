@@ -35,14 +35,17 @@ final class TaskHowTo
             'problem' => ['Tydzień ponad 100 % : produkcja wcześniej na zapas albo dodatkowa zmiana — ustal z Kierownikiem operacyjnym.',
                 'Semaine au-dessus de 100 % : produire plus tôt sur stock ou ajouter une équipe — à voir avec le Kierownik operacyjny.'],
         ],
+        // [432] Obchód chłodni d'abord (tablette qualité), puis le kreator : sans obchód complet récent, « Co kupić » est fermé.
         'buy_sent' => [
-            'pl' => ['Krok « Co kupić » : sprawdź surowce i opakowania do kupienia.', 'Kliknij « Dalej : komu wysłać ».',
+            'pl' => ['Najpierw obchód chłodni na tablecie jakości : w każdej chłodni policz surowce, zaznacz daty i porządek, « Zapisz chłodnię ».',
+                'W ERP krok « Obchód chłodni » : sprawdź różnice, kliknij « Dalej : co kupić ».', 'Krok « Co kupić » : sprawdź surowce i opakowania, kliknij « Dalej : komu wysłać ».',
                 'Krok « Komu i jak » : dla każdej pozycji wybierz dostawców (1–3) i warunki.', 'Kliknij « Dalej : sprawdź i wyślij », potem « Wyślij … zapytań ».'],
-            'fr' => ['Étape « Co kupić » : vérifiez les matières et emballages à acheter.', 'Cliquez « Dalej : komu wysłać ».',
+            'fr' => ['D’abord la tournée des chambres froides sur la tablette qualité : comptez, dates, ordre, puis « Zapisz chłodnię » pour chacune.',
+                'Dans l’ERP, étape « Obchód chłodni » : vérifiez les écarts, cliquez « Dalej : co kupić ».', 'Étape « Co kupić » : vérifiez matières et emballages, cliquez « Dalej : komu wysłać ».',
                 'Étape « Komu i jak » : pour chaque ligne, choisissez les fournisseurs (1 à 3) et les conditions.', 'Cliquez « Dalej : sprawdź i wyślij », puis « Wyślij … zapytań ».'],
             'done_fr' => 'demandes de prix envoyées',
-            'problem' => ['Dostawca bez e-maila zamówień : uzupełnij kartę dostawcy (Zakupy › Dostawcy).',
-                'Fournisseur sans e-mail de commande : complétez sa fiche (Zakupy › Dostawcy).'],
+            'problem' => ['« Co kupić » zamknięte : obchód chłodni za stary albo niepełny — dokończ go na tablecie jakości. Dostawca bez e-maila : uzupełnij jego kartę.',
+                '« Co kupić » fermé : tournée trop ancienne ou incomplète — terminez-la sur la tablette qualité. Fournisseur sans e-mail : complétez sa fiche.'],
         ],
         'inv_checked' => [
             'pl' => ['Krok « Pobierz z KSeF » : nowe faktury są w jednej tabeli.', 'Kliknij « Sprawdź pozycje ».',
