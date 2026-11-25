@@ -6,7 +6,9 @@
  * Le plan de démo part du lundi 2 novembre 2026 : le solde réel du dimanche 8 est saisi, celui du dimanche 15 ne l'est
  * pas encore (la vidéo le tape). Les ventes viennent du même générateur que Semaine et Mois (lib/demo.js) : la semaine
  * close du 9 novembre vaut ici ce qu'elle vaut dans la frise des semaines. Le budget 2026 est validé, celui de 2027
- * encodé, pas encore validé. Les écritures (POST /tresorerie/plan) sont gardées le temps du tournage. */
+ * encodé, pas encore validé. Les écritures (POST /tresorerie/plan, /exploitation/frais/tva, /ajout, /annuler) sont
+ * gardées le temps du tournage. POST /_film/tresorerie (le tournage seul) prépare un état : un magasin sans plan
+ * (`neuf`), un enregistrement qui échoue (`echecs`). */
 const D = require('./lib/demo');
 const A = require('./08_annee');
 const { r2, AUJ, SHOP } = D;
@@ -129,38 +131,105 @@ function planInitial() {
   };
 }
 let PLAN = null, VERSION = 0, MAJ = null;
+// Le tournage (POST /_film/tresorerie, hors de l'API réelle) : `neuf` — le magasin n'a pas encore de plan (GET rend
+// plan: null, version 0 ; le premier POST, version 0, le crée) ; `echecs` — les n prochains POST du plan échouent
+// (HTTP 503, comme une connexion coupée : le bandeau « Ta dernière saisie n'est pas enregistrée » et « Réessayer »).
+let NEUF = false, ECHECS = 0;
 function lirePlan() {
+  if (NEUF) { return { shop: SHOP, plan: null, version: 0, majLe: null, debutPropose: '2026-11-16' }; }
   if (!PLAN) { PLAN = planInitial(); VERSION = 14; MAJ = '2026-11-15 21:12:00'; }
   return { shop: SHOP, plan: PLAN, version: VERSION, majLe: MAJ, debutPropose: '2026-11-16' };
 }
+function ecrirePlan(c) {
+  if (ECHECS > 0) { ECHECS--; return { __status: 503, json: {} }; }
+  lirePlan();
+  // Comme tresorerie.php : la version lue, sinon 409 et le plan tel qu'il est ; la version 0 crée le plan.
+  if (+c.version !== VERSION) { return { __status: 409, json: { error: 'le plan a été modifié sur un autre écran', plan: NEUF ? null : PLAN, version: VERSION, majLe: MAJ } }; }
+  if (c.donnees) { PLAN = c.donnees; NEUF = false; } VERSION++; MAJ = AUJ + ' 15:40:00';
+  return { ok: true, version: VERSION, majLe: MAJ };
+}
 
-/* --- les frais du mois (onglet « Frais ») ------------------------------------------------------------------------- */
+/* --- les frais du mois (onglet « Frais ») ------------------------------------------------------------------------- *
+ * Comme src/frais.php et shared/src/pnl_ht.php : les frais du mois au panel, le choix de chaque poste (« TVA comprise ? »
+ * et le taux, gardé pour le poste d'un mois à l'autre), les lignes plus grosses d'abord ; les frais ajoutés d'ici (une
+ * ligne par mois au panel), et leur annulation. Les écritures sont gardées le temps du tournage. */
+// Les 9 types de frais du panel (/costs).
+const TYPES = ['Loyer', 'Énergie', 'Eau', 'Redevance', 'Assurances', 'Honoraires', 'Abonnements', 'Entretien', 'Banque'];
+// L'énergie suit la saison ; novembre reste ce qu'il était.
+const ENERGIE = [1480, 1420, 1310, 1180, 1090, 1020, 1010, 1040, 1100, 1190, 1250, 1390];
+const BASE = [['Loyer', 'Loyer', 3910, false, 0], ['Énergie', 'Énergie', null, true, 21], ['Redevance de la marque', 'Redevance', 1850, true, 21],
+  ['Assurances', 'Assurances', 230, false, 0], ['Comptable', 'Honoraires', 420, true, 21], ['Télécom et caisse', 'Abonnements', 96, true, 21],
+  ['Entretien et nettoyage', 'Entretien', 310, null, null], ['Eau', 'Eau', 64, null, null], ['Frais bancaires', 'Banque', 58, false, 0]];
+const cleDe = s => String(s).trim().replace(/\s+/g, ' ').toLowerCase().slice(0, 190);
+const CHOIX = {};          // clé du poste → { tva, taux }
+const AJOUTS = [];         // { lot, poste, type, mois: [AAAA-MM], montants: [], le, annule }
+let NLOT = 0;
+const moisCibles = (ym, rep) => { const y = ym.slice(0, 4), m = +ym.slice(5, 7), de = rep === 'annee' ? 1 : m, a = rep === 'mois' ? m : 12, o = []; for (let i = de; i <= a; i++) { o.push(y + '-' + String(i).padStart(2, '0')); } return o; };
+const montantsDe = (v, base, n) => { if (base !== 'total') { return Array(n).fill(r2(v)); } const c = Math.round(v * 100), pm = Math.floor(c / n); return Array.from({ length: n }, (_, i) => (i < n - 1 ? pm : c - pm * (n - 1)) / 100); };
 function frais(q) {
-  const mois = q.get('mois') || AUJ.slice(0, 7);
-  const L = [['Loyer', 'Loyer', 3910, false, 0], ['Énergie', 'Énergie', 1250, true, 21], ['Redevance de la marque', 'Redevance', 1850, true, 21],
-    ['Assurances', 'Assurances', 230, false, 0], ['Comptable', 'Honoraires', 420, true, 21], ['Télécom et caisse', 'Abonnements', 96, true, 21],
-    ['Entretien et nettoyage', 'Entretien', 310, null, null], ['Frais bancaires', 'Banque', 58, false, 0]];
-  const lignes = L.map(([poste, type, montant, tva, taux], i) => {
-    const ai = tva == null, ht = ai ? montant : (tva ? r2(montant / (1 + taux / 100)) : montant);
-    return { cle: 'k' + i, poste, type, montant, tva, taux, ht, tvaMontant: r2(montant - ht), aIndiquer: ai };
-  });
+  const ceMois = AUJ.slice(0, 7);
+  let mois = q.get('mois') || ceMois;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mois) || mois > ceMois) { mois = ceMois; }
+  const brutes = BASE.map(([poste, type, montant, tva, taux]) => ({ poste, type, montant: montant == null ? ENERGIE[+mois.slice(5, 7) - 1] : montant, tva, taux }));
+  AJOUTS.forEach(a => a.mois.forEach((m, i) => { if (m === mois && !a.annule[i]) { brutes.push({ poste: a.poste, type: a.type, montant: a.montants[i], tva: null, taux: null }); } }));
+  const lignes = brutes.map(l => {
+    const c = CHOIX[cleDe(l.poste)] || (l.tva !== null ? { tva: l.tva, taux: l.taux } : null);
+    const tva = c ? c.tva : null, taux = tva == null ? null : (c.taux != null ? c.taux : (tva ? 21 : 0));
+    const ai = tva == null, ht = tva ? r2(l.montant / (1 + taux / 100)) : l.montant;
+    return { cle: cleDe(l.poste), poste: l.poste, type: l.type !== l.poste ? l.type : '', montant: l.montant, tva, taux, ht, tvaMontant: r2(l.montant - ht), aIndiquer: ai };
+  }).sort((a, b) => b.montant - a.montant);
   const saisi = r2(lignes.reduce((a, l) => a + l.montant, 0)), ht = r2(lignes.reduce((a, l) => a + l.ht, 0));
   const ai = lignes.filter(l => l.aIndiquer);
+  const ajouts = AJOUTS.filter(a => a.annule.some(x => !x)).slice().reverse().slice(0, 8).map(a => {
+    const M = a.mois.filter((m, i) => !a.annule[i]);
+    return { lot: a.lot, poste: a.poste, du: M[0], au: M[M.length - 1], n: M.length, montant: r2(a.montants.filter((v, i) => !a.annule[i]).reduce((x, y) => x + y, 0)), le: a.le, par: null, annulable: true };
+  });
   return { shop: SHOP, mois, lu: true, luLe: AUJ + ' 15:32:00', lignes, taux: [0, 6, 12, 21], tauxOui: 21, saisi, ht, tva: r2(saisi - ht), part: ht / saisi,
     postes: lignes.length, aIndiquer: ai.length, aIndiquerEur: r2(ai.reduce((a, l) => a + l.montant, 0)),
-    jour: mois === AUJ.slice(0, 7) ? { saisi: r2(saisi / 30), ht: r2(ht / 30) } : null,
-    types: L.map(([, type], i) => ({ id: i + 1, nom: type })), ajouts: [] };
+    jour: mois === ceMois ? { saisi: r2(saisi / 30), ht: r2(ht / 30) } : null,
+    types: TYPES.map((nom, i) => ({ id: String(i + 1), nom })), ajouts };
+}
+function fraisTva(c) {
+  const poste = String(c.poste || '').trim();
+  if (!poste) { return { __status: 400, json: { error: 'magasin et poste attendus' } }; }
+  const tva = c.tva === true || c.tva === false ? c.tva : null;
+  const taux = tva === null ? null : (c.taux != null ? r2(+c.taux) : (tva ? 21 : 0));
+  CHOIX[cleDe(poste)] = { tva, taux };
+  return { ok: true, poste: cleDe(poste), tva, taux };
+}
+function fraisAjout(c) {
+  const nom = String(c.nom || '').trim().replace(/\s+/g, ' ');
+  const v = +c.montant, rep = ['mois', 'fin', 'annee'].includes(c.repeter) ? c.repeter : 'mois';
+  if (!nom) { return { __status: 400, json: { error: 'magasin et libellé attendus' } }; }
+  if (!(v > 0)) { return { __status: 422, json: { error: 'montant : un nombre positif' } }; }
+  const mois = moisCibles(String(c.mois || AUJ.slice(0, 7)), rep), montants = montantsDe(v, c.base, mois.length);
+  const lot = (0xa17c3e00 + ++NLOT).toString(16).padStart(16, '0');
+  const type = c.type != null ? (TYPES[+c.type - 1] || '') : '';
+  AJOUTS.push({ lot, poste: nom, type, mois, montants, le: AUJ + ' 15:40:00', annule: mois.map(() => false) });
+  if (c.tva === true || c.tva === false) { CHOIX[cleDe(nom)] = { tva: c.tva, taux: c.taux != null ? r2(+c.taux) : (c.tva ? 21 : 0) }; }
+  return { ok: true, lot, poste: nom, mois: mois.map((m, i) => ({ mois: m, montant: montants[i], ok: true, id: String(90400 + NLOT * 20 + i), erreur: null, vu: true })),
+    crees: mois.length, reporteParLePanel: false, annulable: true, champs: ['id_shop', 'id_cost', 'date', 'amount', 'description'], gabarit: true, error: null };
+}
+function fraisAnnuler(c) {
+  const a = AJOUTS.find(x => x.lot === c.lot && x.annule.some(y => !y));
+  if (!a) { return { __status: 404, json: { error: 'ajout inconnu pour ce magasin, ou déjà annulé' } }; }
+  const faits = a.mois.filter((m, i) => !a.annule[i]);
+  a.annule = a.annule.map(() => true);
+  return { ok: true, annules: faits, sansId: [], refus: [], error: null };
 }
 
 module.exports = function (m, p, q, corps) {
-  if (p === '/tresorerie/plan' && m === 'GET') { return lirePlan(); }
-  if (p === '/tresorerie/plan' && m === 'POST') {
-    lirePlan();
-    const c = corps || {};
-    if (+c.version !== VERSION) { return { __status: 409, json: { error: 'le plan a été modifié sur un autre écran', plan: PLAN, version: VERSION, majLe: MAJ } }; }
-    if (c.donnees) { PLAN = c.donnees; } VERSION++; MAJ = AUJ + ' 15:40:00';
-    return { ok: true, version: VERSION, majLe: MAJ };
+  const c = corps && typeof corps === 'object' ? corps : {};
+  if (p === '/_film/tresorerie' && m === 'POST') {
+    if (c.neuf != null) { NEUF = !!c.neuf; if (NEUF) { PLAN = null; VERSION = 0; MAJ = null; } }
+    if (c.echecs != null) { ECHECS = +c.echecs || 0; }
+    return { ok: true, neuf: NEUF, echecs: ECHECS };
   }
+  if (p === '/tresorerie/plan' && m === 'GET') { return lirePlan(); }
+  if (p === '/tresorerie/plan' && m === 'POST') { return ecrirePlan(c); }
+  if (p === '/exploitation/frais/tva' && m === 'POST') { return fraisTva(c); }
+  if (p === '/exploitation/frais/ajout' && m === 'POST') { return fraisAjout(c); }
+  if (p === '/exploitation/frais/annuler' && m === 'POST') { return fraisAnnuler(c); }
   if (m !== 'GET') { return undefined; }
   if (p === '/tresorerie/references') { return references(q.get('debut') && q.get('debut') !== 'undefined' ? lundi(q.get('debut')) : DEBUT); }
   if (p === '/tresorerie/budget') { return budget(q.get('debut') && q.get('debut') !== 'undefined' ? lundi(q.get('debut')) : DEBUT); }
