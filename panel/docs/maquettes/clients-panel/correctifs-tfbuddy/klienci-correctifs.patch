@@ -1,0 +1,163 @@
+diff --git a/panel/controllers/Office/OfficeController.php b/panel/controllers/Office/OfficeController.php
+index 65d4a58..7307baa 100644
+--- a/panel/controllers/Office/OfficeController.php
++++ b/panel/controllers/Office/OfficeController.php
+@@ -42,7 +42,7 @@ class OfficeController extends Controller
+     {
+         header('Cache-Control: private, no-store');
+         $this->view('offices/catalog', [
+-            'office_id' => $id, 'shop_id' => $this->shop(),
++            'office_id' => $id, 'shop_id' => $this->shop(), 'csrf' => \App\User\Core\FranchiseCsrf::token(),
+             'catalog_version' => $this->assetVersion('js/office-catalog.js'),
+             'catalog_style_version' => $this->assetVersion('css/office-catalog.css'),
+         ]);
+@@ -52,7 +52,7 @@ class OfficeController extends Controller
+     {
+         header('Cache-Control: private, no-store');
+         $this->view('offices/offers', [
+-            'office_id' => $id, 'shop_id' => $this->shop(),
++            'office_id' => $id, 'shop_id' => $this->shop(), 'csrf' => \App\User\Core\FranchiseCsrf::token(),
+             'offers_version' => $this->assetVersion('js/office-offers.js'),
+             'offers_style_version' => $this->assetVersion('css/office-offers.css'),
+         ]);
+@@ -64,6 +64,7 @@ class OfficeController extends Controller
+         $this->view('offices/members', [
+             'office_id' => $id,
+             'shop_id' => $this->shop(),
++            'csrf' => \App\User\Core\FranchiseCsrf::token(),
+             'members_version' => $this->assetVersion('js/office-members.js'),
+             'members_style_version' => $this->assetVersion('css/office-members.css'),
+             'office_style_version' => $this->assetVersion('css/offices.css'),
+@@ -103,6 +104,7 @@ class OfficeController extends Controller
+         try {
+             $data=json_decode(file_get_contents('php://input'),true,512,JSON_THROW_ON_ERROR);
+             if(!is_array($data))throw new \RuntimeException('Invalid input',422);
++            if(!\App\User\Core\FranchiseCsrf::validate($data['_csrf']??null))throw new \RuntimeException('Forbidden',403);
+             $pdf=$this->documents->brochure($this->shop(),$id,$data);
+             header('Content-Type: application/pdf');header('Content-Disposition: attachment; filename="office-'.$id.'-brochure.pdf"');echo $pdf;return null;
+         } catch(Throwable $error){return $this->json(['success'=>false,'reason'=>'brochure_error'],in_array($error->getCode(),[403,422],true)?$error->getCode():502);}
+@@ -115,6 +117,7 @@ class OfficeController extends Controller
+             if ($method === 'GET') return $this->json(['success' => true, 'data' => $this->service->read($this->shop(), $path, $_GET)], 200);
+             $data = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
+             if (!is_array($data)) throw new \RuntimeException('Invalid input', 422);
++            if (!\App\User\Core\FranchiseCsrf::validate($data['_csrf'] ?? null)) throw new \RuntimeException('Forbidden', 403);
+             return $this->json(['success' => true, 'data' => $this->service->write($this->shop(), $method, $path, $data)], 200);
+         } catch (Throwable $error) {
+             $code = $error instanceof \JsonException ? 422 : (int)$error->getCode();
+diff --git a/panel/public/assets/js/office-members.js b/panel/public/assets/js/office-members.js
+index 082d593..d0ac001 100644
+--- a/panel/public/assets/js/office-members.js
++++ b/panel/public/assets/js/office-members.js
+@@ -23,9 +23,11 @@
+ 
+     async function request(path = '', method = 'GET', data = null) {
+         const options = {method, credentials: 'same-origin', headers: {Accept: 'application/json'}};
+-        if (data !== null) {
++        // Toute écriture porte un corps (au moins le jeton CSRF) : OfficeController::data() lit le JSON de chaque
++        // POST, PATCH, PUT et DELETE ; un DELETE sans corps (retirer une personne) y tombait en 422.
++        if (data !== null || method !== 'GET') {
+             options.headers['Content-Type'] = 'application/json';
+-            options.body = JSON.stringify({...data, _csrf: app.dataset.csrf});
++            options.body = JSON.stringify({...(data || {}), _csrf: app.dataset.csrf});
+         }
+         const response = await fetch(`${root}/ajax/offices/${officeId}${path}`, options);
+         let json;
+diff --git a/panel/views/analysis/b2b_dashboard.twig b/panel/views/analysis/b2b_dashboard.twig
+index dbd04ff..1d8e655 100644
+--- a/panel/views/analysis/b2b_dashboard.twig
++++ b/panel/views/analysis/b2b_dashboard.twig
+@@ -161,12 +161,16 @@ const b2bTrans = {
+ const MONTHS_SHORT = b2bTrans.months_short.split(',');
+ 
+ /* ── Formatowanie ──────────────────────────────────────────────── */
++// Język strony zamiast 'pl-PL' na sztywno (fr, nl, en, it, pl).
++const B2B_LOCALE = document.documentElement.lang || 'pl';
++// Dane wykresu: ostatnio wczytane (a nie dane z pierwszego wyświetlenia).
++let b2bChartData = B2B.data;
+ function b2bFmt(v, unit) {
+     if (v === null || v === undefined) return '—';
+     const n = Number(v);
+-    if (unit === 'amount') return n.toLocaleString('pl-PL', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' ' + B2B.currency;
++    if (unit === 'amount') return n.toLocaleString(B2B_LOCALE, {minimumFractionDigits:0, maximumFractionDigits:0}) + ' ' + B2B.currency;
+     if (unit === 'pct')   return n.toFixed(1) + '%';
+-    return n.toLocaleString('pl-PL', {minimumFractionDigits:0, maximumFractionDigits:0});
++    return n.toLocaleString(B2B_LOCALE, {minimumFractionDigits:0, maximumFractionDigits:0});
+ }
+ 
+ function trendBadge(pct, momLabel) {
+@@ -378,6 +382,7 @@ document.getElementById('b2b-apply').addEventListener('click', async () => {
+ 
+     const data = await loadDashboard(year, month);
+     if (data) {
++        B2B.data = data;
+         renderKPI(data);
+         renderDonut(data);
+     }
+@@ -395,13 +400,14 @@ document.getElementById('b2b-chart-apply').addEventListener('click', async () =>
+     spinner.classList.add('d-none');
+ 
+     if (data) {
++        b2bChartData = data;
+         renderMonthlyChart(data, currentChartMetric);
+     }
+ });
+ 
+ document.getElementById('b2b-chart-metric').addEventListener('change', function () {
+     currentChartMetric = this.value;
+-    if (B2B.data) renderMonthlyChart(B2B.data, currentChartMetric);
++    if (b2bChartData) renderMonthlyChart(b2bChartData, currentChartMetric);
+ });
+ 
+ /* ── Init ───────────────────────────────────────────────────────── */
+diff --git a/panel/views/b2b/clients/index.twig b/panel/views/b2b/clients/index.twig
+index c22d634..0749846 100644
+--- a/panel/views/b2b/clients/index.twig
++++ b/panel/views/b2b/clients/index.twig
+@@ -2452,7 +2452,8 @@ async function saveAttrSlider() {
+                 data:    attrsPayload,
+             }),
+         ]);
+-        const [profileJson, attrsJson] = await Promise.all([profileResp.json(), attrsResp.json()]);
++        // api() (modules/api.js) a déjà lu le JSON : {ok, status, data, ...payload}. Un second .json() levait une erreur.
++        const profileJson = profileResp, attrsJson = attrsResp;
+ 
+         if (profileJson.success && attrsJson.success) {
+             // Aktualizacja lokalnego cache
+diff --git a/panel/views/client/offer/new.twig b/panel/views/client/offer/new.twig
+index 0cf81e6..8c2ea64 100644
+--- a/panel/views/client/offer/new.twig
++++ b/panel/views/client/offer/new.twig
+@@ -298,17 +298,16 @@
+                 }
+             })
+ 
+-            api(`/ajax/client-offers`, {
++            api(`/ajax/client-offers/new`, {
+                 method: 'POST',
+                 data
+             }).then(response => {
+                 if (response.ok) {
+                     window.location.href = '/client-offers';
+                 } else {
+-                    return response.json().then(error => {
+-                        console.error('Error:', error);
+-                        alert('An error occurred while creating the offer.');
+-                    });
++                    // api() a déjà lu le JSON : l'erreur est dans response.data.
++                    console.error('Error:', response.data);
++                    alert('An error occurred while creating the offer.');
+                 }
+             }).catch(error => {
+                 console.error('Error:', error);
+diff --git a/panel/views/email/template/offer.twig b/panel/views/email/template/offer.twig
+index 26fc2cf..d1748e9 100644
+--- a/panel/views/email/template/offer.twig
++++ b/panel/views/email/template/offer.twig
+@@ -33,6 +33,7 @@
+                             <option value="nl" {% if template_locale|default('fr') == 'nl' %}selected{% endif %}>{{ translations.dutch|default('Nederlands') }}</option>
+                             <option value="en" {% if template_locale|default('fr') == 'en' %}selected{% endif %}>{{ translations.english|default('English') }}</option>
+                             <option value="pl" {% if template_locale|default('fr') == 'pl' %}selected{% endif %}>{{ translations.polish|default('Polski') }}</option>
++                            <option value="it" {% if template_locale|default('fr') == 'it' %}selected{% endif %}>{{ translations.italian|default('Italiano') }}</option>
+                         </select>
+                         <div class="form-text">{{ translations.email_template_language_hint|default('The recipient language selects the version sent.') }}</div>
+                     </div>

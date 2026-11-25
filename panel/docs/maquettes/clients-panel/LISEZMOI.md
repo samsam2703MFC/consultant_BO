@@ -1,6 +1,22 @@
 # Clients — le module « Klienci » du panel TF Buddy dans le dashboard franchisé (maquettes)
 
-**Statut : maquettes, à valider.** Rien n'est codé.
+**Statut : codé le 25/11/2026** (« let's go and code it all ») : `panel/src/clients_panel.php`,
+`panel/public/dashboard/clients.js`, `clients.css`, Vendre › Clients dans le rail. Par les seuls comptes du cockpit
+(consultant, puis admin : « use either all token available from consultant or admin »). Les captures `code-*.png` sont
+le vrai écran au banc (`banc/`, TF Buddy simulé, données fictives) :
+
+| Capture | Ce qu'elle montre |
+|---|---|
+| `code-b2b.png`, `code-particuliers.png`, `code-analyse.png`, `code-bureaux-refus.png`, `code-mobile.png` | aujourd'hui : les routes `/panel/shops/{s}/…` refusées, l'écran se rabat (entreprises sur `/shops/{s}/clients` + relevé des tickets pro ; analyse sur le relevé) et dit ce qui manque |
+| `code-b2b-r1.png`, `code-bureaux-r1.png`, `code-ajout-r1.png`, `code-analyse-r1.png` | avec l'accès de service (R1) : score, crédit, récurrence, les bureaux, l'assistant en sept étapes, le tableau de bord de TF Buddy |
+
+Régénérer : `php -S 127.0.0.1:8098 panel/docs/maquettes/clients-panel/banc/banc.php &`,
+`BANC_ACCES=panel php -S 127.0.0.1:8099 panel/docs/maquettes/clients-panel/banc/banc.php &`, puis
+`node panel/docs/maquettes/clients-panel/banc/voir.cjs`.
+
+Les petits bugs du paquet sont corrigés pour TF Buddy dans `correctifs-tfbuddy/` (un patch `git` et son mode d'emploi).
+
+Ci-dessous, les maquettes d'origine (`ecran-*.png`).
 
 Demande du 25/11/2026 : « fais les maquettes concernant le nouveau module à intégrer dans le panel dashboard des
 franchisés », avec le paquet `panel-klienci.rar` (README polonais : « Panel – menu Klienci », commit 772a05f ; 204
@@ -44,7 +60,7 @@ livraisons, le jeton consultant et le jeton admin du cockpit y sont refusés (40
 un jeton de membre du magasin passe. Coder ce module demande donc le même accès de service que l'appli du livreur
 (R1 de `../../livreur/CAHIER_DES_CHARGES_TFBUDDY.md`).
 
-## Relevé dans le paquet, à signaler à TF Buddy
+## Relevé dans le paquet, à signaler à TF Buddy (corrigé dans `correctifs-tfbuddy/`)
 
 - `views/b2b/clients/index.twig:2455` : l'enregistrement du profil commercial appelle `profileResp.json()` sur un objet
   déjà lu (`api()`) : erreur, « erreur de connexion ».

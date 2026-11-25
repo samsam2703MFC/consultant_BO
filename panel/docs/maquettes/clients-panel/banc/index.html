@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banc — Vendre › Clients</title>
+<link rel="stylesheet" href="/assets/ds/global.css">
+<link rel="stylesheet" href="/dashboard/clients.css">
+<style>body { margin: 0; background: var(--bg, #F7F4EF); } main { max-width: 1280px; margin: 0 auto; padding: 24px 28px 60px; }</style>
+</head>
+<body>
+<main id="ici"></main>
+<script src="/dashboard/clients.js"></script>
+<script>
+  // Le banc : le vrai écran, monté comme le dashboard le monte (pclMonter), sur le magasin 3.
+  const o = new URLSearchParams(location.search).get('onglet');
+  if (o) { try { localStorage.setItem('pcl-onglet:3', o); } catch (e) {} }
+  document.getElementById('ici').appendChild(window.DashClients.racine('3', { apiBase: '/api/cockpit', nomShop: 'Gosselies', aller: (v, i) => { window.allerVers = [v, i]; console.log('aller', v, JSON.stringify(i || null)); } }));
+</script>
+</body>
+</html>
