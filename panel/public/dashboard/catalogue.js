@@ -66,7 +66,7 @@
     ['Gammes', 'mes gammes, mes produits, à mes prix'],
     ['Présentation', 'catégorie par catégorie, puis l’ordre'],
     ['Validation', 'ce qui s’imprimera'],
-    ['Export PDF', 'imprimer, QR, affiche'],
+    ['Export PDF', 'imprimer, QR, affiche, bon'],
   ];
   const CADENAS = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.2" width="8" height="5.8" rx="1.2" fill="currentColor"/><path d="M4 5.4V3.8a2 2 0 0 1 4 0v1.6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
 
@@ -633,6 +633,20 @@
       }
     }
     else if (a === 'reessayer') { chargerDoc(S, true); chargerVerif(S, true); }
+    else if (a === 'quoi') {
+      S.quoi = v; S.msg = null; rendre(S);
+      if (v === 'affiche') { const el = S.el.querySelector('.cm-aff'); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+    }
+    else if (a === 'bonLang') { bonEtat(S).langue = v; rendre(S); }
+    else if (a === 'bonMode') { bonEtat(S).mode = v; rendre(S); }
+    else if (a === 'bonUnite') { bonEtat(S).f.lu = v; rendre(S); }
+    else if (a === 'bonPk') { const f = bonEtat(S).f; f.pk = !f.pk; rendre(S); }
+    else if (a === 'bonDv') { const f = bonEtat(S).f; f.dv = !f.dv; rendre(S); }
+    else if (a === 'bonNl') { bonEtat(S).nl = v === '1'; rendre(S); }
+    else if (a === 'bonDateAjout') { bonEtat(S).f.dl.push({ for: '', until: '' }); rendre(S); }
+    else if (a === 'bonDateSuppr') { bonEtat(S).f.dl.splice(+v, 1); rendre(S); }
+    else if (a === 'bonSauver') { enregistrerConditions(S); }
+    else if (a === 'bonPdf') { telechargerBon(S, v === 'pdf' ? 'Le PDF du bon de commande' : 'Le bon de commande'); }
   }
   function saisie(S, ev) {
     const t = ev.target;
@@ -642,6 +656,9 @@
     if (t.dataset.cm === 'mediasQ') { S.mediasQ = t.value; }
     if (t.dataset.cm === 'qte') { S.imp.qte = t.value.replace(/\D/g, '').slice(0, 7); }
     if (t.dataset.cm === 'afficheTitre') { S.affiche.titre = t.value.slice(0, 80); }
+    if (t.dataset.cm === 'bonQte') { bonEtat(S).qte = t.value.replace(/\D/g, '').slice(0, 5); }
+    if (t.dataset.cm === 'bonF') { bonEtat(S).f[t.dataset.k] = t.value; }
+    if (t.dataset.cm === 'bonDate') { bonEtat(S).f.dl[+t.dataset.i][t.dataset.k] = t.value; }
   }
   function changement(S, ev) {
     const t = ev.target;
@@ -1429,6 +1446,10 @@
 
   /* --- Étape 5 · Export PDF : imprimer (B2), puis diffuser (B3) --------------------------------------------------- */
   function rendreExport(S) {
+    if ((S.quoi || 'catalogue') === 'bon') { return rendreQuoi(S) + rendreBon(S); }
+    return rendreQuoi(S) + rendreExportCatalogue(S);
+  }
+  function rendreExportCatalogue(S) {
     const c = S.cat, k = c.owner + c.id + '|' + S.lang, doc = S.doc[k], v = verifDe(S);
     const ouverts = v ? v.items.filter(it => !it.seen && it.level !== 'ok') : [];
     const livret = S.imp.mode === 'livret';
@@ -1455,6 +1476,139 @@
       + (imp ? '<div class="cm-cpt">Déjà noté : imprimé · ' + imp.quantity + ' ex.' + (imp.printedAt ? ' le ' + esc(date(imp.printedAt)) : '') + '</div>' : '')
       + '</aside></div>';
     h += rendreDiffuser(S, doc);
+    return h;
+  }
+  /* --- Le bon de commande (25/11/2026, maquette F, client : « conditions par magasin – contenu exact de ce qu'il y a dans
+   * le catalogue », puis « cadre vide à remplir, délai boutique sous chaque catégorie ») : une feuille A4 composée par le
+   * Marketing (les produits, mes prix, les remises et offres avec leurs dates, la disponibilité par catégorie) ; « Mes
+   * conditions » se règlent une fois pour tous mes bons (le Marketing les lit). Sans conditions : un cadre vide, à remplir
+   * à la main. L'aperçu et le PDF : la page d'impression du Marketing (lien signé du catalogue, `&bon=`). ------------- */
+  /** « Ce que j'imprime » : le catalogue, l'affiche, le bon de commande. */
+  function rendreQuoi(S) {
+    const q = S.quoi || 'catalogue', c = S.cat;
+    const imp = c.print && c.print.quantity ? c.print : (c.status === 'imprime' && c.printQty ? { quantity: c.printQty } : null);
+    const carte = (v, il, titre, txt, tag) => '<button class="cm-quoi' + (q === v ? ' on' : '') + '" data-cm="quoi" data-v="' + v + '"><span class="il il-' + v + '" aria-hidden="true"><i></i></span>'
+      + '<span class="tx"><b>' + titre + '</b><span>' + txt + '</span>' + (tag ? '<span class="tg' + (v === 'bon' ? ' nv' : '') + '">' + tag + '</span>' : '') + '</span></button>';
+    return '<section class="cm-pan cm-quois"><div class="h"><span class="k">Ce que j’imprime</span></div><div class="cm-quoi3">'
+      + carte('catalogue', '', 'Le catalogue', 'chez un imprimeur ou livret A5 sur mon imprimante', imp ? 'Imprimé · ' + esc(imp.quantity) + ' ex.' : '')
+      + carte('affiche', '', 'L’affiche', 'A4 ou A3 avec le QR du catalogue en ligne', '')
+      + carte('bon', '', 'Le bon de commande', 'les mêmes produits et mes prix, à remplir par le client', 'Nouveau')
+      + '</div></section>';
+  }
+  function bonEtat(S) {
+    if (!S.bon || S.bon.cat !== S.cat.owner + S.cat.id) {
+      S.bon = { cat: S.cat.owner + S.cat.id, langue: S.langs.length > 1 ? 'fr+nl' : (S.langs[0] || 'fr'), qte: '50', mode: 'proof', cond: undefined, condErr: null,
+        f: null, nl: false, data: {}, dataErr: {}, lien: null, lienErr: null, v: 0, sauve: false, erreurs: [] };
+    }
+    return S.bon;
+  }
+  const bonLangs = B => B.langue === 'fr+nl' ? ['fr', 'nl'] : [B.langue];
+  /** Le brouillon du formulaire, tiré des conditions enregistrées. */
+  function bonForm(c) {
+    return {
+      lv: c && c.minDelay ? String(c.minDelay.value) : '', lu: c && c.minDelay ? c.minDelay.unit : 'hours',
+      dp: c && c.depositPct != null ? String(c.depositPct) : '',
+      dl: c ? c.holidayDeadlines.map(d => ({ for: d.for, until: d.until })) : [],
+      pk: c ? c.pickup : true, dv: c ? c.delivery.enabled : false,
+      rk: c && c.delivery.radiusKm != null ? String(c.delivery.radiusKm) : '', fee: c && c.delivery.feeCents != null ? (c.delivery.feeCents / 100).toFixed(2).replace('.', ',') : '',
+      nfr: c ? c.note.fr : '', nnl: c ? c.note.nl : '',
+    };
+  }
+  function chargerBon(S, force) {
+    const B = bonEtat(S);
+    if (B.cond === undefined || force) {
+      B.cond = null;
+      appel('GET', '/conditions' + qs(S)).then(j => { B.cond = j.data; if (!B.f || force) { B.f = bonForm(j.data.configured ? j.data : null); } rendre(S); })
+        .catch(e => { B.condErr = e; B.cond = false; if (!B.f) { B.f = bonForm(null); } rendre(S); });
+    }
+    const lang = bonLangs(B)[0];
+    if (B.data[lang] === undefined || force) {
+      B.data[lang] = null; B.dataErr[lang] = null;
+      appel('GET', chemin(S) + '/bon' + qs(S) + '&lang=' + lang).then(j => { B.data[lang] = j.data; B.dataErr[lang] = null; rendre(S); })
+        .catch(e => { B.dataErr[lang] = e; rendre(S); });
+    }
+    if (!B.lien && !B.lienErr) {
+      B.lien = 'attente';
+      appel('POST', chemin(S) + '/impression' + qs(S), { lang: 'fr' }).then(j => { B.lien = (j.data && j.data.url) || null; if (!B.lien) { B.lienErr = new ErreurApi(502, { error: { message: 'Le Marketing n’a pas rendu d’adresse d’impression.' } }); } rendre(S); })
+        .catch(e => { B.lien = null; B.lienErr = e; rendre(S); });
+    }
+  }
+  const delaiTexte = h => h + ' h';
+  /** Le corps du PUT …/conditions, ou une liste de problèmes à dire avant d'envoyer. */
+  function bonCorps(B) {
+    const f = B.f, err = [];
+    const n = v => v.trim() === '' ? null : (/^\d+$/.test(v.trim()) ? parseInt(v.trim(), 10) : NaN);
+    const lv = n(f.lv), dp = n(f.dp), rk = n(f.rk);
+    const fee = f.fee.trim() === '' ? null : Math.round(parseFloat(f.fee.replace(',', '.')) * 100);
+    if (Number.isNaN(lv)) { err.push('Délai minimum : un nombre entier.'); }
+    if (Number.isNaN(dp)) { err.push('Acompte : un nombre entier (0 = pas d’acompte).'); }
+    if (Number.isNaN(rk)) { err.push('Rayon de livraison : un nombre de km.'); }
+    if (fee !== null && (Number.isNaN(fee) || fee < 0)) { err.push('Frais de livraison : un montant en euros.'); }
+    const dl = f.dl.filter(d => d.for || d.until);
+    if (dl.some(d => !d.for || !d.until)) { err.push('Dates des fêtes : chaque ligne a sa date et son dernier jour de commande.'); }
+    return [err, { minDelay: lv === null ? null : { value: lv, unit: f.lu }, depositPct: dp, holidayDeadlines: dl, pickup: f.pk,
+      delivery: { enabled: f.dv, radiusKm: f.dv ? rk : null, feeCents: f.dv ? fee : null }, note: { fr: f.nfr.trim(), nl: f.nnl.trim() } }];
+  }
+  function enregistrerConditions(S) {
+    const B = bonEtat(S), [err, corps] = bonCorps(B);
+    B.erreurs = err; B.sauve = false;
+    if (err.length) { rendre(S); return; }
+    occupe(S, appel('PUT', '/conditions' + qs(S), corps).then(j => {
+      B.cond = j.data; B.f = bonForm(j.data); B.sauve = true; B.data = {}; B.v++; chargerBon(S);
+    }).catch(e => { B.erreurs = (e.details || []).map(d => (d.field ? d.field + ' : ' : '') + d.message); throw e; }), 'Enregistrement de mes conditions');
+  }
+  function telechargerBon(S, quoi) {
+    const B = bonEtat(S), w = window.open('', '_blank');
+    if (w) { try { w.document.write('<p style="font:15px system-ui;padding:24px;color:#5c5852">Préparation du bon de commande…</p>'); } catch (e) { /* rien */ } }
+    const p = appel('POST', chemin(S) + '/impression' + qs(S), { lang: bonLangs(B)[0] }).then(j => {
+      const url = j.data && j.data.url;
+      if (!url) { throw new ErreurApi(502, { error: { message: 'Le Marketing n’a pas rendu d’adresse d’impression.' } }); }
+      const cible = url + '&bon=' + bonLangs(B).join(',') + (B.mode === 'printer' ? '&mode=printer' : '');
+      if (w) { w.location.href = cible; } else { window.open(cible, '_blank'); }
+      S.msg = { type: 'ok', titre: quoi + ' s’ouvre dans un nouvel onglet' + (B.mode === 'printer' ? ' (traits de coupe, pour l’imprimeur)' : '') + ' : ' + (quoi === 'Le bon de commande' ? 'imprimez-le' : 'choisissez « Enregistrer au format PDF »') + '. Le lien vaut 48 heures.' };
+    }).catch(e => { if (w) { w.close(); } throw e; });
+    occupe(S, p, quoi);
+  }
+  function rendreBon(S) {
+    const B = bonEtat(S);
+    if (B.cond === undefined || B.data[bonLangs(B)[0]] === undefined || (!B.lien && !B.lienErr)) { window.setTimeout(() => chargerBon(S), 0); }
+    const lang = bonLangs(B)[0], d = B.data[lang], f = B.f || bonForm(null), c = B.cond;
+    const lead = d && d.counts ? d.counts.catalogueLeadHours : null;
+    let h = '<div class="cm-bon"><div class="cm-col"><section class="cm-pan">';
+    h += '<div class="h"><span class="k">Le bon de commande · feuille A4</span><span class="sp"></span><span class="cm-cpt">'
+      + (d ? 'Contenu = celui de mon catalogue : ' + d.counts.products + ' produit' + (d.counts.products > 1 ? 's' : '') + ', ' + d.counts.offers + ' offre' + (d.counts.offers > 1 ? 's' : '') + ', dans l’ordre des pages'
+        : B.dataErr[lang] ? '' : 'Composition du bon…') + '</span></div>';
+    if (B.dataErr[lang]) { h += bandeauErreur(B.dataErr[lang], 'Le bon n’a pas pu être composé'); }
+    h += '<div class="cm-imp3"><div><span class="lb">Langue</span><div class="cm-seg">' + [['fr', 'FR'], ['nl', 'NL'], ['fr+nl', 'FR + NL']].map(l => '<button data-cm="bonLang" data-v="' + l[0] + '" class="' + (B.langue === l[0] ? 'on' : '') + '">' + l[1] + '</button>').join('') + '</div></div>'
+      + '<div><span class="lb">Bons à imprimer</span><div class="cm-lig"><input type="text" inputmode="numeric" class="cm-qte" data-cm="bonQte" value="' + esc(B.qte) + '"><span>feuilles A4</span></div></div>'
+      + '<div><span class="lb">Où imprimer</span><div class="cm-seg">' + [['proof', 'Mon imprimante'], ['printer', 'Imprimeur']].map(m => '<button data-cm="bonMode" data-v="' + m[0] + '" class="' + (B.mode === m[0] ? 'on' : '') + '">' + m[1] + '</button>').join('') + '</div></div></div>';
+    // Mes conditions.
+    h += '<div class="cm-bcond"><div class="hd"><b>Mes conditions</b><span class="tg">imprimées sur le bon · lues par le Marketing</span><span class="sp"></span><span class="cm-cpt">'
+      + (c && c.configured ? 'Enregistré le ' + esc(date(c.updatedAt)) : c === null ? 'Lecture…' : 'Pas encore réglées : le cadre s’imprime vide') + '</span></div>';
+    if (B.condErr) { h += bandeauErreur(B.condErr, 'Mes conditions n’ont pas pu être lues'); }
+    h += '<div class="g2"><div><span class="lb">Délai minimum de commande</span><div class="cm-lig"><input type="text" inputmode="numeric" class="cm-qte" data-cm="bonF" data-k="lv" value="' + esc(f.lv) + '">'
+      + '<div class="cm-seg">' + [['hours', 'heures'], ['days', 'jours']].map(u => '<button data-cm="bonUnite" data-v="' + u[0] + '" class="' + (f.lu === u[0] ? 'on' : '') + '">' + u[1] + '</button>').join('') + '</div></div>'
+      + (lead ? '<p class="cm-cpt">Le catalogue dit « sur commande ' + esc(delaiTexte(lead)) + ' » : je ne peux pas descendre en dessous (un délai plus court n’est pas imprimé).</p>' : '<p class="cm-cpt">Imprimé sous chaque catégorie.</p>') + '</div>'
+      + '<div><span class="lb">Acompte à la commande</span><div class="cm-lig"><input type="text" inputmode="numeric" class="cm-qte" data-cm="bonF" data-k="dp" value="' + esc(f.dp) + '"><span>%</span><span class="cm-cpt">0 = pas d’acompte</span></div></div></div>';
+    h += '<span class="lb">Dernier jour de commande pour les fêtes</span><div class="cm-dates">' + f.dl.map((x, i) => '<div class="cm-lig"><span>Pour le</span><input type="date" class="cm-date" data-cm="bonDate" data-i="' + i + '" data-k="for" value="' + esc(x.for) + '">'
+      + '<span>commandes jusqu’au</span><input type="date" class="cm-date" data-cm="bonDate" data-i="' + i + '" data-k="until" value="' + esc(x.until) + '"><button class="cm-lien" data-cm="bonDateSuppr" data-v="' + i + '" aria-label="Retirer cette date">×</button></div>').join('')
+      + (f.dl.length < 10 ? '<button class="cm-btn" data-cm="bonDateAjout">＋ Une date</button>' : '') + '</div>';
+    h += '<div class="g2"><div><span class="lb">Retrait en boutique</span><button class="cm-sw abr' + (f.pk ? ' on' : '') + '" role="switch" aria-checked="' + f.pk + '" data-cm="bonPk"><span class="tr" aria-hidden="true"></span><span class="l">' + (f.pk ? 'Oui' : 'Non') + '</span></button></div>'
+      + '<div><span class="lb">Livraison</span><div class="cm-lig"><button class="cm-sw abr' + (f.dv ? ' on' : '') + '" role="switch" aria-checked="' + f.dv + '" data-cm="bonDv"><span class="tr" aria-hidden="true"></span><span class="l">' + (f.dv ? 'Oui · rayon' : 'Non') + '</span></button>'
+      + (f.dv ? '<input type="text" inputmode="numeric" class="cm-qte cm-court" data-cm="bonF" data-k="rk" value="' + esc(f.rk) + '"><span>km · frais</span><input type="text" inputmode="decimal" class="cm-qte cm-court" data-cm="bonF" data-k="fee" value="' + esc(f.fee) + '" placeholder="0,00"><span>€</span>' : '') + '</div></div></div>';
+    h += '<span class="lb">Mention libre (une ligne)</span><input type="text" class="cm-qte cm-mention" maxlength="160" data-cm="bonF" data-k="' + (B.nl ? 'nnl' : 'nfr') + '" value="' + esc(B.nl ? f.nnl : f.nfr) + '" placeholder="' + (B.nl ? esc(f.nfr || 'NL vide : le français est imprimé') : 'Ex. : bûches glacées à mettre au congélateur dans l’heure') + '">'
+      + '<div class="cm-lig"><div class="cm-seg">' + [['0', 'FR'], ['1', 'NL']].map(l => '<button data-cm="bonNl" data-v="' + l[0] + '" class="' + ((B.nl ? '1' : '0') === l[0] ? 'on' : '') + '">' + l[1] + '</button>').join('') + '</div>'
+      + '<span class="cm-cpt">' + (B.nl ? 'FR : « ' + esc(f.nfr || '—') + ' »' : 'NL : « ' + esc(f.nnl || (f.nfr ? 'le français' : '—')) + ' »') + '</span></div>';
+    if (B.erreurs.length) { h += '<div class="cm-msg err"><ul>' + B.erreurs.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul></div>'; }
+    h += '<div class="cm-lig cm-bsave"><button class="cm-btn" data-cm="bonSauver"' + (S.occupe ? ' disabled' : '') + '>Enregistrer mes conditions</button>' + (B.sauve ? '<span class="cm-cpt">✓ Enregistrées — elles valent pour tous mes bons</span>' : '') + '</div></div>';
+    h += '<div class="cm-pied"><button class="cm-btn pri" data-cm="bonPdf" data-v="imprimer"' + (S.occupe || !d ? ' disabled' : '') + '>Imprimer</button><button class="cm-btn" data-cm="bonPdf" data-v="pdf"' + (S.occupe || !d ? ' disabled' : '') + '>Télécharger le PDF</button>'
+      + '<span class="cm-cpt">' + esc((B.qte || '0') + ' feuilles A4 · ' + bonLangs(B).map(x => x.toUpperCase()).join(' + ') + ' · ' + (S.nom || '')) + '</span><span class="sp"></span><button class="cm-btn" data-cm="etape" data-v="4">‹ Validation</button></div>';
+    h += '</section></div>';
+    // L'aperçu : la page d'impression du Marketing, sans boîte d'impression.
+    const src = B.lien && B.lien !== 'attente' ? B.lien + '&bon=' + lang + (B.mode === 'printer' ? '&mode=printer' : '') + '&imprimer=0&v=' + B.v : '';
+    h += '<aside class="cm-cote cm-bapercu"><div class="k">Aperçu du bon · ' + esc(S.nom || '') + ' · ' + lang.toUpperCase() + '</div>'
+      + (src ? '<div class="cm-bframe"><iframe title="Aperçu du bon de commande" src="' + esc(src) + '" loading="lazy"></iframe></div>' : B.lienErr ? bandeauErreur(B.lienErr, 'L’aperçu n’a pas pu s’ouvrir') : '<div class="cm-vide">Composition du bon…</div>')
+      + '<p class="note">Le cadre « Conditions de la boutique » reprend ce que je règle à gauche, à chaque export. Un produit retiré à l’étape « Gammes » disparaît aussi du bon. Un prix changé dans mon webshop change au prochain export.</p></aside></div>';
     return h;
   }
   /* --- Feuilleter (17/11/2026, Sam : « un catalogue à feuilleter en simulation dans l'export en PDF, pour être sûr que
