@@ -95,6 +95,10 @@ autre) », « une vidéo type formative, à utiliser en formation », les pages 
   aussi (`#/videos/<page>`). Le carré ouvre toujours la vidéo de la page. Fichiers en 1600 × 900 (≈ 1,3 Mo la minute).
   La liste validée le 24/11 : 149 onglets et environ 150 fonctions, par lots (lot 1 : Boîte mail, Mon équipe,
   Trésorerie et Frais, Promotions, Offres, Mon catalogue). Le tournage : `panel/tools/videos/LISEZMOI.md`.
+  **Lot 1 en ligne le 25/11/2026** : 58 onglets et 99 fonctions — Boîte mail 11 et 21, Mon équipe 14 et 16 (retournés
+  le 25/11 après les primes en onglet, les ETP et le mois par section), Trésorerie et Frais 6 et 18, Promotions 6 et 2,
+  Offres 13 et 14, Mon catalogue 8 et 28 ; 149 Mo. Restent : l'onglet Primes de Mon équipe et la fiche d'une personne
+  (venus après la liste), la page Commandes, et les autres pages (lots suivants).
 - Tests : `php panel/bin/tests_videos.php` (registre, fichiers présents, pages connues, les trois niveaux et leurs
   passages, le carré dans le rail, aucune pilule).
 
