@@ -601,6 +601,8 @@ function ep_commandes_bureaux(): array
 /** Un GET à TF Buddy : le compte du cockpit, puis l'admin de l'ERP sur un refus. [code, corps, compte]. */
 function pcoTfGet(string $chemin): array
 {
+    // Le jeton du magasin d'abord (25/11/2026, tfb_magasin.php) : lui seul a le droit des routes /panel/shops/{s}/franchise/….
+    if (function_exists('tfbmAppel') && ($m = tfbmAppel('GET', $chemin)) !== null && $m['code'] >= 200 && $m['code'] < 300) { return [$m['code'], $m['corps'], 'magasin']; }
     $r = class_exists('PanelApi') && PanelApi::configured() ? PanelApi::sondeGet($chemin, 25) : ['code' => 0, 'corps' => null];
     $code = (int) ($r['code'] ?? 0);
     if ($code >= 200 && $code < 300) { return [$code, $r['corps'] ?? null, 'cockpit']; }

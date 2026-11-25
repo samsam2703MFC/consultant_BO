@@ -24,11 +24,16 @@ final class Db
 /** Le compte consultant : des réponses toutes faites, par chemin. */
 final class PanelApi
 {
+    public static ?string $jetonImpose = null;
     public static array $rep = [];
+    public static array $repMagasin = [];
+    public static function config(): array { return ['base' => 'https://tfb.test/api/v1']; }
     public static array $vus = [];
     public static function configured(): bool { return true; }
-    public static function sondeGet(string $p, int $t = 12): array { self::$vus[] = 'GET ' . $p; $r = self::$rep['GET ' . $p] ?? [404, ['description' => 'ORDER_NOT_FOUND']]; return ['code' => $r[0], 'corps' => $r[1], 'erreur' => null]; }
-    public static function requete(string $m, string $p, ?array $b = null, int $t = 20): array { self::$vus[] = $m . ' ' . $p; $r = self::$rep[$m . ' ' . $p] ?? [404, ['description' => 'ORDER_NOT_FOUND']]; return ['code' => $r[0], 'data' => $r[1], 'erreur' => null]; }
+    /** Avec un jeton imposé (le magasin), les réponses de $repMagasin ; sinon celles du consultant. */
+    private static function rep(string $k): array { if (self::$jetonImpose !== null) { self::$vus[] = 'magasin ' . $k; return self::$repMagasin[$k] ?? [401, ['error' => 'PANEL_SESSION_EXPIRED']]; } self::$vus[] = $k; return self::$rep[$k] ?? [404, ['description' => 'ORDER_NOT_FOUND']]; }
+    public static function sondeGet(string $p, int $t = 12): array { $r = self::rep('GET ' . $p); return ['code' => $r[0], 'corps' => $r[1], 'erreur' => null]; }
+    public static function requete(string $m, string $p, ?array $b = null, int $t = 20): array { $r = self::rep($m . ' ' . $p); return ['code' => $r[0], 'data' => $r[1], 'erreur' => null]; }
 }
 /** Le compte admin. */
 final class ErpApi
@@ -45,6 +50,7 @@ function setting(string $k, mixed $d = null): mixed { return $d; }
 function body(): array { return $GLOBALS['corpsTest']; }
 function journalAdd(string $a, string $k, ?string $p, string $m): void {}
 
+require __DIR__ . '/../src/tfb_magasin.php';
 require __DIR__ . '/../src/clients_panel.php';
 
 $ok = 0; $ko = 0;
@@ -54,7 +60,7 @@ function verifie(string $nom, bool $cond, string $detail = ''): void
     if ($cond) { $ok++; echo "  ok  $nom\n"; }
     else { $ko++; echo "  KO  $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
 }
-function remettre(): void { PanelApi::$rep = []; PanelApi::$vus = []; ErpApi::$rep = []; ErpApi::$vus = []; ErpApi::$corps = []; $GLOBALS['pclGarde'] = []; Db::$exec = []; }
+function remettre(): void { PanelApi::$rep = []; PanelApi::$repMagasin = []; PanelApi::$jetonImpose = null; unset($_SERVER['HTTP_X_TFB_JETON']); PanelApi::$vus = []; ErpApi::$rep = []; ErpApi::$vus = []; ErpApi::$corps = []; $GLOBALS['pclGarde'] = []; Db::$exec = []; }
 
 echo "Les champs secrets\n";
 $p = pclPropre(['id' => 4, 'password_hash' => 'x', 'name' => 'A', 'api_key' => 'k', 'pin' => '1234', 'pinned' => true, 'profile' => ['refresh_token' => 'r', 'score' => 'A'], 'iban' => 'BE1', 'l' => [['access_token' => 't', 'v' => 1]]]);
@@ -187,5 +193,32 @@ $GLOBALS['corpsTest'] = ['shop' => 3, 'methode' => 'POST', 'chemin' => '/../../c
 $r = wr_clients_bureaux();
 verifie('un chemin des bureaux hors liste : refusé avant TF Buddy', ($r['error'] ?? '') === 'écriture des bureaux non permise' && PanelApi::$vus === []);
 
+echo "Le compte TF Buddy du magasin\n";
+$jwt = 'eyJhbGciOiJIUzI1NiJ9.' . rtrim(strtr(base64_encode(json_encode(['exp' => 1795600000, 'sub' => 7])), '+/', '-_'), '=') . '.c2lnbmF0dXJl';
+verifie('l’échéance d’un JWT', tfbmExpiration($jwt) === 1795600000 && tfbmExpiration('pas-un-jwt') === null);
+$J = tfbmJetons(['status' => 200, 'token' => $jwt, 'refresh_token' => 'r1', 'expires_at' => 1795596336]);
+verifie('les jetons d’une connexion', $J['acces'] === $jwt && $J['renouvellement'] === 'r1' && $J['expireAcces'] === 1795600000 && $J['expireSession'] === 1795596336);
+verifie('une réponse sans jeton : rien', tfbmJetons(['status' => 401, 'error' => 'PANEL_SESSION_EXPIRED']) === null);
+verifie('le motif d’un refus', tfbmMotif(401, ['error' => 'PANEL_SESSION_EXPIRED']) === 'la session TF Buddy a expiré : reconnectez-vous' && tfbmMotif(429, null) === 'trop d’essais : patientez quelques minutes');
+remettre();
+$_SERVER['HTTP_X_TFB_JETON'] = 'court';
+verifie('un en-tête qui n’a pas la forme d’un jeton est ignoré', tfbmJeton() === null);
+$_SERVER['HTTP_X_TFB_JETON'] = $jwt;
+PanelApi::$repMagasin['GET /panel/shops/3/offices'] = [200, ['offices' => []]];
+$r = pclTf('GET', '/panel/shops/3/offices');
+verifie('une route du panel : le magasin d’abord, seul', $r['code'] === 200 && $r['compte'] === 'magasin' && PanelApi::$vus === ['magasin GET /panel/shops/3/offices'] && ErpApi::$vus === [] && PanelApi::$jetonImpose === null);
+remettre();
+$_SERVER['HTTP_X_TFB_JETON'] = $jwt;
+PanelApi::$rep['GET /shops/3/clients/5'] = [200, ['client' => ['id' => 5]]];
+$r = pclTf('GET', '/shops/3/clients/5');
+verifie('une route hors panel : le consultant d’abord, le magasin en dernier', $r['compte'] === 'consultant' && PanelApi::$vus === ['GET /shops/3/clients/5']);
+remettre();
+$_SERVER['HTTP_X_TFB_JETON'] = $jwt;
+$r = pclTf('GET', '/panel/shops/3/b2b/dashboard?year=2026&month=11');
+verifie('le jeton du magasin périmé, les comptes du cockpit refusés : « reconnectez-vous »', $r['refus'] && $r['magasinExpire'] && str_starts_with($r['compte'], 'magasin (401)') && str_contains(pclRefusDit($r, 'x')['texte'], 'reconnectez-vous'));
+remettre();
+verifie('sans jeton du magasin, le refus propose de le connecter', str_contains(pclRefusDit(pclTf('GET', '/panel/shops/3/offices'), 'les bureaux')['texte'], 'Connectez le compte TF Buddy du magasin'));
+
+verifie('« aux bureaux », « au profil », « à son… »', pclA('les bureaux') === 'aux bureaux' && pclA('le profil') === 'au profil' && pclA('son tableau') === 'à son tableau');
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

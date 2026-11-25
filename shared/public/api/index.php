@@ -181,6 +181,7 @@ require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › An
 require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe : la carte des responsabilités, le planning et son budget d'heures (23/11/2026)
 require __DIR__ . '/../../../panel/src/equipe_fiche.php';       // Mon équipe › la fiche d'une personne : identité, contrat, taux, évaluations, ventes (24/11/2026)
 require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
+require __DIR__ . '/../../../panel/src/tfb_magasin.php';               // Le compte TF Buddy du magasin : téléphone, PIN, SMS ; le jeton reste dans le navigateur (25/11/2026)
 require __DIR__ . '/../../../panel/src/clients_panel.php';             // Vendre › Clients : le module Klienci de TF Buddy, par les comptes du cockpit (25/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
@@ -425,6 +426,8 @@ function route(string $method, string $path): mixed
     if (($c = pcoRoute($method, $path)) !== null) { return $c; }
     // Vendre › Clients (25/11/2026) : particuliers, entreprises B2B, bureaux, analyse B2B, lus et écrits dans TF Buddy (panel/src/clients_panel.php).
     if (($c = pclRoute($method, $path)) !== null) { return $c; }
+    // Le compte TF Buddy du magasin (25/11/2026) : connexion au panel depuis le dashboard (panel/src/tfb_magasin.php).
+    if (($c = tfbmRoute($method, $path)) !== null) { return $c; }
     // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
     if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.
