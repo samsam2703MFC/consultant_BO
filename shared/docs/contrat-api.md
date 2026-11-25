@@ -6096,6 +6096,20 @@ QR du catalogue en ligne, PDF léger, affiche A4 / A3). Un catalogue de la marqu
     POST   /dashboard/catalogues[/marque]/{id}/imprime {quantity}       → …/prints (la charte publiée est figée pour ce catalogue)
     GET|POST /dashboard/catalogues[/marque]/{id}/lien                   → …/public-links (POST : nouveau lien, l'ancien révoqué)
 
+**Le bon de commande** (25/11/2026, client : « conditions par magasin – contenu exact de ce qu'il y a dans le
+catalogue », puis « cadre vide à remplir, délai boutique sous chaque catégorie » ; contrat du Marketing v1.20) —
+étape 5, « Ce que j'imprime » › « Le bon de commande » : une feuille A4 au contenu exact de mon catalogue (produits,
+prix, remises et offres avec leurs dates, disponibilité par catégorie), FR / NL / FR + NL, sur mon imprimante ou chez
+l'imprimeur (traits de coupe). Mes conditions se règlent une fois pour tous mes bons ; le Marketing les lit. Sans
+conditions, le cadre s'imprime vide, à remplir à la main.
+
+    GET    /dashboard/catalogues/conditions?shop=               → …/order-conditions (configured false : rien de réglé)
+    PUT    /dashboard/catalogues/conditions?shop=               → …/order-conditions {minDelay {value, unit hours|days} | null,
+           depositPct, holidayDeadlines [{for, until}], pickup, delivery {enabled, radiusKm, feeCents}, note {fr, nl}}
+    GET    /dashboard/catalogues[/marque]/{id}/bon?shop=&lang=  → …/{catalogues|brand-catalogues}/{id}/order-form
+
+Le PDF du bon : le lien d'impression du catalogue (`…/impression`) ouvert avec `&bon=fr|nl|fr,nl` (et `&mode=printer`).
+
 Le lien d'impression s'ouvre avec `&mode=printer` (PDF imprimeur), `&mode=livret` (livret A4, catalogue A5), `&mode=proof`
 (PDF léger) ou `&affiche=A4|A3&l={jeton du lien permanent}` (affiche), ajoutés par l'écran. Le QR et l'affiche mènent au
 catalogue en ligne du Marketing (`{public}/catalogue/?l=…`), qui suit la dernière version du catalogue.

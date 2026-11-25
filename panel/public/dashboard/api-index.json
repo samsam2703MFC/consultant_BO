@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-25T20:01:57Z",
+ "genere": "2026-11-25T20:15:42Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1049,7 +1049,7 @@
      ],
      "chemin": "/dashboard/catalogues…",
      "handler": "cmRoute",
-     "source": "panel/src/catalogues_magasin.php:161",
+     "source": "panel/src/catalogues_magasin.php:172",
      "resume": "Les routes /dashboard/catalogues* : la réponse (tableau), ou null si la route n'est pas la sienne."
     }
    ]
@@ -1070,7 +1070,7 @@
      ],
      "chemin": "/dashboard/catalogues…",
      "handler": "cmRoute",
-     "source": "panel/src/catalogues_magasin.php:161",
+     "source": "panel/src/catalogues_magasin.php:172",
      "resume": "Les routes /dashboard/catalogues* : la réponse (tableau), ou null si la route n'est pas la sienne."
     }
    ]
