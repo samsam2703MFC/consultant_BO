@@ -181,6 +181,7 @@ require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › An
 require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe : la carte des responsabilités, le planning et son budget d'heures (23/11/2026)
 require __DIR__ . '/../../../panel/src/equipe_fiche.php';       // Mon équipe › la fiche d'une personne : identité, contrat, taux, évaluations, ventes (24/11/2026)
 require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
+require __DIR__ . '/../../../panel/src/clients_panel.php';             // Vendre › Clients : le module Klienci de TF Buddy, par les comptes du cockpit (25/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
 require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
@@ -236,6 +237,11 @@ try {
     if ($method === 'GET' && $path === '/coffre/magasin/fichier') {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_coffre_fichier();   // sort le fichier, puis exit
+    }
+    // Les documents d'un bureau (25/11/2026) : l'affiche, les cartes, la brochure que TF Buddy rend (panel/src/clients_panel.php).
+    if ($method === 'POST' && $path === '/dashboard/clients/bureaux/pdf') {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); echo json_encode($r[1], JSON_UNESCAPED_UNICODE); exit; }
+        ep_clients_bureaux_pdf();   // sort le PDF, puis exit
     }
     // Le PDF d'une offre client (15/11/2026) : celui que TF Buddy rend, tel quel (src/offres_client.php).
     if ($method === 'GET' && $path === '/exploitation/offres-client/pdf') {
@@ -417,6 +423,8 @@ function route(string $method, string $path): mixed
     if (($c = eqpRoute($method, $path)) !== null) { return $c; }
     // Commandes (24/11/2026) : les commandes du jour par canal, les tournées et leurs bureaux (panel/src/commandes_tournees.php, tables panel_tournee*).
     if (($c = pcoRoute($method, $path)) !== null) { return $c; }
+    // Vendre › Clients (25/11/2026) : particuliers, entreprises B2B, bureaux, analyse B2B, lus et écrits dans TF Buddy (panel/src/clients_panel.php).
+    if (($c = pclRoute($method, $path)) !== null) { return $c; }
     // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
     if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.

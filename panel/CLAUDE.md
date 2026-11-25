@@ -26,6 +26,11 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   interrupteur à l'Abricot de la marque (Sam : « A et B on toggle (apricot) »), au jour, à la semaine et au mois
   (« faire une vue semaine et mois (en plus) »). Les commandes se lisent au panel, jamais
   gardées ; les tournées et leurs bureaux n'existent pas au panel : tables `panel_tournee*`.
+- **Clients** (`src/clients_panel.php`, `public/dashboard/clients.js`, 25/11/2026) : le module « Klienci » du panel TF
+  Buddy (Vendre › Clients : Particuliers, Entreprises B2B, Bureaux, Analyse B2B), lu et écrit dans TF Buddy par les seuls
+  comptes du cockpit, consultant puis admin (Sam : « use either all token available from consultant or admin »). Les
+  routes `/panel/shops/{s}/…` leur sont refusées : le module les tente et se rabat sur `/shops/{s}/clients…` et le relevé
+  des tickets pro ; les bureaux attendent l'accès de service (R1). Les offres restent la page Offres.
 - **Vidéos d'instruction** (23/11/2026) : le carré du rail, à côté d'Assistant IA (`public/dashboard/tutos.js`), le registre
   `public/dashboard/videos/videos.json`, le tournage `panel/tools/videos/` (données fictives). Une nouvelle fonction du
   dashboard peut y annoncer sa vidéo (genre `nouveau`) ; un écran filmé qui change se retourne. Détail : `src/LISEZMOI.md`.

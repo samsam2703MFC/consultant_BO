@@ -3393,6 +3393,49 @@ Les clients pro (`/bureaux`) : la liste `/shops/{id}/clients` du panel (2,4 Mo �
 fiches pro actives avec un nom de société — `{id, nom, ville, cp}`, rien d'autre (la fiche du panel porte aussi des
 secrets) — et gardée six heures (`ceo_app_setting`, `pcoBur:{shop}`). Tests : `php panel/bin/tests_commandes.php`.
 
+### `/dashboard/clients/*` — Vendre › Clients : particuliers, entreprises B2B, bureaux, analyse B2B (25/11/2026)
+
+Le module « Klienci » du panel TF Buddy dans le dashboard (`clients.js`, maquettes `panel/docs/maquettes/clients-panel/`).
+Serveur : `panel/src/clients_panel.php`. Ouvert à une session de magasin (`/dashboard`), pour son magasin ; le `shop`
+de la requête et du corps est vérifié. Tout se lit et s'écrit dans TF Buddy par les comptes du cockpit : le consultant
+(PanelApi) d'abord, l'admin (ErpApi) si le premier est refusé (401, 403, 404 d'un magasin non couvert) ; rien n'est
+gardé, sauf la liste des clients d'un magasin un quart d'heure (`pclClients:{shop}:{b2b|b2c}`) et les mois clos du
+relevé des tickets pro (`pclMois:{shop}:{AAAA-MM}`). Les champs secrets d'une réponse (mot de passe, hachage, jeton, PIN,
+IBAN…) ne sortent jamais.
+
+    GET  /dashboard/clients/particuliers?shop=&q=&filtre=remise&frais=1   {total, trouves, clients: [{id, nom, tel (en partie), email (bool), ville, cp, remise, cree}] (50 au plus), avecRemise, lu}
+    GET  /dashboard/clients/entreprises?shop=&frais=1                     {source: panel|base, entreprises: [{id, nom, tva, ville, email, tel, score, type, mode, n12, ca12, panier,
+                                                                          dernier, premier, cycle, recurrence, differe, credit: {actif, limite, utilise, pct, alerte} | null, manques: [nom|adresse|tva|contact]}],
+                                                                          total, incompletes, panel (le refus, si source = base), releve: {jours, lus, texte}}
+    GET  /dashboard/clients/fiche?shop=&id=                               {client (les champs de la fiche, sans secret), b2b, manques, profil: {score, type, mode, creditActif, creditLimite, statut, depuis},
+                                                                          factures: {n, impayees, impaye, liste}, credit, commandes | null, releve: {ca, n, premier, dernier, cycle}}   404 : pas un client du magasin
+    POST /dashboard/clients/client {shop, action, id?, entreprise?, champs}
+         creer      particulier : surname et phone obligatoires (name, email, street, street_number, zip, city, comment)   → POST /shops/{s}/clients
+                    entreprise (entreprise: true) : tax_number (BE0123456789) ; TF Buddy complète par VIES et rattache au magasin
+         modifier   PATCH /clients/{id} (name, surname, company_name, tax_number, adresse, phone, email, comment, peppol_identifier)
+         profil     PATCH /shops/{s}/clients/{id} {score A–D, type standard|vip|restaurant|hotel|wholesale|other, mode delivery|pickup|both, creditActif, creditLimite}
+         entreprise le geste du panel : PATCH /clients/{id} {is_b2b: 1, name: null, surname: null, tax_number, company_name, can_deferral, payment_terms, personal_discount_percent}
+         supprimer  DELETE /clients/{id} — seulement un client né dans ce magasin (id_main_shop), 409 sinon
+    POST /dashboard/clients/tva {shop, tva}                                {trouve, source, existe, rattache, societe}   (POST /shops/{s}/clients/vat-lookup, puis POST /vies/lookup)
+    GET  /dashboard/clients/analyse?shop=&annee=&mois=                     {source: panel|releve|null, kpi: {ventes, tickets, panier, clients, part, factures: {v, mom, yoy}}, graphique: [{mois, ventes: [année, année−1], tickets, clients, part}],
+                                                                          ca, memesJours, couverture, panel (le refus), texte}
+    GET  /dashboard/clients/bureaux?shop=&chemin=[&query=…]                {ok, data} | {ok: false, refus, motif, texte}   relais de /panel/shops/{s}/offices{chemin}
+    POST /dashboard/clients/bureaux {shop, methode, chemin, corps}         écriture des bureaux (onboard, sites, delivery-settings, members/invite, invite…)
+    POST /dashboard/clients/bureaux/pdf {shop, bureau, type: poster|cards|brochure, corps}   le PDF que TF Buddy rend, tel quel
+
+Avant toute écriture sur un client, le module relit `/shops/{s}/clients/{id}` : un client d'un autre magasin répond 404.
+Les chemins des bureaux suivent la liste blanche du panel (`OfficeService::read` / `write`) ; tout autre chemin : 400.
+
+**L'accès** (mesuré le 24/11/2026) : les routes `/shops/{s}/clients…`, `/clients/{id}` et `/vies/lookup` répondent
+aux comptes du cockpit ; celles sous `/panel/shops/{s}/…` (`b2b/clients`, `b2b/dashboard`, `offices…`) les refusent (404
+`ORDER_NOT_FOUND`). Le module les tente à chaque lecture ; refusées : les entreprises viennent de
+`/shops/{s}/clients?type=b2b`, avec la fréquence, le CA et le cycle sur 12 mois lus dans le relevé des tickets pro
+(`consultant/src/ventes_pro.php`, pro = fiche avec une TVA valide) ; le score, le type, le mode et le crédit viennent
+de la fiche (`/shops/{s}/clients/{id}` → `profile`), le crédit utilisé des factures impayées ; l'analyse B2B est
+calculée sur le même relevé : un mois en cours se compare aux mêmes jours du mois d'avant et de l'an dernier. Les
+bureaux n'ont pas de repli : l'écran dit ce qui manque. Demande à TF Buddy : R1 de
+`panel/docs/livreur/CAHIER_DES_CHARGES_TFBUDDY.md`.
+
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 
 `?shop=4&mois=2026-10&n=6` (`n` de 2 à 12, 6 par défaut ; un mois futur est ramené au mois en cours). Pour la carte
