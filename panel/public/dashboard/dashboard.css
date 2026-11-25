@@ -3287,8 +3287,10 @@ tr.moi td{background:rgba(141,29,44,.05)}
 
 /* Concurrence : le code postal d'un concurrent et son classement de zone (14/11/2026). */
 .bm-cp{display:inline-block;font-size:10.5px;background:#fff;border:1px solid var(--color-border-secondary,#d8d0c6);border-radius:999px;padding:0 7px;color:var(--color-text,#222);white-space:nowrap}
-.bm-cl{font-size:10px;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:2px 7px;white-space:nowrap}
-.bm-cl.ok{background:#e6f1e8;color:#1f5c2c}.bm-cl.wa{background:#fbeede;color:#8a4b00}.bm-cl.ko{background:#f6e3e5;color:#8D1D2C}.bm-cl.mu{background:#f1ece5;color:#8a8076}
+/* Le badge s'appelle .bm-rang (25/11/2026) : sous le nom .bm-cl, il habillait aussi les lignes cliquables du Top 10
+   (majuscules, 10 px, sans retour à la ligne : Écart et Verdict sortaient du cadre à 1440 px). */
+.bm-rang{font-size:10px;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:2px 7px;white-space:nowrap}
+.bm-rang.ok{background:#e6f1e8;color:#1f5c2c}.bm-rang.wa{background:#fbeede;color:#8a4b00}.bm-rang.ko{background:#f6e3e5;color:#8D1D2C}.bm-rang.mu{background:#f1ece5;color:#8a8076}
 /* Le helpdesk dans l'assistant (15/11/2026, maquette C de docs/maquettes/helpdesk-franchises) */
 .hd-qui{display:flex;align-items:center;gap:12px;margin:0 0 12px}.hd-qui p{margin:0;font-size:13px;line-height:1.5;color:var(--color-text-muted)}.hd-qui b{font-weight:400;color:var(--color-text)}
 .hd-av{width:56px;height:56px;border-radius:12px;overflow:hidden}.hd-av img{width:56px;height:56px;object-fit:cover}

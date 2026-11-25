@@ -5270,7 +5270,7 @@
     return `<div class="pr-eqb${mobile ? ' mob' : ''}">
       <div class="pr-eqb-h"><div><div class="pr-eqb-t">Le magasin, ensemble</div><div class="s">Les primes que toute l’équipe gagne d’un coup : les mois où le magasin y est arrivé</div></div>
         <div class="pr-eqb-pot"><b>${esc(prEur(verse))}</b><small>versés à l’équipe en ${esc(String(A.y || prAn()))}</small></div></div>
-      <div class="pr-eqb-rs">${V.equipe.map(p => { const n = Math.max(0, ...(A.personnes || []).map(r => +(((r.cases || {})[p.cle] || {}).fois) || 0));
+      <div class="pr-eqb-rs">${V.equipe.map(p => { const n = Math.max(0, ...(A.personnes || []).map(r => { const c = (r.cases || {})[p.cle] || {}; return +(c.foisClos != null ? c.foisClos : Math.min(+c.fois || 0, clos)) || 0; }));   // les mois clos gagnés, sur les mois clos (25/11/2026)
         return prAnneau(clos ? 100 * n / clos : 0, false, `<b>${n} / ${clos}</b><small>mois</small>`,
           `<b>${esc(p.lib)}</b><small>atteint ${prPl(n, 'mois')} sur ${clos} clos · ${esc(prPayeur(p))}</small><small>${esc(prEur(+p.total || 0))} · ${prPl(+p.gagnantes || 0, 'gagnante')}</small>`); }).join('')}</div>
     </div>`;
@@ -5638,7 +5638,7 @@
       const k = LIB[c.classement] || ['mu', c.classement];
       const quoi = c.classement === 'ailleurs' ? 'zone de ' + (c.aussi || []).join(', ') : (c.classement === 'zone' && (c.aussi || []).length ? 'dans la zone · aussi ' + c.aussi.join(', ') : k[1]);
       return `<tr><td>${esc(c.nom)}<div class="db-mini">${esc(c.type || '—')} · ${c.source === 'tfbuddy' ? 'TFBuddy' : (c.source === 'import' ? 'relevé importé, à encoder' : 'relevé web du cockpit')}</div></td>
-        <td>${c.cp ? '<span class="bm-cp">CP ' + esc(c.cp) + '</span> ' : ''}<span class="db-mini">${esc(c.commune || c.ville || '')}</span></td><td><span class="bm-cl ${k[0]}">${esc(quoi)}</span></td></tr>`;
+        <td>${c.cp ? '<span class="bm-cp">CP ' + esc(c.cp) + '</span> ' : ''}<span class="db-mini">${esc(c.commune || c.ville || '')}</span></td><td><span class="bm-rang ${k[0]}">${esc(quoi)}</span></td></tr>`;
     }).join('');
     // Une liste déroulante, fermée par défaut (15/11/2026) : l'en-tête et ses compteurs ; un clic montre le tableau.
     const ouvert = !!S.bmCpOuvert;
@@ -6677,6 +6677,8 @@
         ${vide ? '<span class="fd-vide">Aucun client à ce rythme pour l’instant.</span>' : `<span class="fd-kv"><span>Part du CA scanné</span><b>${fP(p.partCa)}</b><span>Panier moyen</span><b>${fU(p.panier)}</b><span>En commande</span><b>${fP0(p.commande)}</b></span>`}</button>`;
     }).join('')}</div>
       <p class="fd-note">Les conditions se règlent au cockpit (ERP franchisé › Fidélité › Profils clients). Cliquer une vignette affiche son profil dans les radars.</p>`;
+    // Aucun profil (25/11/2026 : la page plantait, « Cannot read properties of undefined (reading 'couleur') ») : on le dit.
+    if (!choisi) { return h + `<div class="db-attente">Aucun profil client n’est encore réglé pour ce magasin : les vignettes et les radars apparaîtront dès qu’il y en aura un (cockpit › ERP franchisé › Fidélité › Profils clients).</div>`; }
     const M = d.moyenne || {};
     const serie = { c: choisi.couleur, lib: choisi.nom + ' · ' + nf(choisi.clients, 0) + ' client' + (choisi.clients > 1 ? 's' : '') };
     h += `<div class="fd-g2 fd-g3"><div class="db-card fd-c"><div class="ct">Récurrence · ${esc(choisi.nom)}<span class="db-mini">0 au centre, 100 au bord</span></div>
@@ -9060,8 +9062,11 @@
           <div class="fi-raxe"><span>× 1</span><span>× ${nf(FI_ZONES.ko, 2)} · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div>
           </div></div>`;
     if (simOn) {
+      // Face au prix réseau : la médiane est un prix ENCAISSÉ (chiffre ÷ pièces, comme celui du magasin), le prix testé est
+      // hors TVA. On compare dans l'unité de la médiane : l'encaissé du magasin, au prorata du nouveau prix (25/11/2026 :
+      // l'écart mélangeait hors TVA et TVA comprise).
       const sLab = sim * se.labour / 100, sOh = sim * se.overhead / 100, sNet = sim - mat - sLab - sOh, nv = niv(sCoef);
-      h += `<div class="fi-rverdict ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null ? ` ${fPs(100 * (sim - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div>`;
+      h += `<div class="fi-rverdict ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null && P && P.magasin && P.magasin.p > 0 && prix > 0 ? ` Encaissé à ce prix : environ ${fPt(P.magasin.p * sim / prix)}, ${fPs(100 * (P.magasin.p * sim / prix - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div>`;
       F.simInfo = { coef: sCoef, taux: sTaux };
       h += ficheAdapter(F, sim);
     } else if (coef != null) {
