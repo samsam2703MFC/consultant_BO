@@ -4,11 +4,25 @@ declare(strict_types=1);
  * un TF Buddy simulé — magasin 3, Gosselies, données fictives (les entreprises et les bureaux des maquettes). Sans base.
  *   BANC_ACCES=panel : les routes /panel/shops/{s}/… répondent (ce que l'accès de service R1 ouvrira) ;
  *   sinon elles refusent les comptes du cockpit (404 ORDER_NOT_FOUND, mesuré le 24/11/2026) et l'écran se rabat.
- *     php -S 127.0.0.1:8098 panel/docs/maquettes/clients-panel/banc/banc.php      (depuis la racine du dépôt)
+ *   Le compte TF Buddy du magasin se connecte au banc avec le PIN 4321 et le code SMS 000000 (panel simulé, /tfb-sim/).
+ *     PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8098 panel/docs/maquettes/clients-panel/banc/banc.php   (depuis la racine du dépôt)
  *   puis http://127.0.0.1:8098/banc/ */
 define('RACINE', dirname(__DIR__, 5));
 $u = parse_url($_SERVER['REQUEST_URI']);
 $chemin = $u['path'];
+// Le panel simulé : la connexion d'un employé du magasin (téléphone, PIN 4321, code SMS 000000 : valeurs fictives du banc).
+if (str_starts_with($chemin, '/tfb-sim/panel/auth/')) {
+    header('Content-Type: application/json');
+    $b = json_decode(file_get_contents('php://input') ?: '[]', true) ?: [];
+    $jwt = static fn () => 'eyJhbGciOiJub25lIn0.' . rtrim(strtr(base64_encode(json_encode(['exp' => time() + 300, 'shop' => 3])), '+/', '-_'), '=') . '.banc-magasin';
+    $r = match (basename($chemin)) {
+        'login' => ($b['pin'] ?? '') === '4321' ? [202, ['status' => 202, 'challenge' => 'banc-challenge']] : [401, ['status' => 401, 'error' => 'PANEL_INVALID_CREDENTIALS']],
+        'confirm' => ($b['code'] ?? '') === '000000' ? [200, ['status' => 200, 'token' => $jwt(), 'refresh_token' => 'banc-r' . time(), 'expires_at' => time() + 43200]] : [401, ['status' => 401, 'error' => 'PANEL_SMS_CODE_INVALID']],
+        'refresh' => [200, ['status' => 200, 'token' => $jwt(), 'refresh_token' => 'banc-r' . time(), 'expires_at' => time() + 43200]],
+        default => [200, ['status' => 200]],
+    };
+    http_response_code($r[0]); echo json_encode($r[1]); return true;
+}
 // Les fichiers : le banc, l'écran du dashboard, le design system.
 if (!str_contains($chemin, '/api/cockpit')) {
     $f = match (true) {
@@ -95,7 +109,10 @@ function bancRep(string $m, string $p, ?array $b): array
 {
     $D = bancDonnees();
     $q = parse_url($p); $chem = $q['path']; parse_str($q['query'] ?? '', $Q);
-    if (str_starts_with($chem, '/panel/') && !bancPanel()) { return [404, ['status' => 'error', 'description' => 'ORDER_NOT_FOUND', 'errors' => []]]; }
+    // Le jeton d'un employé du magasin connecté (tfb_magasin.php) ouvre les routes du panel, comme en vrai.
+    $magasin = PanelApi::$jetonImpose !== null && str_ends_with(PanelApi::$jetonImpose, '.banc-magasin');
+    if (PanelApi::$jetonImpose !== null && !$magasin) { return [401, ['status' => 401, 'error' => 'PANEL_SESSION_EXPIRED']]; }
+    if (str_starts_with($chem, '/panel/') && !bancPanel() && !$magasin) { return [404, ['status' => 'error', 'description' => 'ORDER_NOT_FOUND', 'errors' => []]]; }
     if ($m === 'GET' && $chem === '/shops/3/clients') { $t = ($Q['type'] ?? '') === 'b2b' ? 'b2b' : 'b2c'; return [200, array_values($D[$t])]; }
     if ($m === 'POST' && $chem === '/shops/3/clients') { return [201, ['success' => true, 'client_created' => true, 'shop_assignment_created' => true, 'data' => ['id' => 1999]]]; }
     if (preg_match('#^/shops/3/clients/(\d+)$#', $chem, $mm)) {
@@ -132,18 +149,20 @@ function bancRep(string $m, string $p, ?array $b): array
 }
 final class PanelApi
 {
+    public static ?string $jetonImpose = null;
     public static function configured(): bool { return true; }
     public static function sondeGet(string $p, int $t = 12): array { [$c, $b] = bancRep('GET', $p, null); return ['code' => $c, 'corps' => $b, 'erreur' => null]; }
     public static function requete(string $m, string $p, ?array $b = null, int $t = 20): array { [$c, $r] = bancRep($m, $p, $b); return ['code' => $c, 'data' => $r, 'erreur' => null]; }
     public static function jetonSonde(): ?string { return null; }
-    public static function config(): array { return ['base' => '']; }
+    public static function config(): array { return ['base' => 'http://127.0.0.1:' . $_SERVER['SERVER_PORT'] . '/tfb-sim']; }
 }
+require RACINE . '/panel/src/tfb_magasin.php';
 require RACINE . '/panel/src/clients_panel.php';
 header('Content-Type: application/json; charset=utf-8');
 $path = preg_replace('#^.*/api/cockpit#', '', $chemin);
 parse_str($u['query'] ?? '', $_GET);
 if ($path === '/dashboard/clients/bureaux/pdf') { ep_clients_bureaux_pdf(); }   // comme shared/public/api/index.php : sort le PDF, puis exit
-try { $r = pclRoute($_SERVER['REQUEST_METHOD'], $path); }
+try { $r = pclRoute($_SERVER['REQUEST_METHOD'], $path) ?? tfbmRoute($_SERVER['REQUEST_METHOD'], $path); }
 catch (Throwable $e) { http_response_code(500); $r = ['error' => get_class($e) . ' : ' . $e->getMessage() . ' @' . $e->getLine()]; }
 echo json_encode($r ?? ['error' => 'route inconnue'], JSON_UNESCAPED_UNICODE);
 return true;
