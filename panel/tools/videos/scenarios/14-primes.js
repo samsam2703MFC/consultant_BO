@@ -1,4 +1,4 @@
-/* Vidéo 14 — « Les primes de l'équipe » (mode d'emploi de Vendre › Primes, ?vue=primes). Environ 2 min.
+/* Vidéo 14 — « Les primes de l'équipe » (mode d'emploi de Mon équipe › Primes, ?vue=primes ; dans Vendre jusqu'au 24/11/2026). Environ 2 min.
  * Données fictives : mocks/14_primes.js (six personnes de vente, novembre 2026 en cours, octobre clos, l'année).
  * La page se LIT : rien ne s'y pose ni ne s'y modifie (les primes se règlent au cockpit). Chaque phrase vient de
  * panel/public/dashboard/dashboard.js (rendPrimes et voisins) ou de l'en-tête de panel/src/primes.php. */

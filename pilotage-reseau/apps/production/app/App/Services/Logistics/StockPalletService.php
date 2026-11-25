@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Services\Logistics;
 
 use App\Repositories\Logistics\StockPalletRepository;
+use App\Repositories\Workshop\ParamRepository;
+use App\Services\Workshop\Planning\WeekStart;
 use App\Exceptions\CustomException;
 use DateTimeImmutable;
 
@@ -24,7 +26,7 @@ final class StockPalletService
     /** Couches dessinées : les N produits les plus nombreux, le reste en une couche. */
     public const LAYERS = 5;
 
-    public function __construct(private StockPalletRepository $repo)
+    public function __construct(private StockPalletRepository $repo, private ?ParamRepository $params = null)
     {
     }
 
@@ -108,14 +110,56 @@ final class StockPalletService
      * (bez maks. : « ustaw maks. ») ; na zamówienie (MTO) — tylko pokrycie zamówień, bez min. / maks. Sprzedane = kartony
      * WDT z 6 ostatnich tygodni (bez dnia dzisiejszego), średnio na tydzień w podpowiedzi. Produkty MTS bez stanu też.
      */
-    public function generalStock(): array
+    /** Semaine de production contenant $today (week.start_day ; lundi sans réglages) : [début, fin]. */
+    private function week(?string $today): array
     {
+        $start = WeekStart::of($today ?? date('Y-m-d'), $this->params ? WeekStart::day($this->params) : 1);
+        return [$start, date('Y-m-d', strtotime($start . ' +6 days'))];
+    }
+
+    /**
+     * [430] Fenêtre « Zamówione » de Stan ogólny : commandes ouvertes du produit (GRATIS compris), classées en retard
+     * (départ avant la semaine), cette semaine, plus tard / sans date — mêmes règles que la colonne. Lecture seule.
+     */
+    public function productOrders(int $productId, ?string $today = null): array
+    {
+        $name = $this->repo->productName($productId) ?? throw new CustomException('Nie znaleziono produktu.', 'errors', 404);
+        [$start, $end] = $this->week($today);
+        $groups = ['late' => [], 'week' => [], 'later' => []];
+        $ppc = null;
+        foreach ($this->repo->productOpenOrders($productId) as $r) {
+            $ppc ??= $r['ppc'] !== null ? (int) $r['ppc'] : null;
+            $due = $r['expected_shipping_date'] !== null ? substr((string) $r['expected_shipping_date'], 0, 10) : null;
+            $key = $due === null || $due > $end ? 'later' : ($due < $start ? 'late' : 'week');
+            $cartons = round((float) $r['cartons'], 2);
+            $groups[$key][] = ['order_id' => (int) $r['id'], 'customer_id' => $r['id_customer'] !== null ? (int) $r['id_customer'] : null,
+                'customer' => $r['customer'], 'due' => $due, 'created' => $r['create_order_date'] !== null ? substr((string) $r['create_order_date'], 0, 10) : null,
+                'cartons' => $cartons, 'freebie' => (int) $r['is_freebie'] === 1, 'supplement' => $r['order_type'] === 'SUPPLEMENT',
+                'reference' => $r['reference'] !== null && trim((string) $r['reference']) !== '' ? (string) $r['reference'] : null,
+                'late_days' => $key === 'late' ? (int) ((strtotime($start) - strtotime($due)) / 86400) : null];
+        }
+        $sum = fn(array $l) => round(array_sum(array_column($l, 'cartons')), 2);
+        return ['product_id' => $productId, 'name' => $name, 'ppc' => $ppc, 'week_start' => $start, 'week_end' => $end,
+            'week_label' => date('d.m', strtotime($start)) . ' – ' . date('d.m', strtotime($end)),
+            'groups' => $groups, 'totals' => ['late' => $sum($groups['late']), 'week' => $sum($groups['week']), 'later' => $sum($groups['later'])]];
+    }
+
+    public function generalStock(?string $today = null): array
+    {
+        // [428] « Zamówione » = ce qui part dans la semaine de production (week.start_day, même fenêtre que la feuille
+        // d'équipe) ; plus tard / sans date : à part, hors « Zostaje ». [429] Les commandes en retard encore ouvertes (date
+        // passée, sans WDT — 361 cartons de Tradition le 24.11 : commandes jamais clôturées) sont montrées à part, avec leur
+        // part de GRATIS, et ne sont plus déduites du stock.
+        [$start, $end] = $this->week($today);
         $cats = [];
-        $tot = ['stock' => 0, 'ordered' => 0, 'pallet' => 0, 'left' => 0, 'sold' => 0, 'mts' => 0, 'mto' => 0];
-        foreach ($this->repo->generalStock(self::SOLD_WEEKS * 7) as $r) {
+        $tot = ['stock' => 0, 'ordered' => 0, 'ordered_late' => 0, 'ordered_late_free' => 0, 'ordered_later' => 0, 'pallet' => 0, 'left' => 0, 'sold' => 0, 'mts' => 0, 'mto' => 0];
+        foreach ($this->repo->generalStock(self::SOLD_WEEKS * 7, $start, $end) as $r) {
             $ppc = (int) $r['ppc'];
             $stock = (int) $r['free'] + (int) $r['pallet'];
-            $ordered = (int) round((float) $r['ordered']);
+            $late = (int) round((float) $r['ordered_late']);
+            $lateFree = (int) round((float) $r['ordered_late_free']);
+            $later = (int) round((float) $r['ordered_later']);
+            $ordered = (int) round((float) $r['ordered_week']);
             $left = $stock - $ordered;
             $mts = $r['mode'] === 'MTS';
             $max = $mts && $r['stock_max'] !== null && $ppc > 0 ? (int) round((float) $r['stock_max'] / $ppc) : null;
@@ -123,7 +167,7 @@ final class StockPalletService
             $sold = (int) round((float) $r['sold']);
             $state = $left < 0 ? 'short' : (!$mts ? 'ok' : (!$max ? 'nomax' : ($left > $max ? 'over' : ($min !== null && $left < $min ? 'low' : 'ok'))));
             $row = ['id' => (int) $r['id'], 'item_id' => $r['item_id'] !== null ? (int) $r['item_id'] : null, 'name' => (string) $r['name'], 'ppc' => $ppc ?: null,
-                'mode' => $mts ? 'MTS' : 'MTO', 'stock' => $stock, 'ordered' => $ordered, 'pallet' => (int) $r['pallet'],
+                'mode' => $mts ? 'MTS' : 'MTO', 'stock' => $stock, 'ordered' => $ordered, 'ordered_late' => $late, 'ordered_late_free' => $lateFree, 'ordered_later' => $later, 'pallet' => (int) $r['pallet'],
                 'left' => $left, 'max' => $max ?: null, 'min' => $min, 'period' => $mts ? $r['stock_period'] : null,
                 'sold' => $sold, 'sold_week' => round($sold / self::SOLD_WEEKS, 1),
                 'pct' => $max ? (int) round(max(0, $left) / $max * 100) : null,
@@ -132,10 +176,11 @@ final class StockPalletService
                 'state' => $state];
             $cats[$r['category']] ??= ['name' => (string) $r['category'], 'rows' => []];
             $cats[$r['category']]['rows'][] = $row;
-            foreach (['stock', 'ordered', 'pallet', 'left', 'sold'] as $k) $tot[$k] += $row[$k];
+            foreach (['stock', 'ordered', 'ordered_late', 'ordered_late_free', 'ordered_later', 'pallet', 'left', 'sold'] as $k) $tot[$k] += $row[$k];
             $tot[$mts ? 'mts' : 'mto']++;
         }
-        return ['categories' => array_values($cats), 'totals' => $tot, 'sold_weeks' => self::SOLD_WEEKS];
+        return ['categories' => array_values($cats), 'totals' => $tot, 'sold_weeks' => self::SOLD_WEEKS, 'week_start' => $start, 'week_end' => $end,
+            'week_label' => date('d.m', strtotime($start)) . ' – ' . date('d.m', strtotime($end))];
     }
 
     /**

@@ -83,6 +83,11 @@
     "QC_TRACE_UNKNOWN_CODE": "Aucun lot ni carton trouvé pour le code {code}.",
     "QC_HOLD_NO_PRODUCT": "Ce lot (semi-fini) ne se bloque que par le lot de produit qui l’utilise.",
     "QC_HOLD_RELEASED": "Ce lot est déjà libéré.",
+    "COLD_VISIT_REQUIRED": "D'abord la tournée des chambres froides sur la tablette qualité (complète, des dernières {hours} h) — ensuite « Co kupić ».",
+    "COLD_VISIT_NOT_COUNTED": "Comptez toutes les matières de ce lieu (reste : {count}).",
+    "COLD_VISIT_PHOTO_REQUIRED": "Pas en ordre : prenez une photo avant d'enregistrer.",
+    "COLD_PLACE_EQUIPMENT": "Cette chambre froide est dans le registre des équipements — désactivez-la dans « Serwisy i przeglądy maszyn ».",
+    "COLD_VISIT_NOT_READY": "La tournée des chambres froides n'est pas encore activée (migration 255).",
     "PALLET_PRODUCT_HELD": "Lot bloqué par la qualité : {product}, étiquettes {days} ({cartons} cartons). Ne posez pas les cartons de ces jours sur la palette.",
     "LOT_HELD_ON_PALLET": "La palette P-{pallet} porte des cartons d’un lot bloqué ({product}, {lot}) — ne pas charger, appelez le responsable de production.",
     "MANAGER_NO_DRAFTS": "Aucun brouillon d'objectif à valider.",
@@ -622,7 +627,8 @@
     "zone": "zone de nettoyage",
     "chill": "mesure de refroidissement",
     "help": "appel",
-    "photo": "photo"
+    "photo": "photo",
+    "cold_place": "lieu de la tournée des chambres froides"
   },
   "documents": {
     "team_sheet_title": "Plan de l'équipe",

@@ -294,3 +294,16 @@
 2026-11-24T06:01:12Z Manuels du 23/11/2026 : l'annonce des vidéos sans croix, les tables de Mon équipe, le statut des demandes gardé (documentation seulement)
 2026-11-24T06:01:15Z [409-427] tablet hali, tablet jakosci, karty stanowisk, Jakosc w KP
 2026-11-24T07:52:40Z Dashboard magasin : « Plus tard » ferme toujours la bulle des vidéos, même quand le navigateur refuse d'écrire
+2026-11-24T07:59:40Z [428] stan ogolny zamowione tydzien
+2026-11-24T08:20:13Z [429] stan ogolny zalegle osobno
+2026-11-24T10:02:32Z [430] stan ogolny okno zamowien
+2026-11-24T12:24:01Z Autocontrôle qualité : la tablette du magasin (autocontrole/?shop=, &produit=, &essai=1), les résultats et les grilles au siège (autocontrole/grilles.html)
+2026-11-24T15:31:13Z Dashboard magasin : les primes passent dans Mon équipe, troisième onglet après le planning (?vue=primes ; plus dans Vendre)
+2026-11-24T15:51:47Z Mon équipe › Planning : les ETP planifiés, la jauge du CA par ETP (cible 13 000 €), le mois groupé par section
+2026-11-24T17:03:19Z Mon équipe : la fiche d'une personne (identité, contrat et taux modifiables, évaluations par service, ventes des 12 semaines, compétences, primes)
+2026-11-24T17:14:34Z Mon équipe › Planning : la jauge du CA par ETP au mois seulement ; vidéos 02 et 03 retournées
+2026-11-24T17:24:39Z Dashboard magasin › Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer ; vues Liste et Tournées sur un interrupteur abricot (tables panel_tournee*)
+2026-11-24T17:32:35Z Dashboard magasin › Commandes : les vues Semaine et Mois, en plus du jour (Liste et Tournées)
+2026-11-24T17:34:10Z Commandes : un jour sans commande au panel (404 NO_ORDERS_FOR_PICKUP_DATE) est une liste vide, pas une panne
+2026-11-24T20:36:11Z Commandes : lecture des livraisons de TF Buddy (tournées, horaires, heure limite) avec les comptes du dashboard
+2026-11-25T19:40:49Z [431-437] karty produktow na tablecie, obchod chlodni

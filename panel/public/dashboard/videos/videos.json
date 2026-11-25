@@ -35,7 +35,7 @@
       ],
       "fichier": "02-mon-equipe.mp4",
       "affiche": "02-mon-equipe.jpg",
-      "duree": "2 min 20",
+      "duree": "2 min 21",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/equipe.js",
@@ -43,8 +43,8 @@
         "panel/src/equipe.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "b693753fb10c16e827bda3fce500af04364d2e5d",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "equipe-responsabilites",
@@ -777,7 +777,7 @@
       ],
       "fichier": "03-formation-planning.mp4",
       "affiche": "03-formation-planning.jpg",
-      "duree": "5 min 17",
+      "duree": "5 min 19",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/equipe.js",
@@ -785,8 +785,8 @@
         "panel/src/equipe.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "8b8cc5c341ca8ee89e15dda26b5aad60da805e5d",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "taches",
@@ -2401,15 +2401,16 @@
       ],
       "fichier": "14-primes.mp4",
       "affiche": "14-primes.jpg",
-      "duree": "2 min 11",
+      "duree": "2 min",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
+        "panel/public/dashboard/equipe.css",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "1e40cb22ca3b07b8628beeb88ba0863339628ba6",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "aa3729dd2e71e4f35ab62acac048a20093921ac2",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "concurrence",

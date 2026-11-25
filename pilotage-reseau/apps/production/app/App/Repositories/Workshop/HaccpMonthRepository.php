@@ -145,6 +145,20 @@ final class HaccpMonthRepository extends WorkshopRepository
     }
 
     /**
+     * [432] Obchód chłodni : miejsca zapisane « Czysto i porządek ? Nie » (avec photo) du $from au $to inclus — personne,
+     * heure, note, photo. null si la table manque (migration 255 absente).
+     */
+    public function coldDirty(string $from, string $to): ?array
+    {
+        if (!$this->hasTable('n_cold_visit_place')) return null;
+        return $this->all("SELECT vp.id, vp.id_visit, vp.id_place, vp.place_name, vp.saved_at, vp.id_photo, vp.note,
+                TRIM(CONCAT(COALESCE(pe.name, ''), ' ', COALESCE(pe.surname, ''))) AS employee_name
+            FROM n_cold_visit_place vp LEFT JOIN n_prod_employee e ON e.id = vp.id_employee LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
+            WHERE vp.clean = 'no' AND vp.saved_at >= ? AND vp.saved_at < DATE_ADD(?, INTERVAL 1 DAY)
+            ORDER BY vp.saved_at, vp.id", [$from, $to]);
+    }
+
+    /**
      * Tendance : par mois (YYYY-MM) du $from (1er du mois) au $to exclu — événements HACCP défavorables ou ruptures de la
      * chaîne du froid, exécutions avec écart, incidents de température. Source absente → clé absente.
      * @return array<string, array<string, int>> source → mois → nombre

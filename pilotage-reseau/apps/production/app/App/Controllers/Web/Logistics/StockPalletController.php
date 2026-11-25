@@ -37,6 +37,16 @@ final class StockPalletController extends BaseController
         $this->view('logistics/stock_pallets', $data);
     }
 
+    /** [430] GET /ajax/logistics/stock/orders/{id} : commandes ouvertes du produit (en retard / cette semaine / plus tard). */
+    public function productOrders($id)
+    {
+        try {
+            return $this->json($this->stock->productOrders((int) $id));
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     /** [333] DELETE /ajax/logistics/stock/pallets/{id} {mode: stock|delete, reason?} */
     public function deletePallet($id)
     {

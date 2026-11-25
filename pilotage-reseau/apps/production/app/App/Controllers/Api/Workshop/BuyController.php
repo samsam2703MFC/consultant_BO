@@ -5,12 +5,13 @@ namespace App\Controllers\Api\Workshop;
 
 use App\Core\Api\Workshop\ApiRequest;
 use App\Core\Api\Workshop\ApiResult;
+use App\Services\Workshop\Quality\ColdVisitService;
 use App\Services\Workshop\Supply\BuyService;
 
 /** Zakupy tygodnia : co kupić (z zapasem), zapytania do 1–3 dostawców na pozycję, oferty z minimum, zamówienie, wyniki operatora. */
 final class BuyController
 {
-    public function __construct(private BuyService $buy)
+    public function __construct(private BuyService $buy, private ColdVisitService $cold)
     {
     }
 
@@ -34,4 +35,7 @@ final class BuyController
     public function results(ApiRequest $request): ApiResult { return new ApiResult($this->buy->results((string) $request->query('period', 'month'), $request->context)); }
     public function suppliers(ApiRequest $request): ApiResult { return new ApiResult($this->buy->materialSuppliers($request->query('missing') === '1', $request->context)); }
     public function saveSuppliers(ApiRequest $request): ApiResult { return new ApiResult($this->buy->saveMaterialSuppliers($request->id(), $request->body(), $request->context)); }
+    // [432] Obchód chłodni : miejsca dodane w ERP (Magazyn suchy…) ; réponse = krok « Obchód chłodni ».
+    public function addColdPlace(ApiRequest $request): ApiResult { return new ApiResult($this->cold->addPlace($request->body(), $request->context), 201); }
+    public function removeColdPlace(ApiRequest $request): ApiResult { return new ApiResult($this->cold->removePlace($request->id(), $request->context)); }
 }
