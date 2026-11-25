@@ -55,7 +55,9 @@
   const toutes = () => (st.periode === 'jour' ? st.D : st.P) ? (st.periode === 'jour' ? st.D : st.P).toutes : [];
 
   const json = r => r.json().catch(() => ({})).then(j => { if (!r.ok) { const e = new Error(j.error || ('erreur ' + r.status)); e.code = r.status; throw e; } return j; });
-  const lire = (p, prm) => fetch(st.api + p + '?' + new URLSearchParams(Object.assign({ shop: st.shop }, prm || {})).toString(), { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).then(json);
+  // Le jeton TF Buddy du magasin (tfb-magasin.js, 25/11/2026), s'il est connecté : les livraisons du panel n'ont que lui.
+  const tfb = () => window.DashTfb ? window.DashTfb.entetes(st.shop, st.api) : Promise.resolve({});
+  const lire = (p, prm) => tfb().then(h => fetch(st.api + p + '?' + new URLSearchParams(Object.assign({ shop: st.shop }, prm || {})).toString(), { headers: Object.assign({ Accept: 'application/json' }, h), credentials: 'same-origin' })).then(json);
   const envoyer = (m, p, corps) => fetch(st.api + p, { method: m, credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify(Object.assign({ shop: st.shop }, corps || {})) }).then(json);
 
