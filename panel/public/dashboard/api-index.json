@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-25T19:46:16Z",
+ "genere": "2026-11-25T20:01:57Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -557,7 +557,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:885",
+     "source": "panel/src/clients_panel.php:909",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -1081,7 +1081,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:74"
+    "clients.js:83"
    ],
    "magasin": true,
    "routes": [
@@ -1091,7 +1091,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:927",
+     "source": "panel/src/clients_panel.php:953",
      "resume": ""
     }
    ]
@@ -1102,11 +1102,11 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:382",
-    "clients.js:492",
-    "clients.js:65",
-    "clients.js:70",
-    "clients.js:89"
+    "clients.js:392",
+    "clients.js:502",
+    "clients.js:74",
+    "clients.js:79",
+    "clients.js:98"
    ],
    "magasin": true,
    "routes": [
@@ -1116,7 +1116,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:885",
+     "source": "panel/src/clients_panel.php:909",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -1127,7 +1127,7 @@
     "POST"
    ],
    "fichiers": [
-    "clients.js:486"
+    "clients.js:496"
    ],
    "magasin": true,
    "routes": [
@@ -1137,7 +1137,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:885",
+     "source": "panel/src/clients_panel.php:909",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -1148,7 +1148,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:470"
+    "clients.js:480"
    ],
    "magasin": true,
    "routes": [
@@ -1158,7 +1158,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:927",
+     "source": "panel/src/clients_panel.php:953",
      "resume": ""
     }
    ]
@@ -1169,7 +1169,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:60"
+    "clients.js:69"
    ],
    "magasin": true,
    "routes": [
@@ -1179,7 +1179,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:927",
+     "source": "panel/src/clients_panel.php:953",
      "resume": ""
     }
    ]
@@ -1190,7 +1190,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:81"
+    "clients.js:90"
    ],
    "magasin": true,
    "routes": [
@@ -1200,7 +1200,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:927",
+     "source": "panel/src/clients_panel.php:953",
      "resume": ""
     }
    ]
@@ -1211,7 +1211,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:54"
+    "clients.js:63"
    ],
    "magasin": true,
    "routes": [
@@ -1221,7 +1221,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:927",
+     "source": "panel/src/clients_panel.php:953",
      "resume": ""
     }
    ]
@@ -1232,7 +1232,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:476"
+    "clients.js:486"
    ],
    "magasin": true,
    "routes": [
@@ -1242,7 +1242,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:927",
+     "source": "panel/src/clients_panel.php:953",
      "resume": ""
     }
    ]
@@ -1253,7 +1253,7 @@
     "GET"
    ],
    "fichiers": [
-    "commandes.js:470"
+    "commandes.js:472"
    ],
    "magasin": true,
    "routes": [
@@ -1263,7 +1263,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:659",
+     "source": "panel/src/commandes_tournees.php:661",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1274,7 +1274,7 @@
     "GET"
    ],
    "fichiers": [
-    "commandes.js:405"
+    "commandes.js:407"
    ],
    "magasin": true,
    "routes": [
@@ -1284,7 +1284,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:659",
+     "source": "panel/src/commandes_tournees.php:661",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1295,7 +1295,7 @@
     "GET"
    ],
    "fichiers": [
-    "commandes.js:66"
+    "commandes.js:68"
    ],
    "magasin": true,
    "routes": [
@@ -1305,7 +1305,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:659",
+     "source": "panel/src/commandes_tournees.php:661",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1316,7 +1316,7 @@
     "GET"
    ],
    "fichiers": [
-    "commandes.js:75"
+    "commandes.js:77"
    ],
    "magasin": true,
    "routes": [
@@ -1326,7 +1326,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:659",
+     "source": "panel/src/commandes_tournees.php:661",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1337,8 +1337,8 @@
     "GET"
    ],
    "fichiers": [
-    "commandes.js:421",
-    "commandes.js:485"
+    "commandes.js:423",
+    "commandes.js:487"
    ],
    "magasin": true,
    "routes": [
@@ -1348,7 +1348,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:659",
+     "source": "panel/src/commandes_tournees.php:661",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]
@@ -1359,7 +1359,7 @@
     "GET"
    ],
    "fichiers": [
-    "commandes.js:422"
+    "commandes.js:424"
    ],
    "magasin": true,
    "routes": [
@@ -1369,7 +1369,7 @@
      ],
      "chemin": "/dashboard/commandes…",
      "handler": "pcoRoute",
-     "source": "panel/src/commandes_tournees.php:659",
+     "source": "panel/src/commandes_tournees.php:661",
      "resume": "Les routes de la page Commandes : la journée, la semaine et le mois, les clients pro, les tournées et leurs bureaux, la tournée d'une commande."
     }
    ]

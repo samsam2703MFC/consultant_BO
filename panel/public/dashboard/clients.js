@@ -42,9 +42,18 @@
     a: { annee: null, mois: null, d: null, err: null, lecture: false, metrique: 'ventes' } };
 
   const json = r => r.json().catch(() => ({})).then(j => { if (!r.ok) { const e = new Error(j.error || j.texte || ('erreur ' + r.status)); e.code = r.status; e.corps = j; throw e; } return j; });
-  const lire = (p, prm) => fetch(st.api + p + '?' + new URLSearchParams(Object.assign({ shop: st.shop }, prm || {})).toString(), { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).then(json);
-  const envoyer = (p, corps) => fetch(st.api + p, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({ shop: st.shop }, corps || {})) }).then(json);
+  // Le jeton TF Buddy du magasin, s'il est connecté (tfb-magasin.js), part avec chaque appel : les routes du panel n'ont
+  // que lui ; sans lui, les comptes consultant et admin du cockpit.
+  const tfb = () => window.DashTfb ? window.DashTfb.entetes(st.shop, st.api) : Promise.resolve({});
+  const lire = (p, prm) => tfb().then(h => fetch(st.api + p + '?' + new URLSearchParams(Object.assign({ shop: st.shop }, prm || {})).toString(), { headers: Object.assign({ Accept: 'application/json' }, h), credentials: 'same-origin' })).then(json).then(vuExpire);
+  const envoyer = (p, corps) => tfb().then(h => fetch(st.api + p, { method: 'POST', credentials: 'same-origin', headers: Object.assign({ Accept: 'application/json', 'Content-Type': 'application/json' }, h),
+    body: JSON.stringify(Object.assign({ shop: st.shop }, corps || {})) })).then(json).then(vuExpire);
+  /** Le serveur dit la session TF Buddy du magasin périmée : on l'oublie (le bouton « Connecter » revient). */
+  function vuExpire(d) { const x = d && (d.panel || d); if (x && x.magasinExpire && window.DashTfb) { window.DashTfb.oublier(st.shop); } return d; }
+  const tfbEtat = () => window.DashTfb ? window.DashTfb.etat(st.shop) : { connecte: false };
+  const tfbBouton = (lib) => window.DashTfb ? `<button type="button" class="btn btn--sm btn--primary" data-act="tfb-connecter">${lib || 'Connecter le compte TF Buddy du magasin'}</button>` : '';
+  /** Après une connexion ou une déconnexion : tout se relit avec les nouveaux droits. */
+  function toutRelire() { st.p.d = null; st.e.d = null; st.e.fiche = null; st.b.d = null; st.b.det = {}; st.b.options = null; st.a.d = null; charger(true); }
   const memo = (k, v) => { try { if (v === undefined) { return localStorage.getItem(k); } localStorage.setItem(k, v); } catch (e) { /* sans mémoire */ } return null; };
 
   /* ── Les lectures ─────────────────────────────────────────────────────────────────────────────────────────── */
@@ -137,7 +146,7 @@
       : st.onglet === 'bur' ? `<button type="button" class="btn btn--primary" data-act="w-ouvrir"${st.b.d && st.b.d.ok ? '' : ' disabled title="TF Buddy ne donne pas les bureaux au cockpit"'}>${SVG(ICO.plus)}Ajouter un bureau</button>` : '';
     return `<div class="pcl-tete"><div><p class="pcl-kicker">${esc(st.nomShop || 'Magasin ' + st.shop)}</p><h1>Clients</h1></div><span class="pcl-sp"></span>${act}</div>
       <nav class="page-tabs pcl-tabs" aria-label="Clients">${ong.map(([k, l, c]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-act="onglet" data-v="${k}">${l}${c}</button>`).join('')}
-      <span class="pcl-sp"></span><button type="button" class="linklike" data-act="aller-offres">Les offres : Vendre › Offres</button></nav>`;
+      <span class="pcl-sp"></span>${window.DashTfb ? (tfbEtat().connecte ? `<span class="pcl-tfb" title="Les données du panel se lisent avec le compte TF Buddy du magasin, connecté sur cet appareil">TF Buddy : compte du magasin connecté · <button type="button" class="linklike" data-act="tfb-deconnecter">déconnecter</button></span>` : `<button type="button" class="linklike" data-act="tfb-connecter">connecter TF Buddy</button>`) : ''}<button type="button" class="linklike" data-act="aller-offres">Les offres : Vendre › Offres</button></nav>`;
   }
 
   /* ── Particuliers ─────────────────────────────────────────────────────────────────────────────────────────── */
@@ -196,7 +205,7 @@
     const riche = d.source === 'panel', L = entreprisesVisibles();
     const haut = (d.incompletes ? `<div class="pcl-alerte">${SVG(ICO.alerte)}<div>${nf(d.incompletes)} entreprise${d.incompletes > 1 ? 's ont' : ' a'} des données incomplètes (TVA, adresse, ou ni e-mail ni téléphone) : leurs factures et leurs offres ne peuvent pas partir.</div>
         <button type="button" class="btn btn--sm" data-act="e-incompl">${E.incompl ? 'Toutes les afficher' : 'Les afficher'}</button></div>` : '')
-      + (riche ? '' : note(`${esc(d.panel ? d.panel.texte : '')}<br>${esc(d.releve ? d.releve.texte : '')}`, 'pcl-note-doux'));
+      + (riche ? '' : note(`${esc(d.panel ? d.panel.texte : '')}<br>${esc(d.releve ? d.releve.texte : '')}${d.panel && (!d.panel.magasin || d.panel.magasinExpire) ? '<div style="margin-top:8px">' + tfbBouton() + '</div>' : ''}`, 'pcl-note-doux'));
     const barre = `<div class="pcl-filtres"><input id="pcl-eq" type="search" placeholder="Société, TVA, ville" value="${esc(E.q)}" autocomplete="off">
       ${riche ? `<span class="pcl-grp">Score ${seg('e-score', E.score, [['', 'Tous'], ['A', 'A'], ['B', 'B'], ['C', 'C'], ['D', 'D']])}</span>` : ''}
       <span class="pcl-grp">CA 12M ${seg('e-ca', E.ca, [['', 'Tous'], ['a', '< 1 k'], ['b', '1–5 k'], ['c', '> 5 k']])}</span>
@@ -237,7 +246,8 @@
 
   /* ── Bureaux ──────────────────────────────────────────────────────────────────────────────────────────────── */
   function refus(d, quoi) {
-    return `<section class="card pcl-refus">${SVG(ICO.cadenas)}<div><h3>${esc(quoi)} ne se lisent pas</h3><p>${esc(d.texte || d.motif || '')}</p>${d.motif ? `<p class="muted">Réponse : ${esc(d.motif)}${d.comptes ? ' · ' + esc(d.comptes) : ''}</p>` : ''}</div></section>`;
+    const btn = !d.magasin || d.magasinExpire ? tfbBouton(d.magasinExpire ? 'Reconnecter le compte TF Buddy du magasin' : '') : '';
+    return `<section class="card pcl-refus">${SVG(ICO.cadenas)}<div><h3>${esc(quoi)} ne se lisent pas</h3><p>${esc(d.texte || d.motif || '')}</p>${btn ? `<p>${btn}</p>` : ''}${d.motif ? `<p class="muted">Réponse : ${esc(d.motif)}${d.comptes ? ' · ' + esc(d.comptes) : ''}</p>` : ''}</div></section>`;
   }
   const STATUTS = { active: ['Actif', 'chip chip--ok'], pending: ['En attente', 'tag-warn'], inactive: ['Inactif', 'chip chip--draft'], archived: ['Archivé', 'chip chip--draft'] };
   const statut = s => { const x = STATUTS[s] || [s || '—', 'chip chip--draft']; return `<span class="${x[1]}">${esc(x[0])}</span>`; };
@@ -246,7 +256,7 @@
     if (B.w) { return vueAssistant(); }
     if (B.err && !d) { return `<div class="pcl-vide error card">${esc(B.err)}</div>`; }
     if (!d) { return attente('Lecture des bureaux du magasin…'); }
-    if (!d.ok) { return refus(d, 'Les bureaux du magasin') + note('Ce qu’apportera l’onglet dès que TF Buddy ouvre l’accès : une ligne par bureau (statut, catalogue, offres, sites), sa fiche en onglets — Livraison (site, tournée, créneau, heure limite), Catalogue, Offres, Personnes (invitations), Documents (affiche, cartes, brochure) — et « Ajouter un bureau » en sept étapes.', 'pcl-note-doux'); }
+    if (!d.ok) { return refus(d, 'Les bureaux du magasin') + note('Ce que montre l’onglet une fois le compte TF Buddy du magasin connecté : une ligne par bureau (statut, catalogue, offres, sites), sa fiche en onglets — Livraison (site, tournée, créneau, heure limite), Catalogue, Offres, Personnes (invitations), Documents (affiche, cartes, brochure) — et « Ajouter un bureau » en sept étapes.', 'pcl-note-doux'); }
     const q = B.q.trim().toLowerCase();
     const L = d.data.bureaux.filter(b => (!B.statut || b.statut === B.statut) && (!q || [b.nom, b.societe, b.tva, b.ville, b.contact].join(' ').toLowerCase().includes(q)));
     const nAct = d.data.bureaux.filter(b => b.statut === 'active').length, nAtt = d.data.bureaux.filter(b => b.statut === 'pending').length;
@@ -408,7 +418,7 @@
     const part = K.part.v, ca = d.ca;
     const donut = part == null ? '<div class="pcl-aide">La part du chiffre ne se calcule pas pour ce mois.</div>' : `<svg viewBox="0 0 120 120" class="pcl-donut"><circle cx="60" cy="60" r="44" fill="none" stroke="#EDE7DE" stroke-width="18"/><circle cx="60" cy="60" r="44" fill="none" stroke="#8D1D2C" stroke-width="18" stroke-dasharray="${2 * Math.PI * 44 * Math.min(100, part) / 100} 999" transform="rotate(-90 60 60)"/><text x="60" y="65" text-anchor="middle" font-family="Gotham, system-ui" font-size="16" fill="#1c1a17">${nf(part, 1)} %</text></svg>
       ${K.ventes.v != null ? ligneF('B2B', fE0(K.ventes.v)) : ''}${ca != null && K.ventes.v != null ? ligneF('Le reste du chiffre', fE0(ca - K.ventes.v)) : ''}`;
-    const notes = (d.source === 'releve' ? note(esc(d.texte) + (d.memesJours ? ` Le mois en cours se compare aux ${d.memesJours} premiers jours du mois d’avant et de ${MOIS[A.mois - 1]} ${A.annee - 1}.` : '') + (d.couverture && d.couverture.lus < d.couverture.jours ? ` <b>${d.couverture.lus} jours lus sur ${d.couverture.jours}</b> : les autres seront relus par le relevé de nuit.` : '') + (d.panel ? '<br>' + esc(d.panel.texte) : ''), 'pcl-note-doux') : '');
+    const notes = (d.source === 'releve' ? note(esc(d.texte) + (d.memesJours ? ` Le mois en cours se compare aux ${d.memesJours} premiers jours du mois d’avant et de ${MOIS[A.mois - 1]} ${A.annee - 1}.` : '') + (d.couverture && d.couverture.lus < d.couverture.jours ? ` <b>${d.couverture.lus} jours lus sur ${d.couverture.jours}</b> : les autres seront relus par le relevé de nuit.` : '') + (d.panel ? '<br>' + esc(d.panel.texte) + (!d.panel.magasin || d.panel.magasinExpire ? '<div style="margin-top:8px">' + tfbBouton() + '</div>' : '') : ''), 'pcl-note-doux') : '');
     return barre + notes + kpis + `<div class="pcl-an2"><section class="card"><h2 class="pcl-h2">Ventes B2B, mois par mois<small>${seg('a-metrique', m, [['ventes', 'Ventes'], ['tickets', 'Tickets'], ['clients', 'Clients'], ['part', 'Part du CA']])}</small></h2>${barres}
       <div class="pcl-leg"><span><i style="background:var(--accent)"></i>${A.annee}</span><span><i style="background:#EBD3D8"></i>${A.annee - 1}</span></div></section>
       <section class="card"><h2 class="pcl-h2">Part B2B du chiffre</h2>${donut}<div class="pcl-aide" style="margin-top:8px">Un pro = une fiche avec une TVA valide, comme la jauge B2B de l’Opérationnel.</div></section></div>`;
@@ -483,7 +493,7 @@
     const B = st.b, b = B.d.data.bureaux.find(x => x.id === B.sel);
     B.pdf = { texte: 'TF Buddy fabrique le document…' }; rendre();
     const corps = type === 'poster' ? {} : type === 'cards' ? { request_key: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) } : { catalog: true, offer_ids: [] };
-    fetch(st.api + '/dashboard/clients/bureaux/pdf', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shop: st.shop, bureau: B.sel, type, corps }) })
+    tfb().then(h => fetch(st.api + '/dashboard/clients/bureaux/pdf', { method: 'POST', credentials: 'same-origin', headers: Object.assign({ 'Content-Type': 'application/json' }, h), body: JSON.stringify({ shop: st.shop, bureau: B.sel, type, corps }) }))
       .then(r => { const t = r.headers.get('Content-Type') || ''; if (r.ok && t.includes('pdf')) { return r.blob(); } return r.json().catch(() => ({})).then(j => { throw new Error(j.error || 'erreur ' + r.status); }); })
       .then(bl => { const u = URL.createObjectURL(bl), a = document.createElement('a'); a.href = u; a.download = 'bureau-' + (b ? b.nom.replace(/[^\w-]+/g, '-') : B.sel) + '-' + type + '.pdf'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); B.pdf = { texte: 'Document téléchargé.' }; })
       .catch(e => { B.pdf = { err: e.message }; }).finally(rendre);
@@ -503,6 +513,8 @@
       case 'fermer': st.mo = null; rendre(); break;
       case 'onglet': st.onglet = v; memo('pcl-onglet:' + st.shop, v); st.mo = null; if (v === 'b2c' && !P.d) { lireParticuliers(); } else if (v === 'b2b' && !E.d) { charger(); } else if (v === 'bur' && !B.d) { lireBureaux(); } else if (v === 'an' && !A.d) { lireAnalyse(); } else { rendre(); } break;
       case 'aller-offres': if (st.aller) { st.aller('offres'); } break;
+      case 'tfb-connecter': if (window.DashTfb) { window.DashTfb.ouvrir(st.shop, st.api, toutRelire); } break;
+      case 'tfb-deconnecter': if (window.DashTfb) { window.DashTfb.deconnecter(st.shop, st.api).then(toutRelire); } break;
       case 'relire': charger(true); break;
       // Particuliers
       case 'p-filtre': P.filtre = v; lireParticuliers(); break;

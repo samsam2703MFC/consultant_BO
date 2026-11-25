@@ -2,17 +2,19 @@
 
 **Statut : codé le 25/11/2026** (« let's go and code it all ») : `panel/src/clients_panel.php`,
 `panel/public/dashboard/clients.js`, `clients.css`, Vendre › Clients dans le rail. Par les seuls comptes du cockpit
-(consultant, puis admin : « use either all token available from consultant or admin »). Les captures `code-*.png` sont
+(consultant, puis admin : « use either all token available from consultant or admin »), et depuis le 25/11/2026 le compte TF Buddy du magasin, connecté depuis le dashboard. Les captures `code-*.png` sont
 le vrai écran au banc (`banc/`, TF Buddy simulé, données fictives) :
 
 | Capture | Ce qu'elle montre |
 |---|---|
 | `code-b2b.png`, `code-particuliers.png`, `code-analyse.png`, `code-bureaux-refus.png`, `code-mobile.png` | aujourd'hui : les routes `/panel/shops/{s}/…` refusées, l'écran se rabat (entreprises sur `/shops/{s}/clients` + relevé des tickets pro ; analyse sur le relevé) et dit ce qui manque |
 | `code-b2b-r1.png`, `code-bureaux-r1.png`, `code-ajout-r1.png`, `code-analyse-r1.png` | avec l'accès de service (R1) : score, crédit, récurrence, les bureaux, l'assistant en sept étapes, le tableau de bord de TF Buddy |
+| `code-connexion-magasin.png`, `code-bureaux-magasin.png` | le compte TF Buddy du magasin (« all should work either with admin, consultant or shop token ») : téléphone, PIN, code SMS ; les routes du panel s'ouvrent aussitôt |
 
 Régénérer : `php -S 127.0.0.1:8098 panel/docs/maquettes/clients-panel/banc/banc.php &`,
 `BANC_ACCES=panel php -S 127.0.0.1:8099 panel/docs/maquettes/clients-panel/banc/banc.php &`, puis
-`node panel/docs/maquettes/clients-panel/banc/voir.cjs`.
+`node panel/docs/maquettes/clients-panel/banc/voir.cjs`. Au banc, le compte du magasin se connecte avec le PIN fictif 4321 et le code 000000
+(`PHP_CLI_SERVER_WORKERS=4` : le banc s'appelle lui-même pour simuler la connexion du panel).
 
 Les petits bugs du paquet sont corrigés pour TF Buddy dans `correctifs-tfbuddy/` (un patch `git` et son mode d'emploi).
 

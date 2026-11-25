@@ -177,3 +177,7 @@
   .pcl-table th:last-child, .pcl-table td:last-child { display: none; }
   .pcl-table td, .pcl-table th { padding-left: 10px !important; padding-right: 10px !important; }
 }
+/* Le compte TF Buddy du magasin (tfb-magasin.js) : l'état dans la barre des onglets, la fenêtre de connexion. */
+.pcl-tfb { font-size: 11.5px; color: var(--green); margin-right: 12px; }
+.tfbm-champ { display: grid; gap: 5px; margin-top: 12px; font-size: 11.5px; color: var(--muted); }
+.tfbm-champ input { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font: 14px 'Gotham', system-ui, sans-serif; color: var(--ink); }

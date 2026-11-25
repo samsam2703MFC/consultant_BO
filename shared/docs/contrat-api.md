@@ -3397,8 +3397,9 @@ secrets) — et gardée six heures (`ceo_app_setting`, `pcoBur:{shop}`). Tests :
 
 Le module « Klienci » du panel TF Buddy dans le dashboard (`clients.js`, maquettes `panel/docs/maquettes/clients-panel/`).
 Serveur : `panel/src/clients_panel.php`. Ouvert à une session de magasin (`/dashboard`), pour son magasin ; le `shop`
-de la requête et du corps est vérifié. Tout se lit et s'écrit dans TF Buddy par les comptes du cockpit : le consultant
-(PanelApi) d'abord, l'admin (ErpApi) si le premier est refusé (401, 403, 404 d'un magasin non couvert) ; rien n'est
+de la requête et du corps est vérifié. Tout se lit et s'écrit dans TF Buddy par trois comptes : le compte TF Buddy du magasin s'il est connecté (`/dashboard/tfb/*`,
+en-tête `X-TFB-Jeton`), le consultant (PanelApi), l'admin (ErpApi), chacun essayé quand le précédent est refusé (401,
+403, 404 d'un magasin non couvert) ; rien n'est
 gardé, sauf la liste des clients d'un magasin un quart d'heure (`pclClients:{shop}:{b2b|b2c}`) et les mois clos du
 relevé des tickets pro (`pclMois:{shop}:{AAAA-MM}`). Les champs secrets d'une réponse (mot de passe, hachage, jeton, PIN,
 IBAN…) ne sortent jamais.
@@ -3435,6 +3436,26 @@ de la fiche (`/shops/{s}/clients/{id}` → `profile`), le crédit utilisé des f
 calculée sur le même relevé : un mois en cours se compare aux mêmes jours du mois d'avant et de l'an dernier. Les
 bureaux n'ont pas de repli : l'écran dit ce qui manque. Demande à TF Buddy : R1 de
 `panel/docs/livreur/CAHIER_DES_CHARGES_TFBUDDY.md`.
+
+### `/dashboard/tfb/*` — le compte TF Buddy du magasin : téléphone, PIN, code SMS (25/11/2026)
+
+Sam : « all should work either with admin, consultant or shop token ». Les routes du panel sous `/panel/shops/{s}/…`
+(entreprises B2B, bureaux, analyse B2B, livraisons) ne répondent qu'à un employé du magasin connecté. Le dashboard ouvre
+cette connexion, celle du panel (`panel/src/tfb_magasin.php`, écran `tfb-magasin.js`) ; la session (12 h) reste dans le
+navigateur, le cockpit ne garde ni le PIN ni les jetons et ne les journalise pas.
+
+    POST /dashboard/tfb/connexion   {shop, phone, pin}            → {etape: "sms", challenge, texte} | {etape: "ok", jetons}   (POST /panel/auth/login)
+    POST /dashboard/tfb/confirmer   {shop, challenge, code}       → {ok, jetons: {acces, renouvellement, expireAcces, expireSession}}   (POST /panel/auth/confirm)
+    POST /dashboard/tfb/sms         {shop, challenge}             → {ok}   (POST /panel/auth/resend)
+    POST /dashboard/tfb/renouveler  {shop, renouvellement}        → {ok, jetons} | 401 {error, expire}   (POST /panel/auth/refresh)
+    POST /dashboard/tfb/deconnexion {shop, renouvellement}        → {ok}   (POST /panel/auth/logout)
+
+Le jeton d'accès part dans l'en-tête **`X-TFB-Jeton`** des appels de Clients (`/dashboard/clients/*`) et de Commandes
+(`/dashboard/commandes/*`) ; le navigateur le renouvelle 45 s avant son échéance (un seul renouvellement à la fois : TF
+Buddy fait tourner le jeton de renouvellement). Le serveur l'impose à PanelApi le temps d'un appel
+(`PanelApi::$jetonImpose`). L'ordre des comptes : pour une route `/panel/…`, le magasin, puis le consultant, puis
+l'admin ; pour les autres, le consultant, l'admin, puis le magasin. Un jeton du magasin refusé en 401 : la réponse porte
+`magasinExpire: true`, le navigateur oublie la session et propose de se reconnecter.
 
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 

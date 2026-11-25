@@ -406,20 +406,30 @@ function pclMotif(array $r): string
  */
 function pclTf(string $methode, string $chemin, ?array $corps = null, int $timeout = 25): array
 {
-    $essais = [];
-    if (class_exists('PanelApi') && PanelApi::configured()) {
-        if ($methode === 'GET') { $r = PanelApi::sondeGet($chemin, $timeout); $r = ['code' => (int) ($r['code'] ?? 0), 'corps' => $r['corps'] ?? null, 'erreur' => $r['erreur'] ?? null]; }
-        else { $r = PanelApi::requete($methode, $chemin, $corps, $timeout); $r = ['code' => (int) ($r['code'] ?? 0), 'corps' => $r['data'] ?? null, 'erreur' => $r['erreur'] ?? null]; }
-        $r['compte'] = 'consultant';
-        if ($r['code'] >= 200 && $r['code'] < 300) { return $r + ['refus' => false]; }
-        $essais[] = $r;
-        if ($r['code'] !== 0 && !pclRefus($r['code'], $r['corps'])) { return $r + ['refus' => false]; }
-    }
-    if (class_exists('ErpApi') && ErpApi::disponible()) {
+    // Trois comptes (25/11/2026, « all should work either with admin, consultant or shop token ») : le jeton du magasin
+    // (tfb_magasin.php, une session du panel ouverte depuis le dashboard), le consultant (PanelApi), l'admin (ErpApi).
+    // Les routes /panel/shops/{s}/… essaient le magasin d'abord (lui seul y a le droit) ; les autres, en dernier.
+    $magasin = static fn () => function_exists('tfbmAppel') ? tfbmAppel($methode, $chemin, $corps, $timeout) : null;
+    $consultant = static function () use ($methode, $chemin, $corps, $timeout): ?array {
+        if (!class_exists('PanelApi') || !PanelApi::configured()) { return null; }
+        if ($methode === 'GET') { $r = PanelApi::sondeGet($chemin, $timeout); return ['code' => (int) ($r['code'] ?? 0), 'corps' => $r['corps'] ?? null, 'erreur' => $r['erreur'] ?? null, 'compte' => 'consultant']; }
+        $r = PanelApi::requete($methode, $chemin, $corps, $timeout);
+        return ['code' => (int) ($r['code'] ?? 0), 'corps' => $r['data'] ?? null, 'erreur' => $r['erreur'] ?? null, 'compte' => 'consultant'];
+    };
+    $admin = static function () use ($methode, $chemin, $corps): ?array {
+        if (!class_exists('ErpApi') || !ErpApi::disponible()) { return null; }
         $r = $methode === 'GET' ? ErpApi::sondeGet($chemin) : ErpApi::ecrire($methode, $chemin, $corps);
-        $r = ['code' => (int) ($r['code'] ?? 0), 'corps' => $r['corps'] ?? null, 'erreur' => $r['erreur'] ?? null, 'compte' => 'admin'];
+        return ['code' => (int) ($r['code'] ?? 0), 'corps' => $r['corps'] ?? null, 'erreur' => $r['erreur'] ?? null, 'compte' => 'admin'];
+    };
+    $ordre = str_starts_with($chemin, '/panel/') ? [$magasin, $consultant, $admin] : [$consultant, $admin, $magasin];
+    $essais = [];
+    foreach ($ordre as $f) {
+        $r = $f();
+        if ($r === null) { continue; }
         if ($r['code'] >= 200 && $r['code'] < 300) { return $r + ['refus' => false]; }
         $essais[] = $r;
+        // Une écriture refusée pour une autre raison qu'un droit (422, 409, 404 d'une chose absente) : on s'arrête là.
+        if ($r['code'] !== 0 && !pclRefus($r['code'], $r['corps'])) { return $r + ['refus' => false]; }
     }
     if (!$essais) { return ['code' => 0, 'corps' => null, 'erreur' => 'aucun compte TF Buddy configuré au cockpit', 'compte' => null, 'refus' => true]; }
     // Le refus le plus parlant : celui qui a un code (un injoignable ne dit rien du droit).
@@ -427,15 +437,29 @@ function pclTf(string $methode, string $chemin, ?array $corps = null, int $timeo
     $r = $essais[0];
     $r['refus'] = $r['code'] === 0 ? false : pclRefus($r['code'], $r['corps']);
     $r['compte'] = implode(' puis ', array_map(static fn ($e) => $e['compte'] . ' (' . $e['code'] . ')', $essais));
+    // Le jeton du magasin envoyé et refusé en 401 : sa session est périmée, le navigateur doit le renouveler.
+    $r['magasinExpire'] = (bool) array_filter($essais, static fn ($e) => $e['compte'] === 'magasin' && $e['code'] === 401);
     return $r;
+}
+
+/** « à » contracté devant l'article : « à les bureaux » → « aux bureaux », « à le profil » → « au profil ». */
+function pclA(string $quoi): string
+{
+    if (str_starts_with($quoi, 'les ')) { return 'aux ' . substr($quoi, 4); }
+    if (str_starts_with($quoi, 'le ')) { return 'au ' . substr($quoi, 3); }
+    return 'à ' . $quoi;
 }
 
 /** Un refus d'accès dit au magasin : ce que TF Buddy ne donne pas au compte du cockpit, et pourquoi. */
 function pclRefusDit(array $r, string $quoi): array
 {
     return ['ok' => false, 'refus' => true, 'quoi' => $quoi, 'motif' => pclMotif($r), 'comptes' => $r['compte'] ?? null,
-        // Au magasin, en clair ; la demande à TF Buddy (l'accès de service, R1 de panel/docs/livreur/CAHIER_DES_CHARGES_TFBUDDY.md) reste dans les docs.
-        'texte' => 'TF Buddy ne donne pas encore ' . $quoi . ' au dashboard : ces données du panel demandent un accès que TF Buddy doit ouvrir au cockpit. Elles s’afficheront ici dès qu’il sera ouvert.'];
+        // Au magasin, en clair : se connecter avec son compte TF Buddy (tfb_magasin.php) ouvre ces données tout de suite ;
+        // l'accès de service (R1 de panel/docs/livreur/CAHIER_DES_CHARGES_TFBUDDY.md) les ouvrira sans connexion.
+        'magasin' => function_exists('tfbmJeton') && tfbmJeton() !== null, 'magasinExpire' => !empty($r['magasinExpire']),
+        'texte' => !empty($r['magasinExpire']) ? 'La session TF Buddy du magasin a expiré : reconnectez-vous pour lire ' . $quoi . '.'
+            : (function_exists('tfbmJeton') && tfbmJeton() !== null ? 'Le compte TF Buddy connecté n’a pas accès ' . pclA($quoi) . ' de ce magasin.'
+            : 'Les comptes du cockpit n’ont pas accès ' . pclA($quoi) . ' dans TF Buddy. Connectez le compte TF Buddy du magasin (téléphone, PIN, code SMS) pour les lire et les modifier ici.')];
 }
 
 /* ── La liste des clients d'un magasin, gardée un quart d'heure ───────────────────────────────────────────────── */
@@ -675,7 +699,7 @@ function ep_clients_analyse(): array
         }
         return ['shop' => $shop, 'source' => 'panel', 'annee' => $annee, 'mois' => $mois, 'kpi' => pclKpisPanel($r['corps']['kpi']), 'graphique' => $ch];
     }
-    $refus = pclRefusDit($r, 'son tableau de bord B2B');
+    $refus = pclRefusDit($r, 'le tableau de bord B2B');
     if (!function_exists('vpLu')) { return ['shop' => $shop, 'source' => null, 'annee' => $annee, 'mois' => $mois, 'panel' => $refus, 'kpi' => null, 'graphique' => []]; }
     $lit = static fn (int $a, int $m, ?int $j = null) => pclMois($shop, sprintf('%04d-%02d', $a, $m), $auj, $j);
     // Un mois en cours se compare aux mêmes jours du mois d'avant et de l'an dernier (du 1er au jour d'aujourd'hui).
@@ -896,11 +920,13 @@ function ep_clients_bureaux_pdf(): void
     $corps = array_intersect_key(is_array($b['corps'] ?? null) ? $b['corps'] : [], array_flip($cles));
     $chemin = '/panel/shops/' . $shop . '/offices/' . $id . '/' . $type;
     $dernier = [0, ''];
-    foreach ([['PanelApi', 'configured'], ['ErpApi', 'disponible']] as [$cl, $ok]) {
-        if (!class_exists($cl) || !$cl::$ok()) { continue; }
-        $tok = $cl::jetonSonde();
+    // Le jeton du magasin d'abord (tfb_magasin.php), puis le consultant, puis l'admin.
+    $jm = function_exists('tfbmJeton') ? tfbmJeton() : null;
+    foreach ([['magasin', null], ['PanelApi', 'configured'], ['ErpApi', 'disponible']] as [$cl, $ok]) {
+        if ($cl === 'magasin') { if ($jm === null || !class_exists('PanelApi')) { continue; } $tok = $jm; $base = PanelApi::config()['base']; }
+        else { if (!class_exists($cl) || !$cl::$ok()) { continue; } $tok = $cl::jetonSonde(); $base = $cl::config()['base']; }
         if ($tok === null) { continue; }
-        $ch = curl_init($cl::config()['base'] . $chemin);
+        $ch = curl_init($base . $chemin);
         curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 60, CURLOPT_CONNECTTIMEOUT => 6,
             CURLOPT_POSTFIELDS => json_encode((object) $corps, JSON_UNESCAPED_UNICODE), CURLOPT_MAXFILESIZE => 30_000_000,
             CURLOPT_HTTPHEADER => ['Accept: application/pdf, application/json', 'Content-Type: application/json', 'Authorization: Bearer ' . $tok]]);
