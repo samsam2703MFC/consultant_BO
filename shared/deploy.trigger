@@ -316,3 +316,4 @@
 2026-11-25T20:45:44Z Dashboard : défauts relevés en tournant les vidéos corrigés (Mon catalogue, Trésorerie, Mon équipe, Boîte mail, Promotions, newsletter)
 2026-11-25T20:46:50Z Production : commandes en retard jamais fermées — fermeture en lot (Stan ogólny › Zaległe) et avec la WDT (Wyślij dzień)
 2026-11-25T21:03:21Z Production : Różnice kursowe ouvertes au Kierownik operacyjny (lecture et calcul, montants)
+2026-11-25T21:04:21Z Fidélité : GET /fidelite/programme (règles et saisons du programme, sans client), lisible par le Recrutement avec le jeton de service — l'annexe 2 du Guide pré-ouverture le reprend
