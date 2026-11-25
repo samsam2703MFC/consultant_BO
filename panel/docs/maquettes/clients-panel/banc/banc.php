@@ -16,7 +16,11 @@ if (str_starts_with($chemin, '/tfb-sim/panel/auth/')) {
     $b = json_decode(file_get_contents('php://input') ?: '[]', true) ?: [];
     $jwt = static fn () => 'eyJhbGciOiJub25lIn0.' . rtrim(strtr(base64_encode(json_encode(['exp' => time() + 300, 'shop' => 3])), '+/', '-_'), '=') . '.banc-magasin';
     $r = match (basename($chemin)) {
-        'login' => ($b['pin'] ?? '') === '4321' ? [202, ['status' => 202, 'challenge' => 'banc-challenge']] : [401, ['status' => 401, 'error' => 'PANEL_INVALID_CREDENTIALS']],
+        // 60 s entre deux SMS, comme TF Buddy (PANEL_AUTH_RESEND_WAIT) ; le PIN 9999 simule le blocage (PANEL_AUTH_LIMIT).
+        'login' => ($b['pin'] ?? '') === '9999' ? [429, ['status' => 429, 'error' => 'PANEL_AUTH_LIMIT']]
+            : (($b['pin'] ?? '') !== '4321' ? [401, ['status' => 401, 'error' => 'PANEL_INVALID_CREDENTIALS']]
+            : ((int) @file_get_contents(sys_get_temp_dir() . '/banc-tfb-sms') > time() - 60 ? [429, ['status' => 429, 'error' => 'PANEL_AUTH_RESEND_WAIT']]
+            : (file_put_contents(sys_get_temp_dir() . '/banc-tfb-sms', (string) time()) !== false ? [202, ['status' => 202, 'challenge' => 'banc-challenge']] : [503, []]))),
         'confirm' => ($b['code'] ?? '') === '000000' ? [200, ['status' => 200, 'token' => $jwt(), 'refresh_token' => 'banc-r' . time(), 'expires_at' => time() + 43200]] : [401, ['status' => 401, 'error' => 'PANEL_SMS_CODE_INVALID']],
         'refresh' => [200, ['status' => 200, 'token' => $jwt(), 'refresh_token' => 'banc-r' . time(), 'expires_at' => time() + 43200]],
         default => [200, ['status' => 200]],
