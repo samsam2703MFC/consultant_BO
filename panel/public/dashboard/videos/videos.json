@@ -1238,6 +1238,834 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "catalogue-catalogues",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "Le catalogue : reçu, le mien, ou nouveau",
+      "resume": "La première étape : le catalogue préparé par la marque, mes catalogues et ceux de la marque, leur état et la suite à donner.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-01-catalogues.mp4",
+      "debut": 0,
+      "fin": 53.05,
+      "affiche": "catalogue-catalogues.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-prendre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-catalogues",
+      "titre": "Prendre le catalogue de la marque tel quel",
+      "resume": "« Le prendre tel quel › » : le catalogue de la marque, à mes prix, passe à la Validation ; ses étapes 2 et 3 restent sous cadenas.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-01-catalogues.mp4",
+      "debut": 53.05,
+      "fin": 77.41,
+      "affiche": "catalogue-prendre.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-adapter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-catalogues",
+      "titre": "Adapter le catalogue de la marque à ma boutique",
+      "resume": "« L’adapter à ma boutique », puis confirmer : une copie à moi, que la marque ne modifie plus, reprise à l’étape 2.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-01-catalogues.mp4",
+      "debut": 77.41,
+      "fin": 108.5,
+      "affiche": "catalogue-adapter.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-supprimer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-catalogues",
+      "titre": "Supprimer un de mes catalogues",
+      "resume": "« Supprimer » sur la ligne d’un de mes catalogues, puis confirmer : il disparaît aussi du Marketing.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-01-catalogues.mp4",
+      "debut": 108.5,
+      "fin": 130.42,
+      "affiche": "catalogue-supprimer.jpg",
+      "duree": "22 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-depart",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "Le point de départ d’un nouveau catalogue",
+      "resume": "Un nouveau catalogue : son titre, son nombre de pages, une ou plusieurs gammes, ou tous mes produits.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-02-depart.mp4",
+      "debut": 0,
+      "fin": 47.13,
+      "affiche": "catalogue-depart.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-creer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-depart",
+      "titre": "Créer le catalogue",
+      "resume": "Une ou plusieurs gammes (ou tous mes produits), le titre, le nombre de pages, puis « Créer et choisir mes produits › ».",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-02-depart.mp4",
+      "debut": 47.13,
+      "fin": 78.33,
+      "affiche": "catalogue-creer.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-produits",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "Mes produits, à mes prix",
+      "resume": "Les produits de mon webshop par catégorie et à mes prix, les promotions lues dans TFBuddy et la disponibilité.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 0,
+      "fin": 49.61,
+      "affiche": "catalogue-produits.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-produit",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-produits",
+      "titre": "Retirer ou remettre un produit",
+      "resume": "L’interrupteur du produit à l’étape 2, ou le petit interrupteur du tableau à l’étape 3 : les pages se redessinent aussitôt.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 49.61,
+      "fin": 93.32,
+      "affiche": "catalogue-produit.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-promotion",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-produits",
+      "titre": "Cocher ou décocher une promotion",
+      "resume": "Dans « Promotions et bundles », lus dans TFBuddy : un interrupteur par offre. Cochée, sa vignette prend une case de la page de sa catégorie.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 93.32,
+      "fin": 131.68,
+      "affiche": "catalogue-promotion.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-promo-image",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-produits",
+      "titre": "Mettre une image de la médiathèque sur une promotion",
+      "resume": "« Image » sur l’offre, chercher et choisir une image de la médiathèque : elle remplace les photos des produits dans la vignette ; « Changer » ou « Retirer ».",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 131.68,
+      "fin": 177.78,
+      "affiche": "catalogue-promo-image.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-disponibilite",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-produits",
+      "titre": "Afficher ou masquer la disponibilité",
+      "resume": "L’interrupteur « Afficher la disponibilité » : la période et le délai de commande, lus dans TFBuddy, en pied de chaque page.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 177.78,
+      "fin": 218.06,
+      "affiche": "catalogue-disponibilite.jpg",
+      "duree": "40 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-categorie",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "La présentation, une catégorie à la fois",
+      "resume": "Une catégorie à la fois : sa mise en page, sa pleine page, son gabarit, l’aperçu de ses pages et le tableau de ses produits.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-04-categorie.mp4",
+      "debut": 0,
+      "fin": 56.38,
+      "affiche": "catalogue-categorie.jpg",
+      "duree": "56 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-mise-en-page",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-categorie",
+      "titre": "Choisir la mise en page d’une catégorie",
+      "resume": "1 vedette + 4, 2 par largeur, 1 par largeur ou 2 grandes : les pages de la catégorie se dessinent, et le catalogue prend 2 pages de plus s’il le faut.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-04-categorie.mp4",
+      "debut": 56.38,
+      "fin": 82.49,
+      "affiche": "catalogue-mise-en-page.jpg",
+      "duree": "26 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-pleine-page",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-categorie",
+      "titre": "Mettre un produit seul en pleine page",
+      "resume": "« Un produit seul sur une page » : Oui, puis le produit ; sa promotion s’imprime dessous.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-04-categorie.mp4",
+      "debut": 82.49,
+      "fin": 109.38,
+      "affiche": "catalogue-pleine-page.jpg",
+      "duree": "27 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-gabarit",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-categorie",
+      "titre": "Changer le gabarit et le titre manuscrit",
+      "resume": "Gabarit A · B · C pour toutes les pages de la catégorie, et « Catégorie manuscrite » Oui ou Non ; « Validation › » enregistre.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-04-categorie.mp4",
+      "debut": 109.38,
+      "fin": 148.45,
+      "affiche": "catalogue-gabarit.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-finale",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "La mise en page finale",
+      "resume": "Tout le catalogue dans l’ordre de l’impression, par blocs de catégorie, avec le nombre de pages, le format et les langues.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-05-finale.mp4",
+      "debut": 0,
+      "fin": 49.87,
+      "affiche": "catalogue-finale.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-finale-ordre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-finale",
+      "titre": "Changer l’ordre des catégories",
+      "resume": "Glisser une catégorie par sa poignée ⠿ : ses pages la suivent ; « ‹ › » sans souris. Les pages de la marque ne bougent pas.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-05-finale.mp4",
+      "debut": 49.87,
+      "fin": 78.53,
+      "affiche": "catalogue-finale-ordre.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-finale-pages",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-finale",
+      "titre": "Changer le nombre de pages",
+      "resume": "De 8 à 16 pages, toujours par 2 : les pages libres de la fin partent, ou des pages vides s’ajoutent.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-05-finale.mp4",
+      "debut": 78.53,
+      "fin": 109.93,
+      "affiche": "catalogue-finale-pages.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-format-langues",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-finale",
+      "titre": "Choisir le format et les langues",
+      "resume": "A5 ou A4 ; FR ou FR + NL. « Validation › » les enregistre avec les pages ; le catalogue se compose aussi en néerlandais.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-05-finale.mp4",
+      "debut": 109.93,
+      "fin": 141.13,
+      "affiche": "catalogue-format-langues.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-reglages",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "Les réglages page par page",
+      "resume": "Chaque page réglée à la main : catégorie, gamme, mise en page, gabarit, place libre, ordre, et la répartition automatique.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 0,
+      "fin": 44.46,
+      "affiche": "catalogue-reglages.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-reglages-pages",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Changer le nombre de pages, page par page",
+      "resume": "« − 2 pages » ou « ＋ 2 pages », enregistré tout de suite. Une page à retirer porte des produits : le Marketing refuse et propose de répartir.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 44.46,
+      "fin": 83.51,
+      "affiche": "catalogue-reglages-pages.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-regler-page",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Régler une page à la main",
+      "resume": "Pour une page : sa mise en page (7 choix, dont la présentation d’une gamme et son texte FR / NL), sa catégorie, sa gamme, son gabarit, le produit de la pleine page.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 83.51,
+      "fin": 115.6,
+      "affiche": "catalogue-regler-page.jpg",
+      "duree": "32 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-place-libre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Remplir la place libre d’une page",
+      "resume": "« Place libre » : Rien, Photo (choisie dans la médiathèque, avec recherche) ou Illustration, quand il reste une rangée libre.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 115.6,
+      "fin": 156.61,
+      "affiche": "catalogue-place-libre.jpg",
+      "duree": "41 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-reglages-ordre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Changer l’ordre des pages",
+      "resume": "Page par page : la poignée ⠿ glisse une page au-dessus ou au-dessous d’une autre ; « ↑ » et « ↓ » la montent ou la descendent.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 156.61,
+      "fin": 190.69,
+      "affiche": "catalogue-reglages-ordre.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-repartir",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Répartir automatiquement",
+      "resume": "« ↺ Répartir automatiquement » : le Marketing refait la répartition, une page par catégorie, enregistrée tout de suite.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 190.69,
+      "fin": 210.49,
+      "affiche": "catalogue-repartir.jpg",
+      "duree": "20 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-validation",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "La validation : ce qui s’imprimera",
+      "resume": "Les points calculés par le Marketing, à voir un par un, à côté des pages composées et de leurs marques.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-07-validation.mp4",
+      "debut": 0,
+      "fin": 51.65,
+      "affiche": "catalogue-validation.jpg",
+      "duree": "52 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-verifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-validation",
+      "titre": "Vérifier les points avant d’imprimer",
+      "resume": "Pour chaque point : « ✓ C’est juste », « ✓ Dates vues », « Ouvrir la page N › » ou « Imprimer ainsi » ; la jauge des points vus avance.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-07-validation.mp4",
+      "debut": 51.65,
+      "fin": 87.41,
+      "affiche": "catalogue-verifier.jpg",
+      "duree": "36 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-retirer-promo",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-validation",
+      "titre": "Retirer une promotion qui finit avant le catalogue",
+      "resume": "« La retirer » sur le point : la promotion ne s’imprime plus et les points se recalculent.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-07-validation.mp4",
+      "debut": 87.41,
+      "fin": 108.71,
+      "affiche": "catalogue-retirer-promo.jpg",
+      "duree": "21 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-valider",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-validation",
+      "titre": "Valider mon catalogue",
+      "resume": "« Valider mon catalogue › » : il est prêt à imprimer et passe à l’export ; les points restés ouverts sont rappelés au PDF.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-07-validation.mp4",
+      "debut": 108.71,
+      "fin": 132.34,
+      "affiche": "catalogue-valider.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-export",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "L’export PDF et la diffusion",
+      "resume": "Feuilleter, choisir l’impression, télécharger le PDF, marquer imprimé, puis diffuser : QR, PDF léger, affiche.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 0,
+      "fin": 63.25,
+      "affiche": "catalogue-export.jpg",
+      "duree": "1 min 03",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-exporter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Exporter le PDF imprimeur ou le livret",
+      "resume": "« Chez un imprimeur » ou « Sur mon imprimante » (livret A5), la langue, puis « Télécharger… » : le PDF s’ouvre dans un nouvel onglet, lien valable 48 h.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 63.25,
+      "fin": 97.11,
+      "affiche": "catalogue-exporter.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-marquer-imprime",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Marquer le catalogue imprimé",
+      "resume": "La quantité imprimée, puis « Marquer imprimé · N ex. » : pour savoir combien il en reste à distribuer.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 97.11,
+      "fin": 118.96,
+      "affiche": "catalogue-marquer-imprime.jpg",
+      "duree": "22 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-qr",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Diffuser le QR du catalogue en ligne",
+      "resume": "Le QR ouvre le catalogue en ligne, toujours la dernière version : « Télécharger le QR (PNG) », « Copier le lien », « Partager… ».",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 118.96,
+      "fin": 146.64,
+      "affiche": "catalogue-qr.jpg",
+      "duree": "28 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-nouveau-lien",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Faire un nouveau lien",
+      "resume": "« Nouveau lien », puis confirmer : un autre lien et un autre QR ; l’ancien ne mène plus au catalogue.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 146.64,
+      "fin": 168.17,
+      "affiche": "catalogue-nouveau-lien.jpg",
+      "duree": "22 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-pdf-leger",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Télécharger le PDF léger à partager",
+      "resume": "« Télécharger le PDF léger » : sans traits de coupe, pour WhatsApp, un e-mail ou Facebook.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 168.17,
+      "fin": 187,
+      "affiche": "catalogue-pdf-leger.jpg",
+      "duree": "19 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-affiche",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Télécharger l’affiche en magasin",
+      "resume": "Un titre si on veut, A4 ou A3, puis « Télécharger l’affiche (PDF) » : en vitrine, le client scanne et feuillette.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 187,
+      "fin": 220.82,
+      "affiche": "catalogue-affiche.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "boite-mail",
       "genre": "tuto",
       "titre": "La boîte mail du magasin",
