@@ -26,6 +26,10 @@ $builder->addDefinitions([
         ->constructorParameter('buy', get(App\Services\Workshop\Supply\BuyService::class)),
     // SMS : bramka SMSAPI (jak CRM) ; bez tokenu albo na kopii testowej tylko zapis (n_sms_log).
     App\Services\Logistics\Sms\SmsTransport::class => get(App\Services\Logistics\Sms\SmsGateway::class),
+    // [438] Różnice kursowe : API publiczne NBP (kursy średnie, tabela A) ; w testach fałszywy klient.
+    App\Services\Finances\Fx\NbpHttpClient::class => get(App\Services\Finances\Fx\CurlNbpHttpClient::class),
+    // [439] Wyciągi bankowe : ING (format do uzupełnienia po przykładowym wyciągu — na razie « nieobsługiwany », wpisy ręczne).
+    App\Services\Finances\Fx\BankStatementParser::class => get(App\Services\Finances\Fx\IngStatementParser::class),
 
 ]);
 

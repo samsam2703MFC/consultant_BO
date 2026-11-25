@@ -309,3 +309,6 @@
 2026-11-25T19:40:49Z [431-437] karty produktow na tablecie, obchod chlodni
 2026-11-25T19:46:59Z Dashboard magasin › Vendre › Clients : le module Klienci de TF Buddy (particuliers, entreprises B2B, bureaux, analyse B2B) par les comptes consultant et admin
 2026-11-25T20:02:14Z Clients et Commandes : le compte TF Buddy du magasin (téléphone, PIN, SMS) en plus des comptes consultant et admin
+2026-11-25T20:11:54Z [438-441] roznice kursowe
+2026-11-25T20:15:28Z Vidéos d'instruction : une vidéo par onglet, ses fonctions en chapitres — lot 1 (Boîte mail, Mon équipe, Trésorerie et Frais, Promotions, Offres, Mon catalogue : 58 onglets, 99 fonctions) ; Boîte mail : modèles et messages automatiques enregistrent ce qui est tapé, « Envoyer par e-mail » d'une offre remplit son modèle
+2026-11-25T20:21:50Z Mon catalogue : le bon de commande (Export PDF) et « Mes conditions » de la boutique

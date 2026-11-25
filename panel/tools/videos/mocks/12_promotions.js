@@ -1,8 +1,11 @@
 /* Vendre › Promotions (dashboard.js, rendPromos ; bundles.js) : les promotions qui touchent le magasin de démo, où elles
  * sont utilisées (comptoir, click & collect, livraison), et les bundles du Coach Vente — le constat, les couples, le prix,
  * la fiche — calculés comme le serveur (panel/src/bundles.php : bndProduits, bndBase, bndCouples) sur les ventes fictives
- * de lib/ventes.js. Les écritures (lancer, renvoyer, la fiche PDF) ne sont pas servies : les vidéos s'arrêtent à la fiche
- * pré-encodée. Données fictives.
+ * de lib/ventes.js. Les écritures du Coach Vente (24/11/2026, les vidéos par onglet 12-04 et 12-05) : « Valider et
+ * lancer » (POST …/bundles/lancer : le bundle lancé, en tête de « Lancés avec le Coach Vente » au GET suivant, à venir
+ * le lundi qui suit), « Renvoyer à l'équipe » (POST …/bundles/renvoyer), la fiche PDF de l'équipe (POST …/apercu,
+ * GET …/fiche : un PDF d'une page, fictif). L'état vit le temps d'un tournage : chaque contexte relit ce module.
+ * Données fictives.
  */
 const D = require('./lib/demo');
 const V = require('./lib/ventes');
@@ -92,17 +95,89 @@ function bundles() {
   couples.forEach(c => { c.xNom = nom(c.x); c.yNom = nom(c.y); });
   return { shop: +D.SHOP, magasin: D.NOM, periode: { du: DU, au: AU, jours: B.jours }, base,
     produits: P.map(p => ({ id: p.id, nom: p.nom, cat: p.cat, q: p.q, ttc: p.ttc, ht: Math.round(p.ht * 10000) / 10000, cout: Math.round(p.cout * 10000) / 10000, m: p.m, me: p.me })),
-    couples, lances: lances(P),
+    couples, lances: LANCES.concat(lances(P).map(l => Object.assign(l, ENVOIS[l.id] ? { envoi: ENVOIS[l.id] } : {}))),
     regles: { margeHaute: B.margeHaute, remise: B.remise * 100, remiseConseil: B.remiseConseil, remiseTrop: B.remiseTrop, prise: B.prise,
       durees: { '2s': '2 semaines', '1m': '1 mois', '2m': '2 mois' }, canaux: { tous: 'au comptoir et sur le webshop', comptoir: 'au comptoir', webshop: 'sur le webshop' },
       lundi: '2026-11-23', finMois: '2026-12-22' },
     equipe: { n: EQUIPE.length, boite: true } };
 }
 
+/* --- les écritures du Coach Vente : lancer, renvoyer, la fiche (bundles.php : bndPreparer, wr_bnd_lancer, bndEnvoyer) --- */
+const LANCES = [];          // les bundles lancés pendant le tournage, le plus récent d'abord (ORDER BY cree_le DESC)
+const FICHES = {}, ENVOIS = {};   // la fiche de chaque bundle lancé (son PDF) ; la fiche renvoyée d'un bundle d'avant le tournage
+let ECRITS = 0;             // l'heure des écritures : 15:40:12, puis une minute de plus à chacune (l'horloge de la page est figée)
+const maintenant = () => '2026-11-19 15:' + String(40 + ECRITS++).padStart(2, '0') + ':12';
+const nomCourt = n => String(n || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || n;
+/** Les dates du bundle : du lundi qui suit aujourd'hui, pour la durée (bndDates). */
+function dates(duree) {
+  const du = D.plus(D.AUJ, ((8 - D.dow(D.AUJ)) % 7) || 7), d = D.jourDe(du);
+  if (duree === '2s') { return [du, D.plus(du, 13)]; }
+  d.setMonth(d.getMonth() + (duree === '2m' ? 2 : 1)); d.setDate(d.getDate() - 1);
+  return [du, D.iso(d)];
+}
+/** La fiche envoyée à l'équipe : les six adresses de l'équipe, masquées. */
+const envoi = le => ({ le: le || maintenant(), a: EQUIPE.map(([n, a]) => ({ nom: n, adresse: a[0] + '•••@exemple.be' })), erreur: null, avertissement: null });
+/** Un bundle demandé, vérifié et chiffré (bndPreparer) : [fiche, erreur]. */
+function preparer(b) {
+  const P = bndProduits(), X = P.find(p => p.id === +b.x), Y = P.find(p => p.id === +b.y);
+  if (!X || !Y) { return [null, 'Les deux produits doivent avoir un prix et un coût de recette au panel.']; }
+  if (X.id === Y.id) { return [null, 'Choisissez deux produits différents.']; }
+  const sep = r2(X.ttc + Y.ttc), prix = b.prix != null && !isNaN(+b.prix) ? r2(+b.prix) : prixConseille(sep);
+  if (prix <= X.ttc || prix >= sep) { return [null, 'Le prix du bundle se place entre le prix du ' + X.nom.toLowerCase() + ' seul et celui des deux séparés.']; }
+  const c = bndCouple(X, Y, prix), duree = ['2s', '1m', '2m'].includes(b.duree) ? b.duree : '1m', canal = ['tous', 'comptoir', 'webshop'].includes(b.canal) ? b.canal : 'tous';
+  const [du, au] = dates(duree);
+  return [{ nom: String(b.nom || '').trim().slice(0, 80) || (nomCourt(X.nom) + ' + ' + nomCourt(Y.nom)), x: X.id, xNom: nomCourt(X.nom), y: Y.id, yNom: nomCourt(Y.nom),
+    prix, separes: sep, duree, canal, du, au, couple: c }, null];
+}
+/** POST /assistant/magasin/bundles/lancer : la promotion « créée au panel » (n° 2118, 2119…), gardée, la fiche envoyée. */
+function lancer(b) {
+  const [f, err] = preparer(b || {});
+  if (err) { return { __status: 422, json: { error: err } }; }
+  const le = maintenant();
+  const ligne = { id: 4 + LANCES.length, nom: f.nom, le, x: f.x, xNom: f.xNom, yNom: f.yNom, prix: f.prix, separes: f.separes, du: f.du, au: f.au, canal: f.canal,
+    panelId: 2118 + LANCES.length, statut: D.AUJ < f.du ? 'a_venir' : (D.AUJ <= f.au ? 'en_caisse' : 'terminee'), margeBundle: f.couple.margeBundle, gainTicket: f.couple.gainTicket,
+    envoi: b.envoyer ? envoi(le.slice(0, 17) + '14') : null };
+  LANCES.unshift(ligne); FICHES[ligne.id] = f;
+  return { ok: true, bundle: ligne, panelErreur: null, exclusAuto: [] };
+}
+/** POST /assistant/magasin/bundles/renvoyer {id} : la fiche repart aux six adresses de l'équipe. */
+function renvoyer(b) {
+  const L = LANCES.concat(lances(bndProduits())), l = L.find(x => x.id === +(b || {}).id);
+  if (!l) { return { __status: 404, json: { error: 'bundle inconnu pour ce magasin' } }; }
+  l.envoi = envoi();
+  if (!LANCES.includes(l)) { ENVOIS[l.id] = l.envoi; }
+  return { ok: true, bundle: l };
+}
+/** La fiche de l'équipe en PDF (bndFicheHtml, en plus court) : une page A4, Helvetica, ni marge ni coefficient. */
+function fichePdf(f) {
+  const eur = v => r2(v).toFixed(2).replace('.', ',') + ' EUR';
+  const t = s => String(s).replace(/[’‘]/g, "'").replace(/[−–]/g, '-').replace(/€/g, 'EUR').replace(/[^\x20-\xff]/g, '').replace(/[\\()]/g, m => '\\' + m);
+  const L = [[18, 'L\'Atelier by ' + D.NOM + ' - fiche promotion'], [26, f.nom], [13, '1 ' + f.xNom.toLowerCase() + ' + 1 ' + f.yNom.toLowerCase() + ' pour ' + eur(f.prix) + ' au lieu de ' + eur(f.separes)],
+    [13, 'Du ' + f.du.split('-').reverse().join('/') + ' à l\'ouverture au ' + f.au.split('-').reverse().join('/') + ' au soir'],
+    [13, 'En caisse : la remise s\'applique toute seule quand les deux produits sont sur le même ticket.'],
+    [13, '« ' + f.yNom + ' avec votre ' + f.xNom.toLowerCase() + ' ? Les deux sont à ' + eur(f.prix) + '. »']];
+  let y = 790; const flux = L.map(([s, x]) => { y -= s + 18; return 'BT /F1 ' + s + ' Tf 56 ' + y + ' Td (' + t(x) + ') Tj ET'; }).join('\n');
+  const objets = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>', '<< /Length ' + flux.length + ' >>\nstream\n' + flux + '\nendstream'];
+  let s = '%PDF-1.4\n'; const pos = [];
+  objets.forEach((o, i) => { pos.push(s.length); s += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  const x = s.length;
+  s += 'xref\n0 ' + (objets.length + 1) + '\n0000000000 65535 f \n' + pos.map(p => String(p).padStart(10, '0') + ' 00000 n \n').join('') +
+    'trailer\n<< /Size ' + (objets.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + x + '\n%%EOF\n';
+  return { __body: Buffer.from(s, 'latin1'), type: 'application/pdf' };
+}
+function fiche(id) {
+  const l = LANCES.concat(lances(bndProduits())).find(x => x.id === +id);
+  if (!l) { return { __status: 404, json: { error: 'bundle inconnu pour ce magasin' } }; }
+  return fichePdf(FICHES[l.id] || { nom: l.nom, xNom: l.xNom, yNom: l.yNom, prix: l.prix, separes: l.separes, du: l.du, au: l.au });
+}
+
 /* --- les promotions du panel qui touchent le magasin ---------------------------------------------------------------- */
 const cat = nom => ({ [catId(nom)]: nom });
 const prod = nom => { const p = V.P.find(x => x.nom === nom); return { [p.pid]: p.nom }; };
-function liste() {
+// La liste gardée a été lue au panel à 15:38 ; « ↻ relire le panel » (&frais=1) la relit à l'instant (15:40).
+function liste(frais) {
   const P = bndProduits(), duo = lances(P)[0];
   const panel = [
     { id: 2101, nom: '3 baguettes, la 4e offerte', type: 'xy', texte: '3 achetés (Baguettes), 1 Baguettes offerte', statut: 'active', etat: 'en_caisse', du: '2026-11-01 00:00', au: '2026-11-30 23:59',
@@ -118,7 +193,7 @@ function liste() {
       reseau: false, magasins: 1, x: { q: 1, p: prod(duo.xNom) }, y: { q: 1, p: prod(duo.yNom) }, recompense: { type: 'FIXED_PRICE', valeur: r2(duo.prix - duo.xTtc) } });
   }
   panel.forEach(r => Object.assign(r, { bundle: null, creneaux: [], repetable: true, maxParTicket: null, canaux: null, seuil: null }));
-  return { shop: D.SHOP, demandes: [], panel, erreurPanel: null, source: 'panel', lu: '15:38', luTs: Math.floor(new Date('2026-11-19T15:38:00+01:00') / 1000), luJour: D.AUJ,
+  return { shop: D.SHOP, demandes: [], panel, erreurPanel: null, source: 'panel', lu: frais ? '15:40' : '15:38', luTs: Math.floor(new Date('2026-11-19T15:' + (frais ? '40' : '38') + ':00+01:00') / 1000), luJour: D.AUJ,
     regles: { coefMin: 2, conditions: { seuil: true, canal: true, comptoir: true, webshop: true, noms: { seuil: 'min_order_amount', canal: 'channel' } } } };
 }
 
@@ -147,9 +222,13 @@ function canaux(q) {
   return { shop: D.SHOP, jours: n, du: jours[0], au: jours[n - 1], promos, parJour, total, joursSans: [], commandes: true, enLigne: { cc: 0, liv: 0 }, erreur: null };
 }
 
-module.exports = function (m, p, q) {
+module.exports = function (m, p, q, corps) {
+  if (m === 'POST' && p === '/assistant/magasin/bundles/lancer') { return lancer(corps); }
+  if (m === 'POST' && p === '/assistant/magasin/bundles/renvoyer') { return renvoyer(corps); }
+  if (m === 'POST' && p === '/assistant/magasin/bundles/apercu') { const [f, err] = preparer(corps || {}); return err ? { __status: 422, json: { error: err } } : fichePdf(f); }
   if (m !== 'GET') { return undefined; }
-  if (p === '/exploitation/promos-magasin') { return liste(); }
+  if (p === '/assistant/magasin/bundles/fiche') { return fiche(q.get('id')); }
+  if (p === '/exploitation/promos-magasin') { return liste(q.get('frais') === '1'); }
   if (p === '/exploitation/promos-magasin/produits') { return produits(); }
   if (p === '/exploitation/promos-magasin/canaux') { return canaux(q); }
   if (p === '/assistant/magasin/bundles') { return bundles(); }

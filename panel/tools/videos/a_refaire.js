@@ -24,14 +24,15 @@ const ref = args.find(a => !a.startsWith('--')) || (git('rev-parse', '--verify',
 const reg = JSON.parse(fs.readFileSync(path.join(DEPOT, 'panel/public/dashboard/videos/videos.json'), 'utf8'));
 const lu = chemin => git('show', ref + ':' + chemin) || '';
 
-// 1. À adapter
-const adapter = reg.videos.map(v => {
+// 1. À adapter — un fichier à la fois : une vidéo par onglet porte plusieurs entrées (ses chapitres), un seul tournage.
+const unParFichier = reg.videos.filter((v, i, L) => L.findIndex(x => x.fichier === v.fichier) === i);
+const adapter = unParFichier.map(v => {
   const base = v.tourne_sur && git('cat-file', '-e', v.tourne_sur + '^{commit}') !== null ? v.tourne_sur : null;
   const commits = base
     ? (git('log', '--format=%h %ad %s', '--date=short', base + '..' + ref, '--', ...(v.sources || [])) || '').split('\n').filter(Boolean)
     : (git('log', '--format=%h %ad %s', '--date=short', '--since=' + (v.tourne_le || '1970-01-01'), ref, '--', ...(v.sources || [])) || '').split('\n').filter(Boolean);
   const fichiers = base ? (git('diff', '--name-only', base, ref, '--', ...(v.sources || [])) || '').split('\n').filter(Boolean) : [];
-  return { id: v.id, fichier: v.fichier, scenario: v.fichier.replace(/\.mp4$/, ''), tourne_le: v.tourne_le || null, commits, fichiers };
+  return { id: v.niveau && v.niveau !== 'page' ? v.fichier.replace(/\.mp4$/, '') : v.id, fichier: v.fichier, scenario: v.fichier.replace(/\.mp4$/, ''), tourne_le: v.tourne_le || null, commits, fichiers };
 });
 
 // 2. Nouveautés : les mises en ligne postérieures au plus ancien tournage (l'heure de son commit), qui parlent du
