@@ -32,6 +32,21 @@ class OrderFulfilmentService
         return $ids;
     }
 
+    /**
+     * [442] Commandes en retard restées ouvertes (date de départ passée, sans WDT) : fermées à la main — « shipped » =
+     * parties (« W transporcie ») sans être rattachées à un WDT (le document de différences du jour n'en tient pas compte),
+     * « archived » = ne partiront jamais. Seules les commandes encore ouvertes et en retard au moment de l'appel sont
+     * changées (journal de la commande avec la raison). @return list<int> commandes fermées
+     */
+    public function closeLate(array $ids, string $action, string $before, ?int $customerId, string $reason): array
+    {
+        if (!in_array($action, ['shipped', 'archived'], true)) throw new CustomException('Nieznana akcja.', 'errors', 422);
+        $late = $this->orders->lateOpenIds($ids, $before, $customerId);
+        if ($late === []) return [];
+        $this->apply($late, $action === 'shipped' ? CustomerOrderStatus::IN_TRANSIT : CustomerOrderStatus::ARCHIVED, [CustomerOrderStatus::PENDING], $reason);
+        return $late;
+    }
+
     /** « Oznacz jako wysłane » (liste des commandes) : une commande, même règle. */
     public function markShipped(int $orderId, string $reason): bool
     {

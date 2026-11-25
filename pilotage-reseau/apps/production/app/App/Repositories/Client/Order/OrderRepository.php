@@ -397,6 +397,32 @@ class OrderRepository extends BaseRepository
         return is_array($rows) ? array_map(fn($r) => (int) $r['id'], $rows) : [];
     }
 
+    /**
+     * [442] Zamówienia zaległe klienta : otwarte (« Oczekujące », bez WDT) z datą wysyłki przed $before — do zamknięcia
+     * przy wysyłce (Wyślij dzień) albo z Stan ogólny. Kartony z pozycji, gratis, referencja.
+     */
+    public function lateOpenOrders(int $customerId, string $before): array
+    {
+        $rows = $this->query("SELECT co.id, DATE(co.expected_shipping_date) AS shipping_date, COALESCE(co.is_freebie, 0) AS is_freebie, co.reference,
+                    COALESCE(co.order_type, 'STANDARD') AS order_type, (SELECT COALESCE(SUM(cop.quantity_carton), 0) FROM customer_order_product cop WHERE cop.id_order = co.id) AS cartons
+                FROM customer_order co
+                WHERE co.id_customer = :c AND " . OpenOrders::sql('co') . " AND co.expected_shipping_date IS NOT NULL AND DATE(co.expected_shipping_date) < :before
+                ORDER BY co.expected_shipping_date, co.id", ['c' => $customerId, 'before' => $before]);
+        return is_array($rows) ? $rows : [];
+    }
+
+    /** [442] Parmi $ids : celles encore ouvertes et en retard (date de départ avant $before), du client si donné. @return list<int> */
+    public function lateOpenIds(array $ids, string $before, ?int $customerId = null): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0)));
+        if ($ids === []) return [];
+        $sql = 'SELECT co.id FROM customer_order co WHERE co.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') AND ' . OpenOrders::sql('co')
+            . ' AND co.expected_shipping_date IS NOT NULL AND DATE(co.expected_shipping_date) < ?' . ($customerId !== null ? ' AND co.id_customer = ?' : '') . ' ORDER BY co.id';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(array_merge($ids, [$before], $customerId !== null ? [$customerId] : []));
+        return array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
     /** Zmienia status zamówień (update_status_date = teraz) ; tylko z podanych statusów wyjściowych. */
     public function setStatus(array $ids, int $status, array $fromStatuses): int
     {
