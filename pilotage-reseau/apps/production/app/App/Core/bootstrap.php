@@ -28,6 +28,8 @@ $builder->addDefinitions([
     App\Services\Logistics\Sms\SmsTransport::class => get(App\Services\Logistics\Sms\SmsGateway::class),
     // [438] Różnice kursowe : API publiczne NBP (kursy średnie, tabela A) ; w testach fałszywy klient.
     App\Services\Finances\Fx\NbpHttpClient::class => get(App\Services\Finances\Fx\CurlNbpHttpClient::class),
+    // [439] Wyciągi bankowe : ING (format do uzupełnienia po przykładowym wyciągu — na razie « nieobsługiwany », wpisy ręczne).
+    App\Services\Finances\Fx\BankStatementParser::class => get(App\Services\Finances\Fx\IngStatementParser::class),
 
 ]);
 
