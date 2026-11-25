@@ -970,8 +970,12 @@
       if (a === 'modAnnuler') { st.modEd = null; return rendre(); }
       if (a === 'modEnregistrer') {
         const ed = st.modEd;
+        // Les champs se lisent AVANT de redessiner (25/11/2026 : rendre() les remettait à leur valeur de départ — un
+        // nouveau modèle partait vide, une modification ne changeait rien) ; le formulaire garde la saisie en cas d'erreur.
+        const corps = { action: ed && ed.id ? 'modifier' : 'creer', id: ed && ed.id, nom: val('bx-m-nom'), objet: val('bx-m-objet'), corps: val('bx-m-corps') };
+        if (ed) { Object.assign(ed, { nom: corps.nom, objet: corps.objet, corps: corps.corps }); }
         st.occupe = true; rendre();
-        return ecrire('/dashboard/boite/modeles', { action: ed && ed.id ? 'modifier' : 'creer', id: ed && ed.id, nom: val('bx-m-nom'), objet: val('bx-m-objet'), corps: val('bx-m-corps') })
+        return ecrire('/dashboard/boite/modeles', corps)
           .then(d => { st.modeles = d; st.modEd = null; flash(true, 'Modèle enregistré.'); }).catch(x => flash(false, x.message)).finally(() => { st.occupe = false; rendre(); });
       }
     });
@@ -980,7 +984,7 @@
     on('[data-bxms]', 'click', e => { ecrire('/dashboard/boite/modeles', { action: 'supprimer', id: +e.currentTarget.dataset.bxms }).then(d => { st.modeles = d; rendre(); }).catch(x => flash(false, x.message)); });
     on('[data-bxa]', 'change', e => { const k = e.currentTarget.dataset.bxa, actif = e.currentTarget.checked; ecrire('/dashboard/boite/automatiques', { regle: k, actif }).then(d => { st.auto = d; flash(true, (actif ? 'Allumé' : 'Éteint') + ' : ' + (d.regles.find(r => r.regle === k) || {}).nom + '.'); }).catch(x => { flash(false, x.message); chargerAuto(); }); });
     on('[data-bxao]', 'click', e => { st.autoOuvert = st.autoOuvert === e.currentTarget.dataset.bxao ? null : e.currentTarget.dataset.bxao; rendre(); });
-    on('[data-bxas]', 'click', e => { const k = e.currentTarget.dataset.bxas; st.occupe = true; rendre(); ecrire('/dashboard/boite/automatiques', { regle: k, jours: +val('bx-a-jours') || 1, objet: val('bx-a-objet'), corps: val('bx-a-corps') }).then(d => { st.auto = d; st.autoOuvert = null; flash(true, 'Message enregistré.'); }).catch(x => flash(false, x.message)).finally(() => { st.occupe = false; rendre(); }); });
+    on('[data-bxas]', 'click', e => { const k = e.currentTarget.dataset.bxas, corps = { regle: k, jours: +val('bx-a-jours') || 1, objet: val('bx-a-objet'), corps: val('bx-a-corps') }; st.occupe = true; rendre(); ecrire('/dashboard/boite/automatiques', corps).then(d => { st.auto = d; st.autoOuvert = null; flash(true, 'Message enregistré.'); }).catch(x => flash(false, x.message)).finally(() => { st.occupe = false; rendre(); }); });
     if (st.vue === 'ecrire' && st.ecr) {
       const e = st.ecr;
       [['bx-a', 'a'], ['bx-cc', 'cc'], ['bx-objet', 'objet'], ['bx-texte', 'texte']].forEach(([id, k]) => { const n = el.querySelector('#' + id); if (n) { n.addEventListener('input', () => { e[k] = n.value; }); } });
