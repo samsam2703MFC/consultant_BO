@@ -7441,7 +7441,8 @@
       ecrire('/exploitation/frais/tva', { shop: S.shop, poste: l.poste, tva: tva, taux: taux })
         .then(() => {
           // Le Résultat se refait au serveur avec les nouveaux frais hors TVA : on le relira.
-          Object.keys(S.res).forEach(c => { delete S.res[c]; }); delete S.aux['jourM|' + S.date];
+          // Relu, pas effacé (25/11/2026 : effacé sans relecture, « Objectif du jour » du rail restait sur « lecture… »).
+          Object.keys(S.res).forEach(c => { delete S.res[c]; }); lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, true);
           lireAux(cleFR(), cheminFR(), true);
         })
         .catch(e => { S.err.frEcr = e.message; })
@@ -7541,7 +7542,7 @@
   /** Après un ajout ou une annulation : les frais des mois touchés se relisent (le mois regardé tout de suite), et le Résultat. */
   function frRelire(mois) {
     (mois || []).forEach(m => { if (m !== S.frMois) { delete S.aux['frais|' + S.shop + '|' + m]; } });
-    Object.keys(S.res).forEach(c => { delete S.res[c]; }); delete S.aux['jourM|' + S.date];
+    Object.keys(S.res).forEach(c => { delete S.res[c]; }); lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, true);
     lireAux(cleFR(), cheminFR(), true);
   }
   function frEnvoyer() {

@@ -492,6 +492,9 @@
   font-size: calc(var(--u) * 6.4mm); line-height: 1.5;
 }
 .cat-h__text.cat-h__script { font-size: calc(var(--u) * 8mm); line-height: 1.4; color: var(--p); }
+/* Sur le bandeau (gabarit B ou en-tête « bandeau »), le titre manuscrit prend la couleur du texte du bandeau : en couleur
+   principale, il était invisible (Ruby sur Ruby, 25/11/2026). */
+.cat-t-B .cat-h__text.cat-h__script, .cat-head-bandeau .cat-h__text.cat-h__script { color: var(--s); }
 .cat-t-B .cat-h, .cat-t-C .cat-h, .cat-head-bandeau .cat-h { align-items: flex-start; }
 .cat-t-B .cat-h__top, .cat-t-C .cat-h__top, .cat-head-bandeau .cat-h__top { justify-content: flex-start; }
 .cat-t-C .cat-h--grande .cat-h__top { align-items: flex-start; }

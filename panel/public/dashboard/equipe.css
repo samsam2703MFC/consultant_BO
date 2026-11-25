@@ -154,6 +154,9 @@
 .eqp-bar.trace{justify-content:center;font-size:11px}
 .eqp-poi{position:absolute;top:50%;width:8px;height:18px;margin-top:-9px;border-radius:3px;background:var(--accent);cursor:ew-resize;opacity:.75}
 .eqp-poi.g{left:-5px}.eqp-poi.d{right:-5px}
+/* Une barre non choisie coupe ce qui dépasse (overflow:hidden) : ses poignées se posent dedans, entières (25/11/2026 :
+   3 px seulement se laissaient prendre, et un clic juste à côté traçait un nouveau service). */
+.eqp-bar:not(.sel) .eqp-poi.g{left:0}.eqp-bar:not(.sel) .eqp-poi.d{right:0}
 .eqp-bar:not(.sel) .eqp-poi{opacity:.25}
 .eqp-fant{position:absolute;top:3px;bottom:3px;border-radius:6px;border:1px dashed var(--muted);background:rgba(92,88,82,.05)}
 .eqp-l.repos .eqp-n{opacity:.55}

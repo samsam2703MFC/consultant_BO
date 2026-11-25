@@ -133,7 +133,9 @@
     return { sv, eq, h, cout, sansTaux, ouv, lin, objectif: base, prevu: J.objectif, caSource: J.ca > 0 ? J.caSource : (J.objectif ? 'prevu' : null), pct: base ? cout / base * 100 : null,
       presents: new Set(sv.map(s => s.employe)).size };
   }
-  const niveau = (P, x) => { const b = P.budget || { cible: 17, rouge: 20, noir: 22 }; return x <= b.cible ? 'ok' : x <= b.rouge ? 'orange' : x <= b.noir ? 'rouge' : 'noir'; };
+  // Le niveau se lit sur le pourcentage tel qu'il s'affiche, au dixième (25/11/2026 : 17,03 % s'affichait « 17,0 % » en
+  // orange, à côté de « dans la cible »).
+  const niveau = (P, x) => { const b = P.budget || { cible: 17, rouge: 20, noir: 22 }; x = Math.round(x * 10) / 10; return x <= b.cible ? 'ok' : x <= b.rouge ? 'orange' : x <= b.noir ? 'rouge' : 'noir'; };
   const marq = (P, x, cl) => x == null ? '<span class="eqp-tiret">—</span>' : `<span class="eqp-m eqp-m-${niveau(P, x)}${cl ? ' ' + cl : ''}" title="${esc(NIV[niveau(P, x)](P))}">${fP(x)}</span>`;
   /** D'où vient le CA d'un jour, en clair. */
   const SRC_CA = { reel: 'de CA (caisse : comptoir + B2B)', projection: 'de CA projeté (comptoir + B2B)', encours: 'de CA à cette heure (comptoir + B2B)', prevu: 'de CA prévu (l’objectif)' };
