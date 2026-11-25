@@ -3362,6 +3362,752 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "boite-porte",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "La porte de la boîte",
+      "resume": "La boîte du magasin s’ouvre avec son mot de passe, une fois par appareil et pour 30 jours ; « fermer sur cet appareil » la referme.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-01-porte.mp4",
+      "debut": 0,
+      "fin": 47.32,
+      "affiche": "boite-porte.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-relier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-porte",
+      "titre": "Relier la boîte du magasin",
+      "resume": "La première fois : l’adresse e-mail du magasin et le mot de passe de sa boîte chez OVH. Le mot de passe est essayé, puis gardé côté serveur.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-01-porte.mp4",
+      "debut": 47.32,
+      "fin": 80.8,
+      "affiche": "boite-relier.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-classique",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Le mode Classique",
+      "resume": "La boîte comme un webmail : la barre, la liste et ses filtres, la recherche, puis l’e-mail ouvert à droite avec ses gestes.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-02-classique.mp4",
+      "debut": 0,
+      "fin": 82.78,
+      "affiche": "boite-classique.jpg",
+      "duree": "1 min 23",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-gestes",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-classique",
+      "titre": "Archiver, mettre à la corbeille, suivre, marquer non lu",
+      "resume": "Les icônes à droite de Répondre et Transférer, sur l’e-mail ouvert : chacune agit tout de suite dans la boîte.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-02-classique.mp4",
+      "debut": 82.78,
+      "fin": 147.95,
+      "affiche": "boite-gestes.jpg",
+      "duree": "1 min 05",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-creer-offre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-classique",
+      "titre": "Créer une offre depuis un e-mail",
+      "resume": "« Créer une offre » ouvre Vendre › Offres, pré-remplie avec le client, le jour et les produits repérés dans l’e-mail ; on vérifie, on crée, et la réponse part avec l’offre en PDF.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-02-classique.mp4",
+      "debut": 147.95,
+      "fin": 198.76,
+      "affiche": "boite-creer-offre.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-dossiers",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Les dossiers",
+      "resume": "La rangée de boutons sous la barre : la Réception et ses non-lus, les Brouillons, les Envoyés, les Archives, les Indésirables, la Corbeille, puis les dossiers du magasin.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-03-dossiers.mp4",
+      "debut": 0,
+      "fin": 73.51,
+      "affiche": "boite-dossiers.jpg",
+      "duree": "1 min 14",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-ecrire",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Écrire, répondre, transférer",
+      "resume": "Le volet de droite devient le formulaire : À, + Cc, Objet, un modèle, une offre en PDF, des pièces jointes, puis Envoyer.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 0,
+      "fin": 42.85,
+      "affiche": "boite-ecrire.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-repondre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Répondre à un e-mail",
+      "resume": "« Répondre » remplit À et Objet et cite l’e-mail d’origine ; un modèle s’insère au-dessus, rempli tout seul ; puis Envoyer.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 42.85,
+      "fin": 75.57,
+      "affiche": "boite-repondre.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-nouvel-email",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Écrire un nouvel e-mail",
+      "resume": "« Écrire » ouvre un e-mail vierge : À, + Cc, Objet, le texte, puis Envoyer, depuis l’adresse du magasin.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 75.57,
+      "fin": 108.61,
+      "affiche": "boite-nouvel-email.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-transferer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Transférer un e-mail",
+      "resume": "« Transférer » : on donne le destinataire, un mot si besoin, et l’e-mail d’origine part en pièce jointe, avec ses propres pièces jointes.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 108.61,
+      "fin": 143.67,
+      "affiche": "boite-transferer.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-joindre-fichier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Joindre un fichier ou un document du coffre-fort",
+      "resume": "« Importer » joint un fichier de l’ordinateur ; « Coffre-fort » : chercher, puis cocher jusqu’à cinq documents, envoyés tels qu’ils sont rangés.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 143.67,
+      "fin": 195.92,
+      "affiche": "boite-joindre-fichier.jpg",
+      "duree": "52 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-joindre-catalogue",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Joindre un catalogue",
+      "resume": "« Catalogues » : un catalogue prêt, le mien ou celui de la marque, part en lien vers sa version en ligne, ajouté au texte à l’envoi.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 195.92,
+      "fin": 245.94,
+      "affiche": "boite-joindre-catalogue.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-joindre-offre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Joindre une offre en PDF",
+      "resume": "Dans la réponse, « Joindre une offre (PDF de TF Buddy)… » ; le modèle « Envoi de l’offre » reprend son numéro, son total et son jour.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 245.94,
+      "fin": 283.72,
+      "affiche": "boite-joindre-offre.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-selection",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "La sélection",
+      "resume": "Cocher des e-mails : le volet de droite devient la sélection, avec ses gestes en tuiles, « Déplacer vers » et « Nouveau dossier ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-05-selection.mp4",
+      "debut": 0,
+      "fin": 53.48,
+      "affiche": "boite-selection.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-selection-agir",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-selection",
+      "titre": "Sélectionner des e-mails et agir en une fois",
+      "resume": "Cocher les e-mails (ou « Tout sélectionner »), puis une tuile : Archiver, Corbeille, Lu, Non lu ou Suivre.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-05-selection.mp4",
+      "debut": 53.48,
+      "fin": 81.41,
+      "affiche": "boite-selection-agir.jpg",
+      "duree": "28 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-deplacer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-selection",
+      "titre": "Déplacer vers un dossier ou un nouveau dossier",
+      "resume": "« Déplacer vers » un dossier de la boîte ; ou « Nouveau dossier » : taper son nom, puis « Créer et déplacer ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-05-selection.mp4",
+      "debut": 81.41,
+      "fin": 123.6,
+      "affiche": "boite-deplacer.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-effacer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-selection",
+      "titre": "Effacer pour de bon, ou remettre en Réception",
+      "resume": "Dans la Corbeille ou les Indésirables : cocher, puis « Effacer pour de bon » (après confirmation), ou « Remettre en Réception ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-05-selection.mp4",
+      "debut": 123.6,
+      "fin": 165.33,
+      "affiche": "boite-effacer.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-ranger-ia",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Ranger avec l’IA",
+      "resume": "L’IA propose un dossier pour chaque e-mail coché, groupé par dossier d’arrivée ; chaque proposition se corrige, et rien ne bouge avant « Ranger ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-06-ranger-ia.mp4",
+      "debut": 0,
+      "fin": 53.09,
+      "affiche": "boite-ranger-ia.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-ranger",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ranger-ia",
+      "titre": "Ranger avec l’IA",
+      "resume": "Cocher (50 e-mails au plus), « Proposer un rangement », corriger avec « Changer » ou en décochant, puis « Ranger N e-mails ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-06-ranger-ia.mp4",
+      "debut": 53.09,
+      "fin": 99.56,
+      "affiche": "boite-ranger.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-modeles",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Les modèles",
+      "resume": "Les modèles du magasin et ceux du réseau, puis le formulaire « Nouveau modèle » et ses variables ({prenom}, {magasin}, {offre}…).",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-07-modeles.mp4",
+      "debut": 0,
+      "fin": 46.38,
+      "affiche": "boite-modeles.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-modele-creer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-modeles",
+      "titre": "Créer ou dupliquer un modèle",
+      "resume": "« Dupliquer » un modèle du réseau (ou écrire le sien), l’adapter avec ses variables, puis « Enregistrer le modèle ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-07-modeles.mp4",
+      "debut": 46.38,
+      "fin": 80.12,
+      "affiche": "boite-modele-creer.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-modele-modifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-modeles",
+      "titre": "Modifier ou supprimer un modèle du magasin",
+      "resume": "« Modifier » ouvre le modèle du magasin dans le formulaire ; « Enregistrer le modèle ». « Supprimer » le retire.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-07-modeles.mp4",
+      "debut": 80.12,
+      "fin": 118.23,
+      "affiche": "boite-modele-modifier.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-automatiques",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Les messages automatiques",
+      "resume": "L’accusé de réception, la relance d’une offre sans réponse, le rappel la veille de la commande : éteints tant qu’on ne les allume pas, et ce qui est parti.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-08-automatiques.mp4",
+      "debut": 0,
+      "fin": 49.99,
+      "affiche": "boite-automatiques.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-automatique",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-automatiques",
+      "titre": "Allumer un message automatique et régler son texte",
+      "resume": "Basculer l’interrupteur pour l’allumer ; « Le message » pour régler le délai, l’objet et le texte, puis « Enregistrer ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-08-automatiques.mp4",
+      "debut": 49.99,
+      "fin": 99.16,
+      "affiche": "boite-automatique.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-briefing",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Le Briefing",
+      "resume": "Les non-lus en cartes, déjà lus par l’IA : catégorie, urgence, confiance, résumé et réponse rédigée ; la file du matin et « Mains dans la farine ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-09-briefing.mp4",
+      "debut": 0,
+      "fin": 62.71,
+      "affiche": "boite-briefing.jpg",
+      "duree": "1 min 03",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-briefing-valider",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-briefing",
+      "titre": "Valider une réponse du Briefing",
+      "resume": "Relire la carte, corriger la réponse et remplir les « [à compléter] », puis « Valider » (ou →) : la réponse part.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-09-briefing.mp4",
+      "debut": 62.71,
+      "fin": 106.05,
+      "affiche": "boite-briefing-valider.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-pilote",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Le Pilote",
+      "resume": "Le pilote automatique : trois crans, le temps gagné, ce qu’il a fait, ce qu’il a laissé au magasin, et ses garde-fous fixes.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-10-pilote.mp4",
+      "debut": 0,
+      "fin": 44.23,
+      "affiche": "boite-pilote.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-pilote-regler",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-pilote",
+      "titre": "Régler le pilote",
+      "resume": "Choisir le cran : Éteint, Brouillons ou Simples. « Simples » demande une confirmation ; « Éteint » annule les envois prévus.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-10-pilote.mp4",
+      "debut": 44.23,
+      "fin": 69.57,
+      "affiche": "boite-pilote-regler.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-pilote-traiter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-pilote",
+      "titre": "Traiter ce que le pilote a laissé",
+      "resume": "Dans « Ce qui vous attend » : « Ouvrir l’e-mail » pour y répondre, ou « C’est traité » quand c’est fait.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-10-pilote.mp4",
+      "debut": 69.57,
+      "fin": 95.37,
+      "affiche": "boite-pilote-traiter.jpg",
+      "duree": "26 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-pilote-annuler",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-pilote",
+      "titre": "Annuler un envoi du pilote",
+      "resume": "En « Simples », une réponse part 10 minutes après la lecture : « Annuler l’envoi » l’arrête jusque-là.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-10-pilote.mp4",
+      "debut": 95.37,
+      "fin": 120.08,
+      "affiche": "boite-pilote-annuler.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-radar",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Le Radar",
+      "resume": "Les demandes lues dans les e-mails des trois dernières semaines : trois alertes, la frise des trois semaines à venir, les demandes repérées et l’humeur.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-11-radar.mp4",
+      "debut": 0,
+      "fin": 49.07,
+      "affiche": "boite-radar.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-radar-lire",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-radar",
+      "titre": "Mettre les e-mails sur le radar",
+      "resume": "« Lire et mettre sur le radar » : l’IA lit, une seule fois, les e-mails des trois dernières semaines qu’elle n’a pas encore lus.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-11-radar.mp4",
+      "debut": 49.07,
+      "fin": 76.55,
+      "affiche": "boite-radar-lire.jpg",
+      "duree": "27 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "assistant-ia",
       "genre": "tuto",
       "titre": "L’Assistant IA",
