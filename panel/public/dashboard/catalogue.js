@@ -162,7 +162,9 @@
     appel('GET', chemin(S) + '/document' + qs(S) + '&lang=' + S.lang)
       .then(j => { S.doc[k] = j.data; }).catch(e => { delete S.doc[k]; S.docErr[k] = e; }).finally(() => rendre(S));
   }
-  function oublierDocs(S) { S.doc = {}; S.docErr = {}; }
+  // Les points de la Validation dépendent du catalogue comme ses pages : ils se relisent avec eux (25/11/2026 : ils
+  // restaient ceux de la première visite après un changement de produits, de pages, de nombre de pages ou de format).
+  function oublierDocs(S) { S.doc = {}; S.docErr = {}; S.verif = {}; S.verifErr = {}; }
 
   /* --- les données dérivées ------------------------------------------------------------------------------------- */
   const produits = S => (S.prod && S.prod.products) || [];
@@ -309,6 +311,9 @@
     if (S.etape >= 4) { chargerVerif(S); }
     if (S.etape === 5) { S.lien = undefined; chargerLien(S); if (!S.imp.langue || (S.imp.langue !== 'fr+nl' && !S.langs.includes(S.imp.langue))) { S.imp.langue = S.langs.length > 1 ? 'fr+nl' : S.langs[0]; } }
     if (S.etape === 1 && !S.liste) { chargerListe(S); }
+    // Retour à « Mes catalogues » : ouvrir un catalogue a oublié l'aperçu de la carte de la marque (25/11/2026 : elle
+    // restait sur « Lecture… »).
+    if (S.etape === 1 && S.recus) { chargerApercuRecu(S); }
   }
   /** « Le prendre tel quel » : il devient le mien à regarder, vérifier, imprimer, diffuser (étapes 2 et 3 verrouillées). */
   function prendre(S, id) {
@@ -393,7 +398,7 @@
     if (nb === S.nbPages) { return; }
     S.proposer = null;
     const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) }) : Promise.resolve();
-    const p = avant.then(() => appel('PUT', '/' + S.cat.id + qs(S), { pageCount: nb })).then(j => { adopter(S, j.data); oublierDocs(S); S.liste = null; })
+    const p = avant.then(() => appel('PUT', '/' + S.cat.id + qs(S), { pageCount: nb })).then(j => { adopter(S, j.data); oublierDocs(S); S.liste = null; entrer(S); })
       .catch(e => { if (e.code === 'CATALOGUE_PAGES_NOT_EMPTY') { S.proposer = nb; } throw e; });
     occupe(S, p, 'Passage à ' + nb + ' pages');
   }
@@ -654,9 +659,11 @@
     if (t.dataset.cm === 'rech') { S.rech = t.value; rendreGarde(S, t); }
     if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { S.pages[+t.dataset.i][t.dataset.cm === 'ptexte' ? 'text' : 'textNl'] = t.value.slice(0, 400); S.modifie = true; }
     if (t.dataset.cm === 'mediasQ') { S.mediasQ = t.value; }
-    if (t.dataset.cm === 'qte') { S.imp.qte = t.value.replace(/\D/g, '').slice(0, 7); }
-    if (t.dataset.cm === 'afficheTitre') { S.affiche.titre = t.value.slice(0, 80); }
-    if (t.dataset.cm === 'bonQte') { bonEtat(S).qte = t.value.replace(/\D/g, '').slice(0, 5); }
+    // La quantité et le titre de l'affiche se lisent ailleurs (« Marquer imprimé · N ex. », l'aperçu de l'affiche, le
+    // récapitulatif du bon) : on redessine en gardant le curseur (25/11/2026).
+    if (t.dataset.cm === 'qte') { S.imp.qte = t.value.replace(/\D/g, '').slice(0, 7); rendreGarde(S, t); }
+    if (t.dataset.cm === 'afficheTitre') { S.affiche.titre = t.value.slice(0, 80); rendreGarde(S, t); }
+    if (t.dataset.cm === 'bonQte') { bonEtat(S).qte = t.value.replace(/\D/g, '').slice(0, 5); rendreGarde(S, t); }
     if (t.dataset.cm === 'bonF') { bonEtat(S).f[t.dataset.k] = t.value; }
     if (t.dataset.cm === 'bonDate') { bonEtat(S).f.dl[+t.dataset.i][t.dataset.k] = t.value; }
   }

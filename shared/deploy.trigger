@@ -313,3 +313,4 @@
 2026-11-25T20:15:28Z Vidéos d'instruction : une vidéo par onglet, ses fonctions en chapitres — lot 1 (Boîte mail, Mon équipe, Trésorerie et Frais, Promotions, Offres, Mon catalogue : 58 onglets, 99 fonctions) ; Boîte mail : modèles et messages automatiques enregistrent ce qui est tapé, « Envoyer par e-mail » d'une offre remplit son modèle
 2026-11-25T20:21:50Z Mon catalogue : le bon de commande (Export PDF) et « Mes conditions » de la boutique
 2026-11-25T20:43:41Z Compte TF Buddy du magasin : la limite des connexions dite comme celle de TF Buddy, le code SMS en cours repris
+2026-11-25T20:45:44Z Dashboard : défauts relevés en tournant les vidéos corrigés (Mon catalogue, Trésorerie, Mon équipe, Boîte mail, Promotions, newsletter)

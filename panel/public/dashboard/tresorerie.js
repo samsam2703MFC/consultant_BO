@@ -315,7 +315,11 @@
       for (const at of ['trtxt', 'trsel', 'trdate']) { if (a.dataset[at] != null) { garde = { at: 'data-' + at, v: a.dataset[at], s: a.selectionStart }; break; } }
     }
     E.fmt = {};
+    // Le défilement de côté des grilles survit au redessin (25/11/2026 : chaque saisie ramenait le tableau à gauche, loin
+    // de la case tapée — une remarque, le × d'un paiement).
+    const ongAvant = E.onglet, defil = [...racine.querySelectorAll('.tr-defil')].map(x => x.scrollLeft);
     racine.innerHTML = corps();
+    if (E.onglet === ongAvant) { racine.querySelectorAll('.tr-defil').forEach((x, i) => { if (defil[i]) { x.scrollLeft = defil[i]; } }); }
     const X = extraActif(), ext = X && racine.querySelector('[data-trext]');
     if (ext && typeof X.rendre === 'function') {
       try { X.rendre(ext); } catch (e) { ext.innerHTML = `<div class="db-err">${esc(X.nom || X.cle)} : ${esc(e.message)}</div>`; }
@@ -377,7 +381,7 @@
     h += `<div data-tretat>${bandeauEtat()}</div>`;
     if (S.conflit) {
       const c = S.conflit, t = c.majLe ? new Date(String(c.majLe).replace(' ', 'T')) : null;
-      h += `<div class="db-err">Le plan a été modifié sur un autre écran${t && !isNaN(t) ? ' le ' + t.toLocaleDateString('fr-BE') + ' à ' + t.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''} : tes dernières saisies ici ne sont pas enregistrées. <button type="button" class="tr-lien" data-tra="reprendre">Reprendre le plan enregistré</button></div>`;
+      h += `<div class="db-err tr-collant">Le plan a été modifié sur un autre écran${t && !isNaN(t) ? ' le ' + t.toLocaleDateString('fr-BE') + ' à ' + t.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''} : tes dernières saisies ici ne sont pas enregistrées. <button type="button" class="tr-lien" data-tra="reprendre">Reprendre le plan enregistré</button></div>`;
     }
     if (S.neuf && !S.sale && !S.envoi) {
       h += `<div class="tr-bandeau">Plan proposé d’après ${d.base === 'budget' ? 'le budget validé' : 'l’année passée'} et les postes du budget. Rien n’est enregistré tant que tu n’as rien modifié : commence par ton solde de départ, puis tes paiements réels (onglet Paiements).</div>`;
@@ -473,9 +477,9 @@
     const fin = C.fin, maxV = Math.max(...fin, C.coussin, 0) * 1.08, minV = Math.min(...fin, 0) * 1.08, plage = (maxV - minV) || 1;
     const P = v => ((maxV - v) / plage * 100).toFixed(2) + '%';
     h += `<div class="tr-carte"><div class="tr-cbar"><div class="tr-h3">Cash fin de semaine (prévu)</div><div class="tr-leg">
-      <span><i style="background:var(--color-text-muted)"></i>Au-dessus du coussin</span><span><i style="background:var(--color-collection-border)"></i>Sous le coussin</span><span><i style="background:var(--color-primary)"></i>Découvert</span></div></div>
+      <span><i style="background:var(--color-text-muted)"></i>Au-dessus du coussin</span><span><i style="background:var(--tr-orange)"></i>Sous le coussin</span><span><i style="background:var(--color-primary)"></i>Découvert</span></div></div>
       <div class="tr-graph"><div class="tr-ligne-c" style="top:${P(C.coussin)}"></div><div class="tr-ligne-cl" style="top:${P(C.coussin)}">Coussin ${esc(eur(C.coussin))}</div><div class="tr-ligne-z" style="top:${P(0)}"></div>
-      ${W.map((w, i) => { const v = fin[i], s = statut(v); return `<button type="button" class="tr-barre" data-tra="barre:${i}" title="${esc('Lundi ' + dm(w.ms) + '/' + w.annee + ' · ' + eur(v))}" style="opacity:${F.vis.includes(i) ? 1 : 0.35}"><i style="top:${v >= 0 ? P(v) : P(0)};height:${(Math.abs(v) / plage * 100).toFixed(2)}%;background:${s === 'neg' ? 'var(--color-primary)' : (s === 'bas' ? 'var(--color-collection-border)' : 'var(--color-text-muted)')}"></i></button>`; }).join('')}</div>
+      ${W.map((w, i) => { const v = fin[i], s = statut(v); return `<button type="button" class="tr-barre" data-tra="barre:${i}" title="${esc('Lundi ' + dm(w.ms) + '/' + w.annee + ' · ' + eur(v))}" style="opacity:${F.vis.includes(i) ? 1 : 0.35}"><i style="top:${v >= 0 ? P(v) : P(0)};height:${(Math.abs(v) / plage * 100).toFixed(2)}%;background:${s === 'neg' ? 'var(--color-primary)' : (s === 'bas' ? 'var(--tr-orange)' : 'var(--color-text-muted)')}"></i></button>`; }).join('')}</div>
       <div class="tr-graph-m">${W.map((w, i) => `<span>${(i === 0 || W[i - 1].mois !== w.mois) && (i === 0 || w.mois % 2 === 0) ? MO[w.mois] : ''}</span>`).join('')}</div></div>`;
 
     // Le plan, semaine par semaine.
@@ -748,7 +752,7 @@
       ${etape(3, 'Les 4 semaines à venir', 'Tu corriges tes ventes prévues (onglet Plan), les montants à payer à chaque fournisseur (onglet Fournisseurs) et les paiements exceptionnels. Un montant calculé (marchandises, gérant, personnel, frais…) qui n’est pas le bon cette semaine-là : double-clic sur la case et tu tapes le vrai montant, pour cette semaine seulement. Vider la case revient au calcul.')}
       ${etape(4, 'La décision', 'Tu lis la ligne « Cash fin de semaine (prévu) ». Orange : tu passes sous ton coussin. Rouge : tu ne peux pas tout payer. Tu décides tout de suite quoi décaler et tu préviens avant l’échéance, pas après.')}
       <div class="tr-k">Ce qui est repris tout seul</div>
-      <div class="tr-def"><b>Ce qui a été fait</b><span>Une semaine close prend les ventes réelles de la caisse : tu n’as plus à les taper. Le mois en cours et les mois passés sont dans l’onglet « N-1, budget, réalisé ».</span>
+      <div class="tr-def"><b>Ce qui a été fait</b><span>Une semaine close prend les ventes réelles de la caisse : tu n’as plus à les taper. Le mois en cours et les mois passés sont dans l’onglet « Budget & étude ».</span>
       <b>Le budget validé</b><span>Le CA budget de chaque mois, réparti sur ses semaines au profil de l’an passé : la base des ventes prévues. Ses taux donnent le plafond matière, le repère du personnel et, pour un plan neuf, les paiements proposés.</span>
       <b>L’année passée</b><span>Les ventes de la même semaine un an plus tôt : un repère sous les encaissements, et la base des ventes quand il n’y a ni budget ni étude.</span></div>
       <div class="tr-k">Les couleurs</div>

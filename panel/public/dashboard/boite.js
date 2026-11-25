@@ -10,7 +10,7 @@
  * par e-mail, le magasin corrige, puis range. Les archives et la corbeille sont créées si la boîte n'en a pas.
  * Les modes IA (21/11/2026, « les 3 options futuristes en toggle, avec un bouton type futuriste ») : Classique · Briefing
  * (les non-lus en cartes, l'action prête, à voix haute) · Pilote (l'IA répond seule aux e-mails simples, dans des
- * garde-fous) · Radar (les demandes des e-mails sur les quatorze prochains jours). Serveur : src/boite_ia.php. Pour vendre : « Créer une offre » transforme l'e-mail en offre
+ * garde-fous) · Radar (les demandes des e-mails sur les vingt et un prochains jours). Serveur : src/boite_ia.php. Pour vendre : « Créer une offre » transforme l'e-mail en offre
  * (Vendre › Offres, le client retrouvé dans TF Buddy, le jour, le retrait ou la livraison et les produits repérés dans
  * le texte, à vérifier) ; une offre citée s'ouvre ; une fois l'offre créée, la réponse part avec son PDF. Les messages
  * automatiques (accusé de réception, relance d'une offre, rappel la veille) se règlent ici.
@@ -236,7 +236,7 @@
   function remplir(t) {
     const e = st.ecr || {}, c = e.contexte || {};
     const nom = c.nom || ((String(e.a).match(/^\s*"?([^"<]+?)"?\s*</) || [])[1] || '');
-    const prenom = (() => { let n = nom.trim(); if (n.includes(',')) { n = n.split(',')[1].trim() || n; } const p = n.split(/\s+/)[0] || ''; return p.length > 1 && !/\d|@|^(sa|sprl|srl|bv|nv|asbl|vzw)$/i.test(p) ? p : ''; })();
+    const prenom = (() => { let n = nom.trim(); if (n.includes(',')) { n = n.split(',')[1].trim() || n; } if (/^(famille|fam\.?|familie)\s+\S/i.test(n)) { return n; } const p = n.split(/\s+/)[0] || ''; return p.length > 1 && !/\d|@|^(sa|sprl|srl|bv|nv|asbl|vzw)$/i.test(p) ? p : ''; })();   // « Famille Lambert » : « Bonjour Famille Lambert, » (25/11/2026, pas « Bonjour Famille, »)
     const o = e.offre && st.offres ? st.offres.find(x => String(x.id) === String(e.offre)) : null;
     const v = { prenom, nom, objet: sansPrefixe(c.objet || ''), magasin: (st.etat && st.etat.nom) || st.nomShop || '',
       offre: e.offre ? String(e.offre) : '', total: o ? eur(o.total) : '', jour: o && o.jour ? dFr(o.jour) : '' };
@@ -528,7 +528,7 @@
     const e = st.etat;
     return `<div class="bx-porte"><div class="bx-porte-c">${ico(I.nonlu)}<h2>Relier la boîte mail du magasin</h2>
       <p>L’adresse e-mail du magasin et le mot de passe de sa boîte (chez OVH : ${esc(e.serveur)}). Le mot de passe est essayé auprès du serveur, puis gardé côté serveur avec les clés de l’ERP ; il ne s’affiche plus jamais.</p>
-      <label>Adresse e-mail<input class="bx-in" id="bx-r-adr" type="email" autocomplete="username" placeholder="halle@atelierby.be" value="${esc(st.porte.adr)}"></label>
+      <label>Adresse e-mail<input class="bx-in" id="bx-r-adr" type="email" autocomplete="username" placeholder="ville@atelierby.be" value="${esc(st.porte.adr)}"></label>
       <label>Mot de passe de la boîte<input class="bx-in" id="bx-r-mdp" type="password" autocomplete="current-password" value="${esc(st.porte.mdp)}"></label>
       <button type="button" class="db-btn prim" data-bx="relier"${st.occupe ? ' disabled' : ''}>Relier la boîte</button></div></div>`;
   }
@@ -889,11 +889,16 @@
       geste(g, [st.msg.uid]).then(() => { if (st.msg && (g === 'suivi' || g === 'nonsuivi')) { st.msg.suivi = g === 'suivi'; rendre(); } });
     });
     // La sélection : une case par e-mail (Maj+clic : toute la plage depuis la dernière case), « tout sélectionner » la page.
+    // La case est dans un <label> : le clic du label arrive à la case sans la touche Maj, et Maj+clic sélectionnait le texte
+    // de la liste (25/11/2026). Le label retient Maj pour la case, et Maj+clic n'étend plus la sélection du texte.
+    on('label.bx-coche', 'mousedown', e => { if (e.shiftKey) { e.preventDefault(); } });
+    on('label.bx-coche', 'click', e => { if (!e.target.matches('[data-bxc]')) { st.maj = e.shiftKey; } });
     on('[data-bxc]', 'click', e => {
+      const maj = e.shiftKey || !!st.maj; st.maj = false;
       const u = +e.currentTarget.dataset.bxc, M = (st.liste && st.liste.messages) || [], coche = e.currentTarget.checked;
       if (st.tout) { st.tout = false; M.forEach(m => st.coches.add(m.uid)); }
       const i = M.findIndex(m => m.uid === u), j = M.findIndex(m => m.uid === st.derniere);
-      const plage = e.shiftKey && j >= 0 ? M.slice(Math.min(i, j), Math.max(i, j) + 1).map(m => m.uid) : [u];
+      const plage = maj && j >= 0 ? M.slice(Math.min(i, j), Math.max(i, j) + 1).map(m => m.uid) : [u];
       plage.forEach(x => { if (coche) { st.coches.add(x); } else { st.coches.delete(x); } });
       st.derniere = u; st.rang = null; rendre();
     });

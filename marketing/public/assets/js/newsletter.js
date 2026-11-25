@@ -390,7 +390,9 @@
       const sel = focK && foc.selectionStart != null ? [foc.selectionStart, foc.selectionEnd] : null;
       const sc = this.el.querySelector('.nl-cand'); const scT = sc ? sc.scrollTop : 0;
       this.el.innerHTML = this.html();
-      if (focK) { const e = this.el.querySelector('[data-f="' + focK + '"]'); if (e) { e.focus(); if (sel && e.setSelectionRange) { try { e.setSelectionRange(sel[0], sel[1]); } catch (x) { /* type sans sélection */ } } } }
+      // Un champ number n'a pas de sélection (selectionStart vaut null) : après le redessin, le curseur revenait au début et
+      // « 20 » devenait « 02 » (Vouchers max, Panier min., 25/11/2026). On le remet à la fin en réécrivant la valeur.
+      if (focK) { const e = this.el.querySelector('[data-f="' + focK + '"]'); if (e) { e.focus(); if (!sel && e.tagName === 'INPUT' && e.type === 'number') { const v = e.value; e.value = ''; e.value = v; } if (sel && e.setSelectionRange) { try { e.setSelectionRange(sel[0], sel[1]); } catch (x) { /* type sans sélection */ } } } }
       if (scT) { const s2 = this.el.querySelector('.nl-cand'); if (s2) s2.scrollTop = scT; }
     }
     pill(label, bg, color, border) { return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:400;padding:4px 10px;border-radius:8px;white-space:nowrap;background:${bg};color:${color};border:1px solid ${border}">${esc(label)}</span>`; }
