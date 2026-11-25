@@ -111,6 +111,12 @@ final class StockPalletService
      * WDT z 6 ostatnich tygodni (bez dnia dzisiejszego), średnio na tydzień w podpowiedzi. Produkty MTS bez stanu też.
      */
     /** Semaine de production contenant $today (week.start_day ; lundi sans réglages) : [début, fin]. */
+    /** [442] Début de la semaine de production : « en retard » = départ prévu avant ce jour (même règle que « Zaległe »). */
+    public function weekStart(?string $today = null): string
+    {
+        return $this->week($today)[0];
+    }
+
     private function week(?string $today): array
     {
         $start = WeekStart::of($today ?? date('Y-m-d'), $this->params ? WeekStart::day($this->params) : 1);

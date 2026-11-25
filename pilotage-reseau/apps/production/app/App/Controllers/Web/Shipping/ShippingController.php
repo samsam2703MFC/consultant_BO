@@ -15,7 +15,8 @@ class ShippingController extends BaseController
     public function __construct(
         private ShippingService $shippingService,
         private PalletDeliveryService $palletDeliveryService,
-        private CartonStockComplaintService $cartonStockComplaintService
+        private CartonStockComplaintService $cartonStockComplaintService,
+        private \App\Repositories\Client\Order\OrderRepository $orders
     )
     {
     }
@@ -54,6 +55,9 @@ class ShippingController extends BaseController
             'has_pallets'   => count($products) > 0,
             'all_complete'  => count($products) > 0 && count(array_filter($products, fn($p) => (int)$p['quantity_diff'] !== 0)) === 0,
             'other_dates'   => $otherDates,
+            // [442] Zaległe zamówienia klienta (data przed dniem wysyłki, nadal otwarte) : do zamknięcia razem z wysyłką.
+            'late_orders'   => array_map(fn($o) => ['id' => (int) $o['id'], 'shipping_date' => $o['shipping_date'], 'cartons' => (float) $o['cartons'],
+                'freebie' => (int) $o['is_freebie'] === 1, 'reference' => $o['reference']], $this->orders->lateOpenOrders($clientId, (string) $shippingDate)),
         ]);
     }
 
