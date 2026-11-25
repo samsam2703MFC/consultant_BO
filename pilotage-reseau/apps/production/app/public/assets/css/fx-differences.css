@@ -1,0 +1,95 @@
+/* [440] Różnice kursowe (Finanse) — makieta « Różnice kursowe » ; jetons et composants : docs/DESIGN_SYSTEM.md (§3, §7),
+   déjà posés par ds.css. Tout est limité à .fx. */
+.fx { color: var(--ink); font-size: 13px; }
+.fx-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 18px 24px; margin: 0 0 18px;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+.fx-top__kicker { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+.fx-top h1 { font-size: 26px; font-weight: 400; letter-spacing: -0.01em; margin: 0; color: var(--ink); }
+.fx-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; }
+.fx-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; margin: 0; padding: 7px 16px;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font: 400 13px/1.2 'Gotham', system-ui, sans-serif;
+  text-decoration: none; white-space: nowrap; cursor: pointer; }
+.fx-btn:hover:not(:disabled) { border-color: var(--muted-2); color: var(--ink); }
+.fx-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fx-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.fx-btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fx-btn--primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+.fx-btn--sm { min-height: 30px; padding: 5px 11px; font-size: 12px; }
+.fx-btn--ghost { background: transparent; border-color: transparent; color: var(--muted-2); }
+.fx-link { padding: 2px 4px; font-size: 12px; color: var(--muted-2); background: none; border: 0; border-radius: 6px; text-decoration: underline;
+  text-underline-offset: 2px; cursor: pointer; }
+.fx-link:hover { color: var(--accent); }
+.fx-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--chip); }
+.fx-seg a, .fx-seg span { margin: 0; padding: 6px 12px; border-radius: 7px; color: var(--muted-2); font-size: 12.5px; text-decoration: none; }
+.fx-seg a:hover { color: var(--ink); }
+.fx-seg .is-on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.fx-seg .is-off { color: var(--faint); }
+.fx-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 220px; padding: 6px; background: #fff; border: 1px solid var(--line);
+  border-radius: 10px; display: none; }
+.fx-menu.is-open { display: block; }
+.fx-menu a { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 12.5px; }
+.fx-menu a:hover { background: var(--table-head); }
+
+.fx-kpis { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--table-head); border: 1px solid var(--line); border-radius: 12px; margin: 0 0 16px; }
+.fx-kpi { padding: 14px 18px; border-left: 1px solid var(--line); min-width: 0; }
+.fx-kpi:first-child { border-left: 0; }
+.fx-kpi__l { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.fx-kpi__v { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; line-height: 1.2; }
+.fx-kpi__s { font-size: 12px; color: var(--muted); }
+.fx-pos { color: var(--green); }
+.fx-neg { color: var(--stop); }
+.fx-warn { color: var(--prize); }
+
+.fx-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.fx-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; }
+.fx-card + .fx-card { margin-top: 16px; }
+.fx h2 { font-size: 0.95rem; font-weight: 400; margin: 0 0 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.fx-scroll { overflow-x: auto; }
+.fx-table { width: 100%; min-width: 860px; border-collapse: collapse; font-size: 13px; }
+.fx-table th { font-size: 11px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); text-align: left; padding: 8px;
+  background: var(--table-head); border-bottom: 1px solid var(--line); }
+.fx-table td { padding: 9px 8px; border-bottom: 1px solid var(--row-line); vertical-align: top; }
+.fx-table td.n, .fx-table th.n { text-align: right; white-space: nowrap; }
+.fx-table tr.fx-tot td { background: var(--total-line); font-weight: 700; }
+.fx-table tr.fx-earlier td { background: rgba(250, 247, 242, 0.6); }
+.fx-sub { display: block; font-size: 11.5px; color: var(--muted); }
+.fx-calc { display: block; font-size: 11.5px; color: var(--muted-2); }
+.fx-acc { display: inline-block; margin-top: 3px; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 7px; border-radius: 6px;
+  border: 1px solid var(--line); color: var(--muted-2); }
+.fx-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; white-space: nowrap; }
+.fx-chip--ok { background: var(--ok-soft); color: var(--green); }
+.fx-chip--warn { background: var(--prize-soft); color: var(--prize-ink); }
+.fx-chip--neutral { background: var(--chip); color: var(--muted-2); }
+.fx-piece + .fx-piece { margin-top: 6px; }
+.fx-pick { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.fx-pick input { accent-color: var(--accent); }
+.fx-pick label { display: flex; gap: 7px; align-items: center; font-size: 12px; cursor: pointer; }
+.fx-rowacts { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 6px; }
+.fx-rowacts--links { flex-wrap: nowrap; white-space: nowrap; gap: 0; }
+.fx-rowacts--links .fx-link { padding: 2px 3px; font-size: 11.5px; }
+.fx-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+.fx-list { display: flex; flex-direction: column; }
+.fx-li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--row-line); font-size: 12.5px; }
+.fx-li:last-child { border-bottom: 0; }
+.fx-li b { font-weight: 700; }
+.fx-drop { display: block; width: 100%; border: 1px dashed var(--faint); border-radius: 12px; padding: 16px; text-align: center; color: var(--muted-2);
+  font-size: 12.5px; margin-top: 10px; background: #fff; cursor: pointer; }
+.fx-drop.is-over { border-color: var(--accent); background: var(--select-soft); }
+.fx-empty { margin: 0; padding: 14px 0; color: var(--muted); font-size: 13px; }
+.fx-lock { display: flex; gap: 10px; align-items: flex-start; }
+
+.fx-modal { position: fixed; inset: 0; z-index: 1060; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--veil); }
+.fx-modal__box { width: min(560px, 100%); max-height: calc(100vh - 48px); overflow: auto; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px; }
+.fx-modal__box h3 { margin: 0 0 12px; font-size: 16px; font-weight: 400; }
+.fx-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.fx-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--muted); }
+.fx-form .fx-wide { grid-column: 1 / -1; }
+.fx-form input, .fx-form select { font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+.fx-form input:focus-visible, .fx-form select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fx-modal__acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.fx-error { color: var(--danger); font-size: 12.5px; margin: 10px 0 0; }
+
+@media (max-width: 1200px) {
+  .fx-grid { grid-template-columns: 1fr; }
+  .fx-kpis { grid-template-columns: repeat(3, 1fr); }
+}

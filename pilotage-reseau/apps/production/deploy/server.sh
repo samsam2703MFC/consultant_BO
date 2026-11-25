@@ -506,6 +506,8 @@ ${poller_line}
 * * * * * ${CRON_RUN} Bin/hr_clock_reminder.php >> /var/log/production-erp-mail.log 2>&1
 # [387] Rutyny poranne AI : propositions des assistants du pilote à leur heure (rien tant que ai.routines_enabled = 0 ; rien n'est envoyé)
 */10 * * * * ${CRON_RUN} Bin/ai_routines.php >> /var/log/production-erp-mail.log 2>&1
+# [438] Różnice kursowe : kursy średnie NBP (tabela A, 10 ostatnich dni ; adres API w ustawieniu fx.nbp_api_url) — po publikacji tabeli
+20 13 * * * ${CRON_RUN} Bin/fx_rates_fetch.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log
