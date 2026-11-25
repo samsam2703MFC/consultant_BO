@@ -52,6 +52,9 @@ const OBJ_AUJ = 1910, CA_EN_COURS = 1673;
 // Les autres semaines : la part du personnel visée par jour de semaine (le CA en découle, entre 1 600 et 2 900 €).
 const PCT = { 1: 16.3, 2: 17.4, 3: 16.9, 4: 16.6, 5: 17.6, 6: 15.4, 7: 16.8 };
 const CA_MOYEN = [0, 1660, 1850, 1750, 1950, 2200, 2800, 2500];
+// La semaine du 30 novembre (vide, celle des vidéos de l'assistant, de la recopie et du shift maker) : un début de
+// décembre plus calme (CA prévu ×0,92) — la semaine passée recopiée y a des heures de trop, l'assistant des propositions.
+const CALME_APRES = 0.92;
 const OUVERTURES = { 1: [420, 1140], 2: [420, 1140], 3: [420, 1140], 4: [420, 1140], 5: [420, 1140], 6: [420, 1140], 7: [450, 810] };
 const PREMIER = '2026-11-01', DERNIER = '2026-11-29';   // le planning existe du 1er au 29 novembre
 
@@ -97,8 +100,8 @@ function caDu(date) {
   const w = wd(date), cout = coutDu(date), r10 = x => Math.round(x / 10) * 10;
   let base = CA16[date];
   if (base == null) {
-    base = cout > 0 ? cout / (PCT[w] + bruit(date, 3) * 0.9) * 100 : CA_MOYEN[w] * (1 + bruit(date, 5) * 0.05);
-    base = r10(Math.max(1600, Math.min(2900, base)));
+    base = cout > 0 ? cout / (PCT[w] + bruit(date, 3) * 0.9) * 100 : CA_MOYEN[w] * (1 + bruit(date, 5) * 0.05) * (date > DERNIER ? CALME_APRES : 1);
+    base = r10(Math.max(date > DERNIER ? 1500 : 1600, Math.min(2900, base)));
   }
   let o;
   if (date < AUJ) { o = { objectif: r10(base * (1 + bruit(date, 7) * 0.05)), ca: base, caSource: 'reel', caEnCours: null }; }
