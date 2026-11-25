@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
  * [440] Różnice kursowe (Finanse) : wpłaty klientów w walucie, różnica par facture (kurs NBP / kurs ING), wyciągi ING
  * (PDF chiffré, saisie et correction à la main), dopasowanie « do potwierdzenia », zestawienie miesiąca PDF et CSV.
  * Droit propre « fx_differences » (page, appels ajax et fichiers : App ne contrôle que les pages, les appels vérifient le
- * même droit). Montants et wpłaty des clients : profil Finanse et CEO seulement (PageAccessService::seesOrderValues,
+ * même droit). Montants et wpłaty des clients : profil Finanse, CEO et [443] Kierownik operacyjny (PageAccessService::seesFxValues,
  * [312]) — sinon la page ne montre que le cadre et toute action est refusée. Aucun e-mail.
  */
 final class FxDifferenceController extends BaseController
@@ -152,17 +152,17 @@ final class FxDifferenceController extends BaseController
         }
     }
 
-    /** Droit « fx_differences » ; $values : aussi les montants (profil Finanse / CEO). */
+    /** Droit « fx_differences » ; $values : aussi les montants (profil Finanse / CEO / Kierownik operacyjny [443]). */
     private function guard(bool $values = false): void
     {
         if (!$this->access->canSee($this->userId(), self::PATH)) throw new CustomException('Brak dostępu do « Różnice kursowe ».', 'errors', 403);
-        if ($values && !$this->values()) throw new CustomException('Wpłaty i kwoty klientów : profil Finanse albo CEO (wybierz profil pod awatarem).', 'errors', 403);
+        if ($values && !$this->values()) throw new CustomException('Wpłaty i kwoty klientów : profil Finanse, Kierownik operacyjny albo CEO (wybierz profil pod awatarem).', 'errors', 403);
     }
 
-    /** [312] Kwoty : profil Finanse i CEO. */
+    /** [312] Kwoty : profil Finanse i CEO ; [443] także Kierownik operacyjny. */
     private function values(): bool
     {
-        return $this->access->seesOrderValues($this->userId());
+        return $this->access->seesFxValues($this->userId());
     }
 
     private function month(): ?string

@@ -159,8 +159,8 @@
 
     function render() {
         if (!D.values) {
-            app.innerHTML = header() + `<section class="fx-card"><div class="fx-lock"><i class="bi bi-lock"></i><div><b>Wpłaty i kwoty klientów : profil Finanse albo CEO.</b>
-                <p class="fx-note">Wybierz profil Finanse pod awatarem, żeby zobaczyć wpłaty w walucie, różnice kursowe i zestawienie miesiąca.</p></div></div></section>`;
+            app.innerHTML = header() + `<section class="fx-card"><div class="fx-lock"><i class="bi bi-lock"></i><div><b>Wpłaty i kwoty klientów : profil Finanse, Kierownik operacyjny albo CEO.</b>
+                <p class="fx-note">Wybierz profil Finanse albo Kierownik operacyjny pod awatarem, żeby zobaczyć wpłaty w walucie, różnice kursowe i zestawienie miesiąca.</p></div></div></section>`;
             return;
         }
         app.innerHTML = header() + kpis() + `<div class="fx-grid"><div>${table()}</div><div>${statements()}${rates()}</div></div>`;
