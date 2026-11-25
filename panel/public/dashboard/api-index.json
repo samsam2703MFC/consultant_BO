@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-25T20:15:42Z",
+ "genere": "2026-11-25T20:20:22Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -655,7 +655,7 @@
    ],
    "fichiers": [
     "automatisations.js:38",
-    "boite.js:1047",
+    "boite.js:1053",
     "boite.js:106",
     "dashboard.js:7807"
    ],
@@ -679,9 +679,9 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:387",
-    "boite.js:979",
-    "boite.js:981"
+    "boite.js:389",
+    "boite.js:985",
+    "boite.js:987"
    ],
    "magasin": true,
    "routes": [
@@ -750,8 +750,8 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:301",
-    "boite.js:452"
+    "boite.js:303",
+    "boite.js:454"
    ],
    "magasin": true,
    "routes": [
@@ -793,7 +793,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:941"
+    "boite.js:943"
    ],
    "magasin": true,
    "routes": [
@@ -816,8 +816,8 @@
    "fichiers": [
     "boite.js:150",
     "boite.js:199",
-    "boite.js:457",
-    "boite.js:459"
+    "boite.js:459",
+    "boite.js:461"
    ],
    "magasin": true,
    "routes": [
@@ -838,8 +838,8 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:422",
-    "boite.js:512"
+    "boite.js:424",
+    "boite.js:514"
    ],
    "magasin": true,
    "routes": [
@@ -860,7 +860,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:409"
+    "boite.js:411"
    ],
    "magasin": true,
    "routes": [
@@ -882,9 +882,9 @@
    ],
    "fichiers": [
     "boite.js:136",
-    "boite.js:320",
-    "boite.js:454",
-    "boite.js:953"
+    "boite.js:322",
+    "boite.js:456",
+    "boite.js:955"
    ],
    "magasin": true,
    "routes": [
@@ -927,9 +927,9 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:386",
-    "boite.js:972",
-    "boite.js:978"
+    "boite.js:388",
+    "boite.js:978",
+    "boite.js:984"
    ],
    "magasin": true,
    "routes": [
@@ -951,7 +951,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:938"
+    "boite.js:940"
    ],
    "magasin": true,
    "routes": [
@@ -973,8 +973,8 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:502",
-    "boite.js:505"
+    "boite.js:504",
+    "boite.js:507"
    ],
    "magasin": true,
    "routes": [
@@ -1017,7 +1017,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:932"
+    "boite.js:934"
    ],
    "magasin": true,
    "routes": [
@@ -1038,8 +1038,8 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:272",
-    "boite.js:280"
+    "boite.js:274",
+    "boite.js:282"
    ],
    "magasin": true,
    "routes": [
@@ -1060,7 +1060,7 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:272"
+    "boite.js:274"
    ],
    "magasin": true,
    "routes": [
@@ -2222,7 +2222,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:209",
+    "boite.js:211",
     "offres.js:68",
     "offres.js:73"
    ],
@@ -2479,7 +2479,7 @@
     "GET"
    ],
    "fichiers": [
-    "boite.js:372",
+    "boite.js:374",
     "dashboard.js:4711",
     "dashboard.js:4731",
     "offres.js:100"
