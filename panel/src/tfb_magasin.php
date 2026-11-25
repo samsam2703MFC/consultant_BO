@@ -65,15 +65,31 @@ function tfbmPost(string $chemin, array $corps): array
     return [$raw === false ? 0 : $code, $raw === false ? null : json_decode((string) $raw, true)];
 }
 
-/** Le message d'un refus de connexion, lisible au magasin. */
+/** Le code d'erreur de TF Buddy d'une réponse (`error`, sinon `description`, `message`). */
+function tfbmCodeErreur($c): string
+{
+    return is_array($c) ? (string) ($c['error'] ?? $c['description'] ?? $c['message'] ?? '') : '';
+}
+
+/**
+ * Le message d'un refus de connexion, lisible au magasin, avec le code de TF Buddy entre parenthèses. Les limites sont
+ * celles de TF Buddy (spécification de /panel/auth/login et /resend, 25/11/2026), pas du cockpit : `PANEL_AUTH_LIMIT`
+ * (trop d'essais par téléphone et par adresse IP — tous les magasins se connectent depuis l'adresse du serveur du
+ * cockpit), `PANEL_AUTH_RESEND_WAIT` (60 s entre deux SMS), un code valable 5 minutes et 5 essais.
+ */
 function tfbmMotif(int $code, $c): string
 {
-    $e = is_array($c) ? (string) ($c['error'] ?? $c['description'] ?? $c['message'] ?? '') : '';
-    $lib = ['PANEL_INVALID_CREDENTIALS' => 'téléphone ou PIN incorrect', 'INVALID_CREDENTIALS' => 'téléphone ou PIN incorrect', 'PANEL_SMS_CODE_INVALID' => 'code SMS incorrect',
-        'PANEL_CHALLENGE_EXPIRED' => 'le code a expiré : recommencez', 'PANEL_SESSION_EXPIRED' => 'la session TF Buddy a expiré : reconnectez-vous',
-        'TOO_MANY_ATTEMPTS' => 'trop d’essais : patientez quelques minutes'][$e] ?? null;
-    if ($code === 429) { $lib = 'trop d’essais : patientez quelques minutes'; }
-    return $lib ?? ($code === 0 ? 'TF Buddy injoignable' : 'TF Buddy refuse (HTTP ' . $code . ($e !== '' ? ' : ' . mb_substr($e, 0, 120) : '') . ')');
+    $e = tfbmCodeErreur($c);
+    $lib = ['PANEL_INVALID_CREDENTIALS' => 'téléphone ou PIN incorrect, ou accès inactif', 'INVALID_CREDENTIALS' => 'téléphone ou PIN incorrect, ou accès inactif',
+        'PANEL_AUTH_INPUT' => 'numéro de téléphone invalide : au format international (+32…, +48…)',
+        'PANEL_CODE_INVALID' => 'code SMS incorrect, expiré ou déjà utilisé (5 minutes, 5 essais) : recommencez si besoin', 'PANEL_SMS_CODE_INVALID' => 'code SMS incorrect',
+        'PANEL_SESSION_EXPIRED' => 'la session TF Buddy a expiré : reconnectez-vous',
+        'PANEL_AUTH_RESEND_WAIT' => 'un code SMS vient d’être envoyé : saisissez-le ; un nouveau code n’est possible qu’après 60 secondes',
+        'PANEL_AUTH_LIMIT' => 'TF Buddy bloque les connexions pour quelques minutes (trop d’essais pour ce téléphone ou depuis le serveur du cockpit) : c’est une limite de TF Buddy, pas du dashboard',
+        'PANEL_SMS_UNAVAILABLE' => 'TF Buddy n’arrive pas à envoyer le SMS pour le moment', 'PANEL_AUTH_UNAVAILABLE' => 'la connexion TF Buddy est indisponible pour le moment'][$e] ?? null;
+    if ($lib === null && $code === 429) { $lib = 'TF Buddy limite les connexions pour le moment : c’est une limite de TF Buddy, pas du dashboard'; }
+    if ($lib !== null) { return $lib . ($e !== '' ? ' (TF Buddy : ' . $e . ')' : ' (TF Buddy : HTTP ' . $code . ')'); }
+    return $code === 0 ? 'TF Buddy injoignable' : 'TF Buddy refuse (HTTP ' . $code . ($e !== '' ? ' : ' . mb_substr($e, 0, 120) : '') . ')';
 }
 
 /**
@@ -109,9 +125,10 @@ function wr_tfb_connexion(): array
     if ($code >= 200 && $code < 300 && is_string($ch) && $ch !== '') {
         return ['etape' => 'sms', 'challenge' => $ch, 'texte' => 'Un code a été envoyé par SMS au ' . substr($tel, 0, 4) . '•••' . substr($tel, -2) . '.'];
     }
-    usleep(400000);
+    // Pas de pause ajoutée ici : les limites d'essais sont celles de TF Buddy. `attente` : un code SMS est déjà parti
+    // (PANEL_AUTH_RESEND_WAIT) ; le navigateur reprend le code en cours au lieu de redemander une connexion.
     http_response_code($code === 0 ? 502 : ($code === 429 ? 429 : 401));
-    return ['error' => tfbmMotif($code, $c)];
+    return ['error' => tfbmMotif($code, $c), 'code' => tfbmCodeErreur($c) ?: null, 'attente' => tfbmCodeErreur($c) === 'PANEL_AUTH_RESEND_WAIT'];
 }
 
 function wr_tfb_confirmer(): array
@@ -125,9 +142,8 @@ function wr_tfb_confirmer(): array
         if (function_exists('journalAdd')) { journalAdd('dashboard', 'tfbuddy', null, 'Magasin ' . (int) ($b['shop'] ?? 0) . ' : connexion au panel TF Buddy depuis le dashboard'); }
         return ['ok' => true, 'jetons' => $j];
     }
-    usleep(400000);
     http_response_code($code === 0 ? 502 : ($code === 429 ? 429 : 401));
-    return ['error' => tfbmMotif($code, $c)];
+    return ['error' => tfbmMotif($code, $c), 'code' => tfbmCodeErreur($c) ?: null];
 }
 
 function wr_tfb_sms(): array
@@ -136,8 +152,8 @@ function wr_tfb_sms(): array
     if ($ch === '') { http_response_code(422); return ['error' => 'challenge manquant']; }
     [$code, $c] = tfbmPost('/panel/auth/resend', ['challenge' => $ch]);
     if ($code >= 200 && $code < 300) { return ['ok' => true]; }
-    http_response_code($code === 0 ? 502 : 422);
-    return ['error' => tfbmMotif($code, $c)];
+    http_response_code($code === 0 ? 502 : ($code === 429 ? 429 : 422));
+    return ['error' => tfbmMotif($code, $c), 'code' => tfbmCodeErreur($c) ?: null];
 }
 
 function wr_tfb_renouveler(): array

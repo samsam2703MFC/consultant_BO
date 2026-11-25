@@ -35,6 +35,13 @@ n'a aucun de ces défauts. Il ne dépend pas du patch.
   modifier les deux côtés ensemble. Côté navigateur, le jeton passe dans un en-tête (`X-CSRF-Token`, lu dans une
   `<meta>` du gabarit). Côté contrôleurs, il est vérifié par `FranchiseCsrf::validate()` sur chaque POST, PATCH et
   DELETE. Le patch ne le fait pas : `api.js` sert à tout le panel.
+- **La limite des connexions du panel** (25/11/2026, Sam : « c'est une version test, retirer ça ») : `/panel/auth/login`
+  répond 429 `PANEL_AUTH_LIMIT` (essais par téléphone **et par adresse IP**) ou `PANEL_AUTH_RESEND_WAIT` (60 s entre deux
+  SMS). Le dashboard relaie la connexion depuis son serveur : **tous les magasins arrivent de la même adresse IP**, celle
+  du cockpit, et partagent donc la limite par IP. Demandé : retirer la limite sur la version de test ; en production, ne
+  compter que par téléphone pour l'adresse du serveur du cockpit (ou l'exempter), la limite par téléphone et le délai
+  entre deux SMS restant. Le dashboard ne pose aucune limite à lui (`panel/src/tfb_magasin.php`) ; il dit le code de TF
+  Buddy et reprend le code SMS en cours au lieu d'en redemander un.
 - **L'accès du cockpit (R1)** : les routes `/panel/shops/{shop}/b2b/*` et `/panel/shops/{shop}/offices*` refusent les
   comptes consultant et admin du cockpit (404 `ORDER_NOT_FOUND`, mesuré le 24/11/2026). Le module Clients du dashboard
   les tente à chaque lecture et dit à l'écran ce qui manque. Voir `panel/docs/livreur/CAHIER_DES_CHARGES_TFBUDDY.md`, R1.
@@ -51,5 +58,8 @@ n'a aucun de ces défauts. Il ne dépend pas du patch.
 - removing an office member, broken by a body-less DELETE (422);
 - Italian missing in the offer e-mail template.
 
-Two things are still to do on your side: CSRF on the B2B and offers AJAX calls (`api.js` plus the controllers), and a
-service token for the cockpit on `/panel/shops/{shop}/…`.
+Three things are still to do on your side:
+- the panel login limit: `PANEL_AUTH_LIMIT` counts per IP, and every shop logs in through the cockpit server's single
+  IP. Please remove it on the test version; in production, exempt the cockpit IP or count per phone only;
+- CSRF on the B2B and offers AJAX calls (`api.js` plus the controllers);
+- a service token for the cockpit on `/panel/shops/{shop}/…`.

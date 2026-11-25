@@ -199,7 +199,9 @@ verifie('l’échéance d’un JWT', tfbmExpiration($jwt) === 1795600000 && tfbm
 $J = tfbmJetons(['status' => 200, 'token' => $jwt, 'refresh_token' => 'r1', 'expires_at' => 1795596336]);
 verifie('les jetons d’une connexion', $J['acces'] === $jwt && $J['renouvellement'] === 'r1' && $J['expireAcces'] === 1795600000 && $J['expireSession'] === 1795596336);
 verifie('une réponse sans jeton : rien', tfbmJetons(['status' => 401, 'error' => 'PANEL_SESSION_EXPIRED']) === null);
-verifie('le motif d’un refus', tfbmMotif(401, ['error' => 'PANEL_SESSION_EXPIRED']) === 'la session TF Buddy a expiré : reconnectez-vous' && tfbmMotif(429, null) === 'trop d’essais : patientez quelques minutes');
+verifie('le motif d’un refus, avec le code de TF Buddy', tfbmMotif(401, ['error' => 'PANEL_SESSION_EXPIRED']) === 'la session TF Buddy a expiré : reconnectez-vous (TF Buddy : PANEL_SESSION_EXPIRED)');
+verifie('les limites sont dites comme celles de TF Buddy', str_contains(tfbmMotif(429, ['error' => 'PANEL_AUTH_LIMIT']), 'limite de TF Buddy, pas du dashboard') && str_contains(tfbmMotif(429, null), '(TF Buddy : HTTP 429)'));
+verifie('un SMS déjà parti : saisir le code', str_starts_with(tfbmMotif(429, ['error' => 'PANEL_AUTH_RESEND_WAIT']), 'un code SMS vient d’être envoyé : saisissez-le'));
 remettre();
 $_SERVER['HTTP_X_TFB_JETON'] = 'court';
 verifie('un en-tête qui n’a pas la forme d’un jeton est ignoré', tfbmJeton() === null);
