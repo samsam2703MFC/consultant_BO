@@ -915,6 +915,562 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "treso-plan",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Le plan, semaine par semaine",
+      "resume": "La routine du dimanche, la décision sur quatre semaines, les repères, le cash de chaque fin de semaine, le plan, le pilotage et les dettes hors plan.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 0,
+      "fin": 72.9,
+      "affiche": "treso-plan.jpg",
+      "duree": "1 min 13",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-solde-dimanche",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Saisir le solde réel du dimanche",
+      "resume": "Chaque dimanche soir, le solde lu dans la banque : l’écart avec le prévu s’affiche, la semaine suivante repart de ce chiffre.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 72.9,
+      "fin": 101.3,
+      "affiche": "treso-solde-dimanche.jpg",
+      "duree": "28 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-prevision-ventes",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Taper sa prévision de ventes",
+      "resume": "Une case ≈ part du budget validé : on tape sa prévision par-dessus. Vidée, la case revient au budget.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 101.3,
+      "fin": 134.01,
+      "affiche": "treso-prevision-ventes.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-montant-semaine",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Remplacer un montant pour une seule semaine",
+      "resume": "Double-clic sur une case calculée : le vrai montant de cette semaine-là. Vidée, la case revient au calcul.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 134.01,
+      "fin": 164.47,
+      "affiche": "treso-montant-semaine.jpg",
+      "duree": "30 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-ponctuel",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Saisir un paiement ponctuel",
+      "resume": "Ce qui n’est pas récurrent — réparation, prime, régularisation — se tape dans la semaine où l’argent sort.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 164.47,
+      "fin": 189.86,
+      "affiche": "treso-ponctuel.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-pilotage",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Régler le cash de départ et le coussin",
+      "resume": "Le cash réel de départ, lu dans la banque, et le coussin minimum : le graphique et les semaines sous le coussin suivent.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 189.86,
+      "fin": 230.68,
+      "affiche": "treso-pilotage.jpg",
+      "duree": "41 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-dettes-hors-plan",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Gérer les dettes hors plan",
+      "resume": "Ce qu’on doit sans que ce soit dans le plan : ajouter une dette, la corriger, la supprimer.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 230.68,
+      "fin": 280.4,
+      "affiche": "treso-dettes-hors-plan.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-reessayer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Réessayer une saisie non enregistrée",
+      "resume": "Une saisie qui n’a pas pu partir le dit : « Réessayer ». Le plan changé sur un autre écran : « Reprendre le plan enregistré ».",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 280.4,
+      "fin": 331.1,
+      "affiche": "treso-reessayer.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-plan-neuf",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Démarrer un plan neuf",
+      "resume": "Un magasin sans plan : il est proposé d’après le budget. On tape le cash réel de départ, puis ses paiements réels.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 331.1,
+      "fin": 376.54,
+      "affiche": "treso-plan-neuf.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-fournisseurs",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Les fournisseurs",
+      "resume": "Un fournisseur par ligne : son estimation, les montants réels tapés, le total des achats en % des ventes et le plafond.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 0,
+      "fin": 59.69,
+      "affiche": "treso-fournisseurs.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-facture-fournisseur",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-fournisseurs",
+      "titre": "Saisir le montant réel d’une facture",
+      "resume": "La facture connue remplace l’estimation de sa semaine (0 si rien n’est payé) : la ligne Marchandises et l’écart suivent.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 59.69,
+      "fin": 101.96,
+      "affiche": "treso-facture-fournisseur.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-estimation-fournisseur",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-fournisseurs",
+      "titre": "Régler l’estimation d’un fournisseur",
+      "resume": "Un % des ventes prévues, ou un montant fixe chaque semaine : ce qui compte tant que le montant réel n’est pas tapé.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 101.96,
+      "fin": 130.26,
+      "affiche": "treso-estimation-fournisseur.jpg",
+      "duree": "28 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-fournisseur-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-fournisseurs",
+      "titre": "Ajouter, renommer ou supprimer un fournisseur",
+      "resume": "« + Ajouter un fournisseur » (15 au plus), son nom et son estimation ; le nom se change dans sa case ; × supprime la ligne.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 130.26,
+      "fin": 175.25,
+      "affiche": "treso-fournisseur-ajouter.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-plafond-achats",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-fournisseurs",
+      "titre": "Régler le plafond d’achats",
+      "resume": "Le % des ventes à ne pas dépasser en achats : les semaines au-dessus se colorent, ici et dans les repères du plan.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 175.25,
+      "fin": 211.05,
+      "affiche": "treso-plafond-achats.jpg",
+      "duree": "36 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-paiements",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Les paiements récurrents",
+      "resume": "Les paiements qui reviennent : la catégorie décide la ligne du plan, puis la fréquence, la semaine du mois, les dates et le total sur la période.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-03-paiements.mp4",
+      "debut": 0,
+      "fin": 50.23,
+      "affiche": "treso-paiements.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-paiement-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-paiements",
+      "titre": "Ajouter un paiement récurrent",
+      "resume": "« + Ajouter un paiement » : libellé, catégorie, montant, fréquence, semaine du mois, premier et dernier paiement, remarque.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-03-paiements.mp4",
+      "debut": 50.23,
+      "fin": 94.69,
+      "affiche": "treso-paiement-ajouter.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-paiement-modifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-paiements",
+      "titre": "Modifier ou supprimer un paiement récurrent",
+      "resume": "Changer le montant, la fréquence, la semaine ou les dates d’une ligne ; × la supprime. Le plan suit tout seul.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-03-paiements.mp4",
+      "debut": 94.69,
+      "fin": 140.62,
+      "affiche": "treso-paiement-modifier.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-budget",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Budget & étude",
+      "resume": "En lecture seule : l’étude de marché, le budget mois par mois, le réalisé, l’atteinte, l’année passée, l’atterrissage, les charges en euros, le réel du P&L et la carte de l’étude.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-04-budget.mp4",
+      "debut": 0,
+      "fin": 81.24,
+      "affiche": "treso-budget.jpg",
+      "duree": "1 min 21",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-du-mois",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Les frais du mois",
+      "resume": "Les frais du magasin saisis au panel, mois par mois : « TVA comprise ? » et le taux de chaque poste, les quatre tuiles, ce que ça change dans le P&L court, et « Ajouter un frais ».",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 0,
+      "fin": 55.98,
+      "affiche": "frais-du-mois.jpg",
+      "duree": "56 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-tva-comprise",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "frais-du-mois",
+      "titre": "Indiquer si un poste contient la TVA",
+      "resume": "Oui ou Non sur la ligne : le hors TVA et les tuiles se recalculent ; le choix se garde pour le poste, d’un mois à l’autre.",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 55.98,
+      "fin": 88.61,
+      "affiche": "frais-tva-comprise.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-taux-tva",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "frais-du-mois",
+      "titre": "Choisir le taux de TVA d’un poste",
+      "resume": "0, 6, 12 ou 21 % sur la ligne : le hors TVA suit. Un clic sur un taux suffit à dire que la TVA est comprise.",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 88.61,
+      "fin": 112.41,
+      "affiche": "frais-taux-tva.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "frais-du-mois",
+      "titre": "Ajouter un frais au panel",
+      "resume": "Libellé, type, montant par mois ou total à répartir, les mois, la TVA : le frais est créé au panel, une ligne par mois.",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 112.41,
+      "fin": 161.55,
+      "affiche": "frais-ajouter.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-annuler-ajout",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "frais-du-mois",
+      "titre": "Annuler un ajout",
+      "resume": "« Annuler », puis confirmer : les lignes que l’ajout a créées au panel sont supprimées.",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 161.55,
+      "fin": 190.31,
+      "affiche": "frais-annuler-ajout.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-mode-emploi",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Le mode d’emploi",
+      "resume": "La routine du dimanche en quatre étapes, ce qui est repris tout seul, le sens de chaque couleur et les points « À savoir ».",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-06-mode-emploi.mp4",
+      "debut": 0,
+      "fin": 56.6,
+      "affiche": "treso-mode-emploi.jpg",
+      "duree": "57 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "analyse",
       "genre": "tuto",
       "titre": "Analyse : lire ses ventes",
