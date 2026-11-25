@@ -306,4 +306,5 @@
 2026-11-24T17:32:35Z Dashboard magasin › Commandes : les vues Semaine et Mois, en plus du jour (Liste et Tournées)
 2026-11-24T17:34:10Z Commandes : un jour sans commande au panel (404 NO_ORDERS_FOR_PICKUP_DATE) est une liste vide, pas une panne
 2026-11-24T20:36:11Z Commandes : lecture des livraisons de TF Buddy (tournées, horaires, heure limite) avec les comptes du dashboard
+2026-11-25T19:40:49Z [431-437] karty produktow na tablecie, obchod chlodni
 2026-11-25T19:46:59Z Dashboard magasin › Vendre › Clients : le module Klienci de TF Buddy (particuliers, entreprises B2B, bureaux, analyse B2B) par les comptes consultant et admin

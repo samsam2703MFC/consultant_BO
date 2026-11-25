@@ -6,7 +6,11 @@
  *  J. Kontrola partii — waga N sztuk (klawiatura), wygląd (+ zdjęcie), worki partii (Zeskanuj sam / Wyślij grupie),
  *     próbka (etykieta QR), « Zapisz kontrolę » ; poza normą : propozycja niezgodności (zgłoś albo zapisz bez NC) ;
  *  K. Śledzenie partii — skan etykiety kartonu albo partii : surowce (skąd), kartony (dokąd), PDF partii, wstrzymanie
- *     partii z potwierdzeniem (i zwolnienie).
+ *     partii z potwierdzeniem (i zwolnienie) ;
+ *  [432] Obchód chłodni przed zakupami — A. miejsca (chłodnie z rejestru urządzeń + dodane w ERP : zrobione / teraz /
+ *     potem), B. jedno miejsce : surowiec po surowcu « W ERP » (stan Zaopatrzenia), « Jest naprawdę » (− / + / klawiatura,
+ *     jednostka kg / l → jednostka bazowa), data OK / krótka — najpierw, do wyrzucenia / uszkodzone (ilość + powód),
+ *     porządek tak / nie (+ zdjęcie), « Dodaj surowiec, który tu leży », « Zapisz chłodnię » (inwentaryzacja w ERP).
  * Sesja osoby (krótki token) przedłużana co minutę, póki ktoś dotyka ekranu ; po 15 min bez dotyku — wylogowanie.
  * Skaner QR : BarcodeDetector przeglądarki (bez bibliotek z zewnątrz) ; bez niego — wpisanie kodu.
  */
@@ -28,11 +32,14 @@
     let labels = {};
     let device = store.get(DEVICE_KEY);
     let session = null;      // {token, exp, id, name}
-    let view = 'who';        // who | round | check | trace
+    let view = 'who';        // who | round | check | trace | cold | coldPlace
     let round = null;        // GET /kiosk/quality-round
     let batch = null;        // GET /kiosk/quality-round/batches/{id}
     let draft = null;        // kontrola w toku : {weights[], appearance, photoId, photoUrl, sampleLater}
     let trace = null;        // {scan, lot}
+    let cold = null;         // [432] GET /kiosk/cold-visit
+    let place = null;        // [432] GET /kiosk/cold-visit/places/{id}
+    let cdraft = null;       // [432] miejsce w toku : {id, rows: {material_id → {qty, date, loss}}, clean, photoId, photoUrl, note, dirty}
     let busy = false;
     let lastTouch = Date.now();
     let camStop = null;
@@ -113,7 +120,7 @@
 
     function logout(message) {
         stopCam();
-        session = null; round = null; batch = null; draft = null; trace = null;
+        session = null; round = null; batch = null; draft = null; trace = null; cold = null; place = null; cdraft = null;
         view = 'who';
         closeSheet();
         renderWho();
@@ -131,7 +138,12 @@
 
     function bindTop() {
         const b = el.querySelector('[data-back]');
-        if (b) b.addEventListener('click', () => { stopCam(); openRound(); });
+        if (b) b.addEventListener('click', () => {
+            stopCam();
+            // [432] Z jednego miejsca wraca się do listy miejsc obchodu (z pytaniem, gdy liczenie nie jest zapisane).
+            if (view === 'coldPlace') { if (cdraft && cdraft.dirty && !window.confirm(t('cold_leave'))) return; openCold(); return; }
+            openRound();
+        });
         const l = el.querySelector('[data-logout]');
         if (l) l.addEventListener('click', () => { if (window.confirm(t('logout_confirm', {name: session.name}))) logout(); });
     }
@@ -273,10 +285,16 @@
                 <span class="r">${x.hold ? `<span class="badge stop" style="margin-right:8px">${esc(t('st_held'))}</span>` : ''}<span class="badge ${BADGE[x.status]}">${esc(t('st_' + x.status))}</span></span></button>`).join('')
                 : `<p class="empty">${esc(t('no_batches'))}</p>`}</div>
             <div class="actions"><button type="button" class="btn" style="flex:1" data-trace>${icon('qr')}${esc(t('trace_btn'))}</button>
-                <button type="button" class="btn btn--primary" style="flex:2" data-check ${next ? '' : 'disabled'}>${esc(next ? t('check_btn', {product: next.product}) : t('all_checked'))} ${icon('next')}</button></div></div>`;
+                <button type="button" class="btn" style="flex:1" data-cards>${icon('list')}${esc(t('cards_btn'))}</button>
+                <button type="button" class="btn" style="flex:1" data-cold>${icon('temp')}${esc(t('cold_btn'))}</button>
+                <button type="button" class="btn btn--primary" style="flex:1.6" data-check ${next ? '' : 'disabled'}>${esc(next ? t('check_btn', {product: next.product}) : t('all_checked'))} ${icon('next')}</button></div></div>`;
         bindTop();
         el.querySelectorAll('[data-row]').forEach(b => b.addEventListener('click', () => openCheck(Number(b.dataset.row))));
         el.querySelector('[data-trace]').addEventListener('click', () => openTrace());
+        // [432] Obchód chłodni przed zakupami tygodnia.
+        el.querySelector('[data-cold]').addEventListener('click', () => openCold());
+        // [431] Karty produktów : l'assistant de l'ERP en mode tablette (connexion ERP par QR si le navigateur n'est pas connecté).
+        el.querySelector('[data-cards]').addEventListener('click', () => { stopCam(); location.href = `${root}/workshop/products?tablet=1#/`; });
         const c = el.querySelector('[data-check]');
         if (next) c.addEventListener('click', () => openCheck(next.id));
     }
@@ -340,7 +358,8 @@
             <span class="r badge ${c.state === 'ok' ? 'ok' : 'stop'}">${c.state === 'ok' ? icon('check') : esc(t('b_missing'))}</span></div>`)].join('');
         const missing = b.missing_lots > 0;
         const sample = sampleRow();
-        el.innerHTML = top(b.product + (b.piece_weight ? ' ' + num(b.piece_weight) + ' g' : ''), t('check_sub', {lot: b.lot_code, group: b.group.name, at: b.started_at}), b.hold ? `<span class="badge stop big">${icon('stop')}${esc(t('st_held'))}</span>` : '', true)
+        const cardBtn = `<button type="button" class="btn" style="height:60px;font-size:19px;margin-left:12px" data-card>${icon('list')}${esc(t('card_btn'))}</button>`;
+        el.innerHTML = top(b.product + (b.piece_weight ? ' ' + num(b.piece_weight) + ' g' : ''), t('check_sub', {lot: b.lot_code, group: b.group.name, at: b.started_at}), (b.hold ? `<span class="badge stop big">${icon('stop')}${esc(t('st_held'))}</span>` : '') + cardBtn, true)
             + `<div class="prog">${prog}</div><div class="body"><div class="two">
             <div class="card panel"><p class="h2">${esc(wTitle)} ${wBadge}</p>
                 <div class="pieces" style="grid-template-columns:repeat(${Math.min(n, 3)},1fr)">${pieces}</div>
@@ -358,6 +377,8 @@
                 <button type="button" class="btn btn--primary grow ${all ? '' : 'off'}" data-save ${all ? '' : 'aria-disabled="true"'}>${esc(t('save'))} ${icon('next')}</button></div>
             </div></div>`;
         bindTop();
+        // [431] Karta produktu du lot : fiche de l'article (étape 1 « Produkt »), sinon création à partir du produit.
+        el.querySelector('[data-card]')?.addEventListener('click', () => { stopCam(); location.href = `${root}/workshop/products?tablet=1#/` + (b.item_id ? `item/${b.item_id}/1` : `product/${b.product_id}`); });
         el.querySelectorAll('[data-piece]').forEach(x => x.addEventListener('click', () => weightPad(Number(x.dataset.piece))));
         el.querySelectorAll('[data-app]').forEach(x => x.addEventListener('click', () => { draft.appearance = x.dataset.app; renderCheck(); }));
         el.querySelector('[data-photo]').addEventListener('change', (e) => takePhoto(e.target.files && e.target.files[0]));
@@ -590,6 +611,307 @@
             busy = false;
             if (box) { const n = box.querySelector('[data-error]'); if (n) n.textContent = err.message; } else toast(err.message, true);
         }
+    }
+
+    // ---------------------------------------------------------------------------------------------- [432] Obchód chłodni
+    // Ilość : API w jednostce bazowej (g, ml, szt), ekran w jednostce surowca (kg, l…) — factor z API.
+    const shown = (base, r) => base === null || base === undefined ? null : Math.round(base / (r.factor || 1) * 1000) / 1000;
+    const qtyLabel = (base, r) => base === null || base === undefined ? '—' : `${num(shown(base, r), 3)} ${r.unit}`;
+    const toBase = (v, r) => Math.round(v * (r.factor || 1) * 1000) / 1000;
+    const matCount = (n) => t(plural(n, 'cold_mat_one', 'cold_mat_few', 'cold_mat_many'), {n});
+    const PLACE_BADGE = {done: 'ok', now: 'warn', later: 'neu'};
+    // Data partii : w tym roku dzień i miesiąc (12.12), dalej z rokiem (31.03.2027).
+    const bbLabel = (iso) => iso.slice(0, 4) === String(new Date().getFullYear()) ? dm(iso) : dmy(iso);
+
+    async function openCold(data) {
+        view = 'cold';
+        place = null; cdraft = null; batch = null; draft = null; trace = null;
+        try {
+            cold = data || await api('GET', '/kiosk/cold-visit');
+        } catch (err) { if (session) toast(err.message, true); return; }
+        renderCold();
+    }
+
+    function placeSub(p) {
+        if (p.saved) {
+            const d = p.saved.differences;
+            return [matCount(p.saved.materials), d ? t(plural(d, 'cold_diff_one', 'cold_diff_few', 'cold_diff_many'), {n: d}) : t('cold_diff_none'),
+                t(p.saved.clean === 'yes' ? 'cold_clean_ok' : 'cold_clean_bad'), p.saved.at].join(' · ');
+        }
+        return p.materials ? matCount(p.materials) : t('cold_no_mats');
+    }
+
+    function renderCold() {
+        const c = cold;
+        const next = c.places.find(p => p.id === c.next_id) || null;
+        const today = (c.now || '').slice(0, 10);
+        const complete = c.visit && c.visit.state === 'complete';
+        const right = c.places.length && c.to_do ? `<span class="badge warn big">${esc(t('cold_to_do', {n: c.to_do}))}</span>`
+            : (c.places.length ? `<span class="badge ok big">${icon('done')}${esc(t('cold_done_badge'))}</span>` : '');
+        const sub = complete && c.visit.valid_until ? t('cold_sub_ask_done', {at: dayLabel(c.visit.valid_until.slice(0, 10)) + ' ' + c.visit.valid_until.slice(11, 16).replace(/^0/, '')}) : t('cold_sub_ask');
+        el.innerHTML = top(t('cold_title'), t('cold_sub', {position: t('pos_' + (c.employee?.position || 'KIEROWNIK_PRODUKCJI')), day: dayLabel(today)}), right)
+            + `<div class="body cold" style="padding-top:20px"><p class="ask">${esc(next ? t('cold_ask') : (c.places.length ? t('cold_ask_done') : t('cold_title')))}</p><p class="sub">${esc(sub)}</p>
+            ${c.places.length ? `<div class="places">${c.places.map(p => `<button type="button" class="card pl is-${p.status}" data-place="${p.id}">
+                ${icon(p.status === 'done' ? 'done' : (p.kind === 'cold' ? 'temp' : 'box'))}<span class="t"><b>${esc(p.name)}</b><small>${esc(placeSub(p))}</small></span>
+                <span class="badge ${PLACE_BADGE[p.status]}">${esc(t('cold_st_' + p.status))}</span></button>`).join('')}</div>`
+                : `<div class="card empty">${esc(t('cold_no_places'))}</div>`}
+            <div class="actions"><button type="button" class="btn" style="flex:1" data-round>${icon('back')}${esc(t('cold_back_round'))}</button>
+                <button type="button" class="btn btn--primary" style="flex:2" data-go ${next ? '' : 'disabled'}>${esc(next ? next.name : t('cold_all_done'))} ${icon('next')}</button></div></div>`;
+        bindTop();
+        el.querySelectorAll('[data-place]').forEach(b => b.addEventListener('click', () => openColdPlace(Number(b.dataset.place))));
+        el.querySelector('[data-round]').addEventListener('click', () => openRound());
+        if (next) el.querySelector('[data-go]').addEventListener('click', () => openColdPlace(next.id));
+    }
+
+    async function openColdPlace(id, keep) {
+        try {
+            place = await api('GET', `/kiosk/cold-visit/places/${id}`);
+        } catch (err) { if (session) toast(err.message, true); return; }
+        view = 'coldPlace';
+        const old = keep && cdraft && cdraft.id === id ? cdraft : null;
+        cdraft = {id, rows: {}, clean: old ? old.clean : (place.saved ? place.saved.clean : null), photoId: old ? old.photoId : (place.saved ? place.saved.photo_id : null),
+            photoUrl: old ? old.photoUrl : null, note: old ? old.note : (place.saved ? place.saved.note : null), dirty: old ? old.dirty : false};
+        for (const r of place.rows) {
+            const o = old && old.rows[r.material_id];
+            cdraft.rows[r.material_id] = o || (r.saved ? {qty: r.saved.quantity, date: r.saved.date_state, loss: r.saved.loss} : {qty: null, date: null, loss: null});
+        }
+        renderColdPlace();
+    }
+
+    function coldLeft() { return place.rows.filter(r => cdraft.rows[r.material_id].qty === null).length; }
+
+    function renderColdPlace() {
+        const p = place;
+        const counted = p.rows.length - coldLeft();
+        const rows = p.rows.map(r => {
+            const d = cdraft.rows[r.material_id];
+            const lot = r.lot ? (r.lot.best_before ? t('cold_lot', {lot: r.lot.lot_number || '—', date: bbLabel(r.lot.best_before)}) : t('cold_lot_nobb', {lot: r.lot.lot_number || '—'})) : t('cold_no_lot');
+            const sub = [lot, r.also_in.length ? t('cold_also_in', {places: r.also_in.join(', ')}) : ''].filter(Boolean).join(' · ');
+            const val = d.qty === null ? `<span class="v empty">— <small>${esc(r.unit)}</small></span>`
+                : `<span class="v">${esc(num(shown(d.qty, r), 3))} <small>${esc(r.unit)}</small></span>`;
+            let flags;
+            if (d.qty === null) {
+                flags = r.erp !== null ? `<button type="button" class="btn" data-same="${r.material_id}">${esc(t('cold_same', {qty: qtyLabel(r.erp, r)}))}</button>`
+                    : `<span class="hint">${esc(t('cold_count_hint'))}</span>`;
+            } else {
+                const lossTxt = d.loss ? t('cold_loss_on', {kind: t(d.loss.kind === 'damaged' ? 'cold_damaged' : 'cold_discard'), qty: qtyLabel(d.loss.quantity, r)}) : t('cold_discard');
+                flags = `<button type="button" class="btn ${d.date === 'ok' ? 'on-ok' : ''}" data-date="${r.material_id}:ok" aria-pressed="${d.date === 'ok'}">${esc(t('cold_date_ok'))}</button>
+                    <button type="button" class="btn ${d.date === 'short' ? 'on-w' : ''}" data-date="${r.material_id}:short" aria-pressed="${d.date === 'short'}">${esc(t(d.date === 'short' ? 'cold_short_on' : 'cold_short'))}</button>
+                    <button type="button" class="btn ${d.loss ? 'on-s' : ''}" data-loss="${r.material_id}">${esc(lossTxt)}</button>`;
+            }
+            return `<div class="fr-row"><button type="button" class="nm" data-item="${r.material_id}">${esc(r.name)}<small>${esc(sub)}</small></button>
+                <span class="erp">${esc(qtyLabel(r.erp, r))}</span>
+                <span class="qty"><button type="button" class="btn" data-minus="${r.material_id}" aria-label="−">${icon('minus')}</button>
+                    <button type="button" class="vbtn" data-pad="${r.material_id}">${val}</button>
+                    <button type="button" class="btn" data-plus="${r.material_id}" aria-label="+">${icon('plus')}</button></span>
+                <span class="flags">${flags}</span></div>`;
+        }).join('');
+        const left = coldLeft();
+        const ready = left === 0 && cdraft.clean !== null && (cdraft.clean === 'yes' || cdraft.photoId !== null);
+        const saveText = left ? t('cold_save_left', {left: matCount(left)}) : (cdraft.clean === null ? t('cold_save_clean') : (cdraft.clean === 'no' && cdraft.photoId === null ? t('cold_save_photo') : t('cold_save')));
+        el.innerHTML = top(p.name, t('cold_place_sub', {materials: matCount(p.rows.length), counted}), '', true)
+            + `<div class="body cold-place" style="padding-top:14px"><div class="card fr-card">
+                <div class="fr-row fr-head"><span>${esc(t('cold_col_item'))}</span><span class="erp">${esc(t('cold_col_erp'))}</span><span>${esc(t('cold_col_real'))}</span><span>${esc(t('cold_col_state'))}</span></div>
+                ${rows || `<p class="empty">${esc(t('cold_no_mats'))}</p>`}</div>
+            <div class="fr-bottom"><div class="card fr-clean">${icon('clean')}<span class="q">${esc(t('cold_clean_q'))}</span>
+                <button type="button" class="btn ${cdraft.clean === 'yes' ? 'is-good' : ''}" data-clean="yes" aria-pressed="${cdraft.clean === 'yes'}">${icon('up')}${esc(t('cold_yes'))}</button>
+                <label class="btn ${cdraft.clean === 'no' ? 'is-bad' : ''}" style="position:relative">${cdraft.photoUrl ? `<img class="thumb" src="${cdraft.photoUrl}" alt="">` : icon('down')}${esc(cdraft.clean === 'no' && cdraft.photoId ? t('cold_no') : t('cold_no_photo'))}
+                    <input type="file" accept="image/*" capture="environment" data-dirty-photo style="position:absolute;inset:0;opacity:0;width:100%"></label></div>
+                <button type="button" class="card fr-add" data-add>${icon('plus')}<span>${esc(t('cold_add'))}</span></button></div>
+            <button type="button" class="btn btn--primary ${ready ? '' : 'off'}" style="margin-top:14px;flex:none" data-save ${ready ? '' : 'aria-disabled="true"'}>${esc(saveText)} ${icon('next')}</button></div>`;
+        bindTop();
+        const row = (id) => p.rows.find(r => r.material_id === Number(id));
+        const set = (id, patch) => { Object.assign(cdraft.rows[Number(id)], patch); cdraft.dirty = true; renderColdPlace(); };
+        el.querySelectorAll('[data-same]').forEach(b => b.addEventListener('click', () => set(b.dataset.same, {qty: row(b.dataset.same).erp})));
+        el.querySelectorAll('[data-minus], [data-plus]').forEach(b => b.addEventListener('click', () => {
+            const id = b.dataset.minus || b.dataset.plus;
+            const r = row(id);
+            const d = cdraft.rows[r.material_id];
+            const cur = shown(d.qty !== null ? d.qty : (r.erp !== null ? r.erp : 0), r);
+            const step = b.dataset.minus ? -1 : 1;
+            // Z ERP : pierwszy dotyk startuje od stanu ERP (zaokrąglonego do pełnej jednostki).
+            const v = d.qty === null ? Math.max(0, Math.round(cur) + (r.erp !== null ? step : Math.max(0, step))) : Math.max(0, Math.round((cur + step) * 1000) / 1000);
+            const base = toBase(v, r);
+            set(id, {qty: base, loss: d.loss && d.loss.quantity > base ? null : d.loss});
+        }));
+        el.querySelectorAll('[data-pad]').forEach(b => b.addEventListener('click', () => qtyPad(row(b.dataset.pad))));
+        el.querySelectorAll('[data-date]').forEach(b => b.addEventListener('click', () => {
+            const [id, st] = b.dataset.date.split(':');
+            set(id, {date: cdraft.rows[Number(id)].date === st ? null : st});
+        }));
+        el.querySelectorAll('[data-loss]').forEach(b => b.addEventListener('click', () => lossSheet(row(b.dataset.loss))));
+        el.querySelectorAll('[data-item]').forEach(b => b.addEventListener('click', () => itemSheet(row(b.dataset.item))));
+        el.querySelector('[data-clean="yes"]').addEventListener('click', () => { cdraft.clean = 'yes'; cdraft.dirty = true; renderColdPlace(); });
+        el.querySelector('[data-dirty-photo]').addEventListener('change', (e) => dirtyPhoto(e.target.files && e.target.files[0]));
+        el.querySelector('[data-add]').addEventListener('click', addSheet);
+        el.querySelector('[data-save]').addEventListener('click', () => { if (ready) saveColdPlace(); });
+    }
+
+    // Klawiatura ilości w jednostce surowca (kg, l, szt).
+    function qtyPad(r) {
+        const d = cdraft.rows[r.material_id];
+        let v = d.qty !== null ? String(shown(d.qty, r)).replace('.', ',') : '';
+        const box = sheet(`<h3>${esc(t('cold_pad_title', {name: r.name}))}</h3><div class="display" data-v></div>
+            <p class="hint" style="text-align:center">${esc(t('cold_col_erp') + ' : ' + qtyLabel(r.erp, r))}</p>
+            <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button type="button" class="btn" data-k="${n}">${n}</button>`).join('')}
+            <button type="button" class="btn" data-k=",">,</button><button type="button" class="btn" data-k="0">0</button>
+            <button type="button" class="btn" data-k="del" aria-label="${esc(t('pin_erase'))}">${icon('back')}</button></div>
+            <div class="row3"><button type="button" class="btn md" data-close>${esc(t('cancel'))}</button><button type="button" class="btn btn--primary md" data-ok>${esc(t('pad_ok'))}</button></div>`);
+        const draw = () => { box.querySelector('[data-v]').innerHTML = `${esc(v || '0')} <small>${esc(r.unit)}</small>`; };
+        draw();
+        box.querySelectorAll('[data-k]').forEach(b => b.addEventListener('click', () => {
+            const k = b.dataset.k;
+            if (k === 'del') v = v.slice(0, -1);
+            else if (k === ',') { if (!v.includes(',') && (r.factor || 1) > 1) v = (v || '0') + ','; }
+            else if (v.replace(',', '').length < 7 && !(v.includes(',') && v.split(',')[1].length >= 3)) v += k;
+            draw();
+        }));
+        box.querySelector('[data-ok]').addEventListener('click', () => {
+            const x = Number((v || '0').replace(',', '.'));
+            const base = toBase(Math.max(0, x), r);
+            Object.assign(d, {qty: base, loss: d.loss && d.loss.quantity > base ? null : d.loss});
+            cdraft.dirty = true;
+            closeSheet();
+            renderColdPlace();
+        });
+    }
+
+    // « Do wyrzucenia » / « Uszkodzone » : ilość (≤ jest naprawdę) i powód — zostaje w stanie reszta.
+    function lossSheet(r) {
+        const d = cdraft.rows[r.material_id];
+        let kind = d.loss ? d.loss.kind : 'discard';
+        let v = d.loss ? String(shown(d.loss.quantity, r)).replace('.', ',') : '';
+        let reason = d.loss ? d.loss.reason : '';
+        const reasons = ['cold_r_expired', 'cold_r_spoiled', 'cold_r_pack', 'cold_r_thawed'].map(k => t(k));
+        const box = sheet(`<h3>${esc(t('cold_loss_title', {name: r.name}))}</h3>
+            <div class="seg" role="radiogroup">${['discard', 'damaged'].map(k => `<button type="button" class="btn" role="radio" data-kind="${k}">${esc(t(k === 'damaged' ? 'cold_damaged' : 'cold_discard'))}</button>`).join('')}</div>
+            <div class="loss-grid"><div><div class="display" data-v></div><p class="hint" style="text-align:center" data-rest></p>
+                <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button type="button" class="btn" data-k="${n}">${n}</button>`).join('')}
+                <button type="button" class="btn" data-k=",">,</button><button type="button" class="btn" data-k="0">0</button>
+                <button type="button" class="btn" data-k="del" aria-label="${esc(t('pin_erase'))}">${icon('back')}</button></div></div>
+            <div class="field">${esc(t('cold_loss_reason'))}<div class="reasons">${reasons.map(x => `<button type="button" class="btn" data-reason="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+                <input data-reason-text maxlength="120" autocomplete="off" value="${esc(reason)}"></div></div>
+            <p class="err" data-error></p>
+            <div class="row3">${d.loss ? `<button type="button" class="btn md" data-none>${esc(t('cold_loss_remove'))}</button>` : `<button type="button" class="btn md" data-close>${esc(t('cancel'))}</button>`}
+                <button type="button" class="btn btn--primary md" data-ok>${esc(t('pad_ok'))}</button></div>`, true);
+        const draw = () => {
+            box.querySelector('[data-v]').innerHTML = `${esc(v || '0')} <small>${esc(r.unit)}</small>`;
+            const x = toBase(Number((v || '0').replace(',', '.')), r);
+            box.querySelector('[data-rest]').textContent = t('cold_loss_help', {qty: qtyLabel(Math.max(0, (d.qty || 0) - x), r)});
+            box.querySelectorAll('[data-kind]').forEach(b => { const on = b.dataset.kind === kind; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', String(on)); });
+            box.querySelectorAll('[data-reason]').forEach(b => b.classList.toggle('is-on', b.dataset.reason === reason));
+        };
+        draw();
+        box.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { kind = b.dataset.kind; draw(); }));
+        box.querySelectorAll('[data-reason]').forEach(b => b.addEventListener('click', () => { reason = b.dataset.reason; box.querySelector('[data-reason-text]').value = reason; draw(); }));
+        box.querySelector('[data-reason-text]').addEventListener('input', (e) => { reason = e.target.value; draw(); });
+        box.querySelectorAll('[data-k]').forEach(b => b.addEventListener('click', () => {
+            const k = b.dataset.k;
+            if (k === 'del') v = v.slice(0, -1);
+            else if (k === ',') { if (!v.includes(',') && (r.factor || 1) > 1) v = (v || '0') + ','; }
+            else if (v.replace(',', '').length < 7 && !(v.includes(',') && v.split(',')[1].length >= 3)) v += k;
+            draw();
+        }));
+        const none = box.querySelector('[data-none]');
+        if (none) none.addEventListener('click', () => { d.loss = null; cdraft.dirty = true; closeSheet(); renderColdPlace(); });
+        box.querySelector('[data-ok]').addEventListener('click', () => {
+            const q = toBase(Number((v || '0').replace(',', '.')), r);
+            const why = reason.trim();
+            const e = box.querySelector('[data-error]');
+            if (!(q > 0) || q > (d.qty || 0) + 0.0005) { e.textContent = t('cold_loss_qty_err', {qty: qtyLabel(d.qty || 0, r)}); return; }
+            if (why.length < 3) { e.textContent = t('cold_loss_reason_err'); box.querySelector('[data-reason-text]').focus(); return; }
+            d.loss = {kind, quantity: q, reason: why};
+            cdraft.dirty = true;
+            closeSheet();
+            renderColdPlace();
+        });
+    }
+
+    // Surowiec miejsca : partia, gdzie jeszcze leży, « Nie leży tu — usuń ».
+    function itemSheet(r) {
+        const lot = r.lot ? (r.lot.best_before ? t('cold_lot', {lot: r.lot.lot_number || '—', date: bbLabel(r.lot.best_before)}) : t('cold_lot_nobb', {lot: r.lot.lot_number || '—'})) : t('cold_no_lot');
+        const box = sheet(`<h3>${esc(r.name)}</h3><p>${esc([lot, t('cold_col_erp') + ' : ' + qtyLabel(r.erp, r), r.also_in.length ? t('cold_also_in', {places: r.also_in.join(', ')}) : ''].filter(Boolean).join(' · '))}</p>
+            <p class="err" data-error></p>
+            <div class="row3"><button type="button" class="btn md" data-close>${esc(t('cancel'))}</button><button type="button" class="btn md is-bad" data-remove>${icon('x')}${esc(t('cold_remove'))}</button></div>`);
+        box.querySelector('[data-remove]').addEventListener('click', async () => {
+            if (busy) return;
+            busy = true;
+            try {
+                await api('DELETE', `/kiosk/cold-visit/places/${place.id}/materials/${r.material_id}`);
+                delete cdraft.rows[r.material_id];
+                closeSheet();
+                busy = false;
+                toast(t('cold_removed', {name: r.name}));
+                openColdPlace(place.id, true);
+            } catch (err) { busy = false; box.querySelector('[data-error]').textContent = err.message; }
+        });
+    }
+
+    // « Dodaj surowiec, który tu leży » : wyszukiwanie po nazwie, dotyk = surowiec przypisany do miejsca.
+    function addSheet() {
+        const box = sheet(`<h3>${esc(t('cold_add'))}</h3>
+            <label class="field">${esc(t('cold_search'))}<input data-q autocomplete="off" maxlength="60"></label>
+            <div class="list" data-results style="max-height:330px"><p class="empty">${esc(t('cold_search_hint'))}</p></div>
+            <p class="err" data-error></p><button type="button" class="btn md" data-close>${esc(t('cancel'))}</button>`, true);
+        const input = box.querySelector('[data-q]');
+        const out = box.querySelector('[data-results]');
+        let timer = null;
+        let seq = 0;
+        const have = new Set(place.rows.map(r => r.material_id));
+        const search = async () => {
+            const q = input.value.trim();
+            if (q.length < 2) { out.innerHTML = `<p class="empty">${esc(t('cold_search_hint'))}</p>`; return; }
+            const my = ++seq;
+            try {
+                const list = await api('GET', '/kiosk/cold-visit/materials?q=' + encodeURIComponent(q));
+                if (my !== seq) return;
+                out.innerHTML = list.length ? list.map(m => `<button type="button" class="li" data-m="${m.id}" ${have.has(m.id) ? 'disabled' : ''}>${icon('bag')}<div class="t">${esc(m.name)}
+                    <div class="s15">${esc(m.unit)}${have.has(m.id) ? ' · ' + esc(t('cold_already')) : ''}</div></div>${have.has(m.id) ? '' : icon('plus')}</button>`).join('')
+                    : `<p class="empty">${esc(t('cold_search_none'))}</p>`;
+                out.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => add(list.find(m => m.id === Number(b.dataset.m)))));
+            } catch (err) { box.querySelector('[data-error]').textContent = err.message; }
+        };
+        const add = async (m) => {
+            if (busy || !m) return;
+            busy = true;
+            try {
+                await api('PUT', `/kiosk/cold-visit/places/${place.id}/materials/${m.id}`);
+                closeSheet();
+                busy = false;
+                toast(t('cold_added', {name: m.name}));
+                openColdPlace(place.id, true);
+            } catch (err) { busy = false; box.querySelector('[data-error]').textContent = err.message; }
+        };
+        input.addEventListener('input', () => { window.clearTimeout(timer); timer = window.setTimeout(search, 250); });
+        input.focus();
+    }
+
+    // Porządek « Nie » : zdjęcie obowiązkowe (ten sam zapis zdjęć co kontrola partii).
+    async function dirtyPhoto(file) {
+        if (!file || busy) return;
+        busy = true;
+        try {
+            const read = window.tfbLabelOcr ? await window.tfbLabelOcr.readPhoto(file, 1280) : {dataUrl: await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); })};
+            const r = await api('POST', '/kiosk/quality-round/photos', {photo: read.dataUrl});
+            Object.assign(cdraft, {clean: 'no', photoId: r.id, photoUrl: read.dataUrl, dirty: true});
+            toast(t('photo_ok'));
+            renderColdPlace();
+        } catch (err) { toast(err.message, true); } finally { busy = false; }
+    }
+
+    async function saveColdPlace() {
+        if (busy) return;
+        busy = true;
+        const body = {lines: place.rows.map(r => {
+            const d = cdraft.rows[r.material_id];
+            return {material_id: r.material_id, quantity: d.qty, date_state: d.date, loss: d.loss};
+        }), clean: cdraft.clean, photo_id: cdraft.clean === 'no' ? cdraft.photoId : null};
+        try {
+            const r = await api('POST', `/kiosk/cold-visit/places/${place.id}`, body);
+            busy = false;
+            toast(r.visit && r.visit.state === 'complete' ? t('cold_complete') : t('cold_saved'));
+            openCold(r);
+        } catch (err) { busy = false; toast(err.message, true); }
     }
 
     // ---------------------------------------------------------------------------------------------- K. Śledzenie partii

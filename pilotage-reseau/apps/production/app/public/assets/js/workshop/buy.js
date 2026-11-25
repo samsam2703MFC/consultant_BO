@@ -1,5 +1,8 @@
 /*
  * Zakupy tygodnia (makiety 1 à 5) :
+ *  - [432] Krok « Obchód chłodni » na początku : ostatni obchód z tabletu jakości (kto, kiedy, miejsca, surowce), różnice
+ *    (ERP, policzone, krótka data, do wyrzucenia, uszkodzone) ; bez pełnego obchodu z ostatnich N godzin « Co kupić » jest
+ *    zamknięte ; miejsca obchodu (chłodnie z rejestru urządzeń + dodane tutaj, np. magazyn suchy) ;
  *  - Kreator w 3 krokach : 1. co kupić (stan → produkcja → receptury, zapas +0 / +5 / +10 %, ostatnia najtańsza cena i dostawa),
  *    2. komu i jak (1 do 3 dostawców na pozycję, warunki dla wszystkich : płatność, dostawa, termin, cena za podwójną ilość),
  *    3. sprawdź i wyślij (jeden e-mail na dostawcę, w jego języku, z linkiem do wpisania cen) ;
@@ -52,6 +55,9 @@
         period: 'month', results: null, sup: null, supAll: false, supAdd: null, supLimit: 50, allSuppliers: null, addFor: null,
     };
     const round = () => state.data && state.data.round;
+    // [432] Obchód chłodni : null = migracja 255 nieobecna (kreator bez tego kroku).
+    const coldVisit = () => state.data && state.data.cold_visit;
+    const coldBlocked = () => !!(coldVisit() && coldVisit().blocked);
     const sent = () => round() && ['sent', 'ordered'].includes(round().status);
 
     function setHash() {
@@ -93,7 +99,8 @@
             const inDraft = new Set(r.lines.map(l => l.material.id));
             state.unchecked = new Set((state.data.proposal ? state.data.proposal.lines : []).filter(l => l.selected && !inDraft.has(l.material.id)).map(l => l.material.id));
         } else if (state.step === null || (r && r.status !== 'draft')) {
-            state.step = 1;
+            // [432] Kreator zaczyna od obchodu chłodni (gdy jest) ; « Co kupić » po « Dalej ».
+            state.step = coldVisit() && state.step !== 1 ? 0 : 1;
         }
         state.cond = null;
         state.buy = {};
@@ -115,8 +122,16 @@
     // --- Kreator ---------------------------------------------------------------------------------------------------
 
     function stepper(cur) {
-        const s = (k) => `<span class="tfb-buy-step ${k < cur ? 'is-done' : k === cur ? 'is-on' : ''}"><span class="tfb-buy-step-n">${k < cur ? '<i class="bi bi-check-lg"></i>' : k}</span>${esc(t('buy.step' + k))}</span>`;
-        return `<div class="tfb-buy-stepper">${s(1)}<span class="tfb-buy-step-sep">›</span>${s(2)}<span class="tfb-buy-step-sep">›</span>${s(3)}</div>`;
+        // [432] 1 Obchód chłodni › 2 Co kupić › 3 Komu i jak › 4 Wyślij (bez kroku obchodu : 1–3 jak dawniej).
+        const c = coldVisit();
+        const first = c ? 0 : 1;
+        const coldOk = c && !c.blocked;
+        const on = cur === 0 && coldOk ? 1 : cur;
+        const done = (k) => k < on || (k === 0 && coldOk);
+        const s = (k) => `<span class="tfb-buy-step ${done(k) ? 'is-done' : k === on ? 'is-on' : ''}"><span class="tfb-buy-step-n">${done(k) ? '<i class="bi bi-check-lg"></i>' : k + 1 - first}</span>${esc(t('buy.step' + k))}</span>`;
+        const steps = [];
+        for (let k = first; k <= 3; k++) steps.push(s(k));
+        return `<div class="tfb-buy-stepper">${steps.join('<span class="tfb-buy-step-sep">›</span>')}</div>`;
     }
 
     function weekChips() {
@@ -133,6 +148,8 @@
         if (!state.data.can_write) return `<div class="alert alert-light">${esc(t('buy.read_only'))}</div>`;
         if (state.step === 2 && r && r.status === 'draft') return stepper(2) + drawStep2();
         if (state.step === 3 && r && r.status === 'draft') return stepper(3) + drawStep3();
+        // [432] « Co kupić » zamknięte bez obchodu (szkic już zaczęty zostaje dostępny).
+        if (coldVisit() && (state.step === 0 || (coldBlocked() && !(r && r.status === 'draft')))) return closedNote + stepper(0) + drawCold();
         return closedNote + drawStep1();
     }
 
@@ -175,8 +192,59 @@
                     <th>${esc(t('buy.col.last'))}</th><th class="text-end">${esc(t('buy.col.arrives'))}</th></tr></thead><tbody>${lines.map(row).join('')}</tbody></table></div>`
                     : `<p class="text-muted mb-0">${esc(t('buy.nothing'))}</p>`}
                 <div class="tfb-buy-foot"><span><strong class="tfb-num">${esc(t('buy.n_items', {n: chosen.length}))}</strong> · ${esc(t('buy.estimate'))} <strong class="tfb-num">${esc(money(value))}</strong> ${esc(t('buy.net'))}</span>
-                    <button type="button" class="btn btn-primary btn-lg" data-step1-next ${chosen.length ? '' : 'disabled'}>${esc(t('buy.next_who'))} ›</button></div>
+                    <span class="tfb-buy-foot-actions">${coldVisit() ? `<button type="button" class="btn btn-outline-secondary btn-lg" data-step="0">‹ ${esc(t('buy.step0'))}</button>` : ''}
+                    <button type="button" class="btn btn-primary btn-lg" data-step1-next ${chosen.length ? '' : 'disabled'}>${esc(t('buy.next_who'))} ›</button></span></div>
             </div></section>`;
+    }
+
+    // --- [432] Krok « Obchód chłodni » -----------------------------------------------------------------------------
+
+    const untilLabel = (s) => !s ? '—' : (s.slice(0, 10) === addDays(today, 1) ? t('buy.cold.tomorrow_gen') + ' ' + s.slice(11, 16).replace(/^0/, '') : dateTime(s));
+    const plural = (k, x) => t(k + (x === 1 ? '_one' : ([2, 3, 4].includes(x % 10) && ![12, 13, 14].includes(x % 100) ? '_few' : '_many')), {n: x});
+    const agoLabel = (d) => d <= 0 ? t('buy.cold.ago_0') : (d === 1 ? t('buy.cold.ago_1') : t('buy.cold.ago_n', {n: d}));
+    const signed = (v, m) => v === null || v === undefined ? '—' : (Math.abs(v) < 0.0005 ? '—' : (v > 0 ? '+' : '−') + qty(Math.abs(v), m));
+
+    function drawCold() {
+        const c = coldVisit();
+        const l = c.last;
+        const next = `<button type="button" class="btn btn-primary btn-lg" data-cold-next ${c.blocked ? 'disabled aria-disabled="true"' : ''}>${esc(t('buy.cold.next'))} ›</button>`;
+        let main;
+        if (c.valid && l) {
+            const note = (a) => [
+                a.short ? `<span class="tfb-buy-cold-chip is-warn">${esc(a.short.best_before ? t('buy.cold.short', {d: dm(a.short.best_before)}) : t('buy.cold.short_nodate'))}</span>` : '',
+                ...a.losses.map(x => `<span class="tfb-buy-cold-chip is-stop" title="${esc(x.reason || '')}">${esc(t(x.kind === 'damaged' ? 'buy.cold.damaged' : 'buy.cold.discard', {q: qty(x.quantity, a)}))}</span>`),
+            ].join(' ');
+            const row = (a) => `<tr><td>${esc(a.name)}</td><td>${esc(a.places.join(', '))}</td><td class="text-end tfb-num">${esc(qty(a.erp, a))}</td>
+                <td class="text-end tfb-num">${esc(qty(a.counted, a))}</td>
+                <td class="text-end tfb-num ${a.difference !== null && a.difference < -0.0005 ? 'tfb-buy-cold-neg' : a.difference > 0.0005 ? 'tfb-buy-cold-pos' : ''}">${esc(signed(a.difference, a))}</td><td>${note(a)}</td></tr>`;
+            const dirty = (l.dirty || []).map(d => `<span class="tfb-buy-cold-chip is-stop">${esc(t('buy.cold.dirty', {place: d.place}))}${d.photo_id ? ` · <a href="${api.root}/workshop/traceability/photo/${d.photo_id}" target="_blank" rel="noopener">${esc(t('buy.cold.photo'))}</a>` : ''}</span>`).join(' ');
+            main = `<div class="tfb-buy-cold-head"><div><strong>${esc(t('buy.cold.done', {when: dateTime(l.completed_at)}))}</strong> — ${esc(t('buy.cold.done_by', {by: l.by || '—',
+                    places: plural('buy.cold.places', l.places), materials: plural('buy.cold.mat', l.materials)}))}</div>
+                <span class="tfb-buy-cold-chip is-ok">${esc(t('buy.cold.valid_until', {d: untilLabel(l.valid_until)}))}</span></div>
+                ${dirty ? `<div class="tfb-buy-cold-dirty">${dirty}</div>` : ''}
+                ${c.lines.length ? `<div class="table-responsive"><table class="table tfb-buy-table align-middle mb-0"><thead><tr><th>${esc(t('buy.cold.col.item'))}</th><th>${esc(t('buy.cold.col.place'))}</th>
+                    <th class="text-end">${esc(t('buy.cold.col.erp'))}</th><th class="text-end">${esc(t('buy.cold.col.counted'))}</th><th class="text-end">${esc(t('buy.cold.col.diff'))}</th>
+                    <th>${esc(t('buy.cold.col.notes'))}</th></tr></thead><tbody>${c.lines.map(row).join('')}</tbody></table></div>`
+                    : `<p class="text-muted mb-0">${esc(t('buy.cold.no_diff'))}</p>`}
+                <div class="tfb-buy-foot"><span class="small text-muted">${c.lines.length && c.unchanged ? esc(t('buy.cold.unchanged', {n: c.unchanged})) : ''}</span>${next}</div>`;
+        } else if (c.no_places) {
+            main = `<p class="mb-0">${esc(t('buy.cold.no_places'))}</p><div class="tfb-buy-foot"><span></span>${next}</div>`;
+        } else {
+            const msg = l ? t('buy.cold.blocked_last', {d: dm(l.completed_at.slice(0, 10)), ago: agoLabel(l.days_ago)}) : t('buy.cold.blocked_never');
+            const open = c.open ? `<p class="small mb-0">${esc(t('buy.cold.open', {saved: c.open.saved, places: c.open.places, at: dateTime(c.open.started_at), by: c.open.by ? ', ' + c.open.by : ''}))}</p>` : '';
+            main = `<div class="tfb-buy-cold-block"><i class="bi bi-snow"></i><div><strong>${esc(msg)}</strong>${open}
+                <p class="small text-muted mb-0">${esc(t('buy.cold.rule', {h: c.valid_hours}))}</p></div></div>
+                <div class="tfb-buy-foot"><span></span>${next}</div>`;
+        }
+        const can = state.data.can_write;
+        const places = `<details class="tfb-buy-cold-places" ${state.coldPlaces ? 'open' : ''} data-cold-places><summary>${esc(t('buy.cold.places_title', {n: c.places.length}))}</summary>
+            <p class="small text-muted">${esc(t('buy.cold.places_hint'))}</p>
+            <ul class="list-unstyled mb-2">${c.places.map(p => `<li><i class="bi ${p.kind === 'cold' ? 'bi-snow' : 'bi-box-seam'}"></i> <strong>${esc(p.name)}</strong>
+                <span class="small text-muted">· ${esc(t(p.source === 'equipment' ? 'buy.cold.src_equipment' : 'buy.cold.src_extra'))} · ${esc(plural('buy.cold.mat', p.materials))}</span>
+                ${can && p.source === 'extra' ? `<button type="button" class="btn btn-link btn-sm text-danger p-0 ms-2" data-cold-remove="${p.id}" data-name="${esc(p.name)}">${esc(t('buy.cold.remove'))}</button>` : ''}</li>`).join('')}</ul>
+            ${can ? `<form class="tfb-buy-cold-add" data-cold-add><input class="form-control" name="name" maxlength="160" placeholder="${esc(t('buy.cold.add_ph'))}" aria-label="${esc(t('buy.cold.add_place'))}">
+                <button class="btn btn-outline-secondary">${esc(t('buy.cold.add_place'))}</button></form>` : ''}</details>`;
+        return `<section class="card tfb-buy-card"><div class="card-body">${main}</div></section>${places}`;
     }
 
     // Krok 2 : dostawcy pozycji (1–3) i warunki.
@@ -567,6 +635,13 @@
             return;
         }
         if (b.dataset.step) { state.step = Number(b.dataset.step); if (state.step === 1) { load(); return; } draw(); window.scrollTo(0, 0); return; }
+        // [432] Obchód chłodni : dalej do « Co kupić » (gdy obchód ważny), miejsca dodane w ERP.
+        if (b.matches('[data-cold-next]')) { if (coldBlocked()) return; state.step = 1; draw(); window.scrollTo(0, 0); return; }
+        if (b.dataset.coldRemove) {
+            if (!window.confirm(t('buy.cold.confirm_remove', {name: b.dataset.name || ''}))) return;
+            await act(b, async () => { state.data.cold_visit = await api.del(`/supply/buy/cold-places/${b.dataset.coldRemove}`); ui.notify(true, t('buy.cold.removed')); draw(); });
+            return;
+        }
         if (b.dataset.pick) {
             const [lineId, sid] = b.dataset.pick.split(':').map(Number);
             const l = r.lines.find(x => x.id === lineId);
@@ -728,6 +803,18 @@
         }
         draw();
     }
+
+    // [432] Miejsce obchodu dodane w ERP (np. magazyn suchy).
+    el.addEventListener('submit', async (e) => {
+        const f = e.target.closest('[data-cold-add]');
+        if (!f) return;
+        e.preventDefault();
+        const name = f.name.value.trim();
+        if (name.length < 2) { f.name.focus(); return; }
+        state.coldPlaces = true;
+        await act(f.querySelector('button'), async () => { state.data.cold_visit = await api.post('/supply/buy/cold-places', {name}); ui.notify(true, t('buy.cold.added')); draw(); });
+    });
+    el.addEventListener('toggle', (e) => { if (e.target.matches && e.target.matches('[data-cold-places]')) state.coldPlaces = e.target.open; }, true);
 
     el.addEventListener('change', async (e) => {
         const s = e.target;
