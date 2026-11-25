@@ -141,6 +141,8 @@ final class ParamRules
         // [415] Tablet jakości : sztuki ważone przy kontroli partii, tolerancja średniej wagi sztuki (± %)
         'qc_round.pieces' => [1, 10, true],
         'qc_round.weight_tolerance_pct' => [0, 50, false],
+        // [432] Obchód chłodni : « Co kupić » otwiera się po pełnym obchodzie z ostatnich N godzin
+        'cold_visit.valid_hours' => [1, 168, true],
         'kiosk.office_qr_ttl_s' => [30, 600, true],
         'supply.invoice_price_alert_pct' => [1, 100, false],
         'kiosk.ordered_days' => [1, 28, true],

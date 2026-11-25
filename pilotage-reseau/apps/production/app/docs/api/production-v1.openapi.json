@@ -8580,7 +8580,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Brouillon avec les lignes choisies ; conditions par défaut : paiement 7 jours, livraison chez nous, réponse sous buy.reply_hours heures. BUY_ROUND_EXISTS (409) : achats déjà ouverts pour la semaine. Quantités en unité de base (g, ml, szt) ; unit / factor donnent l'unité affichée (kg, l…) ; prix par unité de base.",
+                "description": "Brouillon avec les lignes choisies ; conditions par défaut : paiement 7 jours, livraison chez nous, réponse sous buy.reply_hours heures. BUY_ROUND_EXISTS (409) : achats déjà ouverts pour la semaine. [432] COLD_VISIT_REQUIRED (409) : pas d'obchód chłodni complet (tablette qualité) depuis cold_visit.valid_hours heures, alors qu'il y a des miejsca à obejść. Quantités en unité de base (g, ml, szt) ; unit / factor donnent l'unité affichée (kg, l…) ; prix par unité de base.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -9562,6 +9562,160 @@
                         }
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/cold-places": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Obchód chłodni : dodaj miejsce / Ajouter un lieu à la tournée",
+                "operationId": "addColdPlace",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ColdVisitSummary"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Miejsce sans urządzenie (Magazyn suchy…) ; les chłodnie / mroźnie viennent seules du rejestr « Serwisy i przeglądy ». Nom déjà pris : DUPLICATE_IN_LIST. Réponse : krok « Obchód chłodni » de Zakupy tygodnia.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ColdPlaceInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/cold-places/{id}": {
+            "delete": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Obchód chłodni : usuń miejsce / Retirer un lieu de la tournée",
+                "operationId": "removeColdPlace",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ColdVisitSummary"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Miejsce ajoutée seulement : une chłodnia du rejestr se retire dans « Serwisy i przeglądy » (409 COLD_PLACE_EQUIPMENT).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
                 "security": [
                     {
                         "bearerAuth": []
@@ -23943,6 +24097,446 @@
                         }
                     }
                 },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/cold-visit": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Obchód chłodni : miejsca / Tournée des chambres froides : lieux",
+                "operationId": "coldVisit",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ColdVisit"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Miejsca : chłodnie / mroźnie actives du rejestr « Serwisy i przeglądy » (n_equipment.kind = cold) et miejsca ajoutées dans l'ERP. status : done (zapisane dans le obchód en cours), now (la première pas encore zapisana), later. visit : obchód en cours (state open, moins de cold_visit.valid_hours heures) ou dernier complet encore valide (state complete). Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/cold-visit/materials": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Szukaj surowca / Chercher une matière",
+                "operationId": "coldVisitMaterials",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ColdVisitMaterial"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "20 résultats au plus, les noms les plus courts d'abord. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "description": "au moins 2 caractères du nom (polonais ou français)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/cold-visit/places/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Jedno miejsce : surowce do policzenia / Un lieu : matières à compter",
+                "operationId": "coldVisitPlace",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ColdVisitPlace"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Un rang par surowiec rattaché : erp = stan de Zaopatrzenie (dernière inwentaryzacja + przyjęcia − zużycie z receptur ; null = inconnu ; dans un obchód en cours, celui d'avant le premier zapis), lot = partia bieżąca du rejestr (date la plus courte d'abord), also_in = autres miejsca du surowiec, saved = zapis de ce obchód. Quantités en unité de base (g, ml, szt) ; unit / factor donnent l'unité affichée (kg, l…). Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zapisz chłodnię / Enregistrer le lieu",
+                "operationId": "coldVisitSave",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ColdVisit"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Chaque surowiec de la miejsce policzony (sinon 422 COLD_VISIT_NOT_COUNTED) ; porządek « no » : photo obligatoire (POST /kiosk/quality-round/photos, sinon 422 COLD_VISIT_PHOTO_REQUIRED). Inventaire de Zaopatrzenie (n_mp_count, jour même) = Σ (policzone − strata) sur toutes les miejsca du surowiec dans ce obchód, écrit quand la dernière est zapisana ; pertes (do wyrzucenia / uszkodzone : quantité ≤ policzone, raison) gardées dans le obchód. Obchód ouvert au premier zapis, complet quand toutes les miejsca actives sont zapisane. Quantités en unité de base (g, ml, szt) ; unit / factor donnent l'unité affichée (kg, l…). Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ColdVisitPlaceInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/cold-visit/places/{id}/materials/{material}": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Dodaj surowiec, który tu leży / Ajouter une matière rangée ici",
+                "operationId": "coldVisitAssign",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ColdVisitPlace"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Rattachement surowiec ↔ miejsce (appris au premier obchód) ; déjà rattaché : rien. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "material",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Surowiec już tu nie leży / La matière n'est plus rangée ici",
+                "operationId": "coldVisitUnassign",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ColdVisitPlace"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Retire le rattachement ; les obchody déjà zapisane restent. Personne identifiée au poste KIEROWNIK_PRODUKCJI ou JAKOSC (sinon 403 QC_ROUND_POSITION).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "material",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
                 "security": [
                     {
                         "deviceToken": [],
@@ -39988,6 +40582,15 @@
                         "type": "integer",
                         "description": "articles consommés avec moins de 3 fournisseurs"
                     },
+                    "cold_visit": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ColdVisitSummary"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "[432] krok « Obchód chłodni » (null : migration 255 absente)"
+                    },
                     "products": {
                         "type": "array",
                         "items": {
@@ -42739,6 +43342,612 @@
                         "type": "string",
                         "minLength": 3,
                         "maxLength": 500
+                    }
+                }
+            },
+            "ColdVisit": {
+                "type": "object",
+                "properties": {
+                    "now": {
+                        "type": "string"
+                    },
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "position": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "valid_hours": {
+                        "type": "integer"
+                    },
+                    "visit": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "state": {
+                                "type": "string",
+                                "enum": [
+                                    "open",
+                                    "complete"
+                                ]
+                            },
+                            "started_at": {
+                                "type": "string"
+                            },
+                            "completed_at": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "places": {
+                                "type": "integer"
+                            },
+                            "materials": {
+                                "type": "integer"
+                            },
+                            "differences": {
+                                "type": "integer"
+                            },
+                            "valid_until": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "to_do": {
+                        "type": "integer"
+                    },
+                    "next_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "places": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "cold",
+                                        "dry",
+                                        "other"
+                                    ]
+                                },
+                                "source": {
+                                    "type": "string",
+                                    "enum": [
+                                        "equipment",
+                                        "extra"
+                                    ]
+                                },
+                                "location": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "materials": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "done",
+                                        "now",
+                                        "later"
+                                    ]
+                                },
+                                "saved": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "at": {
+                                            "type": "string"
+                                        },
+                                        "materials": {
+                                            "type": "integer"
+                                        },
+                                        "differences": {
+                                            "type": "integer"
+                                        },
+                                        "clean": {
+                                            "type": "string",
+                                            "enum": [
+                                                "yes",
+                                                "no"
+                                            ]
+                                        },
+                                        "by": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ColdVisitMaterial": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ColdVisitPlace": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "cold",
+                            "dry",
+                            "other"
+                        ]
+                    },
+                    "source": {
+                        "type": "string",
+                        "enum": [
+                            "equipment",
+                            "extra"
+                        ]
+                    },
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "position": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "base_unit": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "erp": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "lot": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "lot_number": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "best_before": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "also_in": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "saved": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "quantity": {
+                                            "type": "number"
+                                        },
+                                        "date_state": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "loss": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "discard",
+                                                        "damaged"
+                                                    ]
+                                                },
+                                                "quantity": {
+                                                    "type": "number"
+                                                },
+                                                "reason": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "saved": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "at": {
+                                "type": "string"
+                            },
+                            "clean": {
+                                "type": "string"
+                            },
+                            "photo_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "note": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "loss_kinds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "date_states": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "ColdVisitPlaceInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "lines",
+                    "clean"
+                ],
+                "properties": {
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "material_id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "description": "jest naprawdę, unité de base"
+                                },
+                                "date_state": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                        "ok",
+                                        "short"
+                                    ],
+                                    "description": "short = krótka data, zużyć najpierw"
+                                },
+                                "loss": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "required": [
+                                        "kind",
+                                        "quantity",
+                                        "reason"
+                                    ],
+                                    "properties": {
+                                        "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                                "discard",
+                                                "damaged"
+                                            ]
+                                        },
+                                        "quantity": {
+                                            "type": "number",
+                                            "description": "unité de base, au plus quantity"
+                                        },
+                                        "reason": {
+                                            "type": "string",
+                                            "minLength": 3,
+                                            "maxLength": 120
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "clean": {
+                        "type": "string",
+                        "enum": [
+                            "yes",
+                            "no"
+                        ]
+                    },
+                    "photo_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    }
+                }
+            },
+            "ColdPlaceInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 160
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "cold",
+                            "dry",
+                            "other"
+                        ],
+                        "description": "défaut dry (magazyn suchy)"
+                    }
+                }
+            },
+            "ColdVisitSummary": {
+                "type": "object",
+                "properties": {
+                    "valid_hours": {
+                        "type": "integer"
+                    },
+                    "valid": {
+                        "type": "boolean"
+                    },
+                    "blocked": {
+                        "type": "boolean"
+                    },
+                    "no_places": {
+                        "type": "boolean"
+                    },
+                    "last": {
+                        "allOf": [
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "enum": [
+                                            "open",
+                                            "complete"
+                                        ]
+                                    },
+                                    "started_at": {
+                                        "type": "string"
+                                    },
+                                    "completed_at": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "by": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "places": {
+                                        "type": "integer"
+                                    },
+                                    "materials": {
+                                        "type": "integer"
+                                    },
+                                    "differences": {
+                                        "type": "integer"
+                                    },
+                                    "valid_until": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                }
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "dernier obchód complet (+ days_ago, dirty : miejsca « porządek : nie »)"
+                    },
+                    "open": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "started_at": {
+                                "type": "string"
+                            },
+                            "by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "saved": {
+                                "type": "integer"
+                            },
+                            "places": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "places": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "erp": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "counted": {
+                                    "type": "number"
+                                },
+                                "difference": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "short": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "best_before": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "lot_number": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "losses": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string"
+                                            },
+                                            "quantity": {
+                                                "type": "number"
+                                            },
+                                            "reason": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "place": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "stock_after": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        },
+                        "description": "surowce avec différence, krótka data ou perte (unité de base)"
+                    },
+                    "unchanged": {
+                        "type": "integer"
+                    },
+                    "places": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "cold",
+                                        "dry",
+                                        "other"
+                                    ]
+                                },
+                                "source": {
+                                    "type": "string",
+                                    "enum": [
+                                        "equipment",
+                                        "extra"
+                                    ]
+                                },
+                                "materials": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
                     }
                 }
             },

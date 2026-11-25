@@ -5,6 +5,7 @@ namespace App\Core\Routes\Api;
 
 use App\Controllers\Api\Workshop\AuthController;
 use App\Controllers\Api\Workshop\BuyController;
+use App\Controllers\Api\Workshop\ColdVisitController;
 use App\Controllers\Api\Workshop\DataSheetController;
 use App\Controllers\Api\Workshop\DeliveryController;
 use App\Controllers\Api\Workshop\DriverController;
@@ -181,6 +182,9 @@ final class WorkshopApiRoutes
             ['GET', '/supply/buy/results', BuyController::class, 'results', 'prod.supply.read'],
             ['GET', '/supply/buy/suppliers', BuyController::class, 'suppliers', 'prod.supply.read'],
             ['PUT', '/supply/buy/materials/{id:\d+}/suppliers', BuyController::class, 'saveSuppliers', 'prod.supply.write'],
+            // [432] Obchód chłodni : miejsca dodane w ERP (Magazyn suchy…) — chłodnie z rejestru urządzeń przychodzą same.
+            ['POST', '/supply/buy/cold-places', BuyController::class, 'addColdPlace', 'prod.supply.write'],
+            ['DELETE', '/supply/buy/cold-places/{id:\d+}', BuyController::class, 'removeColdPlace', 'prod.supply.write'],
             ['GET', '/supply/invoices', InvoiceController::class, 'list', 'prod.supply.read'],
             ['GET', '/supply/invoices/wizard', InvoiceController::class, 'wizard', 'prod.supply.read'],
             ['GET', '/supply/invoices/assistant-status', InvoiceController::class, 'assistantStatus', 'prod.supply.read'],
@@ -396,6 +400,13 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/quality-round/trace/{id:\d+}/pdf', QualityRoundController::class, 'pdf', 'kiosk_employee'],
             ['POST', '/kiosk/quality-round/trace/{id:\d+}/hold', QualityRoundController::class, 'hold', 'kiosk_employee'],
             ['POST', '/kiosk/quality-round/holds/{id:\d+}/release', QualityRoundController::class, 'release', 'kiosk_employee'],
+            // [432] Obchód chłodni przed zakupami (tablet jakości) : miejsca, jedno miejsce, « Zapisz chłodnię », surowce miejsca.
+            ['GET', '/kiosk/cold-visit', ColdVisitController::class, 'home', 'kiosk_employee'],
+            ['GET', '/kiosk/cold-visit/materials', ColdVisitController::class, 'search', 'kiosk_employee'],
+            ['GET', '/kiosk/cold-visit/places/{id:\d+}', ColdVisitController::class, 'place', 'kiosk_employee'],
+            ['POST', '/kiosk/cold-visit/places/{id:\d+}', ColdVisitController::class, 'save', 'kiosk_employee'],
+            ['PUT', '/kiosk/cold-visit/places/{id:\d+}/materials/{material:\d+}', ColdVisitController::class, 'assign', 'kiosk_employee'],
+            ['DELETE', '/kiosk/cold-visit/places/{id:\d+}/materials/{material:\d+}', ColdVisitController::class, 'unassign', 'kiosk_employee'],
         ];
     }
 

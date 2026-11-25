@@ -2334,6 +2334,25 @@ button.tfb-buy-box.is-on { box-shadow: none; background: var(--at-primary); back
 .tfb-buy-big { font-size: 1.35rem; }
 .tfb-buy-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; margin-bottom: 8px; border-radius: 10px; background: rgba(242, 201, 160, 0.35); }
 .tfb-buy-hint strong:first-child { color: var(--at-on-abricot); }
+/* [432] Zakupy tygodnia, krok « Obchód chłodni » : ostatni obchód, różnice, blokada « Co kupić », miejsca obchodu. */
+.tfb-buy-cold-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 10px; }
+.tfb-buy-cold-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: .78rem; white-space: nowrap; background: var(--at-bg-2); color: var(--at-muted); }
+.tfb-buy-cold-chip.is-ok { background: rgba(46, 125, 79, 0.12); color: var(--at-success); }
+.tfb-buy-cold-chip.is-warn { background: rgba(193, 122, 42, 0.14); color: var(--at-warning); }
+.tfb-buy-cold-chip.is-stop { background: rgba(196, 30, 58, 0.10); color: var(--at-danger); }
+.tfb-buy-cold-chip a { color: inherit; text-decoration: underline; }
+.tfb-buy-cold-dirty { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tfb-buy-cold-neg { color: var(--at-danger); }
+.tfb-buy-cold-pos { color: var(--at-success); }
+.tfb-buy-cold-block { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; border: 1px dashed var(--at-line-2); border-radius: 10px; }
+.tfb-buy-cold-block > i { font-size: 1.6rem; color: var(--at-muted); }
+.tfb-buy-cold-block p { margin-top: 6px; }
+.tfb-buy-cold-places { margin: 0 0 14px; padding: 12px 16px; border: 1px solid var(--at-line); border-radius: var(--at-radius-lg); background: var(--at-surface); }
+.tfb-buy-cold-places summary { cursor: pointer; color: var(--at-muted); }
+.tfb-buy-cold-places[open] summary { margin-bottom: 8px; }
+.tfb-buy-cold-places li { padding: 4px 0; }
+.tfb-buy-cold-add { display: flex; gap: 8px; max-width: 520px; }
+.tfb-buy-cold-add .form-control, .tfb-buy-cold-add .btn { min-height: 44px; }
 .tfb-buy-hint .btn { min-height: 40px; margin-left: auto; }
 .tfb-buy-oform { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding: 8px; border-radius: 10px; background: var(--at-bg-2); }
 .tfb-buy-oform .form-control, .tfb-buy-oform .form-select { width: auto; min-width: 110px; min-height: 40px; }

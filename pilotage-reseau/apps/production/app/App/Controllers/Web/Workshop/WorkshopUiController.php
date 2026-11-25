@@ -25,8 +25,10 @@ class WorkshopUiController extends BaseController
 
     public function products()
     {
+        // [431] ?tablet=1 : la même fiche produit sur la tablette de la Kierownik produkcji (grandes cibles, sans menu,
+        // retour vers /tablet/quality). Mêmes droits que la page (session ERP du navigateur, connexion par QR possible).
         $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id'),
-            'can_toggle' => $this->access->canToggleProducts(user('id') ? (int) user('id') : null)]);
+            'can_toggle' => $this->access->canToggleProducts(user('id') ? (int) user('id') : null), 'tablet' => ($_GET['tablet'] ?? '') === '1']);
     }
 
     /** Magazyn › Stan magazynu (zakładki Magazyn) : widok « levels » aplikacji kart produktów. */

@@ -154,6 +154,18 @@ final class SupplyService
         return $levels;
     }
 
+    /**
+     * [432] Stan teoretyczny (ta sama reguła co wyżej) dla wybranych surowców — « W ERP » obchodu chłodni.
+     * @return array<int, ?array{stock:float, basis:string, count_date:?string}> null = stan nieznany
+     */
+    public function stockLevels(array $ids): array
+    {
+        $levels = $this->levels();
+        $out = [];
+        foreach ($ids as $id) $out[(int) $id] = $levels[(int) $id] ?? null;
+        return $out;
+    }
+
     private function presentMaterial(array $m, string $lang, ?array $level): array
     {
         $unit = CostOptimizationService::displayUnit($m['unit']);

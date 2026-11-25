@@ -83,6 +83,11 @@
     "QC_TRACE_UNKNOWN_CODE": "Nie znaleziono partii ani kartonu dla kodu {code}.",
     "QC_HOLD_NO_PRODUCT": "Tę partię (półprodukt) można wstrzymać tylko przez partię produktu, w której jest użyta.",
     "QC_HOLD_RELEASED": "Ta partia jest już zwolniona.",
+    "COLD_VISIT_REQUIRED": "Najpierw obchód chłodni na tablecie jakości (pełny, z ostatnich {hours} h) — dopiero potem « Co kupić ».",
+    "COLD_VISIT_NOT_COUNTED": "Policz wszystkie surowce tego miejsca (zostało : {count}).",
+    "COLD_VISIT_PHOTO_REQUIRED": "Nie ma porządku : zrób zdjęcie przed zapisem.",
+    "COLD_PLACE_EQUIPMENT": "Ta chłodnia jest w rejestrze urządzeń — wyłącz ją w « Serwisy i przeglądy maszyn ».",
+    "COLD_VISIT_NOT_READY": "Obchód chłodni nie jest jeszcze włączony (migracja 255).",
     "PALLET_PRODUCT_HELD": "Partia wstrzymana przez Jakość : {product}, etykiety {days} ({cartons} kart.). Kartonów z tych dni nie kładź na paletę.",
     "LOT_HELD_ON_PALLET": "Paleta P-{pallet} ma kartony wstrzymanej partii ({product}, {lot}) — nie ładować, zadzwoń do Kierownika produkcji.",
     "MANAGER_NO_DRAFTS": "Brak szkiców celów do zatwierdzenia.",
@@ -622,7 +627,8 @@
     "zone": "strefa sprzątania",
     "chill": "pomiar schładzania",
     "help": "wezwanie",
-    "photo": "zdjęcie"
+    "photo": "zdjęcie",
+    "cold_place": "miejsce obchodu chłodni"
   },
   "documents": {
     "team_sheet_title": "Plan zespołu",
