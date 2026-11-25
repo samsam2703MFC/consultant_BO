@@ -314,3 +314,4 @@
 2026-11-25T20:21:50Z Mon catalogue : le bon de commande (Export PDF) et « Mes conditions » de la boutique
 2026-11-25T20:43:41Z Compte TF Buddy du magasin : la limite des connexions dite comme celle de TF Buddy, le code SMS en cours repris
 2026-11-25T20:45:44Z Dashboard : défauts relevés en tournant les vidéos corrigés (Mon catalogue, Trésorerie, Mon équipe, Boîte mail, Promotions, newsletter)
+2026-11-25T20:46:50Z Production : commandes en retard jamais fermées — fermeture en lot (Stan ogólny › Zaległe) et avec la WDT (Wyślij dzień)
