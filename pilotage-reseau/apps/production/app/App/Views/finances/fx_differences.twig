@@ -1,0 +1,23 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Różnice kursowe{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ root }}/assets/css/fx-differences.css?v={{ asset_v() }}">
+{% endblock %}
+
+{% block content %}
+{# [440] Różnice kursowe (Finanse) : App\Services\Finances\Fx\FxDifferenceService — écran dans
+   assets/js/finances/fx-differences.js. Kurs faktury : NBP (tabela A) du dernier jour ouvré avant la facture ; kurs wpłaty :
+   compte EUR → NBP du dernier jour ouvré avant la wpłata, compte PLN → kurs ING. Wyciągi ING chiffrés ; montants : profil
+   Finanse et CEO seulement. Rien n'est envoyé. #}
+<section class="section">
+    <div id="fxApp" class="fx"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="fxBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/finances/fx-differences.js?v={{ asset_v() }}"></script>
+{% endblock %}

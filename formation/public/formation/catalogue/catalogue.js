@@ -195,23 +195,49 @@
       '<p><span class="ct-chip">' + (n == null ? T('Lecture…', 'Lezen…') : n + ' ' + T('vidéos', 'video’s') + (nf ? ' · ' + nf + ' ' + T('formation' + (nf > 1 ? 's' : ''), 'opleiding' + (nf > 1 ? 'en' : '')) : '')) + '</span></p>' +
       '<div class="ct-actions"><a class="btn btn--primary" href="#/videos">' + T('Regarder', 'Bekijken') + '</a><button type="button" class="btn" data-qr="videos">QR</button></div></div>';
   }
+  /* Trois niveaux (24/11/2026) : la vidéo d'une page du rail (`niveau` absent ou « page »), celles de ses onglets
+     (« onglet ») et de leurs fonctions (« fonction ») ; `parent` range chacune, `debut` et `fin` bornent un passage du
+     fichier de l'onglet. La vidéothèque montre les pages ; « onglet par onglet » ouvre #/videos/<page>. */
+  var VNIV = { onglet: { fr: 'Onglet', nl: 'Tabblad' }, fonction: { fr: 'Fonction', nl: 'Functie' } };
+  function estPageV(v) { return !v.niveau || v.niveau === 'page'; }
+  function enfantsV(v) { return (S.videos || []).filter(function (x) { return x.parent === v.id && !estPageV(x); }); }
+  function descendantsV(v) { var E = enfantsV(v); return E.concat.apply(E, E.map(enfantsV)); }
+  function srcV(dos, v) { return dos + v.fichier + (v.debut != null && v.fin != null ? '#t=' + (+v.debut).toFixed(2) + ',' + (+v.fin).toFixed(2) : ''); }
+  function carteV(dos, v, k, ici) {
+    var D = estPageV(v) && !ici ? descendantsV(v) : [];
+    return '<div class="ct-vt-c"><button type="button" class="ct-vt" data-video="' + esc(v.id) + '">' +
+      '<span class="ct-vt-aff">' + (v.affiche ? '<img src="' + esc(dos + v.affiche) + '" alt="" loading="lazy">' : '') + '<span class="ct-vt-lire" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 7 9 5-9 5z"/></svg></span>' + (v.duree ? '<span class="ct-vt-d">' + esc(v.duree) + '</span>' : '') + '</span>' +
+      '<span class="ct-vt-k">' + esc(k) + '</span><span class="ct-vt-t">' + esc(v.titre) + '</span>' + (v.resume ? '<span class="ct-vt-r">' + esc(v.resume) + '</span>' : '') + '</button>' +
+      (D.length ? '<a class="ct-vt-plus" href="#/videos/' + encodeURIComponent(v.id) + '">' + T('Onglet par onglet', 'Per tabblad') + ' · ' + D.length + ' ' + T('vidéos', 'video’s') + ' →</a>' : '') + '</div>';
+  }
+  /** Une page du rail, onglet par onglet : la vidéo de l'onglet, puis celles de ses fonctions. */
+  function rendrePageVideos(dos, p) {
+    var O = enfantsV(p);
+    return '<p><a class="ct-vt-plus" href="#/videos">← ' + T('Toute la vidéothèque', 'De hele videotheek') + '</a></p>' +
+      '<div class="ct-vt-grille">' + carteV(dos, p, T('La page', 'De pagina'), true) + '</div>' +
+      O.map(function (o) {
+        var F = enfantsV(o);
+        return '<h2 class="ct-vt-h">' + esc(o.titre) + ' <span class="ct-chip">' + (1 + F.length) + '</span></h2><div class="ct-vt-grille">' +
+          carteV(dos, o, L(VNIV.onglet)) + F.map(function (f) { return carteV(dos, f, L(VNIV.fonction)); }).join('') + '</div>';
+      }).join('');
+  }
   function rendreVideotheque() {
     var V = S.videos || [];
     var dos = S.videosDossier || dossierVideos();
-    var groupes = VGENRES.map(function (G) {
-      var L2 = V.filter(function (v) { return (v.genre || 'tuto') === G.g; });
+    var cle = route().cle ? decodeURIComponent(route().cle) : '';
+    var pageV = cle ? V.filter(function (v) { return v.id === cle && estPageV(v); })[0] : null;
+    var groupes = pageV ? rendrePageVideos(dos, pageV) : VGENRES.map(function (G) {
+      var L2 = V.filter(function (v) { return estPageV(v) && (v.genre || 'tuto') === G.g; });
       if (!L2.length) return '';
       return '<h2 class="ct-vt-h">' + esc(L(G.t)) + ' <span class="ct-chip">' + L2.length + '</span></h2><div class="ct-vt-grille">' + L2.map(function (v) {
-        return '<button type="button" class="ct-vt" data-video="' + esc(v.id) + '">' +
-          '<span class="ct-vt-aff">' + (v.affiche ? '<img src="' + esc(dos + v.affiche) + '" alt="" loading="lazy">' : '') + '<span class="ct-vt-lire" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 7 9 5-9 5z"/></svg></span>' + (v.duree ? '<span class="ct-vt-d">' + esc(v.duree) + '</span>' : '') + '</span>' +
-          '<span class="ct-vt-k">' + esc(L(G.k)) + '</span><span class="ct-vt-t">' + esc(v.titre) + '</span>' + (v.resume ? '<span class="ct-vt-r">' + esc(v.resume) + '</span>' : '') + '</button>';
+        return carteV(dos, v, L(G.k));
       }).join('') + '</div>';
     }).join('');
     root.innerHTML = '<header class="ct-barre"><img src="../img/logo.png" alt="L’Atelier By"><div><div class="ct-titre">' + T('Vidéothèque', 'Videotheek') + '</div>' +
       '<div class="ct-sous">' + T('Catalogue · Formation', 'Catalogus · Opleiding') + '</div></div><span class="ct-esp"></span>' + segLangue() +
       '<a class="btn" href="#/">' + T('Catalogue des manuels', 'Catalogus van de handboeken') + '</a></header>' +
       '<div class="ct-corps"><div class="ct-kicker">' + T('Formation · Vidéos', 'Opleiding · Video’s') + '</div>' +
-      '<h1 class="ct-h1">' + T('Vidéothèque', 'Videotheek') + '</h1>' +
+      '<h1 class="ct-h1">' + (pageV ? esc(pageV.titre) : T('Vidéothèque', 'Videotheek')) + '</h1>' +
       '<p class="ct-lead">' + T('Les vidéos du dashboard magasin : les modules de formation à suivre en session, les nouvelles fonctions et les modes d’emploi. Les écrans sont ceux du dashboard ; les chiffres et les noms sont fictifs.', 'De video’s van het winkeldashboard: de opleidingsmodules voor een sessie, de nieuwe functies en de handleidingen. De schermen zijn die van het dashboard; cijfers en namen zijn fictief. De video’s zijn in het Frans.') + '</p>' +
       (S.videos == null ? '<p class="ct-msg">' + T('Lecture des vidéos…', 'Video’s lezen…') + '</p>'
         : !V.length ? '<p class="ct-msg">' + esc(S.videosErreur ? T('Lecture impossible : ', 'Lezen onmogelijk: ') + S.videosErreur : T('Aucune vidéo pour le moment.', 'Nog geen video’s.')) + '</p>' : groupes) + '</div>';
@@ -220,15 +246,23 @@
     var v = (S.videos || []).filter(function (x) { return x.id === id; })[0]; if (!v) return;
     var dos = S.videosDossier || dossierVideos();
     var G = VGENRES.filter(function (g) { return g.g === (v.genre || 'tuto'); })[0] || VGENRES[2];
+    var kicker = VNIV[v.niveau] ? L(VNIV[v.niveau]) : L(G.k);
     var o = document.createElement('div');
     o.className = 'ct-voile';
-    o.innerHTML = '<div class="ct-fenetre ct-vt-fen" role="dialog" aria-label="' + esc(v.titre) + '"><div class="ct-vt-fh"><div><div class="ct-kicker">' + esc(L(G.k)) + (v.duree ? ' · ' + esc(v.duree) : '') + '</div><h3>' + esc(v.titre) + '</h3></div>' +
+    o.innerHTML = '<div class="ct-fenetre ct-vt-fen" role="dialog" aria-label="' + esc(v.titre) + '"><div class="ct-vt-fh"><div><div class="ct-kicker">' + esc(kicker) + (v.duree ? ' · ' + esc(v.duree) : '') + '</div><h3>' + esc(v.titre) + '</h3></div>' +
       '<button type="button" class="btn" data-fermer="1">' + T('Fermer', 'Sluiten') + '</button></div>' +
-      '<video src="' + esc(dos + v.fichier) + '"' + (v.affiche ? ' poster="' + esc(dos + v.affiche) + '"' : '') + ' controls autoplay playsinline preload="metadata"></video>' +
+      '<video src="' + esc(srcV(dos, v)) + '"' + (v.affiche ? ' poster="' + esc(dos + v.affiche) + '"' : '') + ' controls autoplay playsinline preload="metadata"></video>' +
       (v.resume ? '<p>' + esc(v.resume) + '</p>' : '') + '</div>';
     o.addEventListener('click', function (e) {
       if (e.target === o || e.target.closest('[data-fermer]')) { var vd = o.querySelector('video'); if (vd) try { vd.pause(); } catch (x) { /* */ } o.remove(); }
     });
+    // Un passage (onglet ou fonction) s'arrête à sa fin, une fois.
+    var vd = o.querySelector('video');
+    if (vd && v.fin != null) {
+      var fini = false;
+      vd.addEventListener('timeupdate', function () { if (!fini && vd.currentTime >= +v.fin - 0.05) { fini = true; vd.pause(); } });
+      vd.addEventListener('loadedmetadata', function () { if (v.debut != null && vd.currentTime < +v.debut) vd.currentTime = +v.debut; });
+    }
     document.body.appendChild(o);
   }
 

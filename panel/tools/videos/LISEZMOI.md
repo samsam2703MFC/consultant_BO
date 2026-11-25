@@ -64,6 +64,40 @@ routes manquantes dans `mocks/` (`capture.js` les liste), et `node tourner.js 04
 fonction : `genre: "nouveau"` et `depuis` à la date de mise en ligne ; la carte « Nouveau » s'efface après 60 jours ou
 une fois la vidéo ouverte.
 
+## Une vidéo par onglet, ses fonctions en chapitres (24/11/2026)
+
+Sam : « chaque vidéo dans le rail, ensuite une vidéo par onglet interne, ensuite une vidéo spécifique à chaque
+fonction ». Validé le 24/11 : **un fichier par onglet**, ses fonctions en chapitres ; une vidéo de fonction pour ce qui
+**agit** (crée, modifie, envoie, range, supprime) — les gestes de lecture (ouvrir, chercher, filtrer, déplier, changer
+de période) se montrent dans la vidéo de l'onglet ; ni les gestes impossibles à filmer (nouvel onglet du navigateur,
+caméra, micro), ni les écrans propres au téléphone ; les fusions de la liste appliquées.
+
+```js
+const { Film } = require('../film');
+module.exports = async function () {
+  const f = await Film.ouvrir('13-01-en-cours', { vue: 'offres', serie: 'Offres', parent: 'offres',
+    sources: ['panel/public/dashboard/offres.js'], avant: async p => { /* l'état de départ, hors film */ } });
+  await f.onglet({ id: 'offres-en-cours', titre: 'Les offres en cours', resume: '…', accroche: '…',
+    programme: ['Modifier une offre', '…'] });            // couverture courte : le chapitre de l'onglet
+  // … l'onglet, ses gestes de lecture …
+  await f.fonction({ id: 'offres-modifier', titre: 'Modifier une offre', resume: '…',
+    points: ['Choisir l’offre', '« Modifier »', '…'] });  // intercalaire « Pas à pas » : le chapitre de la fonction
+  // … le geste, de bout en bout : il peut se jouer seul (on resélectionne ce qu'il faut) …
+  return f.fin();                                          // pas de diapositive finale
+};
+```
+
+- **Nom du fichier** : `NN-MM-court` — `NN` le numéro de la vidéo de la page (13 pour Offres), `MM` le rang de
+  l'onglet. **Identifiants** : préfixe de la page (`offres-`, `boite-`, `equipe-`…), en minuscules et tirets, uniques.
+- `tourner.js` lit `sortie/<nom>.chapitres.json` (écrit par `fin()`) et crée ou met à jour **une entrée du registre par
+  chapitre** : `niveau` (`onglet`, `fonction`), `parent` (la page pour un onglet, l'onglet pour une fonction), `debut`
+  et `fin` (secondes dans le MP4), `duree`, l'affiche `<id>.jpg` (l'écran, juste après l'intercalaire), `sources`,
+  `tourne_sur`, `tourne_le`. Un chapitre retiré du scénario sort du registre au tournage suivant.
+- Ces fichiers sortent en **1600 × 900, CRF 34** (≈ 1,3 Mo la minute ; le texte reste net), une image clé au début de
+  chaque chapitre : le lecteur y saute (`#t=debut,fin`) et s'arrête à la fin du passage. Il faut un serveur qui
+  accepte les requêtes partielles (Apache en production ; `php -S` ne le fait pas : le saut ne marche pas en local).
+- Le lecteur du dashboard (`tutos.js`) et la vidéothèque (`#/videos/<page>`) montrent la page onglet par onglet.
+
 ## La routine : adapter et faire les nouvelles vidéos
 
 ```bash
