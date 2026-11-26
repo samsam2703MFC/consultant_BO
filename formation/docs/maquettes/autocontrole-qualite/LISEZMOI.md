@@ -98,6 +98,19 @@ Sam : « construire dans cockpit consultant, avec un lien test tablette ».
   à part (ni historique, ni résultats, ni journal), `&qui=` préremplit la personne.
 - **Le siège** `/consulant_bo/autocontrole/grilles.html` (entrée « Autocontrôle qualité ↗ » des Applications du
   cockpit) : les résultats des magasins et les défauts qui reviennent ; l'éditeur des grilles, la publication.
+- **Les trois modules (26/11/2026)**, Sam : « 1. admin (dans la fiche produit) 2. dans les fiches de production, ce qui
+  est regardé, ce qui est bon, ce qui ne l'est pas 3. comme le formulaire, pour le consultant en contrôle (3 produits) ou
+  pour le franchisé ou le manager ».
+  1. **Admin** : l'onglet **Qualité** de la fiche produit du cockpit (Catalogue › fiche) — la grille du produit, sa
+     catégorie forcée, ses cibles (poids, tolérance), sa photo de référence qualité, ses derniers contrôles
+     (`GET|PUT /autocontrole/produits/{pid}`, réglage `autocontroleProduits`).
+  2. **Fiches de production** : le manuel Formation › Fiches techniques imprime pour chaque produit « Le contrôle
+     qualité » — chaque étape, ce qu'on regarde, ce qui est bon, à surveiller, pas bon (`aqStandardProduit`).
+  3. **Le formulaire** : la tablette demande **qui contrôle** (Équipe, Manager, Franchisé, Consultant ; `&role=`) ;
+     dans la **visite du consultant**, l'étape « Le contrôle qualité de 3 produits » (temps Intérieur, après les
+     contrôles du jour) ouvre la tablette par-dessus la visite (`&visite=…&cadre=1`, rôle consultant, jamais un essai) ;
+     les contrôles entrent dans le rapport de la visite (courriel avec la photo, carte du bureau, page du franchisé) et
+     restent ceux du magasin si la visite est effacée.
 - **Reste à faire** : le bouton de la fiche dans l'app Cuisine (dépôt `ThaiZu/TFB-Kitchen`), un simple lien vers la
   tablette avec `&produit=` ; la validation des grilles par la production ; de vraies photos de défauts à la place des
   teintes et des dessins.

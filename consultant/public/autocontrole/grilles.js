@@ -65,7 +65,7 @@
       const ecarts = c.ecarts.map(e => e.libelle).join(', ');
       const ph = c.photos.map(p => `<img src="${API + esc(p.url)}" alt="" loading="lazy">`).join('');
       const tr = `<tr class="row-link" data-ouvrir="${c.id}"><td>${date(c.cree_le)}${c.essai ? ' <span class="chip chip--draft">essai</span>' : ''}<span class="sub">${c.fournee ? 'fournée de ' + esc(c.fournee) : 'sans fournée'}${c.pieces ? ' · ' + c.pieces + ' pcs' : ''}</span></td>
-        <td>${esc(c.magasin)}<span class="sub">${esc(c.auteur)}</span></td><td>${esc(c.produit)}<span class="sub">${esc(c.grille || 'critères communs')}</span></td>
+        <td>${esc(c.magasin)}<span class="sub">${esc([c.auteur, c.roleNom, c.visite ? 'visite du consultant' : ''].filter(Boolean).join(' · '))}</span></td><td>${esc(c.produit)}<span class="sub">${esc(c.grille || 'critères communs')}</span></td>
         <td>${etat(c.niveau)}</td><td>${esc(DEC[c.decision] || c.decision)}${c.decision !== c.suggestion ? `<span class="sub">suggéré : ${esc((DEC[c.suggestion] || '').toLowerCase())}</span>` : ''}</td>
         <td class="num">${c.ecarts.length}${ecarts ? `<span class="sub" style="text-align:left">${esc(ecarts)}</span>` : ''}</td><td><div class="gq-ph">${ph}</div></td>
         <td>${c.prevenir ? '<span class="chip chip--draft">Responsable prévenu</span> ' : ''}${c.reclamer ? '<span class="chip chip--draft">Réclamation</span>' : ''}</td></tr>`;
