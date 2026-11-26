@@ -5671,6 +5671,483 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "coffre-tout",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Tout : l’accueil du coffre",
+      "resume": "L’état du coffre (les pièces attendues, À traiter, la prochaine grande date), la frise des 12 mois, puis tous les documents, avec leurs filtres et la recherche.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-01-tout.mp4",
+      "debut": 0,
+      "fin": 87.49,
+      "affiche": "coffre-tout.jpg",
+      "duree": "1 min 27",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-legal",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Le dossier Légal",
+      "resume": "Les pièces que le magasin dépose lui-même : reçue, à renouveler, à déposer, ou écartée parce qu’elle ne le concerne pas.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-02-legal.mp4",
+      "debut": 0,
+      "fin": 46.2,
+      "affiche": "coffre-legal.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-renouveler",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-legal",
+      "titre": "Renouveler une pièce",
+      "resume": "« Déposer la nouvelle » sur une pièce à renouveler : la fenêtre s’ouvre, la pièce choisie ; l’assistant relève la nouvelle échéance, puis « Ranger ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-02-legal.mp4",
+      "debut": 46.2,
+      "fin": 96.22,
+      "affiche": "coffre-renouveler.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-ecarter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-legal",
+      "titre": "Écarter une pièce qui ne vous concerne pas",
+      "resume": "« pas concernée ? » sous une pièce à déposer, puis confirmer : elle ne compte plus dans le coffre.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-02-legal.mp4",
+      "debut": 96.22,
+      "fin": 123.47,
+      "affiche": "coffre-ecarter.jpg",
+      "duree": "27 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-reintegrer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-legal",
+      "titre": "Réintégrer une pièce écartée",
+      "resume": "Une pièce écartée par erreur : « la réintégrer », et elle compte de nouveau.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-02-legal.mp4",
+      "debut": 123.47,
+      "fin": 143.78,
+      "affiche": "coffre-reintegrer.jpg",
+      "duree": "20 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-dossiers",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Contrat & DIP, Formation, Finances, Courriers",
+      "resume": "Les dossiers que votre consultant remplit, ou qui se remplissent d’office : leurs pièces attendues, puis leurs autres documents, chacun en aperçu d’un clic.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-03-dossiers.mp4",
+      "debut": 0,
+      "fin": 75.2,
+      "affiche": "coffre-dossiers.jpg",
+      "duree": "1 min 15",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-visites",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Les rapports de visite",
+      "resume": "Le rapport envoyé après chaque visite de votre consultant arrive ici tout seul : lu, ou « à lire » ; son aperçu renvoie à « Mon suivi ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-04-visites.mp4",
+      "debut": 0,
+      "fin": 52.59,
+      "affiche": "coffre-visites.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-dates",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Les grandes dates",
+      "resume": "Toutes les échéances du coffre, par année, et d’où chacune vient : calculée, relevée par l’assistant, échéance d’un document, ajoutée à la main. En or, les quatre prochains mois.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-05-dates.mp4",
+      "debut": 0,
+      "fin": 49.47,
+      "affiche": "coffre-dates.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-date-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-dates",
+      "titre": "Ajouter une grande date",
+      "resume": "« ＋ Ajouter une date » : la sorte, le titre, la date (et « jusqu’au »), le document et une note si besoin, puis « Ajouter ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-05-dates.mp4",
+      "debut": 49.47,
+      "fin": 91.35,
+      "affiche": "coffre-date-ajouter.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-date-retirer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-dates",
+      "titre": "Retirer une grande date",
+      "resume": "La croix au bout d’une date rangée par le magasin, puis confirmer. L’échéance d’un document n’en a pas : elle suit le document.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-05-dates.mp4",
+      "debut": 91.35,
+      "fin": 117.35,
+      "affiche": "coffre-date-retirer.jpg",
+      "duree": "26 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-apercu",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "L’aperçu d’un document",
+      "resume": "Un clic sur un document ouvre son aperçu à droite : la page, ses gestes, ses repères, ses grandes dates, et qui l’a ouvert.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-06-apercu.mp4",
+      "debut": 0,
+      "fin": 66.87,
+      "affiche": "coffre-apercu.jpg",
+      "duree": "1 min 07",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-joindre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-apercu",
+      "titre": "Joindre un document à un e-mail",
+      "resume": "« Joindre à un e-mail » ouvre la Boîte mail sur un e-mail, le document en pièce jointe et l’objet rempli ; on écrit, puis on envoie. Le coffre note « joint à un mail ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-06-apercu.mp4",
+      "debut": 66.87,
+      "fin": 114.52,
+      "affiche": "coffre-joindre.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-depot",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Déposer, étape 1 : le fichier",
+      "resume": "La fenêtre du dépôt : le fichier, glissé ou choisi (au téléphone, une photo), « C’est quelle pièce ? », le titre, la date, l’échéance et une note.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-07-deposer.mp4",
+      "debut": 0,
+      "fin": 41.94,
+      "affiche": "coffre-depot.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-deposer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-depot",
+      "titre": "Déposer un document",
+      "resume": "Le fichier, la pièce, le titre et la date, puis « Déposer » : le document est rangé dans le coffre, et l’assistant commence à le lire.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-07-deposer.mp4",
+      "debut": 41.94,
+      "fin": 85,
+      "affiche": "coffre-deposer.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-assistant",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Déposer, étape 2 : l’assistant",
+      "resume": "Après « Déposer », l’assistant lit le document : ce que c’est, la phrase qui fonde les dates, les grandes dates proposées à cocher ; il reconnaît la pièce, remplit le titre et l’échéance.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-08-assistant.mp4",
+      "debut": 0.01,
+      "fin": 48.01,
+      "affiche": "coffre-assistant.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-ranger-dates",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-assistant",
+      "titre": "Ranger les grandes dates proposées",
+      "resume": "Décocher ce qu’on ne garde pas, corriger une date au besoin, puis « Ranger le document et N grandes dates » : elles rejoignent les grandes dates du coffre.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-08-assistant.mp4",
+      "debut": 48.01,
+      "fin": 91.3,
+      "affiche": "coffre-ranger-dates.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-releve",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Relever les grandes dates",
+      "resume": "La fenêtre du dépôt, sur un document déjà rangé : l’assistant le relit et propose ses grandes dates ; on garde celles qui sont cochées, puis « Ranger », ou « Valider ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-09-relever.mp4",
+      "debut": 0,
+      "fin": 60.82,
+      "affiche": "coffre-releve.jpg",
+      "duree": "1 min 01",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-relever",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-releve",
+      "titre": "Relever les grandes dates d’un document rangé",
+      "resume": "« ✦ Relever les dates » dans l’aperçu : l’assistant relit le document ; on garde les dates cochées, puis « Ranger et N grandes dates ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-09-relever.mp4",
+      "debut": 60.82,
+      "fin": 100.12,
+      "affiche": "coffre-relever.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-vide",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Le coffre vide",
+      "resume": "Tant qu’aucun document n’est rangé, le coffre dit ce qu’il doit contenir : chaque dossier, ses pièces, qui les dépose, et « Déposer » sur les vôtres.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-10-vide.mp4",
+      "debut": 0.01,
+      "fin": 56.24,
+      "affiche": "coffre-vide.jpg",
+      "duree": "56 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "mails-automatisations",
       "genre": "tuto",
       "titre": "Mails et automatisations",
@@ -5692,6 +6169,344 @@
       ],
       "tourne_sur": "062ad4f3fd4a087e35086e1bca334243c1fc99e9",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "param-fenetre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mails-automatisations",
+      "titre": "La fenêtre des Paramètres",
+      "resume": "La roue, en bas du rail : tous les réglages du magasin rangés dans une fenêtre, l’état de chacun, et une recherche.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-01-fenetre.mp4",
+      "debut": 0,
+      "fin": 75.5,
+      "affiche": "param-fenetre.jpg",
+      "duree": "1 min 16",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-rappel",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mails-automatisations",
+      "titre": "Le rappel, dans la fenêtre",
+      "resume": "Le rappel la veille du retrait se règle dans la fenêtre des Paramètres : allumé ou non, par où, à quelle heure ; « Ouvrir la page complète » pour le reste.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-02-rappel.mp4",
+      "debut": 0,
+      "fin": 34.07,
+      "affiche": "param-rappel.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-rappel-allumer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-rappel",
+      "titre": "Allumer ou éteindre le rappel",
+      "resume": "L’interrupteur « Rappel actif » : c’est enregistré tout de suite. Sur la page complète, l’interrupteur de la liste des envois fait de même.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-02-rappel.mp4",
+      "debut": 34.07,
+      "fin": 56.57,
+      "affiche": "param-rappel-allumer.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-rappel-canal",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-rappel",
+      "titre": "Choisir par où part le rappel",
+      "resume": "E-mail, SMS ou les deux : enregistré tout de suite dans la fenêtre. Un client sans e-mail reçoit le SMS à la place, et l’inverse.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-02-rappel.mp4",
+      "debut": 56.57,
+      "fin": 80.6,
+      "affiche": "param-rappel-canal.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-rappel-heure",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-rappel",
+      "titre": "Choisir l’heure du rappel",
+      "resume": "Une heure entre 12:00 et 21:00, de demi-heure en demi-heure : enregistrée tout de suite dans la fenêtre.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-02-rappel.mp4",
+      "debut": 80.6,
+      "fin": 104.6,
+      "affiche": "param-rappel-heure.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-page",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mails-automatisations",
+      "titre": "Mails et automatisations",
+      "resume": "La page complète : ce que le magasin envoie tout seul, l’équipe qui reçoit les fiches des promotions, le rappel la veille du retrait en détail, son aperçu, demain et ce qui est parti.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 0,
+      "fin": 59.65,
+      "affiche": "param-page.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-recent",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Écarter les commandes passées au dernier moment",
+      "resume": "« Pas de rappel pour une commande passée moins de 24 h avant le retrait », puis « Enregistrer » : la confirmation de la commande suffit, elle passe « trop récente ».",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 59.65,
+      "fin": 94.07,
+      "affiche": "param-recent.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-email",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Écrire l’e-mail du rappel",
+      "resume": "Changer l’objet et le texte, avec les variables {prenom}, {jour}, {heure}, {paiement}… ; l’aperçu suit ; puis « Enregistrer ».",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 94.07,
+      "fin": 125.48,
+      "affiche": "param-email.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-sms",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Écrire le SMS du rappel",
+      "resume": "Changer le texte du SMS ; le compteur donne les signes et le nombre de SMS ; puis « Enregistrer ».",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 125.48,
+      "fin": 149.55,
+      "affiche": "param-sms.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-essai",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Envoyer un essai",
+      "resume": "Votre GSM, puis « Envoyer un essai » : l’e-mail part à la boîte du magasin, le SMS au GSM donné. Rien n’est gardé.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 149.55,
+      "fin": 168.94,
+      "affiche": "param-essai.jpg",
+      "duree": "19 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-equipe-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Ajouter une personne à l’équipe",
+      "resume": "Le prénom et l’initiale, l’adresse e-mail, puis « Ajouter » : la personne reçoit la fiche de la prochaine promotion lancée.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 168.94,
+      "fin": 193.7,
+      "affiche": "param-equipe-ajouter.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-equipe-retirer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Retirer une personne de l’équipe",
+      "resume": "« Retirer » au bout de sa ligne : elle ne reçoit plus les fiches. Il n’y a pas de confirmation.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 193.7,
+      "fin": 213.79,
+      "affiche": "param-equipe-retirer.jpg",
+      "duree": "20 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-porte",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mails-automatisations",
+      "titre": "Boîte fermée : la porte",
+      "resume": "Mails et automatisations se règlent boîte ouverte : tant qu’elle ne l’est pas sur cet appareil, ou pas encore reliée, la page le dit et mène à la Boîte mail.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-04-porte.mp4",
+      "debut": 0,
+      "fin": 47.78,
+      "affiche": "param-porte.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
     }
   ]
 }
