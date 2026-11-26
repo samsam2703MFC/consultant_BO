@@ -5677,7 +5677,7 @@
     const L = bmProduits().filter(p => BM_NORM(p.nom + ' ' + (p.cat || '')).includes(n)).slice(0, 12);
     box.innerHTML = L.length ? L.map(p => `<button data-bmp="${p.id}"><span>${esc(p.nom)}</span><small>${esc(p.cat || '')} · ${p.prixTtc != null ? fU(p.prixTtc) : 'sans prix'}</small></button>`).join('')
       : `<div class="mu">${bmProduits().length ? 'Aucun produit du magasin ne correspond.' : 'Catalogue du magasin en lecture…'}</div>`;
-    box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; urlMaj(); rendre(); }));
+    box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; S.bmForm = null; urlMaj(); rendre(); }));
   }
   function bmBrancher() {
     $.querySelectorAll('[data-bmcp]').forEach(b => {
@@ -5685,8 +5685,8 @@
       b.addEventListener('click', basculer);
       b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); basculer(); } });
     });
-    $.querySelectorAll('[data-bmtop]').forEach(tr => tr.addEventListener('click', () => { S.bmF = 'produit'; S.bmP = tr.dataset.bmtop; urlMaj(); rendre(); }));
-    $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; urlMaj(); rendre(); }));
+    $.querySelectorAll('[data-bmtop]').forEach(tr => tr.addEventListener('click', () => { S.bmF = 'produit'; S.bmP = tr.dataset.bmtop; S.bmForm = null; urlMaj(); rendre(); }));
+    $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; S.bmForm = null; urlMaj(); rendre(); }));   // changer de sujet ferme le relevé en cours (26/11/2026 : il restait ouvert, unité et produit d'avant)
     const q = $.querySelector('[data-bmq]');
     if (q) { q.addEventListener('input', () => { S.bmQ = q.value; bmChercher(q.value); }); q.addEventListener('focus', () => bmChercher(q.value)); q.addEventListener('blur', () => setTimeout(() => { const b = document.getElementById('bm-res'); if (b) { b.innerHTML = ''; } }, 150)); }
     $.querySelectorAll('[data-bmform]').forEach(b => b.addEventListener('click', () => {
