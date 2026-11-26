@@ -1707,6 +1707,176 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "semaine-douze-semaines",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "semaine",
+      "titre": "Les douze dernières semaines",
+      "resume": "Les clients, le panier moyen ou les articles par client de chaque semaine close, face à la même semaine un an plus tôt ; l’écart semaine par semaine, les trois tuiles ; ouvrir une semaine passée depuis la frise du haut.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-01-douze.mp4",
+      "debut": 0,
+      "fin": 89.65,
+      "affiche": "semaine-douze-semaines.jpg",
+      "duree": "1 min 30",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "semaine-calendrier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "semaine",
+      "titre": "Le calendrier de la semaine",
+      "resume": "Le détail replié sous la page, puce par puce ; le calendrier : chaque jour, son chiffre d’affaires, son atteinte ou ses clients, face à l’objectif du jour ; les tâches et les non-conformités de la semaine.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-02-calendrier.mp4",
+      "debut": 0,
+      "fin": 92.63,
+      "affiche": "semaine-calendrier.jpg",
+      "duree": "1 min 33",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/src/endpoints.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "semaine-heure-par-heure",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "semaine",
+      "titre": "Le détail heure par heure",
+      "resume": "Ce que chaque heure vend et rapporte : la journée type (moyenne par jour ouvert) ou le total de la semaine, la marge nette de chaque heure, une heure ouverte avec ses produits et ses catégories, le tableau.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-03-heures.mp4",
+      "debut": 0,
+      "fin": 81.84,
+      "affiche": "semaine-heure-par-heure.jpg",
+      "duree": "1 min 22",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/stats_ventes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "semaine-periodes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "semaine",
+      "titre": "Les périodes : matin, midi, après-midi",
+      "resume": "La semaine découpée en matin, midi et après-midi : chaque case dit ses ventes, sa marge nette et ses clients, et son rang dans la journée ; la couleur suit le chiffre choisi.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-04-periodes.mp4",
+      "debut": 0,
+      "fin": 63.44,
+      "affiche": "semaine-periodes.jpg",
+      "duree": "1 min 03",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/stats_ventes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "semaine-invendus",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "semaine",
+      "titre": "Invendus et poubelle",
+      "resume": "Les pièces jetées de la semaine : leur coût retranché du résultat, le détail par produit, puis la fenêtre des saisies — chaque pièce jetée, jour par jour, avec l’heure, l’opérateur et le motif.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-05-invendus.mp4",
+      "debut": 0,
+      "fin": 86.7,
+      "affiche": "semaine-invendus.jpg",
+      "duree": "1 min 27",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "semaine-invendus-reclamer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "semaine-invendus",
+      "titre": "Réclamer au fournisseur depuis un invendu",
+      "resume": "Sur une saisie Qualité ou Casse de la semaine : « Réclamer au fournisseur » ouvre la réclamation déjà remplie ; on vérifie la référence, la livraison, la quantité et le problème, on ajoute une photo, on envoie.",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-05-invendus.mp4",
+      "debut": 86.7,
+      "fin": 138.29,
+      "affiche": "semaine-invendus-reclamer.jpg",
+      "duree": "52 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "semaine-invendus-remarque",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "semaine-invendus",
+      "titre": "Faire une remarque à l’opérateur",
+      "resume": "Sur une saisie Qualité ou Casse de la semaine : « Remarque à l’opérateur », la personne qui a produit la référence (choisie d’office), le mot, « Enregistrer la remarque ».",
+      "vues": [
+        "semaine"
+      ],
+      "fichier": "06-05-invendus.mp4",
+      "debut": 138.29,
+      "fin": 181.13,
+      "affiche": "semaine-invendus-remarque.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "mois",
       "genre": "tuto",
       "titre": "La page Mois",
@@ -1726,6 +1896,149 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "mois-leviers",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mois",
+      "titre": "Les six leviers du mois",
+      "resume": "Sous la page, replié : les six leviers du mois face au même mois de l’an passé et au réseau, avec la pastille des seuils ; puis l’évolution de l’année, mois par mois ; et l’évolution de chaque canal de vente.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-01-leviers.mp4",
+      "debut": 0,
+      "fin": 86.3,
+      "affiche": "mois-leviers.jpg",
+      "duree": "1 min 26",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/public/assets/js/cartes-magasin.js",
+        "marketing/src/canaux_offres.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "mois-douze-mois",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mois",
+      "titre": "Les douze derniers mois",
+      "resume": "Les clients, le panier moyen ou les articles par client des douze derniers mois glissants, chacun face au même mois un an plus tôt ; le mois en cours aux mêmes jours ; ouvrir un autre mois depuis la frise.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-02-douze.mp4",
+      "debut": 0,
+      "fin": 85.09,
+      "affiche": "mois-douze-mois.jpg",
+      "duree": "1 min 25",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "mois-calendrier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mois",
+      "titre": "Le calendrier du mois",
+      "resume": "Les jours du mois face à leur objectif : le chiffre d’affaires, l’atteinte ou les clients de chacun ; le profil des jours de la semaine ; le résultat net jour par jour.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-03-calendrier.mp4",
+      "debut": 0,
+      "fin": 66.91,
+      "affiche": "mois-calendrier.jpg",
+      "duree": "1 min 07",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "mois-heure-par-heure",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mois",
+      "titre": "Le détail heure par heure du mois",
+      "resume": "La journée type du mois (moyenne par jour ouvert) ou le total du mois : ce que chaque heure vend et rapporte, une heure ouverte avec ses produits et ses catégories, le tableau.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-04-heures.mp4",
+      "debut": 0,
+      "fin": 53.08,
+      "affiche": "mois-heure-par-heure.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/stats_ventes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "mois-periodes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mois",
+      "titre": "Les périodes du mois",
+      "resume": "Le mois en matin, midi et après-midi, une colonne par semaine : les ventes, la marge nette et les clients de chaque case, son rang dans la semaine, le total du mois ; la couleur suit le chiffre choisi.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-05-periodes.mp4",
+      "debut": 0,
+      "fin": 45.11,
+      "affiche": "mois-periodes.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/stats_ventes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "mois-invendus",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mois",
+      "titre": "Invendus et poubelle du mois",
+      "resume": "Les pièces jetées du mois : leur coût retranché du résultat, le détail par produit, puis la fenêtre des saisies, regroupées par jour, avec l’heure, l’opérateur et le motif.",
+      "vues": [
+        "mois"
+      ],
+      "fichier": "07-06-invendus.mp4",
+      "debut": 0,
+      "fin": 57.33,
+      "affiche": "mois-invendus.jpg",
+      "duree": "57 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "annee",
@@ -1748,6 +2061,55 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "annee-trimestre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "annee",
+      "titre": "Les trimestres",
+      "resume": "Les quatre trimestres de l’année, puis le détail de celui qu’on ouvre : ses trois mois face au budget, l’écart à l’attendu, les clients manquants, la marge nette, les annotations, les actions et le rituel ; changer d’année.",
+      "vues": [
+        "annee"
+      ],
+      "fichier": "08-01-trimestre.mp4",
+      "debut": 0,
+      "fin": 77.63,
+      "affiche": "annee-trimestre.jpg",
+      "duree": "1 min 18",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/plan.php",
+        "consultant/public/assets/js/cartes-magasin.js"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "annee-trafic",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "annee",
+      "titre": "Le trafic, mois par mois",
+      "resume": "Les clients, le panier moyen ou les articles par client de chaque mois, face au même mois de l’an passé ; le mois en cours prolongé au rythme de ses jours ; le détail des mois et le long terme, repliés en bas.",
+      "vues": [
+        "annee"
+      ],
+      "fichier": "08-02-trafic.mp4",
+      "debut": 0,
+      "fin": 63.37,
+      "affiche": "annee-trafic.jpg",
+      "duree": "1 min 03",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/plan.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "tresorerie",
