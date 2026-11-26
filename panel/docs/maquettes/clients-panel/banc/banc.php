@@ -141,7 +141,25 @@ function bancRep(string $m, string $p, ?array $b): array
     if ($chem === '/panel/shops/3/offices') { return $m === 'GET' ? [200, ['offices' => $D['bureaux']]] : [200, ['id' => 99]]; }
     if ($chem === '/panel/shops/3/offices/options') { return [200, ['companies' => array_map(static fn ($c) => ['id' => $c['id'], 'name' => $c['company_name'], 'tax_number' => $c['tax_number']], array_values($D['b2b'])), 'routes' => [['id' => 1, 'name' => 'Midi · Gosselies – Charleroi', 'start_time' => '11:15:00'], ['id' => 2, 'name' => 'Matin · Jumet', 'start_time' => '08:30:00']],
         'delivery_sites' => [['id' => 5, 'name' => 'Lunchroom', 'address' => 'bd Tirou 45, Charleroi', 'route_id' => 1]], 'vouchers' => [['id' => 3, 'code' => 'BIENVENUE5', 'name' => '5 % la première commande']], 'department_presets' => ['Direction', 'Comptabilité', 'Ressources humaines', 'Commercial', 'Informatique']]]; }
-    if ($chem === '/panel/shops/3/offices/onboard') { return [200, ['office' => ['id' => 47], 'onboarding' => ['notifications' => ['status' => 'queued', 'membership' => 0]]]]; }
+    // Les adresses (geo) : suggestions, une adresse vérifiée, les localités d'un code postal (fictif).
+    if ($chem === '/panel/shops/3/offices/geo/autocomplete') {
+        $qq = (string) ($Q['query'] ?? '');
+        return [200, ['available' => true, 'suggestions' => [['id' => 'banc-1', 'label' => 'Rue de la Station 14, 6040 Jumet, Belgique'], ['id' => 'banc-2', 'label' => 'Rue de la Station 14, 6041 Gosselies, Belgique'], ['id' => 'banc-3', 'label' => $qq . ' (autre)']]]];
+    }
+    if ($chem === '/panel/shops/3/offices/geo/place') {
+        return [200, ['place' => ['verified' => true, 'place_id' => (string) ($Q['id'] ?? ''), 'street' => 'Rue de la Station', 'street_number' => '14', 'postal_code' => ($Q['id'] ?? '') === 'banc-2' ? '6041' : '6040',
+            'city' => ($Q['id'] ?? '') === 'banc-2' ? 'Gosselies' : 'Jumet', 'country' => 'BE', 'lat' => 50.43, 'lng' => 4.43, 'formatted_address' => 'Rue de la Station 14, 6040 Jumet']]];
+    }
+    if ($chem === '/panel/shops/3/offices/geo/postcodes') {
+        $cp = (string) ($Q['postal_code'] ?? '');
+        return [200, ['localities' => $cp === '6000' ? [['city' => 'Charleroi']] : [['city' => 'Gosselies'], ['city' => 'Thiméon']]]];
+    }
+    if ($chem === '/panel/shops/3/offices/onboard') {
+        // Ce que l'assistant envoie, gardé pour le contrôle du banc (le logo réduit à sa longueur).
+        $bb = $b ?? []; if (isset($bb['office']['logo_data_url'])) { $bb['office']['logo_data_url'] = 'data-url ' . strlen((string) $bb['office']['logo_data_url']) . ' car.'; }
+        file_put_contents(sys_get_temp_dir() . '/banc-onboard.json', json_encode($bb, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        return [200, ['office' => ['id' => 40], 'onboarding' => ['notifications' => ['status' => 'queued', 'membership' => 0]]]];
+    }
     // Un bureau sans site : TF Buddy refuse sa livraison (422 OFFICE_DELIVERY_SITE_REQUIRED, vu à Corbais le 26/11/2026).
     if (preg_match('#^/panel/shops/3/offices/(\d+)/(delivery-settings|sites)$#', $chem, $mm) && $m === 'GET') {
         $o = array_values(array_filter($D['bureaux'], static fn ($x) => (int) $x['id'] === (int) $mm[1]))[0] ?? null;

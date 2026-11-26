@@ -364,7 +364,8 @@ function pclCheminBureau(string $methode, string $chemin): bool
 function pclParams(array $g): string
 {
     $out = [];
-    foreach (['query', 'q', 'before', 'input', 'place_id', 'session', 'sessiontoken', 'postcode', 'postal_code', 'country', 'limit', 'offset'] as $k) {
+    // `id` et `lang` : geo/place {id, lang} et geo/autocomplete {query, country, lang} (l'adresse d'un site, 26/11/2026).
+    foreach (['query', 'q', 'before', 'input', 'place_id', 'id', 'lang', 'session', 'sessiontoken', 'postcode', 'postal_code', 'country', 'limit', 'offset'] as $k) {
         if (isset($g[$k]) && is_scalar($g[$k]) && (string) $g[$k] !== '') { $out[$k] = mb_substr((string) $g[$k], 0, 120); }
     }
     return $out ? '?' . http_build_query($out) : '';

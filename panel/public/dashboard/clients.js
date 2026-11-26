@@ -141,7 +141,7 @@
   /** Un champ d'un formulaire : sa valeur vit dans st.mo.f[k] (ou l'objet `o`), écrite à la saisie sans rendre. */
   function champ(k, l, o) {
     o = o || {}; const src = o.src || (st.mo && st.mo.f) || {}, v = src[k] == null ? '' : src[k];
-    const attr = `data-f="${esc(k)}"${o.ou ? ` data-ou="${esc(o.ou)}"` : ''}`;
+    const attr = `id="pcl-c-${esc(o.ou || (st.mo ? 'm' : 'f'))}-${esc(k)}" data-f="${esc(k)}"${o.ou ? ` data-ou="${esc(o.ou)}"` : ''}${o.liste ? ` list="${esc(o.liste)}"` : ''}`;
     let w;
     if (o.choix) { w = `<select ${attr}>${o.choix.map(([cv, cl]) => `<option value="${esc(cv)}"${String(v) === String(cv) ? ' selected' : ''}>${esc(cl)}</option>`).join('')}</select>`; }
     else if (o.type === 'case') { return `<label class="pcl-case${o.plein ? ' plein' : ''}"><input type="checkbox" ${attr}${v ? ' checked' : ''}> ${esc(l)}</label>`; }
@@ -285,7 +285,6 @@
   const statut = s => { const x = STATUTS[s] || [s || '—', 'chip chip--draft']; return `<span class="${x[1]}">${esc(x[0])}</span>`; };
   function vueBureaux() {
     const B = st.b, d = B.d;
-    if (B.w) { return vueAssistant(); }
     if (B.err && !d) { return `<div class="pcl-vide error card">${esc(B.err)}</div>`; }
     if (!d) { return attente('Lecture des bureaux du magasin…'); }
     if (!d.ok) { return refus(d, 'Les bureaux du magasin') + note('Ce que montre l’onglet une fois le compte TF Buddy du magasin connecté : une ligne par bureau (statut, catalogue, offres, sites), sa fiche en onglets — Livraison (site, tournée, créneau, heure limite), Catalogue, Offres, Personnes (invitations), Documents (affiche, cartes, brochure) — et « Ajouter un bureau » en sept étapes.', 'pcl-note-doux'); }
@@ -298,16 +297,86 @@
       <td>${b.catalogue === 'restricted' || b.catalogue === 'custom' ? 'Réduit' : b.catalogue ? 'Complet' : '—'}</td><td class="num">${nf(b.offres)}</td><td class="num">${nf(b.departements)}</td><td>${b.sites ? nf(b.sites) + ' site' + (b.sites > 1 ? 's' : '') : '<span class="tag-warn">pas de site</span>'}</td></tr>`).join('');
     // La liste garde toute la largeur ; un bureau s'ouvre dans le tiroir (26/11/2026, maquette A « even larger »).
     return `<section class="card pcl-carte">${barre}${B.lecture ? '<div class="pcl-fil"></div>' : ''}${L.length ? `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Bureau</th><th>Statut</th><th>Catalogue</th><th class="num">Offres</th><th class="num">Départements</th><th>Livraison</th></tr></thead><tbody>${lignes}</tbody></table></div>` : '<div class="pcl-vide">Aucun bureau.</div>'}</section>
-      ${d.data.bureaux.some(b => !b.sites) ? note('Un bureau sans site ne peut être livré par aucune tournée tant qu’il n’a pas de point de livraison : ouvrez-le, « Ajouter un site ».', 'pcl-note-doux') : ''}${tiroirBureau(L)}`;
+      ${d.data.bureaux.some(b => !b.sites) ? note('Un bureau sans site ne peut être livré par aucune tournée tant qu’il n’a pas de point de livraison : ouvrez-le, « Ajouter un site ».', 'pcl-note-doux') : ''}${B.w ? vueAssistant() : tiroirBureau(L)}`;
   }
   const detDe = ch => st.b.det[st.b.sel + ch];
   const detCorps = (ch, f) => { const x = detDe(ch); if (!x || x.lecture) { lireDet(ch); return attente('Lecture…'); } if (!x.ok) { return `<div class="pcl-aide error">${esc(x.texte || x.motif || 'illisible')}</div>`; } return f(x.data || {}); };
+  /* ── L'adresse d'un site : les suggestions de TF Buddy (26/11/2026) ─────────────────────────────────────────
+   * GET …/offices/geo/autocomplete {query, country, lang} → {available, suggestions: [{id, label}]} ; une suggestion
+   * choisie → geo/place {id, lang} → {place: {verified, street, street_number, postal_code, city, country, place_id,
+   * lat, lng}} ; le code postal → geo/postcodes {postal_code, country} → {localities: [{city}]}. `cle` : « s0 », « s1 »…
+   * (les sites de l'assistant) ou « m » (la fenêtre « Ajouter un site »). */
+  st.geo = {};
+  let tGeo = null, tCp = null;
+  const geoCible = cle => cle === 'm' ? (st.mo && st.mo.f) : (st.b.w ? st.b.w.sites[+cle.slice(1)] : null);
+  function geoBloc(cle, src) {
+    const g = st.geo[cle] || {};
+    const etat = g.lecture ? 'recherche des adresses…' : g.statut === 'verifie' ? '✓ adresse vérifiée par TF Buddy' : g.statut === 'manuel' ? 'suggestions indisponibles : saisissez l’adresse à la main' : '';
+    return `<div class="pcl-geo plein" id="pcl-geo-${esc(cle)}">${etat ? `<span class="pcl-geo-etat${g.statut === 'verifie' ? ' ok' : ''}">${esc(etat)}</span>` : ''}${(g.liste || []).map(x => `<button type="button" data-act="geo-place" data-cle="${esc(cle)}" data-id="${esc(x.id)}">${esc(x.label)}</button>`).join('')}</div>`;
+  }
+  const villes = cle => `<datalist id="pcl-villes-${esc(cle)}">${((st.geo[cle] || {}).villes || []).map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`;
+  function geoMaj(cle) { const el = st.el.querySelector('#pcl-geo-' + cle); if (el) { el.outerHTML = geoBloc(cle); } const dl = st.el.querySelector('#pcl-villes-' + cle); if (dl) { dl.outerHTML = villes(cle); } }
+  function geoChercher(cle, q) {
+    clearTimeout(tGeo);
+    const c = geoCible(cle); if (c) { delete c.place_id; }
+    if (q.trim().length < 3) { st.geo[cle] = {}; geoMaj(cle); return; }
+    tGeo = setTimeout(() => {
+      const t = geoCible(cle), pays = (t && t.country) || 'BE';
+      st.geo[cle] = Object.assign({}, st.geo[cle], { lecture: true, statut: '' }); geoMaj(cle);
+      lire('/dashboard/clients/bureaux', { chemin: '/geo/autocomplete', query: q.trim(), country: pays, lang: 'fr' }).then(d => {
+        const x = d.ok ? (d.data || {}) : {};
+        st.geo[cle] = Object.assign({}, st.geo[cle], { lecture: false, liste: (x.suggestions || []).slice(0, 6), statut: !d.ok || x.available === false ? 'manuel' : '' });
+      }).catch(() => { st.geo[cle] = { lecture: false, statut: 'manuel' }; }).finally(() => geoMaj(cle));
+    }, 350);
+  }
+  function geoCodePostal(cle, cp) {
+    clearTimeout(tCp);
+    if (cp.trim().length < 4) { return; }
+    tCp = setTimeout(() => {
+      const t = geoCible(cle), pays = (t && t.country) || 'BE';
+      lire('/dashboard/clients/bureaux', { chemin: '/geo/postcodes', postal_code: cp.trim(), country: pays }).then(d => {
+        const L = d.ok ? ((d.data || {}).localities || []).map(x => x.city).filter(Boolean) : [];
+        st.geo[cle] = Object.assign({}, st.geo[cle], { villes: L });
+        const t2 = geoCible(cle);
+        if (t2 && L.length === 1 && !String(t2.city || '').trim()) { t2.city = L[0]; const i = st.el.querySelector('#pcl-c-' + cle + '-city'); if (i) { i.value = L[0]; } }
+        geoMaj(cle);
+      }).catch(() => null);
+    }, 300);
+  }
+  function geoChoisir(cle, id) {
+    st.geo[cle] = Object.assign({}, st.geo[cle], { lecture: true }); geoMaj(cle);
+    lire('/dashboard/clients/bureaux', { chemin: '/geo/place', id, lang: 'fr' }).then(d => {
+      const p = d.ok ? ((d.data || {}).place || null) : null, t = geoCible(cle);
+      if (!p || !p.verified || !t) { st.geo[cle] = { lecture: false, statut: 'manuel' }; geoMaj(cle); return; }
+      Object.assign(t, { address: [p.street, p.street_number].filter(Boolean).join(' ') || p.formatted_address || t.address, postal_code: p.postal_code || t.postal_code, city: p.city || t.city,
+        country: p.country || t.country, place_id: p.place_id || id, street: p.street || '', street_number: p.street_number || '', latitude: p.lat != null ? p.lat : null, longitude: p.lng != null ? p.lng : null });
+      st.geo[cle] = { lecture: false, statut: 'verifie', liste: [] };
+      rendre(); if (st.b.w) { majResume(); }
+    }).catch(() => { st.geo[cle] = { lecture: false, statut: 'manuel' }; geoMaj(cle); });
+  }
+  /** Le logo : redimensionné à 600 px au plus dans le navigateur, en PNG (WebP s'il dépasse 800 ko), comme le panel. */
+  function logoLire(fichier) {
+    const w = st.b.w; if (!w || !fichier) { return; }
+    w.logoErr = null;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(fichier.type) || fichier.size > 8 * 1024 * 1024) { w.logoErr = 'Un logo PNG, JPEG ou WebP de 8 Mo au plus.'; rendre(); return; }
+    createImageBitmap(fichier).then(bm => {
+      const k = Math.min(1, 600 / Math.max(bm.width, bm.height)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(bm.width * k)); c.height = Math.max(1, Math.round(bm.height * k));
+      c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); if (bm.close) { bm.close(); }
+      let u = c.toDataURL('image/png'); if (u.length > 800000) { u = c.toDataURL('image/webp', 0.85); }
+      if (u.length > 800000) { throw new Error('trop lourd'); }
+      w.logo = u; rendre();
+    }).catch(() => { w.logoErr = 'Ce logo ne se lit pas (ou reste trop lourd).'; rendre(); });
+  }
+
   /** Le nom de la société d'un bureau : celui de la liste, sinon celui de l'entreprise B2B du même numéro. */
   function societeDe(b) {
     if (b.societe) { return b.societe; }
     const e = st.e.d && st.e.d.entreprises ? st.e.d.entreprises.find(x => x.id === b.idSociete) : null;
     return e ? e.nom : (b.idSociete ? 'entreprise n° ' + b.idSociete : '—');
   }
+  /** L'animation d'entrée du tiroir : au premier rendu après l'ouverture seulement. */
+  const entree = () => { if (st.b.entre) { st.b.entre = false; return ' pcl-tir-entre'; } return ''; };
   const SECTIONS = [['livraison', 'Livraison'], ['catalogue', 'Catalogue et offres'], ['personnes', 'Personnes'], ['documents', 'Documents']];
   /**
    * Le tiroir d'un bureau (26/11/2026, Sam : « A, even larger ») : un panneau large sur la droite, par-dessus la liste,
@@ -347,7 +416,7 @@
     const sec = (id, titre, lien, corps) => `<section class="pcl-tir-sec" id="pcl-sec-${id}"><h4>${titre}${lien || ''}</h4>${corps}</section>`;
     const lien = (act, l) => `<button type="button" class="linklike" data-act="${act}">${l}</button>`;
     return `<div class="pcl-tir-voile" data-act="b-fermer-fond"></div>
-      <aside class="pcl-tir" role="dialog" aria-modal="true" aria-label="${esc(b.nom)}">
+      <aside class="pcl-tir${entree()}" role="dialog" aria-modal="true" aria-label="${esc(b.nom)}">
         <div class="pcl-tir-tete"><div><div class="pcl-tir-nom">${esc(b.nom)} ${statut(b.statut)}</div>
           <div class="pcl-fmeta">${esc([societeDe(b), b.ville, b.contact ? 'contact : ' + b.contact : '', b.tva].filter(Boolean).join(' · '))}</div></div>
           <button type="button" class="btn btn--sm btn--icon" data-act="b-fermer" aria-label="Fermer">${SVG(ICO.x)}</button></div>
@@ -385,7 +454,9 @@
       corps = `<div class="pcl-form2">${champ('id_company_client', 'Société (client B2B du magasin)', { src: f, requis: true, plein: true, choix: [['', 'Choisir…'], ...(o.companies || []).map(c => [c.id, [c.name || c.company_name, c.tax_number].filter(Boolean).join(' · ')])] })}
         ${champ('name', 'Nom du bureau', { src: f, requis: true })}${champ('tax_number', 'TVA', { src: f, requis: true, aide: 'BE0123456789' })}
         ${champ('segment', 'Segment', { src: f, choix: [['', '—'], ['horeca', 'Horeca'], ['retail', 'Commerce'], ['corporate', 'Entreprise'], ['event', 'Événement']] })}${champ('payment_terms', 'Paiement', { src: f, choix: [['Comptant', 'Comptant'], ['Différé', 'Différé']] })}
-        ${champ('credit_limit', 'Limite de crédit (€)', { src: f, type: 'number' })}</div><div class="pcl-aide pcl-pad">La société est une entreprise B2B du magasin : ajoutez-la d’abord dans Entreprises B2B si elle n’y est pas.</div>`;
+        ${champ('credit_limit', 'Limite de crédit (€)', { src: f, type: 'number' })}
+        <div class="pcl-champ plein"><span>Logo de la société (facultatif, PNG, JPEG ou WebP)</span><div class="pcl-logo">${w.logo ? `<img src="${esc(w.logo)}" alt="Logo"><button type="button" class="linklike" data-act="w-logo-retirer">retirer</button>` : ''}<input type="file" accept="image/png,image/jpeg,image/webp" data-logo="1"></div>${w.logoErr ? `<span class="error">${esc(w.logoErr)}</span>` : ''}</div></div>
+        <div class="pcl-aide pcl-pad">La société est une entreprise B2B du magasin : ajoutez-la d’abord dans Entreprises B2B si elle n’y est pas.</div>`;
     } else if (E === 1) {
       corps = `<div class="pcl-form2">${champ('contact_name', 'Responsable', { src: f, requis: true })}${champ('contact_function', 'Fonction', { src: f, aide: 'Office manager' })}${champ('contact_email', 'E-mail', { src: f, requis: true, type: 'email' })}${champ('contact_phone', 'Téléphone', { src: f, type: 'tel' })}</div>`;
     } else if (E === 2) {
@@ -393,7 +464,7 @@
       corps = `<div class="pcl-pad"><div class="pcl-h">Où livrer ?</div>${(o.delivery_sites || []).length ? `<div class="pcl-ligne-in">${champ('site_existant', 'Un point de livraison existant', { src: f, choix: [['', 'Choisir…'], ...(o.delivery_sites || []).map(s => [s.id, [s.name, s.address].filter(Boolean).join(' · ')])] })}<button type="button" class="btn btn--sm" data-act="w-site-existant">Ajouter</button></div>` : ''}</div>
         ${w.sites.map((s, i) => `<div class="pcl-site"><div class="pcl-h">Site ${i + 1}${s.delivery_site_id ? ' · point existant' : ''}${i ? ` <button type="button" class="linklike" data-act="w-site-retirer" data-i="${i}">retirer</button>` : ''}</div><div class="pcl-form2">
           ${champ('name', 'Nom du site', { src: s, ou: 's' + i })}${champ('country', 'Pays', { src: s, ou: 's' + i, choix: [['BE', 'Belgique'], ['PL', 'Pologne'], ['FR', 'France'], ['NL', 'Pays-Bas'], ['LU', 'Luxembourg']] })}
-          ${champ('address', 'Adresse', { src: s, ou: 's' + i, requis: true, plein: true, aide: 'Rue et numéro' })}${champ('postal_code', 'Code postal', { src: s, ou: 's' + i })}${champ('city', 'Ville', { src: s, ou: 's' + i })}
+          ${champ('address', 'Adresse', { src: s, ou: 's' + i, requis: true, plein: true, aide: 'Commencez à taper : TF Buddy propose les adresses' })}${geoBloc('s' + i, s)}${champ('postal_code', 'Code postal', { src: s, ou: 's' + i })}${champ('city', 'Ville', { src: s, ou: 's' + i, liste: 'pcl-villes-s' + i })}${villes('s' + i)}
           ${champ('building', 'Bâtiment', { src: s, ou: 's' + i })}${champ('floor', 'Étage', { src: s, ou: 's' + i })}${champ('access_minutes', 'Temps d’accès sur place (min)', { src: s, ou: 's' + i, type: 'number' })}${champ('route_id', 'Livré par', { src: s, ou: 's' + i, choix: R })}</div></div>`).join('')}
         <div class="pcl-pad"><button type="button" class="btn btn--sm" data-act="w-site-plus">${SVG(ICO.plus)}Un autre site</button></div>
         <div class="pcl-form2">${champ('delivery_window_start', 'Créneau : de', { src: f, type: 'time' })}${champ('delivery_window_end', 'à', { src: f, type: 'time' })}${champ('delivery_validation', 'Validation de la remise', { src: f, choix: [['', '—'], ['qr', 'QR'], ['signature', 'Signature'], ['dropoff', 'Dépôt']] })}
@@ -417,11 +488,16 @@
         <div class="pcl-pad pcl-aide">Tout part d’un coup vers TF Buddy (une clé de requête évite le double envoi si l’on clique deux fois).</div>`;
     }
     const resume = resumeAssistant();
-    return `<div class="pcl-2"><section class="card pcl-carte pcl-ass"><div class="pcl-ft"><div class="pcl-fnom">Ajouter un bureau${f.name ? ' · ' + esc(f.name) : ''}</div><div class="pcl-fmeta">Étape ${E + 1} sur 7 · ce qui est saisi se garde si l’on revient en arrière</div></div>
-      <div class="pcl-stepper">${ETAPES.map((x, i) => `<button type="button" class="${i < E ? 'fait' : i === E ? 'on' : ''}" data-act="w-aller" data-v="${i}"${i > E ? ' disabled' : ''}><i></i>${i + 1} · ${x}</button>`).join('')}</div>
-      ${corps}${w.err ? `<p class="error pcl-pad">${esc(w.err)}</p>` : ''}${w.ok ? `<p class="pcl-ok pcl-pad">${esc(w.ok)}</p>` : ''}
-      <div class="pcl-pied-ass"><button type="button" class="btn btn--ghost" data-act="${E ? 'w-retour' : 'w-fermer'}">${E ? 'Retour' : 'Annuler'}</button><span class="pcl-aide">${['La société, le nom du bureau, la TVA', 'Le responsable et son e-mail', 'Au moins un site avec une adresse, pour pouvoir livrer', 'Les départements, facultatifs', 'Les conditions du webshop', 'Les personnes, facultatives', 'Relisez, puis créez'][E]}</span>
-        <button type="button" class="btn btn--primary${w.busy ? ' is-busy' : ''}" data-act="${E === 6 ? 'w-creer' : 'w-suivant'}"${w.busy ? ' disabled' : ''}>${E === 6 ? 'Créer le bureau' : 'Suivant · ' + ETAPES[E + 1]}</button></div></section>${resume}</div>`;
+    // L'assistant dans le même tiroir large que la fiche d'un bureau (26/11/2026) ; un clic à côté ne le ferme pas (la saisie se perdrait).
+    return `<div class="pcl-tir-voile"></div>
+      <aside class="pcl-tir pcl-tir-ass${entree()}" role="dialog" aria-modal="true" aria-label="Ajouter un bureau">
+        <div class="pcl-tir-tete"><div><div class="pcl-tir-nom">Ajouter un bureau${f.name ? ' · ' + esc(f.name) : ''}</div><div class="pcl-fmeta">Étape ${E + 1} sur 7 · ce qui est saisi se garde si l’on revient en arrière</div></div>
+          <button type="button" class="btn btn--sm btn--icon" data-act="w-fermer" aria-label="Fermer">${SVG(ICO.x)}</button></div>
+        <div class="pcl-stepper">${ETAPES.map((x, i) => `<button type="button" class="${i < E ? 'fait' : i === E ? 'on' : ''}" data-act="w-aller" data-v="${i}"${i > E ? ' disabled' : ''}><i></i>${i + 1} · ${x}</button>`).join('')}</div>
+        <div class="pcl-tir-corps"><div class="pcl-ass-grille"><div class="pcl-ass-form">${corps}${w.err ? `<p class="error pcl-pad">${esc(w.err)}</p>` : ''}${w.ok ? `<p class="pcl-ok pcl-pad">${esc(w.ok)}</p>` : ''}</div>${resume}</div></div>
+        <div class="pcl-tir-pied"><button type="button" class="btn btn--ghost" data-act="${E ? 'w-retour' : 'w-fermer'}">${E ? 'Retour' : 'Annuler'}</button><span class="pcl-aide" style="flex:1;text-align:center">${['La société, le nom du bureau, la TVA', 'Le responsable et son e-mail', 'Au moins un site avec une adresse, pour pouvoir livrer', 'Les départements, facultatifs', 'Les conditions du webshop', 'Les personnes, facultatives', 'Relisez, puis créez'][E]}</span>
+          <button type="button" class="btn btn--primary${w.busy ? ' is-busy' : ''}" data-act="${E === 6 ? 'w-creer' : 'w-suivant'}"${w.busy ? ' disabled' : ''}>${E === 6 ? 'Créer le bureau' : 'Suivant · ' + ETAPES[E + 1]}</button></div>
+      </aside>`;
   }
   /** « Ce que l’on crée » : la chaîne société › bureau › site › tournée, refaite à chaque saisie (saisie()). */
   function resumeAssistant() {
@@ -446,10 +522,11 @@
     const w = st.b.w, f = w.f, num = v => v === '' || v == null ? null : Number(v);
     const office = { id_company_client: Number(f.id_company_client), name: f.name.trim(), tax_number: f.tax_number.replace(/[\s.\-]/g, '').toUpperCase(), status: 'active', segment: f.segment || null,
       payment_terms: f.payment_terms || null, credit_limit: f.credit_limit === '' ? null : f.credit_limit, billing_mode: f.billing_mode, show_prices: !!f.show_prices,
-      webshop_discount_percent: f.webshop_discount_percent === '' ? null : f.webshop_discount_percent, free_shipping_terms: f.free_shipping_terms || null,
+      webshop_discount_percent: f.webshop_discount_percent === '' ? null : f.webshop_discount_percent, free_shipping_terms: f.free_shipping_terms || null, logo_data_url: w.logo || null,
       delivery_window_start: f.delivery_window_start || null, delivery_window_end: f.delivery_window_end || null, delivery_validation: f.delivery_validation || null, delivery_days: w.jours.slice().sort() };
     const sites = w.sites.filter(s => s.address.trim()).map((s, i) => ({ name: s.name.trim() || office.name, address: s.address.trim(), postal_code: s.postal_code.trim(), city: s.city.trim(), building: s.building.trim(),
-      floor: s.floor.trim(), country: s.country, notes: s.notes, route_id: num(s.route_id), access_minutes: num(s.access_minutes), delivery_site_id: s.delivery_site_id, is_default: i === 0, active: true }));
+      floor: s.floor.trim(), country: s.country, notes: s.notes, route_id: num(s.route_id), access_minutes: num(s.access_minutes), delivery_site_id: s.delivery_site_id, is_default: i === 0, active: true,
+      ...(s.place_id ? { place_id: s.place_id, street: s.street, street_number: s.street_number, latitude: s.latitude, longitude: s.longitude } : {}) }));
     const corps = { office, contact: { name: f.contact_name.trim(), email: f.contact_email.trim(), phone: f.contact_phone.trim(), function: f.contact_function.trim(), role: 'contact' },
       sites, departments: w.deps, staff: w.staff, voucher_ids: w.vouchers, request_key: w.cle, send_summary: !!f.send_summary, send_membership: !!f.send_membership, locale: 'fr' };
     w.busy = true; w.err = null; rendre();
@@ -523,7 +600,7 @@
     if (m.type === 'b-site') {
       const o = st.b.options || {}, R = [['', 'Aucune tournée pour l’instant'], ...(o.routes || []).map(r => [r.id, r.name + (r.start_time ? ' (' + String(r.start_time).slice(0, 5) + ')' : '')])];
       return fenetre('Ajouter un site de livraison', `<div class="pcl-form2">${champ('name', 'Nom du site', { aide: 'Accueil, lunchroom, salle 2…' })}${champ('access_minutes', 'Temps d’accès sur place (min)', { type: 'number' })}
-        ${champ('address', 'Adresse', { requis: true, plein: true, aide: 'Rue et numéro' })}${champ('postal_code', 'Code postal')}${champ('city', 'Ville')}${champ('building', 'Bâtiment')}${champ('floor', 'Étage')}
+        ${champ('address', 'Adresse', { requis: true, plein: true, aide: 'Commencez à taper : TF Buddy propose les adresses', ou: 'm' })}${geoBloc('m', m.f)}${champ('postal_code', 'Code postal', { ou: 'm' })}${champ('city', 'Ville', { ou: 'm', liste: 'pcl-villes-m' })}${villes('m')}${champ('building', 'Bâtiment')}${champ('floor', 'Étage')}
         ${champ('route_id', 'Livré par', { choix: R, plein: true })}</div><p class="pcl-aide">Le premier site devient le site par défaut du bureau ; la tournée choisie le livre.</p>`, pied('Ajouter le site', 'b-site-ok'));
     }
     if (m.type === 'b-livraison') {
@@ -617,7 +694,7 @@
       case 'e-profil-ok': ecrire({ action: 'profil', id: m.id, champs: m.f }, () => lireEntreprises(true).then(() => lireFiche(E, m.id))); break;
       // Bureaux
       case 'b-statut': B.statut = v; rendre(); break;
-      case 'b-sel': B.sel = id; B.pdf = null; B.hautTiroir = 0; rendre(); break;
+      case 'b-sel': B.entre = !B.sel; B.sel = id; B.pdf = null; B.hautTiroir = 0; rendre(); break;
       case 'b-fermer': B.sel = null; B.pdf = null; rendre(); break;
       case 'b-pas': { const q = B.q.trim().toLowerCase(), L = B.d.data.bureaux.filter(b => (!B.statut || b.statut === B.statut) && (!q || [b.nom, b.societe, b.tva, b.ville, b.contact].join(' ').toLowerCase().includes(q)));
         const k = L.findIndex(x => x.id === B.sel) + (+v); if (L[k]) { B.sel = L[k].id; B.pdf = null; B.hautTiroir = 0; rendre(); } break; }
@@ -626,7 +703,8 @@
       case 'b-site-ok': { const f = m.f; if (!String(f.address || '').trim()) { m.err = 'L’adresse est attendue.'; rendre(); break; } m.busy = true; m.err = null; rendre();
         const b = B.d.data.bureaux.find(x => x.id === m.id) || {};
         ecrireBureau('POST', '/' + m.id + '/sites', { name: String(f.name || '').trim() || b.nom, address: String(f.address).trim(), postal_code: String(f.postal_code || '').trim(), city: String(f.city || '').trim(), building: String(f.building || '').trim(), floor: String(f.floor || '').trim(),
-          country: 'BE', access_minutes: f.access_minutes === '' ? null : Number(f.access_minutes), route_id: f.route_id ? Number(f.route_id) : null, is_default: !b.sites, active: true },
+          country: f.country || 'BE', access_minutes: f.access_minutes === '' ? null : Number(f.access_minutes), route_id: f.route_id ? Number(f.route_id) : null, is_default: !b.sites, active: true,
+          ...(f.place_id ? { place_id: f.place_id, street: f.street, street_number: f.street_number, latitude: f.latitude, longitude: f.longitude } : {}) },
           () => { st.mo = null; B.det = {}; B.pdf = { texte: 'Site ajouté.' }; lireBureaux(); }); break; }
       case 'b-livraison': { const s = (detDe('/delivery-settings') || {}).data || {}; lireOptions().then(() => ouvrir('b-livraison', { route_id: s.route && s.route.id || s.route_id || '', delivery_window_start: String(s.delivery_window_start || '').slice(0, 5), delivery_window_end: String(s.delivery_window_end || '').slice(0, 5),
         cutoff_time: String(s.cutoff_time || '').slice(0, 5), cutoff_days_before: String(s.cutoff_days_before || 0), drop_minutes: String(s.drop_minutes || 5) }, { id: B.sel })); break; }
@@ -639,11 +717,13 @@
       case 'b-lien-retirer': if (window.confirm('Retirer le lien d’invitation ? Les personnes déjà inscrites le restent.')) { ecrireBureau('DELETE', '/' + B.sel + '/invite', null, () => { delete B.det[B.sel + '/invite']; rendre(); }); } break;
       case 'b-pdf': telechargerPdf(v); break;
       // L'assistant
-      case 'w-ouvrir': B.w = nouvelAssistant({}); rendre(); lireOptions().then(o => { if (B.w) { B.w.opt = o; rendre(); } }); break;
-      case 'w-fermer': B.w = null; rendre(); break;
-      case 'w-retour': B.w.etape--; B.w.err = null; rendre(); window.scrollTo(0, 0); break;
-      case 'w-aller': if (+v <= B.w.etape) { B.w.etape = +v; B.w.err = null; rendre(); } break;
-      case 'w-suivant': { const e = assistantValide(B.w); B.w.err = e; if (!e) { B.w.etape++; window.scrollTo(0, 0); } rendre(); break; }
+      case 'w-ouvrir': B.w = nouvelAssistant({}); B.entre = true; rendre(); lireOptions().then(o => { if (B.w) { B.w.opt = o; rendre(); } }); break;
+      case 'w-fermer': { const w = B.w, f = w.f; if ((f.name || f.contact_name || w.sites.some(x => x.address)) && !window.confirm('Abandonner ce bureau ? Ce qui est saisi sera perdu.')) { break; } B.w = null; st.geo = {}; rendre(); break; }
+      case 'w-retour': B.w.etape--; B.w.err = null; B.hautTiroir = 0; rendre(); break;
+      case 'w-aller': if (+v <= B.w.etape) { B.w.etape = +v; B.w.err = null; B.hautTiroir = 0; rendre(); } break;
+      case 'w-suivant': { const e = assistantValide(B.w); B.w.err = e; if (!e) { B.w.etape++; B.hautTiroir = 0; } rendre(); break; }
+      case 'w-logo-retirer': B.w.logo = null; B.w.logoErr = null; rendre(); break;
+      case 'geo-place': geoChoisir(a.dataset.cle, a.dataset.id); break;
       case 'w-creer': creerBureau(); break;
       case 'w-jour': { const n = +v, J = B.w.jours; B.w.jours = J.includes(n) ? J.filter(x => x !== n) : J.concat(n).sort(); rendre(); break; }
       case 'w-site-plus': B.w.sites.push({ name: '', address: '', postal_code: '', city: '', building: '', floor: '', country: 'BE', route_id: '', access_minutes: '', notes: '', delivery_site_id: null }); rendre(); break;
@@ -671,16 +751,18 @@
     if (t.id === 'pcl-pq') { st.p.q = t.value; clearTimeout(tRech); tRech = setTimeout(() => lireParticuliers(), 300); return; }
     if (t.id === 'pcl-eq') { st.e.q = t.value; rendre(); return; }
     if (t.id === 'pcl-bq') { st.b.q = t.value; rendre(); return; }
+    if (t.dataset && t.dataset.logo && ev.type === 'change') { logoLire(t.files && t.files[0]); return; }
     if (!t.dataset || !t.dataset.f) { return; }
     const val = t.type === 'checkbox' ? t.checked : t.value;
     const ou = t.dataset.ou;
+    if (ou && ev.type === 'input') { if (t.dataset.f === 'address') { geoChercher(ou, val); } else if (t.dataset.f === 'postal_code') { geoCodePostal(ou, val); } }
     if (ou && ou[0] === 's' && st.b.w) { const s = st.b.w.sites[+ou.slice(1)]; if (s) { s[t.dataset.f] = val; } majResume(); return; }
     if (st.onglet === 'bur' && st.b.w && !st.mo) { st.b.w.f[t.dataset.f] = val; majResume(); return; }
     if (st.mo) { st.mo.f[t.dataset.f] = val; }
   }
   document.addEventListener('keydown', ev => {
     if (ev.key !== 'Escape' || !st.el || !document.body.contains(st.el)) { return; }
-    if (st.mo) { st.mo = null; rendre(); } else if (st.onglet === 'bur' && st.b.sel) { st.b.sel = null; st.b.pdf = null; rendre(); }
+    if (st.mo) { st.mo = null; rendre(); } else if (st.onglet === 'bur' && st.b.sel && !st.b.w) { st.b.sel = null; st.b.pdf = null; rendre(); }
   });
 
   window.DashClients = {
