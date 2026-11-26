@@ -26,6 +26,263 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "ops-journee-direct",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La journée en direct",
+      "resume": "La journée à l’heure qu’il est : ta place dans le réseau, la jauge du comptoir face à l’objectif et à jeudi dernier, la projection, les canaux, le B2B, le duel chiffre par chiffre et le P&L court. La page se relit toute seule toutes les deux minutes.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-01-direct.mp4",
+      "debut": 0,
+      "fin": 90.22,
+      "affiche": "ops-journee-direct.jpg",
+      "duree": "1 min 30",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-journee-passee",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Une journée passée",
+      "resume": "La même page sur un jour clos : choisi dans la frise, comparé à toute la journée de la semaine d’avant, la vitrine « ont manqué », ‹ › d’une semaine à l’autre et « Aujourd’hui » pour revenir.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-02-passee.mp4",
+      "debut": 0,
+      "fin": 61.96,
+      "affiche": "ops-journee-passee.jpg",
+      "duree": "1 min 02",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-heure-par-heure",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Heure par heure : CA, clients, panier",
+      "resume": "La carte « Heure par heure » : le cumul du chiffre, puis celui des clients, puis le panier moyen de chaque heure, face au même jour la semaine d’avant.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-03-heure-mesure.mp4",
+      "debut": 0,
+      "fin": 49.04,
+      "affiche": "ops-heure-par-heure.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-heure-comptoir-pro",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Heure par heure : comptoir et pro",
+      "resume": "La bascule de la carte « Heure par heure » : le comptoir et les clients pro séparés, chacun face à sa part de l’objectif, ou combinés, face à l’objectif du jour.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-04-heure-pro.mp4",
+      "debut": 0,
+      "fin": 50.96,
+      "affiche": "ops-heure-comptoir-pro.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-ventes-categories",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Ventes par catégorie",
+      "resume": "La vente du jour en quatre vues : la liste groupe › catégorie › produit avec sa marge, le treemap, les promotions lues dans les tickets et les portions.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-05-categories.mp4",
+      "debut": 0,
+      "fin": 85.22,
+      "affiche": "ops-ventes-categories.jpg",
+      "duree": "1 min 25",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/stats_ventes.php",
+        "marketing/src/promos_ventes.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-vitrine",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La vitrine",
+      "resume": "Ce qui va manquer d’ici la fermeture, par durée de vie : heure par heure pour le frais, le stock face à trois jours de vente pour le long life ; les filtres ; et, en bas de page, l’inventaire.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-06-vitrine.mp4",
+      "debut": 0,
+      "fin": 88.29,
+      "affiche": "ops-vitrine.jpg",
+      "duree": "1 min 28",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-controles-photo",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Les contrôles en photo",
+      "resume": "Le carrousel des checklists du jour et leurs photos, filtré selon l’état de la photo : écarts, à contrôler, conformes, non rendues.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-07-controles.mp4",
+      "debut": 0,
+      "fin": 66.28,
+      "affiche": "ops-controles-photo.jpg",
+      "duree": "1 min 06",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-equipe-du-jour",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "L’équipe du jour",
+      "resume": "Qui est là aujourd’hui : le planning sur la journée, puis, pour chaque personne, ses heures faites, ses ventes, ses ventes par heure de vente et son coût ; son heure par heure en un clic.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-08-equipe.mp4",
+      "debut": 0,
+      "fin": 62.85,
+      "affiche": "ops-equipe-du-jour.jpg",
+      "duree": "1 min 03",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-fiche-stock",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fiche de stock d’un produit",
+      "resume": "Un clic sur un produit de La vitrine : faut-il recuire, et combien ? Le calcul, la courbe de la vitrine et les cuissons du jour ; pour un long life, de quoi tenir trois jours.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-09-fiche-stock.mp4",
+      "debut": 0,
+      "fin": 56.73,
+      "affiche": "ops-fiche-stock.jpg",
+      "duree": "57 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-fenetre-categorie",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fenêtre d’une catégorie",
+      "resume": "Le « i » à côté d’un groupe ou d’une catégorie : la tendance des 12 dernières semaines face au réseau, puis la journée heure par heure face aux 6 derniers mêmes jours, en euros ou en pièces.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-10-categorie.mp4",
+      "debut": 0,
+      "fin": 64.1,
+      "affiche": "ops-fenetre-categorie.jpg",
+      "duree": "1 min 04",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/analyse_produits.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-photo-controle",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Une photo de contrôle en grand",
+      "resume": "Un clic sur une photo des contrôles : la photo en plein écran avec ses repères, sa note et le constat ; ‹ › ou les flèches du clavier pour feuilleter, Échap pour fermer.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-11-photo.mp4",
+      "debut": 0,
+      "fin": 54.47,
+      "affiche": "ops-photo-controle.jpg",
+      "duree": "54 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "equipe-horaires",
       "genre": "nouveau",
       "titre": "Mon équipe : faire ses horaires",

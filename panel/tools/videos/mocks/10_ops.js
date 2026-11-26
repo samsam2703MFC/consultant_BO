@@ -4,7 +4,8 @@ const D = require('./lib/demo');
 module.exports = function (m, p, q) {
   if (m !== 'GET') { return undefined; }
   if (p === '/exploitation/jour') { return J.exploitationJour(q.get('date') || D.AUJ); }
-  if (p === '/ventes/stats' && q.get('vue') === 'jour') { return J.ventesStatsJour(q.get('date') || D.AUJ); }
+  // Les onglets Promotions et Portions des ventes par catégorie : 10_ops_ventes.js les remplit.
+  if (p === '/ventes/stats' && q.get('vue') === 'jour') { return require('./10_ops_ventes').enrichir(J.ventesStatsJour(q.get('date') || D.AUJ)); }
   if (p === '/production/flux/suivi') { return J.suiviProduction(q.get('date') || D.AUJ); }
   if (p === '/exploitation/canaux') { return J.canaux(q.get('date') || D.AUJ); }
   if (p === '/analyse/produits/magasin') { return require('./lib/fiche').fiche(q.get('pid'), +(q.get('mois') || 1)); }
