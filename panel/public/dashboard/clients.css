@@ -237,3 +237,19 @@
 .pcl-logo img { max-height: 54px; max-width: 160px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: #fff; }
 .pcl-logo input[type="file"] { font: 12px 'Gotham', system-ui, sans-serif; }
 @media (max-width: 900px) { .pcl-ass-grille { grid-template-columns: minmax(0, 1fr); } }
+
+/* Les bureaux en développement (26/11/2026) : le bloc en tête de Bureaux, le tiroir d'une demande, le questionnaire. */
+.pcl-dev { margin: 0 0 14px; }
+.pcl-dev-tete { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.pcl-dev-tete > div:first-child { max-width: 720px; }
+.pcl-dev-tete .btn svg { width: 14px; height: 14px; }
+.pcl-dev-titre { font-size: 16px; margin-bottom: 3px; }
+.pcl-vert { font-weight: 400; color: var(--green); }
+.pcl-bon { display: inline-block; padding: 3px 8px; border: 1px dashed var(--accent); border-radius: 6px; color: var(--accent); font-size: 12px; letter-spacing: 0.06em; }
+.pcl-dv-statut { display: grid; gap: 6px; padding-top: 4px; }
+.pcl-dv-statut label { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink); }
+.pcl-dev-valider { padding: 14px 16px; border-radius: 12px; background: #FFFCF8; border: 1px solid var(--line); }
+.pcl-q-lien { display: flex; gap: 16px; align-items: flex-start; margin: 0 0 10px; }
+.pcl-q-qr { flex: none; width: 128px; height: 128px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.pcl-q-qr svg { width: 100%; height: 100%; display: block; }
+.pcl-dv-statut input[type="radio"] { width: auto; flex: none; margin: 0; padding: 0; }

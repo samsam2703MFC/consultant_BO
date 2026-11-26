@@ -33,6 +33,8 @@ if (!str_contains($chemin, '/api/cockpit')) {
         $chemin === '/banc/' || $chemin === '/banc' => __DIR__ . '/index.html',
         str_starts_with($chemin, '/banc/') => __DIR__ . '/' . basename($chemin),
         str_starts_with($chemin, '/dashboard/') => RACINE . '/panel/public/dashboard/' . basename($chemin),
+        $chemin === '/bureau/' || $chemin === '/bureau' => RACINE . '/panel/public/bureau/index.html',
+        str_starts_with($chemin, '/bureau/') => RACINE . '/panel/public/bureau/' . basename($chemin),
         str_starts_with($chemin, '/assets/') => RACINE . '/shared/public' . $chemin,
         default => '',
     };
@@ -42,7 +44,16 @@ if (!str_contains($chemin, '/api/cockpit')) {
     readfile($f); return true;
 }
 
-final class Db { public static function exec(string $s, array $a = []): int { return 1; } public static function row(string $s, array $a = []): ?array { return null; } public static function rows(string $s, array $a = []): array { return []; } }
+// Une vraie base si COCKPIT_DB_NAME est donnée (les bureaux en développement gardent leurs demandes), sinon une doublure.
+if (getenv('COCKPIT_DB_NAME')) { require RACINE . '/shared/src/Db.php'; }
+else { eval('final class Db { public static function exec(string $s, array $a = []): int { return 1; } public static function row(string $s, array $a = []): ?array { return null; } public static function rows(string $s, array $a = []): array { return []; } public static function pdo() { return new class { public function lastInsertId() { return "1"; } }; } }'); }
+function accesNomMagasin(string $s): string { return 'Gosselies'; }
+/* Les bons (module Promotions, marketing/src/promos_*.php) : une promotion du magasin avec un bon à codes personnels. */
+function pmMiennes(int $shop): array { return [[['panelId' => 321, 'nom' => '−20 % sur le premier lunch', 'description' => 'une fois, sur le webshop ou en caisse', 'statut' => 'en_caisse', 'bon' => ['campagne' => 900]]], null]; }
+function pmMienne(int $shop, int $id): ?array { return $id === 321 ? pmMiennes($shop)[0][0] : null; }
+function pbLire(int $camp, array $c = []): ?array { return ['campagne' => $camp, 'cible' => 'clients', 'code' => null]; }
+function pbGenerer(int $n = 8, string $p = ''): string { $c = ''; for ($i = 0; $i < $n; $i++) { $c .= 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[random_int(0, 31)]; } return $p . $c; }
+final class ErpApi { public static function disponible(): bool { return true; } public static function ecrire(string $m, string $p, ?array $b = null): array { return ['code' => 200, 'corps' => ['id' => 5], 'erreur' => null]; } public static function sondeGet(string $p): array { return ['code' => 404, 'corps' => null, 'erreur' => 'banc']; } }
 function setting(string $k, mixed $d = null): mixed { return $d; }
 function body(): array { static $b = null; if ($b === null) { $b = json_decode(file_get_contents('php://input') ?: '[]', true) ?: []; } return $b; }
 function journalAdd(string $a, string $k, ?string $p, string $m): void { error_log('journal : ' . $m); }
@@ -118,7 +129,7 @@ function bancRep(string $m, string $p, ?array $b): array
     if (PanelApi::$jetonImpose !== null && !$magasin) { return [401, ['status' => 401, 'error' => 'PANEL_SESSION_EXPIRED']]; }
     if (str_starts_with($chem, '/panel/') && !bancPanel() && !$magasin) { return [404, ['status' => 'error', 'description' => 'ORDER_NOT_FOUND', 'errors' => []]]; }
     if ($m === 'GET' && $chem === '/shops/3/clients') { $t = ($Q['type'] ?? '') === 'b2b' ? 'b2b' : 'b2c'; return [200, array_values($D[$t])]; }
-    if ($m === 'POST' && $chem === '/shops/3/clients') { return [201, ['success' => true, 'client_created' => true, 'shop_assignment_created' => true, 'data' => ['id' => 1999]]]; }
+    if ($m === 'POST' && $chem === '/shops/3/clients') { return [201, ['success' => true, 'client_created' => true, 'shop_assignment_created' => true, 'data' => ['id' => isset($b['vat_number']) ? 2999 : 1999]]]; }
     if (preg_match('#^/shops/3/clients/(\d+)$#', $chem, $mm)) {
         $c = $D['b2b'][(int) $mm[1]] ?? $D['b2c'][(int) $mm[1]] ?? null;
         if (!$c) { return [404, ['description' => 'CLIENT_NOT_FOUND']]; }
@@ -190,11 +201,13 @@ final class PanelApi
 }
 require RACINE . '/panel/src/tfb_magasin.php';
 require RACINE . '/panel/src/clients_panel.php';
+require RACINE . '/panel/src/bureaux_dev.php';
 header('Content-Type: application/json; charset=utf-8');
 $path = preg_replace('#^.*/api/cockpit#', '', $chemin);
 parse_str($u['query'] ?? '', $_GET);
 if ($path === '/dashboard/clients/bureaux/pdf') { ep_clients_bureaux_pdf(); }   // comme shared/public/api/index.php : sort le PDF, puis exit
-try { $r = pclRoute($_SERVER['REQUEST_METHOD'], $path) ?? tfbmRoute($_SERVER['REQUEST_METHOD'], $path); }
+if (preg_match('#^/bureau-questionnaire/([a-f0-9]{32})$#', $path, $mq)) { echo json_encode(bdvPublic($_SERVER['REQUEST_METHOD'], $mq[1]), JSON_UNESCAPED_UNICODE); return true; }
+try { $r = pclRoute($_SERVER['REQUEST_METHOD'], $path) ?? tfbmRoute($_SERVER['REQUEST_METHOD'], $path) ?? bdvRoute($_SERVER['REQUEST_METHOD'], $path); }
 catch (Throwable $e) { http_response_code(500); $r = ['error' => get_class($e) . ' : ' . $e->getMessage() . ' @' . $e->getLine()]; }
 echo json_encode($r ?? ['error' => 'route inconnue'], JSON_UNESCAPED_UNICODE);
 return true;
