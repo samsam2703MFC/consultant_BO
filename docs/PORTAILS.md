@@ -112,7 +112,7 @@ pour vivre avec l'ERP), le site public `landing` (`lp_`, **à décider**), et le
 - **Entre portails** : `/api/v1/integration/{portail}/{ressource}`, jeton de service (`erp_jeton_service`
   d'`erp_cles`, en-tête `X-Service-Token`). En place (7 nov. 2026) : le Cockpit accepte ce jeton sur ses
   lectures `/stores` (avec `franchise` et `cp`), `/stores/perf`, `/exploitation/pro`, `/marketing/avis`,
-  `/formation/ref`… et publie son adresse https dans `pil_api_url` ; le Recrutement sert
+  `/formation/ref`…, `/fidelite/programme` (25/11/2026, lu par le Recrutement pour l'annexe 2 du Guide pré-ouverture) et publie son adresse https dans `pil_api_url` ; le Recrutement sert
   `/crm/api/v1/integration/recrutement/scouting-reseau` (positions et données d'étude des magasins, lues
   par le Cockpit) ; Social sert `…/social/integration/formulaires` ; le dashboard magasin du Cockpit relaie « Mon catalogue » au Marketing
   (`…/integration/marketing/shops/{shopId}/catalogues`, adresse `mar_api_url` d'`erp_cles`, 14 nov. 2026). Exemples :

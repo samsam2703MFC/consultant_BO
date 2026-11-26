@@ -1,0 +1,1386 @@
+{
+ "id": "art-pil-01",
+ "version": "1.5",
+ "enVigueur": false,
+ "contenu": {
+  "titre": {
+   "fr": "Comprendre le dashboard magasin",
+   "nl": "Het winkeldashboard begrijpen"
+  },
+  "objectif": {
+   "fr": "Savoir lire chaque onglet du dashboard magasin : d’où vient chaque chiffre, à quoi il se compare, ce que disent les couleurs, et où regarder pour répondre à une question sur le magasin.",
+   "nl": "Elk tabblad van het winkeldashboard kunnen lezen: waar elk cijfer vandaan komt, waarmee het vergeleken wordt, wat de kleuren zeggen, en waar je kijkt om een vraag over de winkel te beantwoorden."
+  },
+  "pour": {
+   "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire en pré-ouverture, dans la formation FO-05, avant la première journée.",
+   "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen vóór de opening, in opleiding FO-05, vóór de eerste dag."
+  },
+  "duree": "1 h 30 de lecture, puis 30 min sur le dashboard de son magasin",
+  "sections": [
+   {
+    "titre": {
+     "fr": "Avant de commencer",
+     "nl": "Voor je begint"
+    },
+    "etapes": [
+     {
+      "numero": "1",
+      "titre": {
+       "fr": "Ouvrir le dashboard",
+       "nl": "Het dashboard openen"
+      },
+      "texte": {
+       "fr": "Adresse : …/consulant_bo/dashboard/?shop= suivi du numéro du magasin.\nAujourd’hui, l’accès est ouvert : la page s’ouvre sans connexion.\nL’onglet qui s’ouvre d’office : « Opérationnel », la journée en cours.\nL’adresse garde l’onglet et la date (?vue=…&date=…) : un lien copié rouvre le même écran.\nLa page se relit seule sur la journée d’aujourd’hui : Opérationnel toutes les deux minutes, Tâches et Temps morts toutes les dix minutes.\n« Relire » relit tout de suite ; la vignette dit « lu à … », l’heure de l’ouverture ou du dernier « Relire ».\nUn chiffre faux se corrige à la source (caisse, panel, cockpit), puis on relit.",
+       "nl": "Adres: …/consulant_bo/dashboard/?shop= gevolgd door het nummer van de winkel.\nVandaag is de toegang open: de pagina opent zonder aanmelding.\nHet tabblad dat standaard opent: « Opérationnel » (Operationeel), de lopende dag.\nHet adres onthoudt het tabblad en de datum (?vue=…&date=…): een gekopieerde link opent hetzelfde scherm opnieuw.\nDe pagina herleest zichzelf op de dag van vandaag: Operationeel om de twee minuten, Taken en Dode momenten om de tien minuten.\n« Relire » (herlezen) leest meteen alles opnieuw; de tegel zegt « lu à … » (gelezen om …), het uur van het openen of van de laatste « Relire ».\nEen fout cijfer corrigeer je aan de bron (kassa, panel, cockpit), daarna herlees je."
+      },
+      "critique": false,
+      "photo": "u/20261116-cc1a7510a956.jpg",
+      "video": null
+     },
+     {
+      "numero": "2",
+      "titre": {
+       "fr": "Le rail à gauche",
+       "nl": "De rail links"
+      },
+      "texte": {
+       "fr": "Au bureau (1 024 px de large et plus), les onglets sont rangés dans un rail à gauche.\nEn tête, « Boîte mail », avec le nombre d’e-mails non lus quand la boîte est ouverte (relu toutes les deux minutes).\n« La journée » : Opérationnel, Tâches, Temps morts.\n« Les chiffres » : Semaine, Mois, Année, Trésorerie.\n« Vendre » : Analyse, Produits, Promotions, Offres, Primes, Concurrence.\n« Marketing » : Mon marketing, Réseaux sociaux, Fidélité, Mon catalogue.\nL’onglet ouvert est surligné en bordeaux. Plus de lien vers le cockpit dans le rail : tout se fait dans le dashboard.",
+       "nl": "Op kantoor (1 024 px breed en meer) staan de tabbladen in een rail links.\nBovenaan « Boîte mail » (mailbox), met het aantal ongelezen e-mails als de mailbox open is (om de twee minuten herlezen).\n« La journée » (de dag): Opérationnel (Operationeel), Tâches (Taken), Temps morts (Dode momenten).\n« Les chiffres » (de cijfers): Semaine (Week), Mois (Maand), Année (Jaar), Trésorerie (Thesaurie).\n« Vendre » (verkopen): Analyse, Produits (Producten), Promotions (Promoties), Offres (Aanbiedingen), Primes (Premies), Concurrence (Concurrentie).\n« Marketing »: Mon marketing (Mijn marketing), Réseaux sociaux (Sociale media), Fidélité (Klantenbinding), Mon catalogue (Mijn catalogus).\nHet open tabblad is in bordeaux gemarkeerd. Geen link meer naar de cockpit in de rail: alles gebeurt in het dashboard."
+      },
+      "critique": false,
+      "photo": "u/20261116-629edefed6ab.jpg",
+      "video": null
+     },
+     {
+      "numero": "3",
+      "titre": {
+       "fr": "L’objectif du jour et la note Google",
+       "nl": "De doelstelling van de dag en de Google-score"
+      },
+      "texte": {
+       "fr": "En haut du rail, deux cartes, les mêmes sur tous les onglets.\n« Objectif du jour » : le chiffre d’affaires du jour en % de l’objectif du jour (le budget du mois réparti sur les jours) ; « en direct » aujourd’hui.\nLa barre est verte à 100 % et plus, dorée en dessous ; le trait noir marque la projection de fin de journée, dès que 30 % de la journée est écoulée.\nUn toucher sur la carte ouvre Opérationnel.\n« Note Google » : la note de la fiche Google du magasin et son nombre d’avis, sur une échelle de 4,0 à 5,0.\nLe trait marque la « cible » du réseau, posée au cockpit (Paramètres › Réputation digitale, « Note Google visée ») : barre verte à la cible ou au-dessus, dorée en dessous.",
+       "nl": "Bovenaan de rail twee kaarten, dezelfde op alle tabbladen.\n« Objectif du jour » (doelstelling van de dag): de omzet van de dag in % van de doelstelling van de dag (het maandbudget verdeeld over de dagen); « en direct » (live) vandaag.\nDe balk is groen vanaf 100 %, goud daaronder; het zwarte streepje toont de projectie voor het einde van de dag, zodra 30 % van de dag voorbij is.\nEen tik op de kaart opent Operationeel.\n« Note Google » (Google-score): de score van de Google-fiche van de winkel en het aantal reviews, op een schaal van 4,0 tot 5,0.\nHet streepje toont de « cible » (het doel) van het netwerk, ingesteld in de cockpit (Paramètres › Réputation digitale, « Note Google visée »): groene balk op of boven het doel, goud eronder."
+      },
+      "critique": false,
+      "photo": "u/20261116-187189da1a41.jpg",
+      "video": null
+     },
+     {
+      "numero": "4",
+      "titre": {
+       "fr": "Un chiffre ne se lit jamais seul",
+       "nl": "Een cijfer lees je nooit alleen"
+      },
+      "texte": {
+       "fr": "Chaque chiffre est posé à côté de sa référence : l’objectif, le même jour la semaine dernière, la médiane du réseau, l’an dernier ou un seuil.\nChaque carte porte sa légende ; les couleurs disent la même chose partout.\nVert : en ordre ou au-dessus de la référence. Orange : en dessous, à surveiller. Rouge ou bordeaux : franchement en retard, ou une perte.\nDoré : au-delà de l’objectif ou un record. L’orange et le doré ne se confondent pas (par exemple la rentabilité du Mois : « rouge < 0 % · orange 0–5 · verts 5–25 · doré > 25 % »).\nHachuré : « la journée en cours, pas encore jugée ». Gris : pas de chiffre ou pas de référence.\nLe bordeaux sert aussi à montrer « toi » face au réseau, et l’onglet ouvert.",
+       "nl": "Elk cijfer staat naast zijn referentie: de doelstelling, dezelfde dag vorige week, de mediaan van het netwerk, vorig jaar of een drempel.\nElke kaart heeft haar legende; de kleuren zeggen overal hetzelfde.\nGroen: in orde of boven de referentie. Oranje: eronder, in het oog houden. Rood of bordeaux: duidelijk achter, of een verlies.\nGoud: boven de doelstelling of een record. Oranje en goud zijn niet hetzelfde (bijvoorbeeld de rendabiliteit van Maand: « rouge < 0 % · orange 0–5 · verts 5–25 · doré > 25 % »).\nGearceerd: « la journée en cours, pas encore jugée » (de lopende dag, nog niet beoordeeld). Grijs: geen cijfer of geen referentie.\nBordeaux toont ook « jou » tegenover het netwerk, en het open tabblad."
+      },
+      "critique": true,
+      "photo": "u/20261116-969e889dbb94.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "La barre du haut",
+     "nl": "De bovenste balk"
+    },
+    "etapes": [
+     {
+      "numero": "5",
+      "titre": {
+       "fr": "Les vignettes",
+       "nl": "De tegels"
+      },
+      "texte": {
+       "fr": "Au-dessus de chaque onglet : le magasin et le nom de l’onglet (sauf les onglets qui ont leur propre titre), la date et ses flèches quand l’onglet en a.\nPuis une rangée de six vignettes de même taille : « Relire », « Valeur du magasin », « Coach », « Demande au bureau », « Revue du soir », « API ».\n« Revue du soir » dit l’heure prévue (« à 18 h », réglée au cockpit, Cadre des tâches › Revue du soir), puis « à faire » une fois l’heure passée, « en cours », « faite » ; un jour passé sans revue : « pas faite ».\n« à faire » et « en cours » s’écrivent en bordeaux ; un toucher ouvre la revue.\n« API » : le nombre d’appels de la page à l’API du cockpit ; un toucher ouvre « Les appels à l’API ».\n« Cette session » : chaque appel, son statut, sa durée, la fonction qui le sert ; « Index » : tous les chemins du dashboard, « magasin » ou « siège seulement ». Le journal vit dans l’onglet du navigateur et s’oublie avec lui.",
+       "nl": "Boven elk tabblad: de winkel en de naam van het tabblad (behalve de tabbladen met een eigen titel), de datum en de pijltjes als het tabblad die heeft.\nDaarna een rij van zes tegels van dezelfde grootte: « Relire » (herlezen), « Valeur du magasin » (waarde van de winkel), « Coach », « Demande au bureau » (vraag aan het kantoor), « Revue du soir » (avondronde), « API ».\n« Revue du soir » toont het geplande uur (« à 18 h », ingesteld in de cockpit, Cadre des tâches › Revue du soir), daarna « à faire » (te doen) zodra het uur voorbij is, « en cours » (bezig), « faite » (gedaan); een voorbije dag zonder ronde: « pas faite » (niet gedaan).\n« à faire » en « en cours » staan in bordeaux; een tik opent de ronde.\n« API »: het aantal oproepen van de pagina naar de API van de cockpit; een tik opent « Les appels à l’API » (de oproepen naar de API).\n« Cette session » (deze sessie): elke oproep, zijn status, zijn duur, de functie die hem bedient; « Index »: alle paden van het dashboard, « magasin » (winkel) of « siège seulement » (enkel hoofdkantoor). Het logboek leeft in het tabblad van de browser en verdwijnt ermee."
+      },
+      "critique": false,
+      "photo": "u/20261116-cc1a7510a956.jpg",
+      "video": null
+     },
+     {
+      "numero": "6",
+      "titre": {
+       "fr": "La valeur du magasin",
+       "nl": "De waarde van de winkel"
+      },
+      "texte": {
+       "fr": "« Valeur du magasin » : ce que vaut le magasin à son rythme actuel. La règle : « (marge brute réelle − charges normatives du réseau) × 3,5 ».\nLe chiffre d’affaires des 730 derniers jours (ou des jours d’activité depuis l’ouverture), ramené à 365 jours ; le mois en cours est écarté.\n« Marge brute réelle » : ce chiffre d’affaires moins son coût matière, au food cost que le cockpit mesure mois par mois ; un mois sans mesure prend la moyenne mesurée du magasin, à défaut la norme du réseau.\n« Charges normatives du réseau » : les % du modèle de Budget › Paramètres au cockpit, hors matière. Le personnel y entre par la ligne « Rémunération » du compte de résultat du CRM (20 % du CA) ; sans ligne de personnel, 20 % sont ajoutés.\n« = résultat normatif » × 3,5 = la valeur.\nUn toucher ouvre le détail : le calcul ligne par ligne, puis la courbe des derniers trimestres (six au plus), à la même règle.\nL’ancienne règle (le chiffre d’affaires ÷ 6) n’est plus utilisée.",
+       "nl": "« Valeur du magasin » (waarde van de winkel): wat de winkel waard is aan zijn huidige ritme. De regel: « (marge brute réelle − charges normatives du réseau) × 3,5 » ((werkelijke brutomarge − normatieve kosten van het netwerk) × 3,5).\nDe omzet van de laatste 730 dagen (of van de activiteitsdagen sinds de opening), herleid tot 365 dagen; de lopende maand telt niet mee.\n« Marge brute réelle » (werkelijke brutomarge): die omzet min zijn grondstofkost, aan de food cost die de cockpit maand per maand meet; een maand zonder meting neemt het gemeten gemiddelde van de winkel, anders de norm van het netwerk.\n« Charges normatives du réseau » (normatieve kosten van het netwerk): de % van het model van Budget › Paramètres in de cockpit, zonder grondstoffen. Het personeel komt erin via de lijn « Rémunération » (verloning) van de resultatenrekening van de CRM (20 % van de omzet); zonder personeelslijn wordt 20 % toegevoegd.\n« = résultat normatif » (normatief resultaat) × 3,5 = de waarde.\nEen tik opent het detail: de berekening lijn per lijn, daarna de curve van de laatste kwartalen (hoogstens zes), volgens dezelfde regel.\nDe oude regel (de omzet ÷ 6) wordt niet meer gebruikt."
+      },
+      "critique": true,
+      "photo": "u/20261116-889940e04130.jpg",
+      "video": null
+     },
+     {
+      "numero": "7",
+      "titre": {
+       "fr": "Le Coach, l’assistant du magasin",
+       "nl": "De Coach, de assistent van de winkel"
+      },
+      "texte": {
+       "fr": "« Coach » ouvre l’« Assistant du magasin » : il lit les chiffres du magasin dans l’ERP au moment de la question, « rien d’autre ».\n« Votre assistant » : Mr. Pierre (« bienveillant, motivateur »), Le Coach (« à la dure : ici, on joue pour gagner »), Coach Vente (« expert en vente : panier, produits, heures fortes »). Le choix ne change que le ton ; ce navigateur le garde.\n« Bilan » : une question libre ou quatre questions toutes prêtes ; la réponse en résumé, quelques chiffres et des priorités, chacune avec un bouton vers l’écran du dashboard où agir.\nSous la réponse, « Creuser : » propose des questions de suite ; « Continuer en conversation › » ouvre « Conversation ».\n« Conversation » : les « Questions toutes prêtes » à gauche (Ma semaine, Mes ventes, Mon équipe, Mes clients, Ma production, Le réseau), le fil à droite. Le fil vit le temps de la page.\n« Rédigé par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir. »",
+       "nl": "« Coach » opent de « Assistant du magasin » (assistent van de winkel): hij leest de cijfers van de winkel in de ERP op het moment van de vraag, « rien d’autre » (niets anders).\n« Votre assistant » (je assistent): Mr. Pierre (« bienveillant, motivateur »: welwillend, motiverend), Le Coach (« à la dure : ici, on joue pour gagner »: de harde aanpak, hier spelen we om te winnen), Coach Vente (« expert en vente : panier, produits, heures fortes »: verkoopexpert, ticket, producten, drukke uren). De keuze verandert alleen de toon; deze browser onthoudt ze.\n« Bilan » (balans): een vrije vraag of vier kant-en-klare vragen; het antwoord als samenvatting, enkele cijfers en prioriteiten, elk met een knop naar het scherm van het dashboard waar je kunt handelen.\nOnder het antwoord stelt « Creuser : » (verder graven) vervolgvragen voor; « Continuer en conversation › » (verder in gesprek) opent « Conversation » (gesprek).\n« Conversation »: de « Questions toutes prêtes » (kant-en-klare vragen) links (Ma semaine, Mes ventes, Mon équipe, Mes clients, Ma production, Le réseau), de draad rechts. De draad leeft zolang de pagina open is.\n« Rédigé par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir. » (Opgesteld door de assistent op basis van de cijfers van de winkel. Controleer voor je handelt.)"
+      },
+      "critique": false,
+      "photo": "u/20261116-9fe66ee374d3.jpg",
+      "video": null
+     },
+     {
+      "numero": "8",
+      "titre": {
+       "fr": "Demande au bureau",
+       "nl": "Vraag aan het kantoor"
+      },
+      "texte": {
+       "fr": "La vignette dit « nouvelle », ou le nombre de demandes ouvertes, en bordeaux.\nUn toucher ouvre la même fenêtre que le Coach, en « Demande au bureau » : l’assistant choisi « transmet votre demande au bureau ».\nLe formulaire : « Le sujet » (Stratégie, Produit, Activités opérationnelles, Ventes, Application, Réseaux sociaux), « Le titre », « La demande », des photos (« 4 au plus »), « Un passage du consultant ? », puis « Envoyer au bureau ».\n« Mes demandes » : les ouvertes, celles « sans réponse depuis plus de 30 jours », et les filtres Toutes · Ouvertes · Répondues.\nChaque demande : son statut (Envoyée, En cours, Résolue, Fermée, Annulée) et la réponse du bureau, ou « Reprise dans la visite » du consultant.\nAu téléphone : « ✉ Une demande au bureau », en bas de Contrôle.",
+       "nl": "De tegel zegt « nouvelle » (nieuw), of het aantal open vragen, in bordeaux.\nEen tik opent hetzelfde venster als de Coach, op « Demande au bureau »: de gekozen assistent « transmet votre demande au bureau » (bezorgt je vraag aan het kantoor).\nHet formulier: « Le sujet » (het onderwerp: Stratégie, Produit, Activités opérationnelles, Ventes, Application, Réseaux sociaux), « Le titre » (de titel), « La demande » (de vraag), foto’s (« 4 au plus »: hoogstens 4), « Un passage du consultant ? » (een bezoek van de consultant?), daarna « Envoyer au bureau » (naar het kantoor sturen).\n« Mes demandes » (mijn vragen): de open vragen, die « sans réponse depuis plus de 30 jours » (zonder antwoord sinds meer dan 30 dagen), en de filters Toutes · Ouvertes · Répondues (alle · open · beantwoord).\nElke vraag: haar status (Envoyée, En cours, Résolue, Fermée, Annulée) en het antwoord van het kantoor, of « Reprise dans la visite » (opgenomen in het bezoek) van de consultant.\nOp de telefoon: « ✉ Une demande au bureau », onderaan Contrôle."
+      },
+      "critique": false,
+      "photo": "u/20261116-f205b8ed0876.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Opérationnel — la journée",
+     "nl": "Operationeel — de dag"
+    },
+    "etapes": [
+     {
+      "numero": "9",
+      "titre": {
+       "fr": "La frise des jours",
+       "nl": "De tijdlijn van de dagen"
+      },
+      "texte": {
+       "fr": "Sous la barre du haut, la semaine affichée, du lundi au dimanche : une case par jour.\nChaque case : le chiffre d’affaires du jour et sa part de l’objectif (« obj. ») ; un jour à venir, en cadre pointillé, ne montre que son objectif.\nLa pastille : verte à 100 % de l’objectif et plus, beige de 90 à 100 %, orange clair de 75 à 90 %, orange en dessous, grise sans objectif ; noire pour aujourd’hui, « en cours ».\nLa case d’aujourd’hui prend le chiffre en direct de la page.\nLe jour ouvert est encadré en bordeaux ; un toucher sur un autre jour passé l’ouvre.\n‹ et › changent de semaine ; › est grisé sur la semaine en cours.",
+       "nl": "Onder de bovenste balk de getoonde week, van maandag tot zondag: één vak per dag.\nElk vak: de omzet van de dag en zijn aandeel in de doelstelling (« obj. »); een komende dag, in een stippelkader, toont alleen zijn doelstelling.\nHet bolletje: groen vanaf 100 % van de doelstelling, beige van 90 tot 100 %, lichtoranje van 75 tot 90 %, oranje daaronder, grijs zonder doelstelling; zwart voor vandaag, « en cours » (bezig).\nHet vak van vandaag neemt het live cijfer van de pagina over.\nDe open dag heeft een bordeaux kader; een tik op een andere voorbije dag opent die.\n‹ en › wisselen van week; › is grijs in de lopende week."
+      },
+      "critique": false,
+      "photo": "u/20261116-4bd0a0ae0254.jpg",
+      "video": null
+     },
+     {
+      "numero": "10",
+      "titre": {
+       "fr": "Ta place dans le réseau",
+       "nl": "Jouw plaats in het netwerk"
+      },
+      "texte": {
+       "fr": "Cinq chiffres du jour face aux autres magasins ouverts, anonymes : « Chiffre d’affaires », « Clients », « Panier moyen » (hors clients pro), « Marge brute », « B2B · clients pro » (avec sa part du CA).\nChaque jauge va du plus bas au plus haut du réseau : le point bordeaux, c’est toi ; les points gris, les autres ; le trait noir, la médiane.\nSous chaque chiffre : la médiane, l’écart « vs médiane » et le chiffre du 1er (celui du 2e quand tu es 1er).\nLe rang (« 1er / … », « 2e / … ») : vert quand tu es premier, bordeaux quand tu es dernier, noir entre les deux.\nEn tête : le nombre de magasins ouverts, et combien de fois tu es premier.\nLes chiffres viennent du Résultat du jour, lu par le cockpit pour tous les magasins.",
+       "nl": "Vijf cijfers van de dag tegenover de andere open winkels, anoniem: « Chiffre d’affaires » (omzet), « Clients » (klanten), « Panier moyen » (gemiddeld ticket, zonder zakelijke klanten), « Marge brute » (brutomarge), « B2B · clients pro » (met zijn aandeel in de omzet).\nElke meter gaat van het laagste tot het hoogste cijfer van het netwerk: het bordeaux punt ben jij; de grijze punten de anderen; het zwarte streepje de mediaan.\nOnder elk cijfer: de mediaan, het verschil « vs médiane » en het cijfer van de 1e (dat van de 2e als jij 1e bent).\nDe rang (« 1er / … », « 2e / … »): groen als je eerste bent, bordeaux als je laatste bent, zwart daartussen.\nBovenaan: het aantal open winkels, en hoe vaak je eerste bent.\nDe cijfers komen uit het Résultat du jour (resultaat van de dag), dat de cockpit voor alle winkels leest."
+      },
+      "critique": false,
+      "photo": "u/20261116-3a408bb8fa99.jpg",
+      "video": null
+     },
+     {
+      "numero": "11",
+      "titre": {
+       "fr": "L’objectif comptoir et l’objectif B2B",
+       "nl": "De toonbankdoelstelling en de B2B-doelstelling"
+      },
+      "texte": {
+       "fr": "« Objectif comptoir du » jour regardé : l’objectif du jour moins la part B2B habituelle.\nL’objectif du jour vient du budget du mois, réparti sur les jours selon la pondération du réseau (cockpit, Budget › Paramètres) ; sans elle, selon le profil du magasin.\nBarre bordeaux : le comptoir d’aujourd’hui à l’heure qu’il est ; le hachuré rose mène à la projection de fin de journée ; la barre devient dorée et « objectif atteint » s’affiche quand l’objectif est atteint.\nBarre bleue : le même jour la semaine dernière, à la même heure ; le hachuré bleu mène à sa journée entière. Le trait pointillé vertical : la part de la journée normalement écoulée.\n« Objectif B2B du » jour : les clients pro seuls, face à la part B2B habituelle (les 4 mêmes jours d’avant), remise personnelle des paiements différés déduite.\nUn toucher sur la carte B2B (« le détail des tickets › ») ouvre « Ventes B2B » : CA B2B, tickets pro, panier pro, « À facturer », chaque ticket avec sa société et ce qu’ils ont acheté.",
+       "nl": "« Objectif comptoir du » (toonbankdoelstelling van) de bekeken dag: de doelstelling van de dag min het gebruikelijke B2B-aandeel.\nDe doelstelling van de dag komt uit het maandbudget, over de dagen verdeeld volgens de weging van het netwerk (cockpit, Budget › Paramètres); zonder weging, volgens het profiel van de winkel.\nBordeaux balk: de toonbank van vandaag tot nu; het roze gearceerde deel loopt naar de projectie voor het einde van de dag; de balk wordt goud en « objectif atteint » (doelstelling bereikt) verschijnt als de doelstelling bereikt is.\nBlauwe balk: dezelfde dag vorige week, op hetzelfde uur; het blauwe gearceerde deel loopt naar die hele dag. De verticale stippellijn: het deel van de dag dat normaal voorbij is.\n« Objectif B2B du » (B2B-doelstelling van) de dag: alleen de zakelijke klanten, tegenover het gebruikelijke B2B-aandeel (dezelfde 4 dagen ervoor), persoonlijke korting van de uitgestelde betalingen afgetrokken.\nEen tik op de B2B-kaart (« le détail des tickets › ») opent « Ventes B2B » (B2B-verkoop): B2B-omzet, zakelijke tickets, zakelijk gemiddeld ticket, « À facturer » (te factureren), elk ticket met zijn bedrijf en wat er gekocht werd."
+      },
+      "critique": false,
+      "photo": "u/20261116-86d7460226d1.jpg",
+      "video": null
+     },
+     {
+      "numero": "12",
+      "titre": {
+       "fr": "Heure par heure",
+       "nl": "Uur per uur"
+      },
+      "texte": {
+       "fr": "Le chiffre d’affaires cumulé d’aujourd’hui (trait bordeaux) face au même jour la semaine dernière (pointillé bleu).\n« Comptoir et pro séparés » : une courbe comptoir et une courbe pro par jour, la ligne de l’objectif comptoir et celle de la « part B2B habituelle » ; « Combinés » : une courbe par jour face à l’objectif du jour.\n« CA · Clients · Panier » : « Clients » cumule les clients face à la référence ; « Panier » montre le panier de chaque heure (pas un cumul), le panier du jour en pointillé et les clients de l’heure en barres pâles.\nUn point creux : moins de 5 clients dans l’heure, ou l’heure en cours.\nLe trait pointillé vertical : maintenant. L’axe s’arrête à 20 h ; une vente plus tardive compte dans 19 – 20 h.",
+       "nl": "De gecumuleerde omzet van vandaag (bordeaux lijn) tegenover dezelfde dag vorige week (blauwe stippellijn).\n« Comptoir et pro séparés » (toonbank en zakelijk apart): een toonbankcurve en een zakelijke curve per dag, de lijn van de toonbankdoelstelling en die van het « part B2B habituelle » (gebruikelijk B2B-aandeel); « Combinés » (samen): één curve per dag tegenover de doelstelling van de dag.\n« CA · Clients · Panier » (omzet · klanten · ticket): « Clients » telt de klanten op tegenover de referentie; « Panier » toont het ticket van elk uur (geen cumul), het ticket van de dag in stippellijn en de klanten van het uur in lichte balken.\nEen hol punt: minder dan 5 klanten in het uur, of het lopende uur.\nDe verticale stippellijn: nu. De as stopt om 20 u; een latere verkoop telt mee in 19 – 20 u."
+      },
+      "critique": false,
+      "photo": "u/20261116-57d529939f1d.jpg",
+      "video": null
+     },
+     {
+      "numero": "13",
+      "titre": {
+       "fr": "Le duel, chiffre par chiffre",
+       "nl": "Het duel, cijfer per cijfer"
+      },
+      "texte": {
+       "fr": "Trois lignes : « Chiffre d’affaires », « Clients », « Panier moyen » (hors clients pro).\nLes colonnes : aujourd’hui à l’heure qu’il est ; le même jour la semaine dernière à la même heure ; l’écart en % (vert en mieux, rouge en moins bien, gris sous 1 %) ; ce même jour sur toute la journée ; la « référence ».\nLa référence du CA et des clients : la moyenne des 6 derniers mêmes jours ; celle du panier : le panier du réseau aujourd’hui.\nSous le CA : la part de l’objectif ; sous le panier : le nombre de produits par client.\nMoins de clients : c’est le trafic (vitrine, trottoir, offre). Panier plus bas : c’est la vente additionnelle.",
+       "nl": "Drie lijnen: « Chiffre d’affaires » (omzet), « Clients » (klanten), « Panier moyen » (gemiddeld ticket, zonder zakelijke klanten).\nDe kolommen: vandaag tot nu; dezelfde dag vorige week op hetzelfde uur; het verschil in % (groen als beter, rood als slechter, grijs onder 1 %); diezelfde dag over de hele dag; de « référence » (referentie).\nDe referentie van de omzet en de klanten: het gemiddelde van de 6 laatste dezelfde dagen; die van het ticket: het gemiddelde ticket van het netwerk vandaag.\nOnder de omzet: het aandeel van de doelstelling; onder het ticket: het aantal producten per klant.\nMinder klanten: dat is de traffic (etalage, stoep, aanbod). Lager ticket: dat is de bijverkoop."
+      },
+      "critique": false,
+      "photo": "u/20261116-557818413bca.jpg",
+      "video": null
+     },
+     {
+      "numero": "14",
+      "titre": {
+       "fr": "Le P&L court de la journée",
+       "nl": "De korte W&V van de dag"
+      },
+      "texte": {
+       "fr": "Chiffre d’affaires − coût matière = marge brute.\nMarge brute − invendus et poubelle − main-d’œuvre − frais généraux = résultat.\nChaque charge porte son seuil, écrit sous la ligne : vert jusqu’au seuil, orange jusqu’à 1,3 fois le seuil, rouge au-delà. Le résultat : vert à 15 % et plus, orange de 5 à 15 %, rouge sous 5 %.\nLe seuil du coût matière est le taux matière du réseau posé au cockpit, Budget › Paramètres ; ceux de la main-d’œuvre et des frais généraux, la Table KPI. On les change là, le dashboard suit.\nLa main-d’œuvre est celle du planning du jour ; les heures du franchisé sont mises à part (« hors … h de franchisé »).\n« les saisies ▸ » ouvre le détail des invendus déclarés au panel : heure, opérateur, produit, quantité.\nLe matin, le résultat est toujours négatif : les coûts de toute la journée sont posés, le chiffre d’affaires ne l’est pas encore. Il se lit le soir.",
+       "nl": "Omzet − grondstofkost = brutomarge.\nBrutomarge − onverkochte producten en afval − personeelskost − algemene kosten = resultaat.\nElke kost heeft zijn drempel, onder de lijn geschreven: groen tot de drempel, oranje tot 1,3 keer de drempel, rood daarboven. Het resultaat: groen vanaf 15 %, oranje van 5 tot 15 %, rood onder 5 %.\nDe drempel van de grondstofkost is het grondstofpercentage van het netwerk, ingesteld in de cockpit, Budget › Paramètres; die van de personeelskost en de algemene kosten, de KPI-tabel. Je wijzigt ze daar, het dashboard volgt.\nDe personeelskost is die van de planning van de dag; de uren van de franchisenemer staan apart (« hors … h de franchisé »: zonder … u franchisenemer).\n« les saisies ▸ » (de ingaven) opent het detail van de onverkochte producten aangegeven in het panel: uur, operator, product, hoeveelheid.\n’s Ochtends is het resultaat altijd negatief: de kosten van de hele dag staan er al, de omzet nog niet. Je leest het ’s avonds."
+      },
+      "critique": true,
+      "photo": "u/20261116-c336cb67c184.jpg",
+      "video": null
+     },
+     {
+      "numero": "15",
+      "titre": {
+       "fr": "Ventes par catégorie",
+       "nl": "Verkoop per categorie"
+      },
+      "texte": {
+       "fr": "Les ventes du jour lues sur les tickets de caisse, rangées « Groupe › catégorie › produit » : un toucher sur ▸ déplie.\nChaque ligne : CA, part, marge brute, taux de marge et coefficient (CA ÷ coût matière, « × »).\nLa couleur de la marge : noir sous 40 %, rouge de 40 à 50, orange de 50 à 60, vert de 60 à 70, or à 70 % et plus ; gris (« ? ») = coût matière inconnu, recette à compléter au panel.\n« i » à côté d’un groupe ou d’une catégorie : ses ventes des 12 dernières semaines face au réseau ; un toucher sur un produit ouvre sa fiche (ventes sur 12 semaines, prix face au réseau, recette, marge).\nAutres lectures : « Treemap » (le poids d’un coup d’œil), « Promotions », « Portions ».\nLe total est celui du P&L court : les deux cartes disent le même chiffre.",
+       "nl": "De verkoop van de dag, gelezen op de kassatickets, geordend « Groupe › catégorie › produit » (groep › categorie › product): een tik op ▸ klapt open.\nElke lijn: omzet, aandeel, brutomarge, margepercentage en coëfficiënt (omzet ÷ grondstofkost, « × »).\nDe kleur van de marge: zwart onder 40 %, rood van 40 tot 50, oranje van 50 tot 60, groen van 60 tot 70, goud vanaf 70 %; grijs (« ? ») = grondstofkost onbekend, recept aan te vullen in het panel.\n« i » naast een groep of een categorie: de verkoop van de laatste 12 weken tegenover het netwerk; een tik op een product opent zijn fiche (verkoop over 12 weken, prijs tegenover het netwerk, recept, marge).\nAndere lezingen: « Treemap » (het gewicht in één oogopslag), « Promotions » (promoties), « Portions » (porties).\nHet totaal is dat van de korte W&V: beide kaarten tonen hetzelfde cijfer."
+      },
+      "critique": false,
+      "photo": "u/20261116-d2c82b5260f9.jpg",
+      "video": null
+     },
+     {
+      "numero": "16",
+      "titre": {
+       "fr": "La journée",
+       "nl": "De dag"
+      },
+      "texte": {
+       "fr": "Une frise de 4 h à 20 h : « Équipe » (le planning, ses heures au total), « Four » (les cuissons), « Vitrine » (les pièces de chaque cuisson), « Commandes ».\n« à valider » sur une cuisson : son heure est passée et elle n’a pas encore été confirmée.\nLe trait vertical : maintenant ; une personne pas encore ou plus en poste est grisée.\nÀ droite, « Ventes au comptoir, heure par heure » : le vendu face à la moyenne des 6 derniers mêmes jours ; vert au-dessus, ocre sous la moyenne, bordeaux l’heure en cours.\n« L’équipe du jour › », ou un toucher sur une personne de la frise, ouvre le tableau de l’équipe.",
+       "nl": "Een tijdlijn van 4 u tot 20 u: « Équipe » (team: de planning, de uren in totaal), « Four » (oven: de bakbeurten), « Vitrine » (etalage: de stuks van elke bakbeurt), « Commandes » (bestellingen).\n« à valider » (te bevestigen) bij een bakbeurt: het uur is voorbij en ze is nog niet bevestigd.\nDe verticale lijn: nu; wie nog niet of niet meer aan het werk is, staat in het grijs.\nRechts « Ventes au comptoir, heure par heure » (toonbankverkoop, uur per uur): het verkochte tegenover het gemiddelde van de 6 laatste dezelfde dagen; groen erboven, oker onder het gemiddelde, bordeaux het lopende uur.\n« L’équipe du jour › » (het team van de dag), of een tik op een persoon in de tijdlijn, opent de tabel van het team."
+      },
+      "critique": false,
+      "photo": "u/20261116-8a6ba51430a7.jpg",
+      "video": null
+     },
+     {
+      "numero": "17",
+      "titre": {
+       "fr": "L’équipe du jour",
+       "nl": "Het team van de dag"
+      },
+      "texte": {
+       "fr": "Le tableau s’ouvre sous « La journée » ; « × » le referme.\nUne ligne par personne du planning, « rangée par ventes » : « Planning », « Faites » (« en poste », « arrive à … »), « Vendu », « Par heure », « Panier », « Produit », « Coût », « Coût / ventes ».\nVendu : le vendeur inscrit sur chaque ticket. Par heure : ses ventes ÷ les heures de son poste où le magasin a vendu.\nProduit : les cuissons de son poste, si elle tient un poste de production.\nCoût : son taux horaire au panel × ses heures faites ; un franchisé ne pèse pas au P&L ; « taux absent au panel » : le taux manque au panel.\n« ▸ heure par heure » déplie la journée d’une personne ; la ligne « Magasin » fait le total.",
+       "nl": "De tabel opent onder « La journée » (de dag); « × » sluit hem.\nEén lijn per persoon uit de planning, « rangée par ventes » (gerangschikt op verkoop): « Planning », « Faites » (gepresteerd: « en poste », aan het werk, « arrive à … », komt om …), « Vendu » (verkocht), « Par heure » (per uur), « Panier » (ticket), « Produit » (geproduceerd), « Coût » (kost), « Coût / ventes » (kost / verkoop).\nVendu: de verkoper die op elk ticket staat. Par heure: de verkoop ÷ de uren van de shift waarin de winkel verkocht heeft.\nProduit: de bakbeurten van de shift, als die persoon een productiepost heeft.\nCoût: het uurloon in het panel × de gepresteerde uren; een franchisenemer weegt niet op de W&V; « taux absent au panel » (tarief ontbreekt in het panel): het uurloon ontbreekt in het panel.\n« ▸ heure par heure » (uur per uur) klapt de dag van één persoon open; de lijn « Magasin » (winkel) maakt het totaal."
+      },
+      "critique": false,
+      "photo": "u/20261116-80d8fc95d6ab.jpg",
+      "video": null
+     },
+     {
+      "numero": "18",
+      "titre": {
+       "fr": "La vitrine",
+       "nl": "De etalage"
+      },
+      "texte": {
+       "fr": "Ce qui va manquer d’ici la fermeture, au rythme des 6 derniers mêmes jours heure par heure, et les euros de ventes « à sauver » ; la prochaine cuisson est écrite en haut à droite.\nTrois familles, chacune une liste qui se déplie (▸) : « Short life » (vendu le jour même), « Medium life » (se garde 2 à 3 jours), « Long life » (se garde une semaine et plus : un stock, face à 3 jours de vente).\nEn bout de ligne, trois carrés filtrent la liste : rouge, vide maintenant ; orange, va manquer ; vert, en ordre (masqué au départ).\nPour chaque produit : sa journée en cases (vert en vitrine, orange vitrine basse, rouge vide alors que des clients le demandent), ce qui manque en pièces et en euros, et le geste : « +N » dans la prochaine cuisson, « déjà prévu à … » ou « à recuire ».\n« +N à cuire » (« à refaire » en long life) : le total à ajouter pour la famille.\nUn toucher sur un produit ouvre sa fiche de stock.\nLes chiffres viennent du suivi de production ; la durée de vie d’un produit s’y règle.",
+       "nl": "Wat tegen sluitingstijd zal ontbreken, aan het ritme van de 6 laatste dezelfde dagen uur per uur, en de euro’s verkoop « à sauver » (te redden); de volgende bakbeurt staat rechtsboven.\nDrie families, elk een lijst die openklapt (▸): « Short life » (verkocht op de dag zelf), « Medium life » (2 tot 3 dagen houdbaar), « Long life » (een week en langer houdbaar: een voorraad, tegenover 3 dagen verkoop).\nAan het einde van de lijn filteren drie vierkantjes de lijst: rood, nu leeg; oranje, zal ontbreken; groen, in orde (eerst verborgen).\nVoor elk product: zijn dag in vakjes (groen in de etalage, oranje etalage laag, rood leeg terwijl klanten ernaar vragen), wat ontbreekt in stuks en in euro, en de actie: « +N » in de volgende bakbeurt, « déjà prévu à … » (al gepland om …) of « à recuire » (opnieuw te bakken).\n« +N à cuire » (te bakken; « à refaire », opnieuw te maken, bij long life): het totaal om toe te voegen voor de familie.\nEen tik op een product opent zijn voorraadfiche.\nDe cijfers komen uit de productieopvolging; de houdbaarheid van een product stel je daar in."
+      },
+      "critique": true,
+      "photo": "u/20261116-56253e0be747.jpg",
+      "video": null
+     },
+     {
+      "numero": "19",
+      "titre": {
+       "fr": "Les contrôles en photo",
+       "nl": "De controles met foto"
+      },
+      "texte": {
+       "fr": "Seules les tâches du jour qui demandent une photo (ou qui en ont une, ou une note), rangées par checklist.\nEn haut, une pastille par checklist : son heure, son code et les photos rendues (rendues / attendues) ; un toucher amène sa carte.\nUne carte par checklist, dans l’ordre des heures, son bandeau à la couleur de la zone ; ‹ et › font défiler les cartes.\nObligatoire : un cadre plein. Facultative : un cadre en pointillé, la photo estompée et le mot « facultative ».\nLes filtres (« Écarts », « À contrôler », « Conformes », « Non rendues », « Sans photo ») n’apparaissent que lorsqu’ils ont des photos ; « Tout » les remet toutes. À droite : les photos rendues, par qui, et la moyenne des notes.\nUne photo s’ouvre en grand d’un toucher, avec les repères et le constat du contrôleur ; on n’y note rien.",
+       "nl": "Alleen de taken van de dag die een foto vragen (of er een hebben, of een score), geordend per checklist.\nBovenaan één bolletje per checklist: het uur, de code en de ingediende foto’s (ingediend / verwacht); een tik brengt je naar de kaart.\nEén kaart per checklist, in de volgorde van de uren, de band in de kleur van de zone; ‹ en › schuiven de kaarten door.\nVerplicht: een volle rand. Facultatief: een stippelrand, de foto vervaagd en het woord « facultative » (facultatief).\nDe filters (« Écarts », « À contrôler », « Conformes », « Non rendues », « Sans photo »: afwijkingen, te controleren, conform, niet ingediend, zonder foto) verschijnen alleen als ze foto’s hebben; « Tout » (alles) toont ze weer allemaal. Rechts: de ingediende foto’s, door wie, en het gemiddelde van de scores.\nEen tik opent een foto in het groot, met de markeringen en de vaststelling van de controleur; je geeft er geen score."
+      },
+      "critique": false,
+      "photo": "u/20261116-70992d1887a2.jpg",
+      "video": null
+     },
+     {
+      "numero": "20",
+      "titre": {
+       "fr": "Le stock vivant",
+       "nl": "De levende voorraad"
+      },
+      "texte": {
+       "fr": "L’inventaire matière du magasin au panel, relu avec la page.\nUne référence est en alerte quand son stock est négatif (écart de caisse ou de comptage) ou sous son minimum : le bandeau passe au rouge (« … sous le minimum », « à zéro », « négatif »).\nZéro alerte n’est une bonne nouvelle que si l’inventaire est récent : au-delà de sept jours sans comptage, le bandeau passe à l’orange (« Inventaire non recompté depuis … jours »).\nSinon : « Stock au complet », en vert, avec le nombre de références et la date du dernier comptage.\n« la liste ▾ » ouvre l’inventaire : les références en alerte d’abord, puis par catégorie ; stock, minimum, manque, date du comptage.",
+       "nl": "De grondstoffeninventaris van de winkel in het panel, opnieuw gelezen met de pagina.\nEen referentie staat in alarm als haar voorraad negatief is (kassa- of telverschil) of onder haar minimum: de balk wordt rood (« … sous le minimum », « à zéro », « négatif »: onder het minimum, op nul, negatief).\nNul alarmen is alleen goed nieuws als de inventaris recent is: na zeven dagen zonder telling wordt de balk oranje (« Inventaire non recompté depuis … jours »: inventaris niet herteld sinds … dagen).\nAnders: « Stock au complet » (voorraad volledig), in het groen, met het aantal referenties en de datum van de laatste telling.\n« la liste ▾ » (de lijst) opent de inventaris: eerst de referenties in alarm, daarna per categorie; voorraad, minimum, tekort, datum van de telling."
+      },
+      "critique": false,
+      "photo": "u/20261116-99200e01975c.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Tâches — les checklists du jour",
+     "nl": "Taken — de checklists van de dag"
+    },
+    "etapes": [
+     {
+      "numero": "21",
+      "titre": {
+       "fr": "L’onglet Tâches",
+       "nl": "Het tabblad Taken"
+      },
+      "texte": {
+       "fr": "En tête : « Tâches et checklists — » et la date.\nLa semaine : une case par jour, la part des tâches obligatoires faites et sa barre (vert à 90 % et plus, orange de 50 à 90 %, rouge en dessous) ; un toucher ouvre le jour ; « ‹ semaine d’avant » et « semaine d’après › ».\nQuatre tuiles : « Tâches obligatoires faites », « Photos rendues », « Contrôle qualité du jour » (la moyenne des notes, ou les photos à contrôler et le dernier passage du contrôleur), « Non-conformités · 30 jours » (et combien sont reprises).\n« voir les retours ↓ », sur la dernière tuile, descend à « Chercher une tâche ».\nSeules les tâches obligatoires comptent dans les pourcentages ; une tâche cochée sans la photo demandée ne compte pas.\nLes tâches sont lues au panel, là où l’équipe les coche ; le dashboard ne coche rien.",
+       "nl": "Bovenaan: « Tâches et checklists — » (taken en checklists) en de datum.\nDe week: één vak per dag, het aandeel uitgevoerde verplichte taken en zijn balk (groen vanaf 90 %, oranje van 50 tot 90 %, rood daaronder); een tik opent de dag; « ‹ semaine d’avant » (vorige week) en « semaine d’après › » (volgende week).\nVier tegels: « Tâches obligatoires faites » (uitgevoerde verplichte taken), « Photos rendues » (ingediende foto’s), « Contrôle qualité du jour » (kwaliteitscontrole van de dag: het gemiddelde van de scores, of de te controleren foto’s en de laatste passage van de controleur), « Non-conformités · 30 jours » (non-conformiteiten · 30 dagen, en hoeveel er hersteld zijn).\n« voir les retours ↓ » (de feedback bekijken), op de laatste tegel, gaat naar « Chercher une tâche » (een taak zoeken).\nAlleen de verplichte taken tellen mee in de percentages; een taak aangevinkt zonder de gevraagde foto telt niet.\nDe taken worden gelezen in het panel, waar het team ze aanvinkt; het dashboard vinkt niets aan."
+      },
+      "critique": false,
+      "photo": "u/20261116-7af7e8484eba.jpg",
+      "video": null
+     },
+     {
+      "numero": "22",
+      "titre": {
+       "fr": "Comment c’est organisé",
+       "nl": "Hoe het georganiseerd is"
+      },
+      "texte": {
+       "fr": "Un encart qui se replie (« replier ▴ » / « déplier ▾ ») : une checklist est une liste de tâches à faire à un moment de la journée ; son code a trois parties, qui · quand · numéro.\nL’exemple est pris dans les checklists du jour, par exemple « 1.1.02 · Photos des comptoirs » : Vente · Ouverture · checklist n° 02.\n1er chiffre, qui : 1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion ; « 0 SOP et manuel ».\nLa zone 0 est réservée aux documents de formation (0.1.01 : la 1re SOP de l’ouverture ; 0.0.xx : un article) : aucune checklist ne la prend.\n2e chiffre, quand : .1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture, .5 Chaque semaine, .6 Chaque mois.\nObligatoire : la tâche doit être faite chaque jour où elle revient. Photo : cochée sans la photo demandée, elle ne compte pas.\nContrôle qualité : chaque photo rendue est notée de 1 à 5 par le contrôleur, qui peut entourer ce qui ne va pas et laisser un commentaire ; sous 4, c’est une non-conformité, à corriger.",
+       "nl": "Een kader dat dichtklapt (« replier ▴ » / « déplier ▾ »: dichtklappen / openklappen): een checklist is een lijst taken die op een moment van de dag gedaan moeten worden; de code heeft drie delen, wie · wanneer · nummer.\nHet voorbeeld komt uit de checklists van de dag, bijvoorbeeld « 1.1.02 · Photos des comptoirs » (foto’s van de toonbanken): Verkoop · Opening · checklist nr. 02.\n1e cijfer, wie: 1 Verkoop, 2 Bakkerij, 3 Traiteur, 4 Schoonmaak, 5 Beheer; « 0 SOP et manuel » (0 SOP en handboek).\nZone 0 is voorbehouden voor de opleidingsdocumenten (0.1.01: de 1e SOP van de opening; 0.0.xx: een artikel): geen enkele checklist gebruikt ze.\n2e cijfer, wanneer: .1 Opening, .2 Dag, .3 Namiddag, .4 Sluiting, .5 Elke week, .6 Elke maand.\nVerplicht: de taak moet gedaan worden op elke dag dat ze terugkomt. Foto: aangevinkt zonder de gevraagde foto telt ze niet.\nKwaliteitscontrole: elke ingediende foto krijgt van de controleur een score van 1 tot 5; hij kan omcirkelen wat niet klopt en een opmerking achterlaten; onder 4 is het een non-conformiteit, te corrigeren."
+      },
+      "critique": false,
+      "photo": "u/20261116-2b6323f03e03.jpg",
+      "video": null
+     },
+     {
+      "numero": "23",
+      "titre": {
+       "fr": "Chercher une tâche",
+       "nl": "Een taak zoeken"
+      },
+      "texte": {
+       "fr": "À la place des « Retours du contrôle qualité » : on tape au moins deux lettres, un mot d’une tâche ou d’une checklist, ou un code (« biscuiterie », « chambre froide », « 1.1.02 »).\nChaque tâche de la semaine qui le contient : le code de sa checklist, son nom, et ses sept jours du lundi au dimanche.\nChaque jour : l’heure où elle a été faite, sa photo (un toucher l’ouvre dans un nouvel onglet), et la note du contrôle sur sa pastille de couleur (par exemple « 4 Conforme »), sinon son statut : « faite », « à contrôler », « sans photo », « pas encore faite », « pas faite », « pas prévue », « à venir ».\nDessous, « notes des 30 derniers jours » : les notes du contrôle d’avant la semaine.\nEn haut, le compte des tâches trouvées et des photos de la semaine.",
+       "nl": "In de plaats van de « Retours du contrôle qualité » (feedback van de kwaliteitscontrole): je typt minstens twee letters, een woord uit een taak of een checklist, of een code (« biscuiterie », « chambre froide », « 1.1.02 »).\nElke taak van de week die het bevat: de code van haar checklist, haar naam, en haar zeven dagen van maandag tot zondag.\nElke dag: het uur waarop ze gedaan werd, haar foto (een tik opent die in een nieuw tabblad), en de score van de controle op het gekleurde bolletje (bijvoorbeeld « 4 Conforme »), anders haar status: « faite » (gedaan), « à contrôler » (te controleren), « sans photo » (zonder foto), « pas encore faite » (nog niet gedaan), « pas faite » (niet gedaan), « pas prévue » (niet gepland), « à venir » (komt nog).\nEronder « notes des 30 derniers jours » (scores van de laatste 30 dagen): de scores van de controle van vóór de week.\nBovenaan het aantal gevonden taken en de foto’s van de week."
+      },
+      "critique": false,
+      "photo": "u/20261116-2b9e8cd85d92.jpg",
+      "video": null
+     },
+     {
+      "numero": "24",
+      "titre": {
+       "fr": "Les checklists du jour",
+       "nl": "De checklists van de dag"
+      },
+      "texte": {
+       "fr": "Dans l’ordre des codes ; pour chacune : son code à la couleur de la zone, son heure, sa zone, son moment et la barre des tâches obligatoires faites (faites / total).\nL’état : « faite » en vert, « en partie » en orange, « pas commencée » en rouge (« pas faite » un jour passé), « à venir » en gris tant que son heure n’est pas arrivée.\nLes filtres « Toutes », « Pas commencées » (« Pas faites » un jour passé), « En partie », « Faites » ; « voir ▾ » ouvre ses tâches, « Tout déplier » les ouvre toutes.\nUne tâche : ✓ faite (l’heure et qui), ✗ pas faite (« prévue à … »), ! cochée sans la photo demandée ; l’appareil photo signale une photo demandée.\nÀ droite : la photo (un toucher l’ouvre en grand, avec les remarques du contrôleur), puis la note du contrôle ou « à contrôler ».\nUne tâche notée garde sa photo : pendant la lecture des photos, sa case palpite, puis la photo s’y pose.",
+       "nl": "In de volgorde van de codes; voor elke checklist: de code in de kleur van de zone, het uur, de zone, het moment en de balk van de uitgevoerde verplichte taken (gedaan / totaal).\nDe status: « faite » (gedaan) in het groen, « en partie » (gedeeltelijk) in het oranje, « pas commencée » (niet begonnen) in het rood (« pas faite » op een voorbije dag), « à venir » (komt nog) in het grijs zolang het uur niet aangebroken is.\nDe filters « Toutes », « Pas commencées » (« Pas faites » op een voorbije dag), « En partie », « Faites »; « voir ▾ » (bekijken) opent de taken, « Tout déplier » (alles openklappen) opent ze allemaal.\nEen taak: ✓ gedaan (het uur en wie), ✗ niet gedaan (« prévue à … »: gepland om …), ! aangevinkt zonder de gevraagde foto; het fototoestel toont dat er een foto gevraagd wordt.\nRechts: de foto (een tik opent ze in het groot, met de opmerkingen van de controleur), daarna de score van de controle of « à contrôler ».\nEen taak met een score houdt haar foto: terwijl de foto’s gelezen worden, pulseert haar vak, daarna verschijnt de foto erin."
+      },
+      "critique": false,
+      "photo": "u/20261116-114dd4af1082.jpg",
+      "video": null
+     },
+     {
+      "numero": "25",
+      "titre": {
+       "fr": "La revue du soir",
+       "nl": "De avondronde"
+      },
+      "texte": {
+       "fr": "Elle s’ouvre depuis la vignette « Revue du soir » de la barre du haut : « à 18 h » (l’heure du réglage) avant l’heure, puis « à faire », « en cours », « faite », ou « pas faite » un jour passé ; elle s’allume à faire et en cours.\nPremier écran : « Bonsoir », les tâches obligatoires faites, le nombre de checklists pas finies et de points de gestion, et le temps estimé ; les checklists pas finies en petites cartes (code, nom, faites / total).\n« Qui fait la revue ? » : un nom (ceux qui ont coché des tâches ce jour, et le dernier qui a fait la revue sur cet appareil) ou « Autre… », puis « Commencer » (« Reprendre » si des réponses sont déjà données) ou « Plus tard ».\nEnsuite une question par écran, avec une barre d’avancement : chaque checklist pas finie et sa raison en un bouton (« Fait, pas coché », « Pas eu le temps », « Manque de personnel », « Oublié »…, ou « Autre… »), un commentaire facultatif.\nPuis la gestion : les points vérifiés seuls et en ordre sur un écran (invendus encodés, stock compté, commandes clients clôturées, photos rendues, non-conformités reprises) ; les autres un par un, avec leurs réponses (feedback à l’équipe, caisse, commande fournisseurs, demain prêt).\n« Pour demain » : un mot pour l’équipe, puis « Clôturer la journée ». La fin : une carte par zone, chaque checklist ✓ ou ✗ avec sa raison, la gestion en tuiles. Chaque réponse s’enregistre aussitôt.\nLes points, leurs réponses, les raisons et l’heure se règlent au cockpit (Cadre des tâches › Revue du soir).",
+       "nl": "Ze opent via de tegel « Revue du soir » in de bovenste balk: « à 18 h » (het ingestelde uur) vóór het uur, daarna « à faire », « en cours », « faite », of « pas faite » op een voorbije dag; ze licht op bij te doen en bezig.\nEerste scherm: « Bonsoir » (goedenavond), de uitgevoerde verplichte taken, het aantal onafgewerkte checklists en beheerpunten, en de geschatte tijd; de onafgewerkte checklists in kleine kaarten (code, naam, gedaan / totaal).\n« Qui fait la revue ? » (wie doet de ronde?): een naam (wie die dag taken aangevinkt heeft, en de laatste die de ronde op dit toestel deed) of « Autre… » (andere), daarna « Commencer » (beginnen; « Reprendre », hervatten, als er al antwoorden gegeven zijn) of « Plus tard » (later).\nDaarna één vraag per scherm, met een voortgangsbalk: elke onafgewerkte checklist en de reden met één knop (« Fait, pas coché », « Pas eu le temps », « Manque de personnel », « Oublié »…, of « Autre… »: gedaan maar niet aangevinkt, geen tijd gehad, personeelstekort, vergeten, andere), een facultatieve opmerking.\nDaarna het beheer: de punten die vanzelf gecontroleerd en in orde zijn, op één scherm (onverkochte producten ingegeven, voorraad geteld, klantenbestellingen afgesloten, foto’s ingediend, non-conformiteiten hersteld); de andere één voor één, met hun antwoorden (feedback aan het team, kassa, bestelling bij de leveranciers, morgen klaar).\n« Pour demain » (voor morgen): een woord voor het team, daarna « Clôturer la journée » (de dag afsluiten). Het einde: één kaart per zone, elke checklist ✓ of ✗ met haar reden, het beheer in tegels. Elk antwoord wordt meteen bewaard.\nDe punten, hun antwoorden, de redenen en het uur stel je in de cockpit in (Cadre des tâches › Revue du soir)."
+      },
+      "critique": false,
+      "photo": "u/20261116-3046b94b28d6.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Temps morts — le comptoir minute par minute",
+     "nl": "Dode momenten — de toonbank minuut per minuut"
+    },
+    "etapes": [
+     {
+      "numero": "26",
+      "titre": {
+       "fr": "Temps morts",
+       "nl": "Dode momenten"
+      },
+      "texte": {
+       "fr": "Un temps mort : 10 minutes ou plus sans un seul ticket, entre le premier et le dernier ticket de la journée ; « 5 min », « 10 min » ou « 15 min » changent ce seuil (le choix reste sur l’appareil).\nLes tuiles : les temps morts, le temps « Sans client », la « Part de l’ouverture », « Le plus long trou » et les « Tickets », face à l’habitude (les 4 mêmes jours de semaine d’avant) ; l’écart ne s’affiche qu’une fois la journée close.\n« La journée minute par minute » : un carré par minute ; foncé s’il y a eu un ticket (le chiffre quand il y en a plusieurs), rose dans un temps mort, hachuré avant le premier et après le dernier ticket.\nÀ droite de chaque heure : la part de l’heure sans client, de plus en plus foncée (de « < 10 » à « ≥ 70 » %), le nombre de tickets et de temps morts.\nEn bas, la semaine jour par jour, avec la « Moyenne par jour » (journées closes) et la « Semaine d’avant » ; un toucher sur un jour le lit au-dessus ; « ‹ semaine d’avant » et « semaine d’après › ».\nTous les tickets comptent, comptoir et pro (la liste des tickets du panel) ; un ticket isolé à 45 min ou plus du suivant, en début ou en fin de journée, est écarté.",
+       "nl": "Een dood moment: 10 minuten of meer zonder één enkel ticket, tussen het eerste en het laatste ticket van de dag; « 5 min », « 10 min » of « 15 min » wijzigen die drempel (de keuze blijft op het toestel).\nDe tegels: de dode momenten, de tijd « Sans client » (zonder klant), de « Part de l’ouverture » (aandeel van de openingstijd), « Le plus long trou » (het langste gat) en de « Tickets », tegenover de gewoonte (dezelfde 4 weekdagen ervoor); het verschil verschijnt pas als de dag afgesloten is.\n« La journée minute par minute » (de dag minuut per minuut): één vierkantje per minuut; donker als er een ticket was (het aantal als er meerdere zijn), roze in een dood moment, gearceerd vóór het eerste en na het laatste ticket.\nRechts van elk uur: het deel van het uur zonder klant, steeds donkerder (van « < 10 » tot « ≥ 70 » %), het aantal tickets en dode momenten.\nOnderaan de week dag per dag, met de « Moyenne par jour » (gemiddelde per dag, afgesloten dagen) en de « Semaine d’avant » (vorige week); een tik op een dag toont hem erboven; « ‹ semaine d’avant » en « semaine d’après › ».\nAlle tickets tellen mee, toonbank en zakelijk (de ticketlijst van het panel); een alleenstaand ticket op 45 min of meer van het volgende, aan het begin of het einde van de dag, wordt weggelaten."
+      },
+      "critique": false,
+      "photo": "u/20261116-ff61ad3a50fa.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Semaine et Mois — le résultat",
+     "nl": "Week en Maand — het resultaat"
+    },
+    "etapes": [
+     {
+      "numero": "27",
+      "titre": {
+       "fr": "La frise des périodes",
+       "nl": "De tijdlijn van de periodes"
+      },
+      "texte": {
+       "fr": "Sous la barre du haut, une frise choisit la période ; chaque case montre déjà son chiffre.\nSemaine : les sept dernières semaines (S41, S42…), celle choisie à droite ; « en cours » sur la semaine qui n’est pas finie.\nLe chiffre d’une semaine est la somme de ses jours, avec sa part de l’objectif (« % obj. »).\nLa pastille : vert à 100 % et plus, crème 90–100, orange clair 75–90, orange sous 75 % ; noire pour la semaine en cours.\nUn toucher ouvre la semaine ; ‹ et › reculent ou avancent d’une semaine.\nMois : les douze mois de l’année, chacun sa jauge vers l’objectif ; ‹ et › changent d’année.",
+       "nl": "Onder de bovenste balk kies je de periode in een tijdlijn; elk vak toont al zijn cijfer.\nWeek: de zeven laatste weken (S41, S42…), de gekozen week rechts; « en cours » (bezig) bij de week die nog niet afgelopen is.\nHet cijfer van een week is de som van haar dagen, met haar aandeel in de doelstelling (« % obj. »).\nHet bolletje: groen vanaf 100 %, crème 90–100, lichtoranje 75–90, oranje onder 75 %; zwart voor de lopende week.\nEen tik opent de week; ‹ en › gaan een week terug of vooruit.\nMaand: de twaalf maanden van het jaar, elk met haar meter naar de doelstelling; ‹ en › wisselen van jaar."
+      },
+      "critique": false,
+      "photo": "u/20261116-a642c09b3e7e.jpg",
+      "video": null
+     },
+     {
+      "numero": "28",
+      "titre": {
+       "fr": "Les tâches de la période",
+       "nl": "De taken van de periode"
+      },
+      "texte": {
+       "fr": "« Les tâches de la semaine » ou « du mois » : les tâches obligatoires relevées, jour par jour.\nTrois cases : « Faites », « Non faites » (avec la moyenne par jour) et « Jours sous 40 % ».\n« Le fil des jours » : une case par jour — vert 80 % et plus, vert clair 40 % et plus, rose sous 40 %, rouge rien de fait.\n« détail ▾ » ouvre les jours un par un, avec une barre et le compte faites / prévues.\nLes tâches bloquantes ne se lisent pas ici : « bloquantes : voir le jour ».\nSans relevé sur la période, la carte le dit (« pas de relevé pour ce magasin sur la période »).",
+       "nl": "« Les tâches de la semaine » of « du mois » (de taken van de week / van de maand): de opgenomen verplichte taken, dag per dag.\nDrie vakken: « Faites » (gedaan), « Non faites » (niet gedaan, met het gemiddelde per dag) en « Jours sous 40 % » (dagen onder 40 %).\n« Le fil des jours » (de dagenlijn): één vak per dag — groen 80 % en meer, lichtgroen 40 % en meer, roze onder 40 %, rood niets gedaan.\n« détail ▾ » opent de dagen één voor één, met een balk en de telling gedaan / gepland.\nDe blokkerende taken lees je hier niet: « bloquantes : voir le jour » (blokkerend: zie de dag).\nZonder opname over de periode zegt de kaart het (« pas de relevé pour ce magasin sur la période »: geen opname voor deze winkel in de periode)."
+      },
+      "critique": false,
+      "photo": "u/20261116-9c464ea23531.jpg",
+      "video": null
+     },
+     {
+      "numero": "29",
+      "titre": {
+       "fr": "Le résultat de la période",
+       "nl": "Het resultaat van de periode"
+      },
+      "texte": {
+       "fr": "Huit tuiles. « CA de la semaine » ou « du mois », face à l’objectif (« budget validé » ou « CA théorique de l’étude ») et à l’attendu à ce jour.\n« Atteinte » : la part de l’attendu à ce jour, l’écart et les clients manquants (ou d’avance).\n« Projection » : où la période finira au rythme actuel. « Reste à faire » : le total, et par jour restant.\n« Par jour ouvert » : le CA, les clients et le panier hors clients pro.\n« Marge brute » avec le coût matière face à son seuil ; « Résultat net » en % des ventes ; « Record » : le meilleur jour de la période.\nL’objectif du mois est réparti sur les jours par la pondération réseau.",
+       "nl": "Acht tegels. « CA de la semaine » of « du mois » (omzet van de week / van de maand), tegenover de doelstelling (« budget validé », gevalideerd budget, of « CA théorique de l’étude », theoretische omzet van de studie) en het verwachte tot vandaag.\n« Atteinte » (bereikt): het deel van het verwachte tot vandaag, het verschil en de ontbrekende klanten (of de voorsprong).\n« Projection » (projectie): waar de periode eindigt aan het huidige ritme. « Reste à faire » (nog te doen): het totaal, en per resterende dag.\n« Par jour ouvert » (per open dag): de omzet, de klanten en het gemiddeld ticket zonder zakelijke klanten.\n« Marge brute » (brutomarge) met de grondstofkost tegenover zijn drempel; « Résultat net » (nettoresultaat) in % van de verkoop; « Record »: de beste dag van de periode.\nDe doelstelling van de maand wordt over de dagen verdeeld volgens de weging van het netwerk."
+      },
+      "critique": false,
+      "photo": "u/20261116-4e9bdba65b4f.jpg",
+      "video": null
+     },
+     {
+      "numero": "30",
+      "titre": {
+       "fr": "Commandes et canaux",
+       "nl": "Bestellingen en kanalen"
+      },
+      "texte": {
+       "fr": "En Mois, quatre canaux : « Comptoir » (tickets caisse hors clients pro), « Clients pro — B2B » (tickets des sociétés, TVA valide), « Click & collect » (webshop retiré en boutique), « Livraison » (webshop livré).\nPour chacun : le chiffre, l’écart au mois d’avant, la part du CA, les tickets ou commandes, le panier.\nUn toucher sur un canal ouvre « voir l’évolution ▾ » : les six derniers mois.\nDessous, le mois jour par jour par canal, puis « Les commandes du mois — semaine par semaine » et le nombre « à préparer ».\nEn Semaine, la même carte en trois canaux (le pro compris dans le comptoir), avec les commandes jour par jour ; tant que les commandes ne sont pas lues, elle reste « Comptoir et clients pro ».",
+       "nl": "In Maand vier kanalen: « Comptoir » (toonbank: kassatickets zonder zakelijke klanten), « Clients pro — B2B » (zakelijke klanten: tickets van bedrijven, geldig btw-nummer), « Click & collect » (webshop, afgehaald in de winkel), « Livraison » (levering: webshop, geleverd).\nVoor elk: het cijfer, het verschil met de vorige maand, het aandeel in de omzet, de tickets of bestellingen, het gemiddeld ticket.\nEen tik op een kanaal opent « voir l’évolution ▾ » (de evolutie bekijken): de zes laatste maanden.\nEronder de maand dag per dag per kanaal, daarna « Les commandes du mois — semaine par semaine » (de bestellingen van de maand, week per week) en het aantal « à préparer » (klaar te maken).\nIn Week dezelfde kaart met drie kanalen (zakelijk inbegrepen in de toonbank), met de bestellingen dag per dag; zolang de bestellingen niet gelezen zijn, blijft ze « Comptoir et clients pro » (toonbank en zakelijke klanten)."
+      },
+      "critique": false,
+      "photo": "u/20261116-b1f290a55cde.jpg",
+      "video": null
+     },
+     {
+      "numero": "31",
+      "titre": {
+       "fr": "Invendus et poubelle",
+       "nl": "Onverkochte producten en afval"
+      },
+      "texte": {
+       "fr": "Les pièces jetées déclarées en caisse ; leur coût de production « retranché du résultat ».\n« Valeur de vente perdue » : ce qu’elles auraient rapporté au prix de vente du panel.\n« Motifs » (fin de journée, dégustation, casse…) et « Les saisies une par une — heure, opérateur, quantité ▸ ».\n« voir le détail ▾ » ouvre les produits jetés.\nRien de déclaré ne veut pas dire rien de jeté : une poubelle non saisie fausse le résultat.\nLes reports au lendemain ne se lisent pas : la caisse les enregistre comme une production du matin.",
+       "nl": "De weggegooide stuks aangegeven in de kassa; hun productiekost wordt « retranché du résultat » (van het resultaat afgetrokken).\n« Valeur de vente perdue » (verloren verkoopwaarde): wat ze hadden opgebracht aan de verkoopprijs van het panel.\n« Motifs » (redenen: einde van de dag, proeverij, breuk…) en « Les saisies une par une — heure, opérateur, quantité ▸ » (de ingaven één voor één: uur, operator, hoeveelheid).\n« voir le détail ▾ » (het detail bekijken) opent de weggegooide producten.\nNiets aangegeven betekent niet niets weggegooid: afval dat niet ingegeven is, vervalst het resultaat.\nWat naar de volgende dag doorschuift, lees je niet: de kassa registreert het als een productie van de ochtend."
+      },
+      "critique": true,
+      "photo": "u/20261116-26dd1fa36183.jpg",
+      "video": null
+     },
+     {
+      "numero": "32",
+      "titre": {
+       "fr": "Le CA de chaque jour",
+       "nl": "De omzet van elke dag"
+      },
+      "texte": {
+       "fr": "Le calendrier de la période : en grand, le chiffre d’affaires du jour.\nTrois boutons changent ce qu’il montre : « CA », « Atteinte » (le CA en % de l’objectif du jour) ou « Clients » (face à l’objectif CA ÷ panier moyen).\nCouleur et jauge face à l’objectif du jour : ≥ 110 %, 100–110, 90–100, 75–90, < 75 %. Le trait : 100 % de l’objectif.\nHachuré : la journée en cours, pas encore jugée ; un jour à venir montre son objectif.\nDessous, « Le P&L de la semaine » ou « du mois » ; en Mois, à côté, « Le profil des jours » et le jour de la semaine le plus faible.",
+       "nl": "De kalender van de periode: groot, de omzet van de dag.\nDrie knoppen wijzigen wat hij toont: « CA » (omzet), « Atteinte » (bereikt: de omzet in % van de dagdoelstelling) of « Clients » (klanten, tegenover de doelstelling omzet ÷ gemiddeld ticket).\nKleur en meter tegenover de dagdoelstelling: ≥ 110 %, 100–110, 90–100, 75–90, < 75 %. Het streepje: 100 % van de doelstelling.\nGearceerd: de lopende dag, nog niet beoordeeld; een komende dag toont zijn doelstelling.\nEronder « Le P&L de la semaine » of « du mois » (de W&V van de week / van de maand); in Maand, ernaast, « Le profil des jours » (het profiel van de dagen) en de zwakste weekdag."
+      },
+      "critique": false,
+      "photo": "u/20261116-969e889dbb94.jpg",
+      "video": null
+     },
+     {
+      "numero": "33",
+      "titre": {
+       "fr": "Douze semaines et les heures",
+       "nl": "Twaalf weken en de uren"
+      },
+      "texte": {
+       "fr": "En Semaine, « Les douze dernières semaines » : clients, panier moyen ou articles par client, face à la même semaine un an plus tôt (décalée de 364 jours).\nBleu au-dessus du N-1, orange en dessous ; la semaine en cours reste hors de la courbe. Sans N-1, la carte dit pourquoi.\nLes heures (Semaine et Mois) : l’heure avec le plus de clients, le plus de chiffre, la plus rentable, la moins rentable.\n« La journée type » : pour chaque heure, ventes, coût matière, rémunération et marge nette ; case rouge < 0, orange < 20 % des ventes, vert clair < 40 %, vert ≥ 40 %.\n« Les périodes — matin, midi, après-midi » et le tableau heure par heure complètent ; un toucher sur une heure ouvre son détail.",
+       "nl": "In Week « Les douze dernières semaines » (de twaalf laatste weken): klanten, gemiddeld ticket of artikelen per klant, tegenover dezelfde week een jaar eerder (364 dagen verschoven).\nBlauw boven N-1, oranje eronder; de lopende week blijft buiten de curve. Zonder N-1 zegt de kaart waarom.\nDe uren (Week en Maand): het uur met de meeste klanten, de meeste omzet, het meest rendabele, het minst rendabele.\n« La journée type » (de typedag): voor elk uur verkoop, grondstofkost, verloning en nettomarge; vak rood < 0, oranje < 20 % van de verkoop, lichtgroen < 40 %, groen ≥ 40 %.\n« Les périodes — matin, midi, après-midi » (de periodes: ochtend, middag, namiddag) en de tabel uur per uur vullen aan; een tik op een uur opent het detail."
+      },
+      "critique": false,
+      "photo": "u/20261116-8f8d49bd0d4e.jpg",
+      "video": null
+     },
+     {
+      "numero": "34",
+      "titre": {
+       "fr": "Les six leviers (onglet Mois)",
+       "nl": "De zes hefbomen (tabblad Maand)"
+      },
+      "texte": {
+       "fr": "Trafic (clients par jour), récurrence (taux de retour des clients identifiés), expérience client (note Google), food cost, labour cost, overhead cost.\nChaque levier face au même mois de l’an dernier (« Écart vert : mieux qu’en … ») et au réseau, avec son seuil.\nLa pastille suit les seuils de la Table KPI : sous l’alerte, entre alerte et critique, au-delà ; pour le trafic, l’écart au réseau.\n« L’évolution de l’année » : les cinq leviers mois par mois (sans la note Google), le meilleur et le pire mois.\nLa carte se lit après les autres : « lecture… » le temps que le réseau soit lu.",
+       "nl": "Traffic (klanten per dag), terugkeer (terugkeerpercentage van de geïdentificeerde klanten), klantervaring (Google-score), food cost, labour cost, overhead cost.\nElke hefboom tegenover dezelfde maand vorig jaar (« Écart vert : mieux qu’en … »: groen verschil, beter dan in …) en het netwerk, met zijn drempel.\nHet bolletje volgt de drempels van de KPI-tabel: onder het alarm, tussen alarm en kritiek, erboven; voor de traffic, het verschil met het netwerk.\n« L’évolution de l’année » (de evolutie van het jaar): de vijf hefbomen maand per maand (zonder de Google-score), de beste en de slechtste maand.\nDe kaart wordt na de andere gelezen: « lecture… » (bezig met lezen) zolang het netwerk gelezen wordt."
+      },
+      "critique": false,
+      "photo": "u/20261116-111513942980.jpg",
+      "video": null
+     },
+     {
+      "numero": "35",
+      "titre": {
+       "fr": "La rentabilité jour par jour (onglet Mois)",
+       "nl": "De rendabiliteit dag per dag (tabblad Maand)"
+      },
+      "texte": {
+       "fr": "« Rentabilité — le résultat net, jour par jour » : une case par jour du mois en cours, avec son résultat net en % des ventes.\nPalette : rouge < 0 %, orange 0–5, verts 5–25, doré > 25 %.\nLe personnel et les frais généraux du mois sont répartis par jour ouvert ; la source : le P&L quotidien du panel.\nElle ne se lit que sur le mois en cours ; un mois passé le dit à sa place.",
+       "nl": "« Rentabilité — le résultat net, jour par jour » (rendabiliteit: het nettoresultaat, dag per dag): één vak per dag van de lopende maand, met het nettoresultaat in % van de verkoop.\nKleuren: rood < 0 %, oranje 0–5, groen 5–25, goud > 25 %.\nHet personeel en de algemene kosten van de maand worden over de open dagen verdeeld; de bron: de dagelijkse W&V van het panel.\nZe is alleen leesbaar voor de lopende maand; bij een voorbije maand staat dat op haar plaats."
+      },
+      "critique": false,
+      "photo": "u/20261116-a7cfc4ee67cf.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Année — le cap",
+     "nl": "Jaar — de koers"
+    },
+    "etapes": [
+     {
+      "numero": "36",
+      "titre": {
+       "fr": "L’objectif et les quatre trimestres",
+       "nl": "De doelstelling en de vier kwartalen"
+      },
+      "texte": {
+       "fr": "Trimestre et Année ne font plus qu’un onglet : « Année ». Une ancienne adresse Trimestre ouvre l’Année sur le trimestre de sa date.\n« Objectif » de l’année (« engagement du franchisé », ou la rampe de l’étude à engager) : une barre avec le réalisé, la projection hachurée et le repère « attendu à ce jour ».\nTrois chiffres : « Réalisé », « Écart à ce jour » (en avance ou en retard sur l’attendu), « Projection fin d’année ».\nLes quatre trimestres côte à côte (clos, en cours, à venir) : le réalisé sur l’objectif, les trois mois en petites barres, l’écart et la marge nette.\nLa pastille compare le réalisé à l’attendu à ce jour ; un toucher sur un trimestre ouvre son détail.",
+       "nl": "Kwartaal en Jaar zijn nu één tabblad: « Année » (jaar). Een oud adres van Kwartaal opent Jaar op het kwartaal van zijn datum.\n« Objectif » (doelstelling) van het jaar (« engagement du franchisé », engagement van de franchisenemer, of de opbouw van de studie, nog vast te leggen): een balk met het gerealiseerde, de gearceerde projectie en de markering « attendu à ce jour » (verwacht tot vandaag).\nDrie cijfers: « Réalisé » (gerealiseerd), « Écart à ce jour » (verschil tot vandaag, voor of achter op het verwachte), « Projection fin d’année » (projectie einde jaar).\nDe vier kwartalen naast elkaar (afgesloten, lopend, komend): het gerealiseerde tegenover de doelstelling, de drie maanden in kleine balken, het verschil en de nettomarge.\nHet bolletje vergelijkt het gerealiseerde met het verwachte tot vandaag; een tik op een kwartaal opent het detail."
+      },
+      "critique": false,
+      "photo": "u/20261116-4c1864a4810d.jpg",
+      "video": null
+     },
+     {
+      "numero": "37",
+      "titre": {
+       "fr": "Le trimestre ouvert",
+       "nl": "Het open kwartaal"
+      },
+      "texte": {
+       "fr": "« Le trimestre T… — en cours / clos / à venir » : objectif du plan de développement, attendu au rythme des budgets mensuels.\nSes trois mois : le budget en gris, le réalisé en couleur (vert à 95 % et plus).\nObjectif, réalisé, attendu à ce jour, écart, clients manquants (au panier moyen), marge nette avec food et labour.\n« Annotations » du franchisé, du consultant et de la marque ; « Actions » posées sur le trimestre, avec leur statut.\n« Rituel du trimestre » : cinq étapes, et s’il est validé (par qui, quand).",
+       "nl": "« Le trimestre T… — en cours / clos / à venir » (het kwartaal T…: lopend / afgesloten / komend): doelstelling van het ontwikkelingsplan, verwacht aan het ritme van de maandbudgetten.\nDe drie maanden: het budget in het grijs, het gerealiseerde in kleur (groen vanaf 95 %).\nDoelstelling, gerealiseerd, verwacht tot vandaag, verschil, ontbrekende klanten (aan het gemiddeld ticket), nettomarge met food en labour.\n« Annotations » (notities) van de franchisenemer, de consultant en het merk; « Actions » (acties) genomen voor het kwartaal, met hun status.\n« Rituel du trimestre » (kwartaalritueel): vijf stappen, en of het gevalideerd is (door wie, wanneer)."
+      },
+      "critique": false,
+      "photo": "u/20261116-7ebaf01a7840.jpg",
+      "video": null
+     },
+     {
+      "numero": "38",
+      "titre": {
+       "fr": "Les douze mois et le trafic",
+       "nl": "De twaalf maanden en de traffic"
+      },
+      "texte": {
+       "fr": "« Les 12 mois · … face à … » : une barre par mois, rangée par trimestre ; sa couleur dit l’atteinte du budget.\nRouge sous 80 %, orange 80–95 %, vert 95–105 %, doré au-delà de 105 % ; or : le mois en cours.\nLe trait gris : le même mois de l’an passé, et l’évolution en % ; le mois en cours n’est pas comparé.\n« Le trafic » : clients, panier moyen ou articles par client, mois par mois, face à l’an passé.",
+       "nl": "« Les 12 mois · … face à … » (de 12 maanden · … tegenover …): één balk per maand, geordend per kwartaal; de kleur zegt hoeveel van het budget bereikt is.\nRood onder 80 %, oranje 80–95 %, groen 95–105 %, goud boven 105 %; goudkleurig: de lopende maand.\nHet grijze streepje: dezelfde maand vorig jaar, en de evolutie in %; de lopende maand wordt niet vergeleken.\n« Le trafic » (de traffic): klanten, gemiddeld ticket of artikelen per klant, maand per maand, tegenover vorig jaar."
+      },
+      "critique": false,
+      "photo": "u/20261116-df27f5c43da3.jpg",
+      "video": null
+     },
+     {
+      "numero": "39",
+      "titre": {
+       "fr": "Le détail des mois et le long terme",
+       "nl": "Het detail van de maanden en de lange termijn"
+      },
+      "texte": {
+       "fr": "Deux plis fermés en bas de l’onglet ; un toucher les ouvre.\n« Le détail des mois » : CA, budget, atteinte, clients, panier, food cost, labour, overhead, marge nette.\nUn « ! » sur le labour : des jours vendus sans planning au panel, la main-d’œuvre du mois est incomplète.\n« Le long terme » : la rampe à 5 ans de l’étude de marché (année 1, 2, 3, puis la maturité) et les montants engagés, le réalisé à ce jour sur l’année en cours.",
+       "nl": "Twee dichtgeklapte delen onderaan het tabblad; een tik opent ze.\n« Le détail des mois » (het detail van de maanden): omzet, budget, bereikt, klanten, gemiddeld ticket, food cost, labour, overhead, nettomarge.\nEen « ! » bij labour: dagen met verkoop zonder planning in het panel, de personeelskost van de maand is onvolledig.\n« Le long terme » (de lange termijn): de opbouw over 5 jaar van de marktstudie (jaar 1, 2, 3, daarna de maturiteit) en de vastgelegde bedragen, het gerealiseerde tot vandaag voor het lopende jaar."
+      },
+      "critique": false,
+      "photo": "u/20261116-cd85befdae9d.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Trésorerie — payer tout le monde",
+     "nl": "Thesaurie — iedereen betalen"
+    },
+    "etapes": [
+     {
+      "numero": "40",
+      "titre": {
+       "fr": "La routine du dimanche et la décision",
+       "nl": "De zondagsroutine en de beslissing"
+      },
+      "texte": {
+       "fr": "« Plan de trésorerie » : semaine par semaine, en € TTC, d’après le modèle du réseau. Une seule question : peut-on payer tout le monde dans les semaines qui viennent ?\n« Routine du dimanche » : le solde réel du compte, lu dans la banque. Vide, le plan part de 0 € : « tout est faux ».\nEnsuite, l’« Écart réel − prévu » : au-delà de 500 €, la cause se cherche avant lundi.\n« La décision · 4 semaines à venir » : le cash prévu de chaque lundi ; orange sous le coussin, rouge à découvert.\nLes repères : « Point bas du cash », « Semaines sous le coussin », ventes prévues, marchandises et personnel + gérant en % des ventes face au plafond ou au budget.\nCe qui se saisit (solde, coussin, montants) s’enregistre au serveur : rien ne se tape pour essayer.",
+       "nl": "« Plan de trésorerie » (thesaurieplan): week per week, in € incl. btw, volgens het model van het netwerk. Eén enkele vraag: kunnen we iedereen betalen in de komende weken?\n« Routine du dimanche » (zondagsroutine): het werkelijke saldo van de rekening, gelezen in de bank. Leeg vertrekt het plan van 0 €: « tout est faux » (alles is fout).\nDaarna het « Écart réel − prévu » (verschil werkelijk − voorzien): boven 500 € zoek je de oorzaak vóór maandag.\n« La décision · 4 semaines à venir » (de beslissing · 4 komende weken): de voorziene cash van elke maandag; oranje onder de buffer, rood bij een negatief saldo.\nDe markeringen: « Point bas du cash » (laagste cashpunt), « Semaines sous le coussin » (weken onder de buffer), voorziene verkoop, goederen en personeel + zaakvoerder in % van de verkoop tegenover het plafond of het budget.\nWat je ingeeft (saldo, buffer, bedragen) wordt op de server bewaard: typ niets om te proberen."
+      },
+      "critique": true,
+      "photo": "u/20261116-b39c5c859077.jpg",
+      "video": null
+     },
+     {
+      "numero": "41",
+      "titre": {
+       "fr": "Le plan semaine par semaine",
+       "nl": "Het plan week per week"
+      },
+      "texte": {
+       "fr": "Une colonne par lundi (« 8 semaines », « 13 semaines » ou « Tout ») ; un « ? » sur chaque ligne explique d’où elle vient.\n« Encaissements (ventes) » : une semaine close prend le réel de la caisse ; les autres partent du budget validé (à défaut l’étude, puis l’année passée), en « ≈ ».\nTrois repères dessous : « réalisé en caisse », « budget validé », « même semaine N-1 » (364 jours plus tôt, un lundi face à un lundi).\nUn repère absent est un tiret ; son motif se lit au survol (semaine pas encore passée, magasin qui ne vendait pas encore, aucune vente lue). Sous l’intitulé : « pas d’année passée : première vente le … ».\nLes décaissements suivent les onglets Fournisseurs et Paiements (gérant, personnel, frais fixes, crédits, TVA & ONSS…), puis « Cash fin de semaine (prévu) » : orange sous le coussin, rouge découvert.\nTVA et ONSS ne sont pas préremplies : sans elles, le plan est trop optimiste.",
+       "nl": "Eén kolom per maandag (« 8 semaines », « 13 semaines » of « Tout »: 8 weken, 13 weken, alles); een « ? » op elke lijn legt uit waar ze vandaan komt.\n« Encaissements (ventes) » (ontvangsten, verkoop): een afgesloten week neemt het werkelijke cijfer van de kassa; de andere vertrekken van het gevalideerde budget (anders de studie, daarna vorig jaar), met « ≈ ».\nDrie markeringen eronder: « réalisé en caisse » (gerealiseerd in de kassa), « budget validé » (gevalideerd budget), « même semaine N-1 » (dezelfde week N-1: 364 dagen eerder, een maandag tegenover een maandag).\nEen ontbrekende markering is een streepje; de reden lees je als je er met de muis over gaat (week nog niet voorbij, winkel die nog niet verkocht, geen verkoop gelezen). Onder de titel: « pas d’année passée : première vente le … » (geen vorig jaar: eerste verkoop op …).\nDe uitgaven volgen de tabbladen Fournisseurs (Leveranciers) en Paiements (Betalingen) (zaakvoerder, personeel, vaste kosten, kredieten, btw & RSZ…), daarna « Cash fin de semaine (prévu) » (cash einde week, voorzien): oranje onder de buffer, rood bij een negatief saldo.\nBtw en RSZ zijn niet vooraf ingevuld: zonder die bedragen is het plan te optimistisch."
+      },
+      "critique": false,
+      "photo": "u/20261116-2496fd1059b1.jpg",
+      "video": null
+     },
+     {
+      "numero": "42",
+      "titre": {
+       "fr": "Fournisseurs",
+       "nl": "Leveranciers"
+      },
+      "texte": {
+       "fr": "Le montant à payer à chaque fournisseur, semaine par semaine (€ TTC) ; 15 fournisseurs au plus.\nSur chaque ligne, l’estimation se choisit : « % » (une part des ventes prévues de la semaine) ou « € » (un même montant chaque semaine).\nUne case vide garde l’estimation (« ≈ ») ; un montant tapé a la priorité pour sa semaine.\n« Total achats » additionne les deux (« … % + … €/sem. ») et alimente la ligne Marchandises du plan.\n« En % des ventes » passe en couleur au-delà du « Plafond à ne pas dépasser », proposé au taux matière du budget (Budget › Paramètres).\nLes factures réellement payées ne sont pas encore lues : elles se tapent.",
+       "nl": "Het bedrag te betalen aan elke leverancier, week per week (€ incl. btw); hoogstens 15 leveranciers.\nOp elke lijn kies je de schatting: « % » (een deel van de voorziene verkoop van de week) of « € » (elke week hetzelfde bedrag).\nEen leeg vak houdt de schatting (« ≈ »); een getypt bedrag heeft voorrang voor zijn week.\n« Total achats » (totaal aankopen) telt beide op (« … % + … €/sem. ») en voedt de lijn Marchandises (goederen) van het plan.\n« En % des ventes » (in % van de verkoop) krijgt een kleur boven het « Plafond à ne pas dépasser » (niet te overschrijden plafond), voorgesteld op het grondstofpercentage van het budget (Budget › Paramètres).\nDe werkelijk betaalde facturen worden nog niet gelezen: je typt ze in."
+      },
+      "critique": false,
+      "photo": "u/20261116-219deabd417c.jpg",
+      "video": null
+     },
+     {
+      "numero": "43",
+      "titre": {
+       "fr": "Budget & étude",
+       "nl": "Budget & studie"
+      },
+      "texte": {
+       "fr": "En lecture seule : rien ne s’y modifie, le budget et l’étude s’encodent au cockpit, avec le consultant.\nUn bouton par exercice (« … · validé », « budget encodé »…) ; une année à venir sans budget encodé ne s’affiche pas.\nMois par mois : l’étude de marché (saisonnalité, CA théorique), le budget (CA, réalisé en caisse, atteinte, N-1, évolution, atterrissage).\nPuis les charges du budget en euros (taux × CA au budget) jusqu’à la marge brute et au disponible pour la rémunération, et le réel du P&L (panel) des mois clos face aux taux du budget.\nUn mois N-1 incomplet (ouverture en cours de mois) est marqué « ‡ » et sort de l’évolution. Dessous, la carte de l’étude : potentiel, montée en régime, saisonnalité.",
+       "nl": "Alleen-lezen: hier wijzig je niets, het budget en de studie worden in de cockpit ingegeven, met de consultant.\nEén knop per boekjaar (« … · validé », « budget encodé »…: gevalideerd, budget ingegeven); een komend jaar zonder ingegeven budget verschijnt niet.\nMaand per maand: de marktstudie (seizoensgebondenheid, theoretische omzet), het budget (omzet, gerealiseerd in de kassa, bereikt, N-1, evolutie, eindprognose).\nDaarna de kosten van het budget in euro (percentage × omzet volgens budget) tot de brutomarge en het beschikbare voor de verloning, en het werkelijke cijfer van de W&V (panel) van de afgesloten maanden tegenover de percentages van het budget.\nEen onvolledige N-1-maand (opening in de loop van de maand) krijgt « ‡ » en valt uit de evolutie. Eronder de kaart van de studie: potentieel, opstartfase, seizoensgebondenheid."
+      },
+      "critique": false,
+      "photo": "u/20261116-3ab44cd3ad7e.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Vendre — Analyse",
+     "nl": "Verkopen — Analyse"
+    },
+    "etapes": [
+     {
+      "numero": "44",
+      "titre": {
+       "fr": "L’entrée d’Analyse",
+       "nl": "De ingang van Analyse"
+      },
+      "texte": {
+       "fr": "« Analyse » ouvre le groupe « Vendre » du rail : les ventes du magasin, produit par produit, lues dans les ventes du panel.\nEn tête, six chiffres : « Chiffre d’affaires TTC », « Pièces vendues », « Marge réalisée », « Panier moyen », « Références vendues », « Recettes sans coût ».\nLa marge réalisée : CA HT − pièces × coût de la recette ; « connue sur … % du CA » dit la part du chiffre dont la recette a un coût.\n« Recettes sans coût » : la marge de ces produits est inconnue, « à compléter au panel ».\n« Les familles » : chiffre, marge réalisée et évolution de chaque famille ; un clic ouvre la famille.\nDessous, la courbe du chiffre et quatre classements : « Les plus gros chiffres », « Ce qui rapporte le plus », « Ce qui monte », « Ce qui baisse » ; un clic sur un produit ouvre sa page.\nLes flèches : ▲ vert à +5 % et plus, ▶ gris entre −5 et +5 %, ▼ orange de −5 à −15 %, ▼ rouge au-delà.",
+       "nl": "« Analyse » opent de groep « Vendre » (Verkopen) van de zijbalk: de verkoop van de winkel, product per product, gelezen uit de verkoop in het panel.\nBovenaan zes cijfers: « Chiffre d’affaires TTC » (omzet incl. btw), « Pièces vendues » (verkochte stuks), « Marge réalisée » (gerealiseerde marge), « Panier moyen » (gemiddeld ticket), « Références vendues » (verkochte referenties), « Recettes sans coût » (recepten zonder kost).\nDe gerealiseerde marge: omzet excl. btw − stuks × kost van het recept; « connue sur … % du CA » (bekend op … % van de omzet) zegt welk deel van de omzet een recept met een kost heeft.\n« Recettes sans coût »: de marge van deze producten is onbekend, « à compléter au panel » (aan te vullen in het panel).\n« Les familles » (de families): omzet, gerealiseerde marge en evolutie van elke familie; een klik opent de familie.\nEronder de omzetcurve en vier rangschikkingen: « Les plus gros chiffres » (de grootste omzetten), « Ce qui rapporte le plus » (wat het meest opbrengt), « Ce qui monte » (wat stijgt), « Ce qui baisse » (wat daalt); een klik op een product opent zijn pagina.\nDe pijlen: ▲ groen vanaf +5 %, ▶ grijs tussen −5 en +5 %, ▼ oranje van −5 tot −15 %, ▼ rood daarbuiten."
+      },
+      "critique": false,
+      "photo": "u/20261116-052ac17367ed.jpg",
+      "video": null
+     },
+     {
+      "numero": "45",
+      "titre": {
+       "fr": "Choisir la période",
+       "nl": "De periode kiezen"
+      },
+      "texte": {
+       "fr": "La barre du haut choisit la période : « Semaine », « Mois », « Trimestre », « Année », « 13 semaines », « Du … au ».\nÀ l’ouverture : « 13 semaines », jusqu’à aujourd’hui.\n‹ et › passent à la période d’avant ou d’après ; › est grisé sur la période en cours.\n« Du … au » montre deux dates ; une plage compte 400 jours au plus.\nLa ligne « comparé …, au jour » dit à quoi tout se compare : la période d’avant, de même longueur ; une période entamée se compare aux mêmes jours.\nLes courbes vont jour par jour jusqu’à 31 jours, semaine par semaine jusqu’à 190 jours, mois par mois au-delà.\nL’adresse de la page garde la période et la page ouverte (produit ou famille) : un rechargement ou un lien partagé rouvre la même vue.",
+       "nl": "De bovenste balk kiest de periode: « Semaine » (week), « Mois » (maand), « Trimestre » (kwartaal), « Année » (jaar), « 13 semaines » (13 weken), « Du … au » (van … tot).\nBij het openen: « 13 semaines », tot vandaag.\n‹ en › gaan naar de vorige of de volgende periode; › is grijs bij de lopende periode.\n« Du … au » toont twee datums; een bereik telt hoogstens 400 dagen.\nDe lijn « comparé …, au jour » (vergeleken …, tot op de dag) zegt waarmee alles vergeleken wordt: de vorige periode, even lang; een begonnen periode wordt met dezelfde dagen vergeleken.\nDe curves gaan dag per dag tot 31 dagen, week per week tot 190 dagen, maand per maand daarboven.\nHet adres van de pagina bewaart de periode en de geopende pagina (product of familie): herladen of een gedeelde link opent dezelfde weergave opnieuw."
+      },
+      "critique": false,
+      "photo": "u/20261116-815b7cb188cc.jpg",
+      "video": null
+     },
+     {
+      "numero": "46",
+      "titre": {
+       "fr": "Un produit, question par question",
+       "nl": "Een product, vraag per vraag"
+      },
+      "texte": {
+       "fr": "Un clic sur un produit, ou « Chercher un produit ou une famille… », ouvre sa page ; « Analyse » ramène à l’entrée.\n« Ce qu’il faut retenir » résume en tête ce que disent les cartes.\nSept questions, une carte chacune : « Combien j’en vends ? », « Combien il me rapporte ? », « Combien j’en jette ? », « Quel jour il part ? », « Mon prix est-il bon ? », « Est-ce que je fais mieux que les autres ? », « Comment a-t-il évolué depuis l’ouverture ? ».\nLe rapport se lit en cascade : prix TTC − TVA = hors TVA − recette = marge, avec le coefficient (prix HT ÷ recette).\nLes invendus sont ceux saisis en caisse ; « Quel jour il part ? » lit les 28 derniers jours clos, 4 de chaque jour.\nLe prix : « Affiché », « Encaissé » (remises comprises) et la médiane du réseau.\nFace aux autres : les pièces « pour 10 k€ de chiffre », pour comparer un grand et un petit magasin ; les autres sont « Magasin A », « Magasin B », jamais nommés.",
+       "nl": "Een klik op een product, of « Chercher un produit ou une famille… » (een product of familie zoeken), opent zijn pagina; « Analyse » brengt je terug naar de ingang.\n« Ce qu’il faut retenir » (wat je moet onthouden) vat bovenaan samen wat de kaarten zeggen.\nZeven vragen, elk een kaart: « Combien j’en vends ? » (hoeveel verkoop ik ervan?), « Combien il me rapporte ? » (hoeveel brengt het me op?), « Combien j’en jette ? » (hoeveel gooi ik weg?), « Quel jour il part ? » (op welke dag gaat het weg?), « Mon prix est-il bon ? » (is mijn prijs goed?), « Est-ce que je fais mieux que les autres ? » (doe ik het beter dan de anderen?), « Comment a-t-il évolué depuis l’ouverture ? » (hoe is het geëvolueerd sinds de opening?).\nDe opbrengst lees je als een cascade: prijs incl. btw − btw = excl. btw − recept = marge, met de coëfficiënt (prijs excl. btw ÷ recept).\nDe onverkochte stuks zijn die ingegeven in de kassa; « Quel jour il part ? » leest de laatste 28 afgesloten dagen, 4 van elke weekdag.\nDe prijs: « Affiché » (aangeduid), « Encaissé » (geïnd, kortingen inbegrepen) en de mediaan van het netwerk.\nTegenover de anderen: de stuks « pour 10 k€ de chiffre » (per 10 k€ omzet), om een grote en een kleine winkel te vergelijken; de anderen heten « Magasin A », « Magasin B », nooit bij naam."
+      },
+      "critique": false,
+      "photo": "u/20261116-5ee0fabad56e.jpg",
+      "video": null
+     },
+     {
+      "numero": "47",
+      "titre": {
+       "fr": "Une famille",
+       "nl": "Een familie"
+      },
+      "texte": {
+       "fr": "Un clic sur une famille ouvre sa page : huit questions, de « Combien pèse-t-elle chez moi ? » à « Comment a-t-elle évolué depuis l’ouverture ? ».\n« Quels produits la portent ? » : les trois premiers et leur part du chiffre de la famille ; un clic ouvre un produit.\n« Lesquels montent, lesquels baissent ? » : les nouveaux à part, et les tranches « hors norme » (plus de 3 fois l’habitude : une commande, une fête), ramenées à l’habitude.\n« Où est-ce que je perds de l’argent ? » : pièces jetées et matière perdue ; la barre est verte sous 8 %, orange de 8 à 15 %, rouge au-delà.\n« À quelle heure se vend-elle ? » : un jour de la semaine au choix, la moyenne des mêmes jours d’avant, heure par heure.",
+       "nl": "Een klik op een familie opent haar pagina: acht vragen, van « Combien pèse-t-elle chez moi ? » (hoeveel weegt ze bij mij?) tot « Comment a-t-elle évolué depuis l’ouverture ? » (hoe is ze geëvolueerd sinds de opening?).\n« Quels produits la portent ? » (welke producten dragen haar?): de eerste drie en hun aandeel in de omzet van de familie; een klik opent een product.\n« Lesquels montent, lesquels baissent ? » (welke stijgen, welke dalen?): de nieuwe apart, en de schijven « hors norme » (buiten de norm: meer dan 3 keer de gewoonte, een bestelling, een feest), teruggebracht tot de gewoonte.\n« Où est-ce que je perds de l’argent ? » (waar verlies ik geld?): weggegooide stuks en verloren grondstof; de balk is groen onder 8 %, oranje van 8 tot 15 %, rood daarboven.\n« À quelle heure se vend-elle ? » (op welk uur verkoopt ze?): een weekdag naar keuze, het gemiddelde van dezelfde dagen ervoor, uur per uur."
+      },
+      "critique": false,
+      "photo": "u/20261116-3a5e23553053.jpg",
+      "video": null
+     },
+     {
+      "numero": "48",
+      "titre": {
+       "fr": "« Et chez les autres ? »",
+       "nl": "« Et chez les autres ? » (En bij de anderen?)"
+      },
+      "texte": {
+       "fr": "La question 7 de la famille met le magasin face aux autres magasins du réseau, à taille égale.\n« pour 10 k€ » : les pièces rapportées au chiffre de chaque magasin.\n« Les autres, pour 10 k€ » : la moyenne des magasins qui vendent le produit, sans leur nom ; la flèche dit l’écart.\n« Vendus ailleurs, pas chez vous » : les références que d’autres magasins vendent et pas celui-ci ; « à votre taille », ce que leur rythme donnerait ici.\n« À essayer, ou à écarter en connaissance de cause. »\nSur la courbe de la question 2, la ligne grise : « les autres magasins, ramenés à votre taille ».",
+       "nl": "Vraag 7 van de familie zet de winkel tegenover de andere winkels van het netwerk, bij gelijke grootte.\n« pour 10 k€ » (per 10 k€): de stuks herleid tot de omzet van elke winkel.\n« Les autres, pour 10 k€ » (de anderen, per 10 k€): het gemiddelde van de winkels die het product verkopen, zonder hun naam; de pijl geeft het verschil.\n« Vendus ailleurs, pas chez vous » (elders verkocht, niet bij jou): de referenties die andere winkels verkopen en deze winkel niet; « à votre taille » (op jouw grootte): wat hun ritme hier zou geven.\n« À essayer, ou à écarter en connaissance de cause. » (te proberen, of bewust te laten vallen.)\nOp de curve van vraag 2 de grijze lijn: « les autres magasins, ramenés à votre taille » (de andere winkels, herleid tot jouw grootte)."
+      },
+      "critique": false,
+      "photo": "u/20261116-b71e7a75b9ae.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Vendre — Produits",
+     "nl": "Verkopen — Producten"
+    },
+    "etapes": [
+     {
+      "numero": "49",
+      "titre": {
+       "fr": "Le magasin se développe-t-il ?",
+       "nl": "Groeit de winkel?"
+      },
+      "texte": {
+       "fr": "« Produits » répond d’abord à une question : le magasin se développe-t-il ?\nLes 13 dernières semaines en colonnes : « les 6 semaines d’avant » en clair, « les 6 dernières semaines » en foncé, la semaine en cours hachurée.\nLa comparaison : le chiffre des 6 dernières semaines closes face aux 6 d’avant ; la ligne du haut en donne les dates.\n▲ à plus de 8 %, ▼ à 8 % de moins, = entre les deux ; la phrase le dit : « Le magasin se développe. », « recule », « est stable ».\nLes chiffres viennent des « ventes du panel, semaine par semaine » ; la lecture est gardée 15 minutes.",
+       "nl": "« Produits » (producten) beantwoordt eerst één vraag: groeit de winkel?\nDe laatste 13 weken in kolommen: « les 6 semaines d’avant » (de 6 weken ervoor) licht, « les 6 dernières semaines » (de laatste 6 weken) donker, de lopende week gearceerd.\nDe vergelijking: de omzet van de laatste 6 afgesloten weken tegenover de 6 ervoor; de bovenste lijn geeft de datums.\n▲ bij meer dan 8 %, ▼ bij 8 % minder, = daartussen; de zin zegt het: « Le magasin se développe. » (de winkel groeit), « recule » (gaat achteruit), « est stable » (is stabiel).\nDe cijfers komen uit de « ventes du panel, semaine par semaine » (verkoop in het panel, week per week); de lezing wordt 15 minuten bewaard."
+      },
+      "critique": true,
+      "photo": "u/20261116-5a050700977a.jpg",
+      "video": null
+     },
+     {
+      "numero": "50",
+      "titre": {
+       "fr": "Une tuile par catégorie",
+       "nl": "Eén tegel per categorie"
+      },
+      "texte": {
+       "fr": "« Vos catégories » : une tuile par catégorie, de la plus grosse à la plus petite.\nVerte si elle monte, ocre si elle baisse, neutre si elle est stable.\nSur la tuile : l’évolution, le chiffre « par semaine » des 6 dernières semaines, le nombre de produits et les 13 semaines en petit.\n« nouveau » ou « arrêté » quand l’une des deux périodes est presque vide ; « peu vendu » sous 24 pièces en 12 semaines.\nUn clic ouvre la catégorie.",
+       "nl": "« Vos catégories » (jouw categorieën): één tegel per categorie, van de grootste naar de kleinste.\nGroen als ze stijgt, oker als ze daalt, neutraal als ze stabiel is.\nOp de tegel: de evolutie, de omzet « par semaine » (per week) van de laatste 6 weken, het aantal producten en de 13 weken in het klein.\n« nouveau » (nieuw) of « arrêté » (gestopt) als een van beide periodes bijna leeg is; « peu vendu » (weinig verkocht) onder 24 stuks in 12 weken.\nEen klik opent de categorie."
+      },
+      "critique": false,
+      "photo": "u/20261116-a3b286f6ad2d.jpg",
+      "video": null
+     },
+     {
+      "numero": "51",
+      "titre": {
+       "fr": "La catégorie et le produit déplié",
+       "nl": "De categorie en het opengeklapte product"
+      },
+      "texte": {
+       "fr": "La catégorie s’ouvre en fenêtre : son évolution, ses semaines, puis « Ses produits ».\nPour chaque produit : prix, pièces « par semaine », évolution, et ses semaines en petit ; les 12 premiers au chiffre, les autres sous « ▾ les … autres produits ».\nUn clic sur un produit le déplie : « Prix de vente », « Quantité » par semaine (maintenant et « avant »), « Marge » en % et par semaine.\nLa marge se calcule au coût de la recette du jour, avec le prix du catalogue du magasin ; sans coût, le motif s’affiche.\n« Fiche complète ↗ » ferme la catégorie et ouvre la fiche du produit.",
+       "nl": "De categorie opent in een venster: haar evolutie, haar weken, daarna « Ses produits » (haar producten).\nVoor elk product: prijs, stuks « par semaine », evolutie, en zijn weken in het klein; de eerste 12 volgens omzet, de andere onder « ▾ les … autres produits » (de … andere producten).\nEen klik op een product klapt het open: « Prix de vente » (verkoopprijs), « Quantité » (hoeveelheid) per week (nu en « avant », ervoor), « Marge » in % en per week.\nDe marge wordt berekend aan de kost van het recept van vandaag, met de catalogusprijs van de winkel; zonder kost verschijnt de reden.\n« Fiche complète ↗ » (volledige fiche) sluit de categorie en opent de fiche van het product."
+      },
+      "critique": false,
+      "photo": "u/20261116-acd9730004ca.jpg",
+      "video": null
+     },
+     {
+      "numero": "52",
+      "titre": {
+       "fr": "La fiche du produit : « prix HT du catalogue »",
+       "nl": "De productfiche: « prix HT du catalogue » (catalogusprijs excl. btw)"
+      },
+      "texte": {
+       "fr": "La fiche a trois onglets : « Ventes · 12 semaines », « Prix face au réseau », « Recette & marge ».\nOuverte depuis Produits, elle ne part pas d’une vente du jour : « Recette & marge » prend « le prix HT du catalogue ».\nLa marge brute se lit alors « au prix du catalogue », pas au prix encaissé.\nLe coefficient (prix ÷ coût de recette) se place sur la bande : « × 1,67 · marge 40 % », « × 2,5 · marge 60 % » ; l’objectif du réseau y a son repère.\nLe champ « Prix de vente » se tape pour voir le coefficient à un autre prix ; rien n’est enregistré.",
+       "nl": "De fiche heeft drie tabbladen: « Ventes · 12 semaines » (verkoop · 12 weken), « Prix face au réseau » (prijs tegenover het netwerk), « Recette & marge » (recept & marge).\nGeopend vanuit « Produits » vertrekt ze niet van een verkoop van de dag: « Recette & marge » neemt « le prix HT du catalogue ».\nDe brutomarge lees je dan « au prix du catalogue » (aan de catalogusprijs), niet aan de geïnde prijs.\nDe coëfficiënt (prijs ÷ receptkost) staat op de band: « × 1,67 · marge 40 % », « × 2,5 · marge 60 % »; de doelstelling van het netwerk heeft er een merkteken.\nIn het veld « Prix de vente » typ je een andere prijs om de coëfficiënt bij die prijs te zien; er wordt niets opgeslagen."
+      },
+      "critique": false,
+      "photo": "u/20261116-13878b130708.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Vendre — Promotions, Offres, Primes",
+     "nl": "Verkopen — Promoties, Offertes, Premies"
+    },
+    "etapes": [
+     {
+      "numero": "53",
+      "titre": {
+       "fr": "Promotions",
+       "nl": "Promoties"
+      },
+      "texte": {
+       "fr": "Lecture seule : « les promotions se créent et se modifient au cockpit, dans Promotions › Édition ».\n« Où les promotions sont utilisées » : chaque promotion reconnue dans les tickets, « En nombre » ou « En remise € », sur « 7 jours » ou « 30 jours ».\nLa barre de chaque promotion se partage entre comptoir, click & collect et livraison ; à droite, le jour par jour, « comptoir en bas, webshop au-dessus ».\n« Une utilisation : une fois où une promotion s’applique sur un ticket. »\nDessous, la liste : « Actives », « À venir », « Brouillons », « Terminées », « Toutes », la sorte (« X achetés + Y », « Bundles ») et « Colonnes ▾ ».\n« ↻ relire le panel » relit les promotions au panel.",
+       "nl": "Alleen-lezen: « les promotions se créent et se modifient au cockpit, dans Promotions › Édition » (promoties worden aangemaakt en gewijzigd in de cockpit, in Promotions › Édition).\n« Où les promotions sont utilisées » (waar de promoties gebruikt worden): elke promotie herkend in de tickets, « En nombre » (in aantal) of « En remise € » (in korting €), over « 7 jours » of « 30 jours » (7 of 30 dagen).\nDe balk van elke promotie wordt verdeeld over toonbank, click & collect en levering; rechts dag per dag, « comptoir en bas, webshop au-dessus » (toonbank onderaan, webshop erboven).\n« Une utilisation : une fois où une promotion s’applique sur un ticket. » (één gebruik: één keer dat een promotie op een ticket toegepast wordt.)\nEronder de lijst: « Actives », « À venir », « Brouillons », « Terminées », « Toutes » (actief, komend, ontwerpen, afgelopen, alle), de soort (« X achetés + Y », « Bundles ») en « Colonnes ▾ » (kolommen).\n« ↻ relire le panel » leest de promoties opnieuw in het panel."
+      },
+      "critique": false,
+      "photo": "u/20261116-7e1f7b58653a.jpg",
+      "video": null
+     },
+     {
+      "numero": "54",
+      "titre": {
+       "fr": "Le coefficient d’une promotion",
+       "nl": "De coëfficiënt van een promotie"
+      },
+      "texte": {
+       "fr": "« Coef. du lot » : prix payé HT ÷ coût matière, dans le cas le plus serré.\nEn vert à × 2 et plus, en rouge en dessous : c’est le « repère ×2 ».\nUn toucher sur le coefficient (ⓘ) ouvre le détail : avec et sans la promotion, l’« Écart au repère », « Ce qui fixe le chiffre ».\nLe calcul se refait aux prix HT de la caisse et aux coûts de recette du magasin, aujourd’hui.\nSous le repère, une promotion du magasin est « À revoir au cockpit (Promotions › Édition) » ; une promotion de la marque est « à lui signaler ».\n« Voir produit par produit » : le pire lot de chaque produit visé.",
+       "nl": "« Coef. du lot » (coëfficiënt van de bundel): betaalde prijs excl. btw ÷ grondstofkost, in het krapste geval.\nGroen vanaf × 2, rood daaronder: dat is de « repère ×2 » (ijkpunt ×2).\nEen tik op de coëfficiënt (ⓘ) opent het detail: met en zonder de promotie, het « Écart au repère » (verschil met het ijkpunt), « Ce qui fixe le chiffre » (wat het cijfer bepaalt).\nDe berekening wordt opnieuw gemaakt met de prijzen excl. btw van de kassa en de receptkosten van de winkel, vandaag.\nOnder het ijkpunt is een promotie van de winkel « À revoir au cockpit (Promotions › Édition) » (te herzien in de cockpit); een promotie van het merk is « à lui signaler » (aan het merk te melden).\n« Voir produit par produit » (product per product bekijken): de slechtste bundel van elk betrokken product."
+      },
+      "critique": true,
+      "photo": "u/20261116-0c8c4af2473c.jpg",
+      "video": null
+     },
+     {
+      "numero": "55",
+      "titre": {
+       "fr": "Offres : les offres client de TF Buddy",
+       "nl": "Offertes: de klantoffertes van TF Buddy"
+      },
+      "texte": {
+       "fr": "« Offres » montre les offres de prix du magasin à ses clients, telles que TF Buddy les garde.\nOnglets « En cours », « Converties », « Archivées », « Toutes », « Newsletter ».\nQuatre chiffres : « En cours », « Converties en commande », « Taux de conversion », « Prochain événement ».\nLa liste : n°, offre et client, événement, « Total TTC », état ; un clic ouvre l’offre à côté, avec son aperçu au gabarit A4.\n« Le document officiel est le PDF que TF Buddy rend » : PDF en FR, NL ou EN.\n« Nouvelle offre », « Modifier », « Convertir en commande », « Archiver » et « Supprimer » écrivent directement dans TF Buddy.",
+       "nl": "« Offres » (offertes) toont de prijsoffertes van de winkel aan zijn klanten, zoals TF Buddy ze bewaart.\nTabbladen « En cours » (lopend), « Converties » (omgezet), « Archivées » (gearchiveerd), « Toutes » (alle), « Newsletter ».\nVier cijfers: « En cours », « Converties en commande » (omgezet in bestelling), « Taux de conversion » (conversieratio), « Prochain événement » (volgend evenement).\nDe lijst: nr., offerte en klant, evenement, « Total TTC » (totaal incl. btw), status; een klik opent de offerte ernaast, met haar voorbeeld op A4-formaat.\n« Le document officiel est le PDF que TF Buddy rend » (het officiële document is de pdf die TF Buddy aflevert): pdf in het FR, NL of EN.\n« Nouvelle offre » (nieuwe offerte), « Modifier » (wijzigen), « Convertir en commande » (omzetten in bestelling), « Archiver » (archiveren) en « Supprimer » (verwijderen) schrijven rechtstreeks in TF Buddy."
+      },
+      "critique": false,
+      "photo": "u/20261116-7c09e59142e8.jpg",
+      "video": null
+     },
+     {
+      "numero": "56",
+      "titre": {
+       "fr": "La marge de l’offre",
+       "nl": "De marge van de offerte"
+      },
+      "texte": {
+       "fr": "Chaque offre dit sa « Marge de l’offre », au total et ligne par ligne.\n« Prix HT » : ce que le client paie, remises déduites ; « Coût matière » : le coût de recette du panel pour le magasin, sinon celui du réseau (« coût réseau »).\n« Marge brute » en euros, en % et en coefficient.\nLes seuils de « Recette & marge » : rouge sous × 1,67 (« marge brute sous 40 % »), orange sous × 2,5 (« entre 40 et 60 % »), vert au-delà.\nL’objectif du réseau est une matière à 32 % du prix HT ; au-dessus, la ligne dit le prix HT qu’il faudrait.\n« livraison hors marge ».",
+       "nl": "Elke offerte toont haar « Marge de l’offre » (marge van de offerte), in totaal en lijn per lijn.\n« Prix HT » (prijs excl. btw): wat de klant betaalt, kortingen afgetrokken; « Coût matière » (grondstofkost): de receptkost in het panel voor de winkel, anders die van het netwerk (« coût réseau »).\n« Marge brute » (brutomarge) in euro, in % en als coëfficiënt.\nDe drempels van « Recette & marge »: rood onder × 1,67 (« marge brute sous 40 % »), oranje onder × 2,5 (« entre 40 et 60 % »), groen daarboven.\nDe doelstelling van het netwerk is grondstof op 32 % van de prijs excl. btw; daarboven geeft de lijn de prijs excl. btw die nodig zou zijn.\n« livraison hors marge » (levering buiten de marge)."
+      },
+      "critique": false,
+      "photo": "u/20261116-0d7a3a2dae8d.jpg",
+      "video": null
+     },
+     {
+      "numero": "57",
+      "titre": {
+       "fr": "Offres › Newsletter",
+       "nl": "Offertes › Newsletter"
+      },
+      "texte": {
+       "fr": "L’onglet « Newsletter » ouvre l’écran newsletter du cockpit, au nom du magasin.\n« Campagnes », « Templates », « Expéditeur » ; l’écran se lit en FR, NL ou EN.\nLes chiffres : « Contacts opt-in », « Envois ce mois », « Vouchers utilisés », puis les bases de clients.\n« Mode test — aucun envoi ne part » tant que la marque n’a pas lancé l’envoi.\nLa base des candidats à la franchise n’y paraît pas : elle est l’affaire du réseau.",
+       "nl": "Het tabblad « Newsletter » opent het newsletterscherm van de cockpit, op naam van de winkel.\n« Campagnes », « Templates », « Expéditeur » (afzender); het scherm is te lezen in het FR, NL of EN.\nDe cijfers: « Contacts opt-in », « Envois ce mois » (verzendingen deze maand), « Vouchers utilisés » (gebruikte vouchers), daarna de klantenbestanden.\n« Mode test — aucun envoi ne part » (testmodus, er vertrekt geen enkele verzending) zolang het merk de verzending niet gestart heeft.\nHet bestand van de kandidaat-franchisenemers verschijnt er niet: dat is de zaak van het netwerk."
+      },
+      "critique": false,
+      "photo": "u/20261116-36baa5ebcdd2.jpg",
+      "video": null
+     },
+     {
+      "numero": "58",
+      "titre": {
+       "fr": "Primes : le magasin, ensemble",
+       "nl": "Premies: de winkel, samen"
+      },
+      "texte": {
+       "fr": "« Où en sont tes vendeuses » : « Ce que chacune voit dans Mes primes, prime par prime. »\n« Toutes les primes » ou « Celles du magasin » ; « Mois » ou « Année » ; ‹ et › changent de mois ou d’année.\n« Le magasin, ensemble » : les primes que toute l’équipe gagne d’un coup (objectif du magasin, note Google), un anneau par prime, vert passé 80 % ou atteint.\nÀ côté : ce que chacune touche si tout est atteint, les « Éligibles » et celles « sous le min. d’heures ».\nLecture seule : « les primes se posent et se règlent au cockpit ».",
+       "nl": "« Où en sont tes vendeuses » (waar je verkoopsters staan): « Ce que chacune voit dans Mes primes, prime par prime. » (wat elk van hen ziet in Mes primes, premie per premie.)\n« Toutes les primes » (alle premies) of « Celles du magasin » (die van de winkel); « Mois » (maand) of « Année » (jaar); ‹ en › wisselen van maand of jaar.\n« Le magasin, ensemble » (de winkel, samen): de premies die het hele team in één keer wint (doelstelling van de winkel, Google-score), één ring per premie, groen vanaf 80 % of bereikt.\nErnaast: wat elk van hen krijgt als alles bereikt is, de « Éligibles » (in aanmerking) en wie « sous le min. d’heures » (onder het minimum aantal uren) zit.\nAlleen-lezen: « les primes se posent et se règlent au cockpit » (premies worden ingesteld en uitbetaald in de cockpit)."
+      },
+      "critique": false,
+      "photo": "u/20261116-157a098b0faa.jpg",
+      "video": null
+     },
+     {
+      "numero": "59",
+      "titre": {
+       "fr": "Primes : vendeuse par vendeuse",
+       "nl": "Premies: verkoopster per verkoopster"
+      },
+      "texte": {
+       "fr": "Le tableau : une ligne par vendeuse (heures, tickets), une colonne par prime individuelle, et l’« Acquis ».\nChaque case : « ✓ » gagnée, « en tête », la place (« 2e / 3 »), ou la valeur face à sa « cible ».\nLa barre fine : le chemin vers l’objectif, verte passé 80 %, grise une fois le mois perdu.\n« en tête : 1re du magasin pour l’instant » ; « un clic sur un en-tête trie ».",
+       "nl": "De tabel: één lijn per verkoopster (uren, tickets), één kolom per individuele premie, en het « Acquis » (verworven).\nElk vak: « ✓ » gewonnen, « en tête » (aan kop), de plaats (« 2e / 3 »), of de waarde tegenover haar « cible » (doel).\nDe dunne balk: de weg naar de doelstelling, groen vanaf 80 %, grijs zodra de maand verloren is.\n« en tête : 1re du magasin pour l’instant » (aan kop: voorlopig 1e van de winkel); « un clic sur un en-tête trie » (een klik op een kolomkop sorteert)."
+      },
+      "critique": false,
+      "photo": "u/20261116-1ea662a7b6af.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Vendre — Concurrence",
+     "nl": "Verkopen — Concurrentie"
+    },
+    "etapes": [
+     {
+      "numero": "60",
+      "titre": {
+       "fr": "Concurrence : le Top 10 du réseau",
+       "nl": "Concurrentie: de Top 10 van het netwerk"
+      },
+      "texte": {
+       "fr": "La lecture prend du temps : les prix relevés viennent du module Benchmark de TFBuddy.\n« Top 10 réseau » : nos dix produits les plus vendus dans le réseau (4 magasins, 3 derniers mois), face aux prix relevés autour du magasin.\nPour chacun : « Nous » (prix à la pièce, promo comprise), « Médiane boulangeries », « Médiane supermarchés », « Fourchette », « Position », « Relevés », « Écart », « Verdict ».\nLe verdict se fait face aux boulangeries (artisans, chaînes, stations), hors supermarchés : « au prix du marché » à ± 5 % de la médiane, « au-dessus » en rouge, « en dessous » en vert au-delà.\nUn produit vendu par lot (« 6 pc à … ») compte à son prix à la pièce.\nLes tuiles du haut comptent les produits de chaque verdict, les « Relevés » et ceux « Sans relevé », « à relever sur le terrain ».",
+       "nl": "Het laden duurt even: de opgenomen prijzen komen uit de Benchmark-module van TFBuddy.\n« Top 10 réseau » (top 10 netwerk): onze tien best verkochte producten in het netwerk (4 winkels, laatste 3 maanden), tegenover de prijzen opgenomen rond de winkel.\nVoor elk: « Nous » (wij: prijs per stuk, promo inbegrepen), « Médiane boulangeries » (mediaan bakkerijen), « Médiane supermarchés » (mediaan supermarkten), « Fourchette » (vork), « Position » (positie), « Relevés » (opnames), « Écart » (verschil), « Verdict » (oordeel).\nHet oordeel valt tegenover de bakkerijen (ambachtelijk, ketens, tankstations), zonder supermarkten: « au prix du marché » (aan de marktprijs) binnen ± 5 % van de mediaan, « au-dessus » (erboven) in het rood, « en dessous » (eronder) in het groen daarbuiten.\nEen product dat per lot verkocht wordt (« 6 pc à … ») telt aan zijn prijs per stuk.\nDe tegels bovenaan tellen de producten van elk oordeel, de « Relevés » en die « Sans relevé » (zonder opname), « à relever sur le terrain » (op het terrein op te nemen)."
+      },
+      "critique": false,
+      "photo": "u/20261116-d8f20e4ef6a9.jpg",
+      "video": null
+     },
+     {
+      "numero": "61",
+      "titre": {
+       "fr": "Un produit face aux concurrents",
+       "nl": "Een product tegenover de concurrenten"
+      },
+      "texte": {
+       "fr": "Un clic sur une ligne, ou « Aller chercher un produit… », ouvre un produit ; « Cougnou » et « Galette des rois » ont leur onglet.\nLes tuiles : « Notre prix », la médiane des supermarchés, des artisans, des chaînes et stations, « Moins chers que nous ».\n« Où nous situons-nous » : chaque relevé en point, notre prix en trait.\nLa liste des relevés : concurrent, type, code postal (« CP … »), distance, source et date, prix, écart.\n« + Relevé terrain » ajoute un prix vu chez un concurrent : il s’écrit dans TFBuddy.",
+       "nl": "Een klik op een lijn, of « Aller chercher un produit… » (een product opzoeken), opent een product; « Cougnou » en « Galette des rois » hebben een eigen tabblad.\nDe tegels: « Notre prix » (onze prijs), de mediaan van de supermarkten, van de ambachtelijke bakkers, van de ketens en tankstations, « Moins chers que nous » (goedkoper dan wij).\n« Où nous situons-nous » (waar we staan): elke opname als punt, onze prijs als streep.\nDe lijst van de opnames: concurrent, type, postcode (« CP … »), afstand, bron en datum, prijs, verschil.\n« + Relevé terrain » (terreinopname) voegt een prijs toe die bij een concurrent gezien werd: die wordt in TFBuddy geschreven."
+      },
+      "critique": false,
+      "photo": "u/20261116-1d62fe35f616.jpg",
+      "video": null
+     },
+     {
+      "numero": "62",
+      "titre": {
+       "fr": "Les concurrents par code postal",
+       "nl": "De concurrenten per postcode"
+      },
+      "texte": {
+       "fr": "« Les concurrents du magasin, par code postal » est replié par défaut ; l’en-tête garde ses compteurs.\nL’en-tête : le franchisé, le code postal du magasin, la taille de sa zone, et combien de concurrents dans la zone, hors zone, nationaux, sans code postal.\n« voir les … concurrents ▾ » ouvre le tableau ; « replier ▴ » le ferme.\nChaque concurrent : son code postal, sa commune et son classement : « dans la zone », « zone d’un autre magasin », « hors zone », « national », « code postal inconnu ».\n« zones réglées dans le cockpit, Benchmark ».",
+       "nl": "« Les concurrents du magasin, par code postal » (de concurrenten van de winkel, per postcode) is standaard dichtgeklapt; de kop behoudt zijn tellers.\nDe kop: de franchisenemer, de postcode van de winkel, de grootte van zijn zone, en hoeveel concurrenten in de zone, buiten de zone, nationaal, zonder postcode.\n« voir les … concurrents ▾ » (de … concurrenten bekijken) opent de tabel; « replier ▴ » (dichtklappen) sluit hem.\nElke concurrent: zijn postcode, zijn gemeente en zijn indeling: « dans la zone » (in de zone), « zone d’un autre magasin » (zone van een andere winkel), « hors zone » (buiten de zone), « national » (nationaal), « code postal inconnu » (postcode onbekend).\n« zones réglées dans le cockpit, Benchmark » (zones ingesteld in de cockpit, Benchmark)."
+      },
+      "critique": false,
+      "photo": "u/20261116-4f3ef98f1efa.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Marketing — Mon marketing et Réseaux sociaux",
+     "nl": "Marketing — Mijn marketing en Sociale media"
+    },
+    "etapes": [
+     {
+      "numero": "63",
+      "titre": {
+       "fr": "Le calendrier de l’année",
+       "nl": "De kalender van het jaar"
+      },
+      "texte": {
+       "fr": "Le groupe « Marketing » du rail réunit « Mon marketing », « Réseaux sociaux », « Fidélité » et « Mon catalogue ».\n« Mon marketing » s’ouvre sur « Le calendrier de l’année » : douze mois, le mois en cours souligné, un trait bordeaux pour « aujourd’hui » ; ‹ et › changent d’année.\n« Les campagnes du magasin » : les campagnes du réseau ou qui désignent le magasin, une barre à la couleur de leur type, avec leur état (« en cours », « à venir », « terminée »).\n« Les saisons des produits » : les gammes saisonnières du panel, dans l’ordre de l’année, chacune avec son illustration et ses dates ; celles du jour passent en bordeaux avec « en ce moment ».\nUn ⚠ à côté d’une gamme : le panel doute de ses dates ; le survol dit pourquoi.\nUn toucher sur une saison ouvre la liste de ses produits.",
+       "nl": "De groep « Marketing » van de zijbalk bundelt « Mon marketing » (mijn marketing), « Réseaux sociaux » (sociale media), « Fidélité » (klantenbinding) en « Mon catalogue » (mijn catalogus).\n« Mon marketing » opent op « Le calendrier de l’année » (de kalender van het jaar): twaalf maanden, de lopende maand onderstreept, een bordeaux streep voor « aujourd’hui » (vandaag); ‹ en › wisselen van jaar.\n« Les campagnes du magasin » (de campagnes van de winkel): de campagnes van het netwerk of die de winkel aanduiden, een balk in de kleur van hun type, met hun status (« en cours », « à venir », « terminée »: lopend, komend, afgelopen).\n« Les saisons des produits » (de seizoenen van de producten): de seizoensgamma’s van het panel, in de volgorde van het jaar, elk met zijn illustratie en datums; die van vandaag worden bordeaux met « en ce moment » (op dit moment).\nEen ⚠ naast een gamma: het panel twijfelt aan de datums; met de muis erover zie je waarom.\nEen tik op een seizoen opent de lijst van zijn producten."
+      },
+      "critique": false,
+      "photo": "u/20261116-9cb6ec871ebe.jpg",
+      "video": null
+     },
+     {
+      "numero": "64",
+      "titre": {
+       "fr": "La liste d’une saison",
+       "nl": "De lijst van een seizoen"
+      },
+      "texte": {
+       "fr": "Le toucher sur une saison déroule, sur toute la largeur, ses produits : « Catégorie », « Produit » (avec son prix TTC d’aujourd’hui), « Qté vendue », « CA TTC », « CA HT », « Marge réalisée », « Marge % ».\nLes chiffres sont ceux du magasin au panel, sur la même saison l’an dernier (colonnes « N-1 ») ; la ligne du bas donne le total de la gamme.\nSans aucune vente l’an dernier (magasin pas encore ouvert, gamme absente), la liste prend cette année depuis le début de la saison, le dit et nomme ses colonnes « N ».\n« Marge réalisée » = CA HT encaissé − quantité × coût de la recette du jour.\nUn produit vendu aussi en portions ou en variantes (prix moyen encaissé à plus de 15 % du prix de la pièce entière) : CA HT × taux de marge de la recette, noté « au taux de la recette ».\nUne recette manquante, ou qui coûte plus que le prix ou moins de 5 % de celui-ci, n’est pas crue : la case dit pourquoi et le produit sort du total de la marge.",
+       "nl": "De tik op een seizoen rolt over de hele breedte zijn producten uit: « Catégorie » (categorie), « Produit » (product, met zijn prijs incl. btw van vandaag), « Qté vendue » (verkochte hoeveelheid), « CA TTC » (omzet incl. btw), « CA HT » (omzet excl. btw), « Marge réalisée » (gerealiseerde marge), « Marge % ».\nDe cijfers zijn die van de winkel in het panel, over hetzelfde seizoen vorig jaar (kolommen « N-1 »); de onderste lijn geeft het totaal van het gamma.\nZonder enige verkoop vorig jaar (winkel nog niet open, gamma afwezig) neemt de lijst dit jaar sinds het begin van het seizoen, zegt ze het en noemt ze de kolommen « N ».\n« Marge réalisée » = geïnde omzet excl. btw − hoeveelheid × kost van het recept van vandaag.\nEen product dat ook in porties of varianten verkocht wordt (gemiddelde geïnde prijs meer dan 15 % afwijkend van de prijs van het hele stuk): omzet excl. btw × margepercentage van het recept, vermeld als « au taux de la recette » (aan het percentage van het recept).\nEen ontbrekend recept, of een recept dat meer kost dan de prijs of minder dan 5 % ervan, wordt niet geloofd: het vak zegt waarom en het product valt uit het margetotaal."
+      },
+      "critique": false,
+      "photo": "u/20261116-197ffe6cecb8.jpg",
+      "video": null
+     },
+     {
+      "numero": "65",
+      "titre": {
+       "fr": "Les campagnes en cours",
+       "nl": "De lopende campagnes"
+      },
+      "texte": {
+       "fr": "Sous le calendrier, « Les campagnes en cours » : chaque campagne en cours du magasin, décrite comme la note de campagne que le réseau envoie au franchisé.\nEn tête : le type et le levier, les dates, la portée (« tout le réseau » ou des magasins désignés) et une barre du temps (« jour … sur … », « encore … jours »).\n« Ce que la campagne vise » : le KPI sur lequel elle se juge, la « référence » du magasin (la même période l’an dernier, ou une moyenne récente quand il n’y a pas de relevé, et l’écran le dit), le « visé », les clients et le chiffre de la période de référence, l’« Objectif de la période » (budget validé du magasin).\n« Le calendrier » : les étapes posées par le réseau jusqu’à « Fin de la campagne ».\nLe pied dit l’heure de lecture ; « relire » relit les campagnes.",
+       "nl": "Onder de kalender, « Les campagnes en cours » (de lopende campagnes): elke lopende campagne van de winkel, beschreven zoals de campagnenota die het netwerk naar de franchisenemer stuurt.\nBovenaan: het type en de hefboom, de datums, het bereik (« tout le réseau », het hele netwerk, of aangeduide winkels) en een tijdbalk (« jour … sur … », dag … van …; « encore … jours », nog … dagen).\n« Ce que la campagne vise » (wat de campagne beoogt): de KPI waarop ze beoordeeld wordt, de « référence » (referentie) van de winkel (dezelfde periode vorig jaar, of een recent gemiddelde als er geen meting is, en het scherm zegt het), het « visé » (beoogd), de klanten en de omzet van de referentieperiode, de « Objectif de la période » (doelstelling van de periode: gevalideerd budget van de winkel).\n« Le calendrier » (de kalender): de stappen die het netwerk vastlegde tot « Fin de la campagne » (einde van de campagne).\nDe voet geeft het uur van de lezing; « relire » (herlezen) leest de campagnes opnieuw."
+      },
+      "critique": false,
+      "photo": "u/20261116-b74dacecc27e.jpg",
+      "video": null
+     },
+     {
+      "numero": "66",
+      "titre": {
+       "fr": "Réseaux sociaux",
+       "nl": "Sociale media"
+      },
+      "texte": {
+       "fr": "« Réseaux sociaux » affiche dans le dashboard l’espace boutique du Marketing, pour ce magasin seulement.\nUne seule barre d’onglets : « Calendrier », « Vues et abonnés », « Suivi », « Commentaires », « Messages », « Avis Google », « Créer un post », « Publicités », « Instagram ».\nUne pastille sur un onglet compte ce qui attend (commentaires, messages…) ; sur « Créer un post », les posts faits cette semaine sur ceux permis.\nTout ce qui se publie, se valide ou se répond se fait dans ces pages : ce sont celles du Marketing, avec ses règles et la validation du réseau.\nLe cadre ne se recharge pas quand le dashboard se relit : un post en cours d’écriture ne se perd pas.\nSi le lien avec le Marketing n’est pas réglé, la page dit « L’espace boutique ne s’ouvre pas » et pourquoi, avec « Réessayer ».",
+       "nl": "« Réseaux sociaux » toont in het dashboard de winkelruimte van Marketing, alleen voor deze winkel.\nEén enkele tabbladbalk: « Calendrier » (kalender), « Vues et abonnés » (weergaven en volgers), « Suivi » (opvolging), « Commentaires » (reacties), « Messages » (berichten), « Avis Google » (Google-reviews), « Créer un post » (een post maken), « Publicités » (advertenties), « Instagram ».\nEen bolletje op een tabblad telt wat wacht (reacties, berichten…); op « Créer un post » de posts van deze week op het toegelaten aantal.\nAlles wat gepubliceerd, gevalideerd of beantwoord wordt, gebeurt in deze pagina’s: het zijn die van Marketing, met zijn regels en de validatie door het netwerk.\nHet kader herlaadt niet wanneer het dashboard herleest: een post die je aan het schrijven bent, gaat niet verloren.\nAls de koppeling met Marketing niet ingesteld is, zegt de pagina « L’espace boutique ne s’ouvre pas » (de winkelruimte gaat niet open) en waarom, met « Réessayer » (opnieuw proberen)."
+      },
+      "critique": false,
+      "photo": "u/20261116-dfef8308f1c5.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Marketing — Fidélité",
+     "nl": "Marketing — Klantenbinding"
+    },
+    "etapes": [
+     {
+      "numero": "67",
+      "titre": {
+       "fr": "La part des tickets scannés",
+       "nl": "Het aandeel gescande tickets"
+      },
+      "texte": {
+       "fr": "« Fidélité » a deux sous-onglets : « Profils des clients » et « Cartes de fidélité ».\nEn tête des profils, une grande vignette : la part des tickets d’aujourd’hui dont le client a été reconnu en caisse (carte ou commande), « à l’heure qu’il est ».\nDessous, une échelle de 0 à 90 % en bandes : noir de 0 à 10 %, rouge jusqu’à 20 %, orange jusqu’à 35 %, jaune jusqu’à 50 %, vert jusqu’à 65 %, vert foncé jusqu’à 80 %, or au-delà.\nLe chiffre du jour prend la couleur de sa bande ; un repère le place sur l’échelle.\n« Ce mois-ci » (depuis le 1er) et « Cette année » (depuis le 1er janvier) sont dessous, en chiffres et en repères discrets sur l’échelle.\nLes tickets viennent de la caisse, lus à l’API du panel ; les tickets pro ne comptent pas.",
+       "nl": "« Fidélité » heeft twee subtabbladen: « Profils des clients » (klantprofielen) en « Cartes de fidélité » (klantenkaarten).\nBovenaan de profielen een groot kaartje: het aandeel tickets van vandaag waarvan de klant aan de kassa herkend werd (kaart of bestelling), « à l’heure qu’il est » (op dit uur).\nEronder een schaal van 0 tot 90 % in banden: zwart van 0 tot 10 %, rood tot 20 %, oranje tot 35 %, geel tot 50 %, groen tot 65 %, donkergroen tot 80 %, goud daarboven.\nHet cijfer van de dag krijgt de kleur van zijn band; een merkteken plaatst het op de schaal.\n« Ce mois-ci » (deze maand, sinds de 1e) en « Cette année » (dit jaar, sinds 1 januari) staan eronder, in cijfers en als discrete merktekens op de schaal.\nDe tickets komen uit de kassa, gelezen via de API van het panel; de zakelijke tickets tellen niet mee."
+      },
+      "critique": false,
+      "photo": "u/20261116-d14108c46a3a.jpg",
+      "video": null
+     },
+     {
+      "numero": "68",
+      "titre": {
+       "fr": "Les profils, de Découverte à Fanbase",
+       "nl": "De profielen, van « Découverte » tot « Fanbase »"
+      },
+      "texte": {
+       "fr": "« Les profils des clients scannés » rangent chaque client reconnu en caisse selon le rythme de ses passages (un passage = un jour avec au moins un ticket).\nSix vignettes, du moins fidèle au plus fidèle : « Découverte », « Occasionnel », « Régulier », « Hebdo », « Fidèle », « Fanbase ».\nChaque vignette : la part des clients scannés, le nombre de clients, sa « Condition » (de « Moins d’1 fois par mois » à « 3 fois par semaine ou plus ») et son équivalent en passages par mois.\nDessous : « Part du CA scanné », « Panier moyen », « En commande ».\nSont comptés les clients passés sur la mémoire des profils (90 jours par défaut) ; le rythme se lit sur une fenêtre (30 jours par défaut), ramené à un mois.\nLes conditions se règlent au cockpit (« ERP franchisé › Fidélité › Profils clients ») ; un toucher sur une vignette la choisit pour les graphiques dessous.",
+       "nl": "« Les profils des clients scannés » (de profielen van de gescande klanten) delen elke aan de kassa herkende klant in volgens het ritme van zijn bezoeken (één bezoek = één dag met minstens één ticket).\nZes kaartjes, van minst tot meest trouw: « Découverte » (ontdekking), « Occasionnel » (occasioneel), « Régulier » (regelmatig), « Hebdo » (wekelijks), « Fidèle » (trouw), « Fanbase ».\nElk kaartje: het aandeel van de gescande klanten, het aantal klanten, zijn « Condition » (voorwaarde, van « Moins d’1 fois par mois », minder dan 1 keer per maand, tot « 3 fois par semaine ou plus », 3 keer per week of meer) en het equivalent in bezoeken per maand.\nEronder: « Part du CA scanné » (aandeel gescande omzet), « Panier moyen » (gemiddeld ticket), « En commande » (in bestelling).\nMeegeteld worden de klanten die langskwamen binnen het geheugen van de profielen (standaard 90 dagen); het ritme wordt gelezen over een venster (standaard 30 dagen), herleid tot een maand.\nDe voorwaarden stel je in de cockpit in (« ERP franchisé › Fidélité › Profils clients »); een tik op een kaartje kiest het voor de grafieken eronder."
+      },
+      "critique": false,
+      "photo": "u/20261116-71b81c9e705d.jpg",
+      "video": null
+     },
+     {
+      "numero": "69",
+      "titre": {
+       "fr": "Radars, évolution et clients qui reviennent",
+       "nl": "Radars, evolutie en terugkerende klanten"
+      },
+      "texte": {
+       "fr": "Le profil choisi (d’office le plus fidèle qui a des clients) se lit dans trois graphiques, face à la moyenne en gris.\n« Récurrence » : fréquence, récence, ancienneté, panier, diversité, comptoir, de 0 au centre à 100 au bord.\n« Type d’achat » : la part des articles en pain, viennoiserie, anti-gaspi, tartes & fêtes, goûter, salé.\n« Évolution » : le nombre de clients du profil, date après date, sur « 30 j », « 90 j » (d’office) ou « 180 j » ; l’écart en vert s’il monte, en rouge s’il baisse, « Stable » sinon.\n« Les clients qui reviennent » (au-dessus du profil de base) : une liste fermée ; son titre l’ouvre, la recherche filtre par nom ou profil.\nChaque ligne : profil, rythme, dernier passage, panier, ce qu’il achète surtout ; « Historique › » ouvre la fiche du client.",
+       "nl": "Het gekozen profiel (standaard het trouwste profiel dat klanten heeft) lees je in drie grafieken, tegenover het gemiddelde in het grijs.\n« Récurrence » (terugkeer): frequentie, recentheid, anciënniteit, ticket, diversiteit, toonbank, van 0 in het midden tot 100 aan de rand.\n« Type d’achat » (soort aankoop): het aandeel artikelen in brood, viennoiserie, anti-gaspi, taarten & feesten, vieruurtje, hartig.\n« Évolution » (evolutie): het aantal klanten van het profiel, datum na datum, over « 30 j », « 90 j » (standaard) of « 180 j »; het verschil in het groen als het stijgt, in het rood als het daalt, anders « Stable » (stabiel).\n« Les clients qui reviennent » (de klanten die terugkomen, boven het basisprofiel): een dichtgeklapte lijst; de titel opent ze, de zoekfunctie filtert op naam of profiel.\nElke lijn: profiel, ritme, laatste bezoek, ticket, wat de klant vooral koopt; « Historique › » (historiek) opent de klantenfiche."
+      },
+      "critique": false,
+      "photo": "u/20261116-c6e339cfebe5.jpg",
+      "video": null
+     },
+     {
+      "numero": "70",
+      "titre": {
+       "fr": "Les cartes de fidélité",
+       "nl": "De klantenkaarten"
+      },
+      "texte": {
+       "fr": "Le sous-onglet « Cartes de fidélité » lit les cartes en direct dans l’ERP ; « Ce mois », « 30 j » ou « Année » change la période.\n« Du client reconnu à la récompense » : clients reconnus en caisse (90 derniers jours), inscrits à une carte (« à inscrire »), « ont gagné sur leur carte », « à 1 ou 2 timbres du cadeau » (« à relancer »), « récompenses prêtes » (« à offrir en caisse »).\n« Les cartes » : une ligne par carte (timbres, récompense, fin), les clients par nombre de timbres, les timbres gagnés ici et les récompenses prêtes en vert ; un toucher ouvre son détail (règles, récompense, validité, ses clients du plus avancé au moins avancé).\nUne reconnaissance est un scan réussi, pas un ticket.\n« Par client » : recherche, filtres « Tous », « Récompense prête », « Inactifs ici » ; « Sa fiche › » ouvre la fiche du client.\n« Le réseau » : inscrits, actifs, timbres et ventes des inscrits de chaque magasin, sur la même période ; la ligne du magasin est surlignée.",
+       "nl": "Het subtabblad « Cartes de fidélité » leest de kaarten rechtstreeks in het ERP; « Ce mois » (deze maand), « 30 j » of « Année » (jaar) verandert de periode.\n« Du client reconnu à la récompense » (van herkende klant tot beloning): klanten herkend aan de kassa (laatste 90 dagen), ingeschreven op een kaart (« à inscrire », in te schrijven), « ont gagné sur leur carte » (hebben gewonnen op hun kaart), « à 1 ou 2 timbres du cadeau » (op 1 of 2 stempels van het cadeau; « à relancer », op te volgen), « récompenses prêtes » (beloningen klaar; « à offrir en caisse », aan de kassa te geven).\n« Les cartes » (de kaarten): één lijn per kaart (stempels, beloning, einde), de klanten per aantal stempels, de hier gewonnen stempels en de klaarstaande beloningen in het groen; een tik opent het detail (regels, beloning, geldigheid, de klanten van meest tot minst gevorderd).\nEen herkenning is een geslaagde scan, geen ticket.\n« Par client » (per klant): zoeken, filters « Tous » (alle), « Récompense prête » (beloning klaar), « Inactifs ici » (hier inactief); « Sa fiche › » (zijn fiche) opent de klantenfiche.\n« Le réseau » (het netwerk): ingeschrevenen, actieven, stempels en verkoop van de ingeschrevenen van elke winkel, over dezelfde periode; de lijn van de winkel is gemarkeerd."
+      },
+      "critique": false,
+      "photo": "u/20261116-c73492dbdc9d.jpg",
+      "video": null
+     },
+     {
+      "numero": "71",
+      "titre": {
+       "fr": "La fiche d’un client",
+       "nl": "De fiche van een klant"
+      },
+      "texte": {
+       "fr": "Un toucher sur un client (« Historique › » ou « Sa fiche › ») ouvre sa fiche ; « ‹ Retour aux profils » (ou « aux cartes ») revient.\nEn tête : son profil sur la fenêtre, ses passages et ce qu’il a dépensé sur 180 jours, ses tickets en commande et au comptoir.\n« Comment il achète » : une jauge en quatre canaux, toujours dans cet ordre, « Commande comptoir », « Comptoir », « Webshop », « Livraison bureau » ; un canal à 60 % ou plus donne la phrase « Achète surtout … », sinon « Achète par plusieurs canaux ».\nLa livraison se lit sur les commandes de l’ERP ; le comptoir sur les tickets de caisse.\n« Fidélité · sa carte » : la carte et ses timbres (solde actuel, tous magasins) ; « À faire en caisse » dit la récompense à offrir ou les timbres qui manquent ; un client pas inscrit montre la carte à lui proposer.\nDessous : « Son profil, mois par mois », « Ses passages » semaine par semaine (commande en bordeaux, comptoir en ocre), « Ses habitudes », ses radars et « Ses tickets ».",
+       "nl": "Een tik op een klant (« Historique › » of « Sa fiche › ») opent zijn fiche; « ‹ Retour aux profils » (terug naar de profielen; of « aux cartes », naar de kaarten) gaat terug.\nBovenaan: zijn profiel over het venster, zijn bezoeken en wat hij uitgaf over 180 dagen, zijn tickets in bestelling en aan de toonbank.\n« Comment il achète » (hoe hij koopt): een meter in vier kanalen, altijd in deze volgorde, « Commande comptoir » (toonbankbestelling), « Comptoir » (toonbank), « Webshop », « Livraison bureau » (levering kantoor); een kanaal op 60 % of meer geeft de zin « Achète surtout … » (koopt vooral …), anders « Achète par plusieurs canaux » (koopt via meerdere kanalen).\nDe levering lees je in de bestellingen van het ERP; de toonbank in de kassatickets.\n« Fidélité · sa carte » (klantenbinding · zijn kaart): de kaart en zijn stempels (huidig saldo, alle winkels); « À faire en caisse » (te doen aan de kassa) zegt welke beloning je geeft of hoeveel stempels ontbreken; bij een niet-ingeschreven klant staat de kaart die je hem voorstelt.\nEronder: « Son profil, mois par mois » (zijn profiel, maand per maand), « Ses passages » (zijn bezoeken) week per week (bestelling in bordeaux, toonbank in oker), « Ses habitudes » (zijn gewoonten), zijn radars en « Ses tickets » (zijn tickets)."
+      },
+      "critique": true,
+      "photo": "u/20261116-ed785fe42601.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Marketing — Mon catalogue",
+     "nl": "Marketing — Mijn catalogus"
+    },
+    "etapes": [
+     {
+      "numero": "72",
+      "titre": {
+       "fr": "Mon catalogue : l’assistant",
+       "nl": "Mijn catalogus: de assistent"
+      },
+      "texte": {
+       "fr": "« Mon catalogue » fait le catalogue imprimé du magasin ; les catalogues vivent dans le portail Marketing, le dashboard lui parle.\nUn assistant en cinq étapes : « 1 · Catalogue », « 2 · Gammes », « 3 · Présentation », « 4 · Validation », « 5 · Export PDF » ; une étape faite porte ✓.\nÉtape 1 : les catalogues reçus de la marque et les miens, ou « ＋ Nouveau catalogue » (« Aucun catalogue pour l’instant » tant qu’il n’y en a pas).\nUn catalogue reçu se prend « tel quel » (étapes 2 et 3 verrouillées, cadenas) ou s’adapte à la boutique (une copie à moi que la marque ne change plus).\nUn nouveau catalogue : un titre, le nombre de pages (de 8 à 16, toujours par 2, dont 4 de la marque), et le point de départ : une ou plusieurs gammes (8 au plus) ou « Tous mes produits ».\nLes quatre pages de la marque (couverture, page 2, avant-dernière, dernière) gardent leur place ; elles portent la commande en ligne, l’adresse, les horaires et le QR du magasin.\nLes étapes 2 à 5 (gammes, présentation, validation, export PDF) s’ouvrent une fois un catalogue créé ; elles enregistrent dans le Marketing.",
+       "nl": "« Mon catalogue » maakt de gedrukte catalogus van de winkel; de catalogi leven in het Marketingportaal, het dashboard praat ermee.\nEen assistent in vijf stappen: « 1 · Catalogue » (catalogus), « 2 · Gammes » (gamma’s), « 3 · Présentation » (presentatie), « 4 · Validation » (validatie), « 5 · Export PDF »; een voltooide stap draagt ✓.\nStap 1: de catalogi ontvangen van het merk en die van jezelf, of « ＋ Nouveau catalogue » (nieuwe catalogus; « Aucun catalogue pour l’instant », voorlopig geen catalogus, zolang er geen is).\nEen ontvangen catalogus neem je « tel quel » (zoals hij is: stappen 2 en 3 vergrendeld, hangslot) of pas je aan de winkel aan (een eigen kopie die het merk niet meer wijzigt).\nEen nieuwe catalogus: een titel, het aantal pagina’s (van 8 tot 16, altijd per 2, waarvan 4 van het merk), en het vertrekpunt: één of meer gamma’s (hoogstens 8) of « Tous mes produits » (al mijn producten).\nDe vier pagina’s van het merk (cover, pagina 2, voorlaatste, laatste) behouden hun plaats; ze dragen de online bestelling, het adres, de openingsuren en de QR-code van de winkel.\nStappen 2 tot 5 (gamma’s, presentatie, validatie, export PDF) gaan open zodra een catalogus aangemaakt is; ze slaan op in Marketing."
+      },
+      "critique": false,
+      "photo": "u/20261116-51b6e379fb2a.jpg",
+      "video": null
+     }
+    ]
+   },
+   {
+    "titre": {
+     "fr": "Boîte mail et téléphone",
+     "nl": "Mailbox en telefoon"
+    },
+    "etapes": [
+     {
+      "numero": "73",
+      "titre": {
+       "fr": "Relier et ouvrir la boîte mail",
+       "nl": "De mailbox koppelen en openen"
+      },
+      "texte": {
+       "fr": "« Boîte mail », en tête du rail : la boîte e-mail du magasin (chez OVH), dans le dashboard.\nLa première fois : « Relier la boîte mail du magasin », avec l’adresse e-mail du magasin et le mot de passe de sa boîte.\nLe mot de passe est essayé auprès du serveur, puis gardé côté serveur ; « il ne s’affiche plus jamais ».\nEnsuite, la boîte s’ouvre avec son mot de passe, « une fois par appareil (30 jours) » ; « fermer sur cet appareil » la referme.\nLe siège n’ouvre pas la boîte d’un magasin sans son mot de passe.",
+       "nl": "« Boîte mail » (mailbox), bovenaan de zijbalk: de mailbox van de winkel (bij OVH), in het dashboard.\nDe eerste keer: « Relier la boîte mail du magasin » (de mailbox van de winkel koppelen), met het e-mailadres van de winkel en het wachtwoord van zijn mailbox.\nHet wachtwoord wordt bij de server uitgeprobeerd en daarna aan de serverkant bewaard; « il ne s’affiche plus jamais » (het wordt nooit meer getoond).\nDaarna opent de mailbox met zijn wachtwoord, « une fois par appareil (30 jours) » (één keer per toestel, 30 dagen); « fermer sur cet appareil » (sluiten op dit toestel) sluit hem weer.\nHet hoofdkantoor opent de mailbox van een winkel niet zonder haar wachtwoord."
+      },
+      "critique": false,
+      "photo": "u/20261116-52df1f947117.jpg",
+      "video": null
+     },
+     {
+      "numero": "74",
+      "titre": {
+       "fr": "Au téléphone",
+       "nl": "Op de telefoon"
+      },
+      "texte": {
+       "fr": "Sous 560 px de large, la même page se lit au pouce : ni rail ni vignettes.\nEn haut : le magasin, la date avec ‹ et ›, la revue du soir et ↻ pour relire.\nEn bas, six onglets : Opérationnel, Exploitation, Contrôle, Tâches, Semaine, Primes. Un point sur Exploitation, Contrôle ou Semaine : la couleur du pire point de la page (vert, orange, rouge).\nExploitation commence par son verdict : le nombre de points « à surveiller » et lesquels, puis une pastille par point.\nTant que les chiffres du jour ne sont pas lus, il dit « pas encore jugé », jamais « tout est au vert » ; quelques points jugés et d’autres pas : « rien à signaler pour l’instant ».\nLa valeur du magasin : la carte « Valeur » de Semaine ; un toucher ouvre son détail.\nLe mois, l’année, Vendre, Marketing et la Boîte mail se lisent sur ordinateur ou tablette.",
+       "nl": "Onder 560 px breed lees je dezelfde pagina met de duim: geen zijbalk en geen kaartjes.\nBovenaan: de winkel, de datum met ‹ en ›, de avondronde en ↻ om te herlezen.\nOnderaan zes tabbladen: Operationeel, Exploitatie, Controle, Taken, Week, Premies. Een bolletje op Exploitatie, Controle of Week: de kleur van het slechtste punt van de pagina (groen, oranje, rood).\nExploitatie begint met zijn oordeel: het aantal punten « à surveiller » (in het oog te houden) en welke, daarna één bolletje per punt.\nZolang de cijfers van de dag niet gelezen zijn, staat er « pas encore jugé » (nog niet beoordeeld), nooit « tout est au vert » (alles op groen); enkele punten beoordeeld en andere niet: « rien à signaler pour l’instant » (voorlopig niets te melden).\nDe waarde van de winkel: de kaart « Valeur » (waarde) van Week; een tik opent het detail.\nDe maand, het jaar, « Vendre », « Marketing » en de « Boîte mail » lees je op een computer of tablet."
+      },
+      "critique": false,
+      "photo": "u/20261116-2661afa5d681.jpg",
+      "video": null
+     }
+    ]
+   }
+  ],
+  "points_critiques": [
+   {
+    "fr": "Un chiffre se lit toujours face à sa référence (objectif, même jour la semaine dernière, médiane du réseau, an dernier), jamais seul.",
+    "nl": "Een cijfer lees je altijd tegenover zijn referentie (doelstelling, dezelfde dag vorige week, mediaan van het netwerk, vorig jaar), nooit alleen."
+   },
+   {
+    "fr": "Le résultat du P&L court se lit le soir : le matin, les coûts de toute la journée sont déjà posés.",
+    "nl": "Het resultaat van de korte W&V lees je ’s avonds: ’s ochtends staan de kosten van de hele dag er al."
+   },
+   {
+    "fr": "Un chiffre faux se corrige à la source (caisse, panel, cockpit), puis on relit. Ce qui se saisit dans le dashboard (revue du soir, trésorerie, offres, demande au bureau) s’enregistre aussitôt : rien ne se tape pour essayer.",
+    "nl": "Een fout cijfer corrigeer je aan de bron (kassa, panel, cockpit), daarna herlees je. Wat je in het dashboard ingeeft (avondronde, thesaurie, offertes, vraag aan het kantoor), wordt meteen opgeslagen: typ niets om te proberen."
+   },
+   {
+    "fr": "Zéro alerte de stock ne rassure que si l’inventaire a moins de sept jours.",
+    "nl": "Nul voorraadalarmen stelt alleen gerust als de inventaris minder dan zeven dagen oud is."
+   },
+   {
+    "fr": "La trésorerie part du solde réel du dimanche : sans lui, le plan part de 0 € et tout est faux.",
+    "nl": "De thesaurie vertrekt van het werkelijke saldo van zondag: zonder dat saldo vertrekt het plan van 0 € en klopt niets."
+   }
+  ],
+  "quiz": [
+   {
+    "question": {
+     "fr": "À 9 h, le P&L court affiche un résultat négatif. Que faut-il en conclure ?",
+     "nl": "Om 9 u toont de korte W&V een negatief resultaat. Wat besluit je daaruit?"
+    },
+    "choix": {
+     "fr": [
+      "La journée sera perdante, il faut réduire l’équipe",
+      "Rien encore : les coûts de toute la journée sont posés, le chiffre d’affaires ne l’est pas ; le résultat se lit le soir",
+      "Le dashboard est en panne"
+     ],
+     "nl": [
+      "De dag wordt verlieslatend, het team moet kleiner",
+      "Nog niets: de kosten van de hele dag staan er al, de omzet nog niet; het resultaat lees je ’s avonds",
+      "Het dashboard is stuk"
+     ]
+    },
+    "bonne": 1
+   },
+   {
+    "question": {
+     "fr": "Comment se calcule aujourd’hui la valeur du magasin ?",
+     "nl": "Hoe wordt de waarde van de winkel vandaag berekend?"
+    },
+    "choix": {
+     "fr": [
+      "Le chiffre d’affaires des deux dernières années ramené à un an, divisé par 6",
+      "Le résultat net de l’année × 3",
+      "(Marge brute réelle − charges normatives du réseau de Budget › Paramètres) × 3,5"
+     ],
+     "nl": [
+      "De omzet van de laatste twee jaar herleid tot één jaar, gedeeld door 6",
+      "Het nettoresultaat van het jaar × 3",
+      "(Werkelijke brutomarge − normatieve kosten van het netwerk uit Budget › Parameters) × 3,5"
+     ]
+    },
+    "bonne": 2
+   },
+   {
+    "question": {
+     "fr": "Dans « Le duel », le panier moyen est en hausse mais le CA en baisse face à la semaine dernière. Où chercher ?",
+     "nl": "In « Le duel » (het duel) stijgt het gemiddelde ticket maar daalt de omzet tegenover vorige week. Waar zoek je?"
+    },
+    "choix": {
+     "fr": [
+      "La vente additionnelle",
+      "Le coût matière",
+      "Le nombre de clients : c’est le trafic qui manque"
+     ],
+     "nl": [
+      "De bijverkoop",
+      "De grondstofkost",
+      "Het aantal klanten: het is de traffic die ontbreekt"
+     ]
+    },
+    "bonne": 2
+   },
+   {
+    "question": {
+     "fr": "Le bandeau du stock dit « inventaire non recompté depuis 12 jours » en orange. Que faire ?",
+     "nl": "De voorraadbalk zegt « inventaire non recompté depuis 12 jours » (inventaris niet herteld sinds 12 dagen) in het oranje. Wat doe je?"
+    },
+    "choix": {
+     "fr": [
+      "Rien, il n’y a pas d’alerte",
+      "Modifier le stock dans le dashboard",
+      "Planifier un comptage : sans inventaire récent, l’absence d’alerte ne prouve rien"
+     ],
+     "nl": [
+      "Niets, er is geen alarm",
+      "De voorraad in het dashboard aanpassen",
+      "Een telling plannen: zonder recente inventaris bewijst het ontbreken van alarmen niets"
+     ]
+    },
+    "bonne": 2
+   },
+   {
+    "question": {
+     "fr": "Que dit le code de la checklist 2.4.01 ?",
+     "nl": "Wat zegt de code van checklist 2.4.01?"
+    },
+    "choix": {
+     "fr": [
+      "Boulangerie, à la fermeture, checklist n° 01",
+      "La 2e checklist de la 4e semaine",
+      "Vente, en journée, 1 tâche sur 4"
+     ],
+     "nl": [
+      "Bakkerij, bij de sluiting, checklist nr. 01",
+      "De 2e checklist van de 4e week",
+      "Verkoop, overdag, 1 taak op 4"
+     ]
+    },
+    "bonne": 0
+   },
+   {
+    "question": {
+     "fr": "Dans Trésorerie, la ligne « Cash fin de semaine (prévu) » passe en orange. Qu’est-ce que cela veut dire ?",
+     "nl": "In « Trésorerie » (thesaurie) wordt de lijn « Cash fin de semaine (prévu) » (cash einde week, verwacht) oranje. Wat betekent dat?"
+    },
+    "choix": {
+     "fr": [
+      "Le compte sera à découvert : on ne peut pas tout payer",
+      "Le cash prévu passe sous le coussin de sécurité : il faut décider tout de suite quoi décaler",
+      "Le solde réel diffère du prévu de plus de 500 €"
+     ],
+     "nl": [
+      "De rekening zal in het rood staan: niet alles kan betaald worden",
+      "De verwachte cash zakt onder het veiligheidskussen: je moet meteen beslissen wat je uitstelt",
+      "Het werkelijke saldo wijkt meer dan 500 € af van het verwachte"
+     ]
+    },
+    "bonne": 1
+   },
+   {
+    "question": {
+     "fr": "Dans Produits, la tuile d’une catégorie est ocre. Que dit-elle ?",
+     "nl": "In « Produits » is de tegel van een categorie oker. Wat zegt die?"
+    },
+    "choix": {
+     "fr": [
+      "Son chiffre des 6 dernières semaines est au moins 8 % sous celui des 6 semaines d’avant",
+      "Ses recettes n’ont pas de coût au panel",
+      "Elle a moins vendu hier que le même jour la semaine dernière"
+     ],
+     "nl": [
+      "Haar omzet van de laatste 6 weken ligt minstens 8 % onder die van de 6 weken ervoor",
+      "Haar recepten hebben geen kost in het panel",
+      "Ze verkocht gisteren minder dan dezelfde dag vorige week"
+     ]
+    },
+    "bonne": 0
+   },
+   {
+    "question": {
+     "fr": "Sur l’échelle de la part des tickets scannés (onglet Fidélité), dans quelle bande tombe une journée à 40 % ?",
+     "nl": "Op de schaal van het aandeel gescande tickets (tabblad « Fidélité »), in welke band valt een dag op 40 %?"
+    },
+    "choix": {
+     "fr": [
+      "Orange",
+      "Jaune",
+      "Vert"
+     ],
+     "nl": [
+      "Oranje",
+      "Geel",
+      "Groen"
+     ]
+    },
+    "bonne": 1
+   },
+   {
+    "question": {
+     "fr": "Où retrouver les notes du contrôle qualité d’une tâche, par exemple « chambre froide » ?",
+     "nl": "Waar vind je de opmerkingen van de kwaliteitscontrole van een taak terug, bijvoorbeeld « chambre froide » (koelcel)?"
+    },
+    "choix": {
+     "fr": [
+      "Dans « Chercher une tâche » : ses sept jours, ses photos, ses notes et celles des 30 derniers jours",
+      "Dans la revue du soir",
+      "Nulle part : elles ne sont plus visibles"
+     ],
+     "nl": [
+      "In « Chercher une tâche » (een taak zoeken): haar zeven dagen, haar foto’s, haar opmerkingen en die van de laatste 30 dagen",
+      "In de avondronde",
+      "Nergens: ze zijn niet meer zichtbaar"
+     ]
+    },
+    "bonne": 0
+   }
+  ],
+  "corrections": [],
+  "remarques": []
+ },
+ "note": "Refonte pour le dashboard au rail (déploiement du 15/11/2026) : rail, barre du haut, valeur du magasin (nouvelle règle), Année avec les trimestres, Trésorerie, Vendre (Analyse, Produits, Offres…), Marketing (Fidélité, Mon catalogue…), Boîte mail ; 74 parties, quiz de 9 questions ; NL à relire",
+ "publieLe": "2026-11-16T07:34:47+01:00",
+ "publiePar": "Routine dashboard (Claude)"
+}

@@ -313,3 +313,11 @@
 2026-11-25T20:15:28Z Vidéos d'instruction : une vidéo par onglet, ses fonctions en chapitres — lot 1 (Boîte mail, Mon équipe, Trésorerie et Frais, Promotions, Offres, Mon catalogue : 58 onglets, 99 fonctions) ; Boîte mail : modèles et messages automatiques enregistrent ce qui est tapé, « Envoyer par e-mail » d'une offre remplit son modèle
 2026-11-25T20:21:50Z Mon catalogue : le bon de commande (Export PDF) et « Mes conditions » de la boutique
 2026-11-25T20:43:41Z Compte TF Buddy du magasin : la limite des connexions dite comme celle de TF Buddy, le code SMS en cours repris
+2026-11-25T20:45:44Z Dashboard : défauts relevés en tournant les vidéos corrigés (Mon catalogue, Trésorerie, Mon équipe, Boîte mail, Promotions, newsletter)
+2026-11-25T20:46:50Z Production : commandes en retard jamais fermées — fermeture en lot (Stan ogólny › Zaległe) et avec la WDT (Wyślij dzień)
+2026-11-25T21:03:21Z Production : Różnice kursowe ouvertes au Kierownik operacyjny (lecture et calcul, montants)
+2026-11-25T21:04:21Z Fidélité : GET /fidelite/programme (règles et saisons du programme, sans client), lisible par le Recrutement avec le jeton de service — l'annexe 2 du Guide pré-ouverture le reprend
+2026-11-25T21:04:35Z Dashboard : défauts du premier lot de vidéos corrigés (Fidélité sans profil, Concurrence, conversion d'une offre, anneau des primes de l'année, fiche produit, panier du mois) ; plus de ville dans les exemples de la newsletter
+2026-11-26T03:59:24Z Manuels du 26/11 : bon de commande de Mon catalogue, limites de connexion TF Buddy du magasin, GET /fidelite/programme, anneau des primes de l'année (documentation seulement)
+2026-11-26T04:21:38Z SOP du dashboard magasin : article v1.11, SOP v1.8 (Primes dans Mon équipe ; Commandes et Clients au rail)
+2026-11-26T04:43:30Z Manuel opératoire : thèmes 1 à 10 publiés (codes 0.0.61 à 0.0.70 ; 0.0.66 et 0.0.67 en v1.1 ; nouveaux : 0.0.68 Clients, 0.0.69 Autocontrôle qualité, 0.0.70 Commandes)

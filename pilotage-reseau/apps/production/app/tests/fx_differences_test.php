@@ -53,7 +53,7 @@ foreach ([
 $pdo->exec("INSERT INTO n_position (id, code, name_pl) VALUES (11, 'KIEROWNIK_OPERACYJNY', 'Kierownik operacyjny'), (12, 'LOGISTYKA', 'Logistyka'), (13, 'ADMINISTRACJA', 'Administracja')");
 $pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (11, 'liquidity'), (12, 'payments_day'), (13, 'payments_day'), (13, 'liquidity')");
 $migrate = function () use ($pdo) {
-    foreach (['256_fx_differences.sql', '257_fx_differences_access.sql'] as $f) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/' . $f)) as $sql) $pdo->exec($sql);
+    foreach (['256_fx_differences.sql', '257_fx_differences_access.sql', '258_fx_differences_operations.sql'] as $f) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/' . $f)) as $sql) $pdo->exec($sql);
 };
 $migrate(); $migrate();
 
@@ -66,7 +66,7 @@ $tables = $pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TA
 $params = $pdo->query("SELECT code, value, value_type FROM n_prod_param WHERE code LIKE 'fx.%'")->fetchAll();
 $check(count($tables) === 5 && count($params) === 1 && $params[0]['code'] === 'fx.nbp_api_url' && $params[0]['value_type'] === 'string', 'migration 256 replayed: five tables, one setting fx.nbp_api_url (string)');
 $acc = $pdo->query("SELECT id_position, GROUP_CONCAT(page_key ORDER BY page_key) k FROM n_page_access GROUP BY id_position")->fetchAll(PDO::FETCH_KEY_PAIR);
-$check($acc === [11 => 'liquidity', 12 => 'payments_day', 13 => 'fx_differences,liquidity,payments_day'], 'migration 257 replayed: « fx_differences » for the Finanse position (ADMINISTRACJA) only');
+$check($acc === [11 => 'fx_differences,liquidity', 12 => 'payments_day', 13 => 'fx_differences,liquidity,payments_day'], 'migrations 257 + 258 replayed: « fx_differences » for Finanse (ADMINISTRACJA) and [443] Kierownik operacyjny, not Logistyka');
 
 // --- Faux NBP : tables A des jours ouvrés (11.11.2026 férié), cours de la maquette, compteur d'appels ; aucune requête réseau.
 $fake = new class implements NbpHttpClient {
@@ -331,7 +331,8 @@ $b->addDefinitions([PDO::class => fn() => new PDO($dsn . ';dbname=' . $db, geten
 $ctl = $b->build()->get(App\Controllers\Web\Finances\FxDifferenceController::class);
 $call = function (int $user, string $method = 'data') use ($ctl) { $_SESSION['USER'] = ['id' => $user, 'login' => 'u' . $user]; $_GET['month'] = '2026-11'; $res = $ctl->$method(); return [$res->getStatusCode(), json_decode((string) $res->getContent(), true), $res]; };
 [$cFin, $bFin] = $call(23);
-[$cKo] = $call(21);
+[$cKo, $bKo] = $call(21);
+[$cKoPdf] = $call(21, 'pdf');
 [$cLog] = $call(22);
 [$cPdf, , $rPdf] = $call(23, 'pdf');
 $pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (12, 'fx_differences')");
@@ -339,7 +340,8 @@ $pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (12, 'fx_di
 [$cLogPdf] = $call(24, 'pdf');
 $check($cFin === 200 && ($bFin['data']['values'] ?? null) === true && count($bFin['data']['rows'] ?? []) === 5 && $cPdf === 200 && $rPdf->headers->get('Content-Type') === 'application/pdf',
     'controller : Finanse (ADMINISTRACJA) sees the page with amounts, downloads the PDF');
-$check($cKo === 403 && $cLog === 403, 'controller : Kierownik operacyjny (liquidity) and Logistyka without the right → 403');
+$check($cKo === 200 && ($bKo['data']['values'] ?? null) === true && count($bKo['data']['rows'] ?? []) === 5 && $cKoPdf === 200, '[443] controller : Kierownik operacyjny sees the page with amounts and downloads the PDF');
+$check($cLog === 403, 'controller : Logistyka without the right → 403');
 $check($cLog2 === 200 && ($bLog2['data']['values'] ?? null) === false && !isset($bLog2['data']['rows']) && $cLogPdf === 403, 'controller : right given to another position → frame only, amounts and files refused (403)');
 unset($_SESSION['USER'], $_GET['month']);
 

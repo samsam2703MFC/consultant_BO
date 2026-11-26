@@ -1,0 +1,14 @@
+[
+ { "nom": "do-concurrence-top10", "vue": "concurrence", "cibles": [".db-sec .bm-choix"], "attendre": ".bm-tab", "cadre": "haut", "mobile": false, "pause": 8000 },
+ { "nom": "do-concurrence-cougnou", "vue": "concurrence", "clics": ["[data-bmf=\"cougnou\"]"], "attendre": ".db-tuiles", "cibles": [".db-tuiles"], "cadre": "haut", "mobile": false, "pause": 8000 },
+ { "nom": "do-concurrence-galette", "vue": "concurrence", "clics": ["[data-bmf=\"galette\"]"], "attendre": ".db-tuiles + .db-card", "cibles": [".db-tuiles + .db-card"], "cadre": "centre", "mobile": false, "pause": 8000 },
+ { "nom": "do-concurrence-chercher", "vue": "concurrence", "attendre": ".bm-tab", "cibles": [".bm-cherche"], "cadre": "haut", "mobile": false, "pause": 8000 },
+ { "nom": "do-concurrence-tuiles", "vue": "concurrence", "attendre": ".bm-tab", "cibles": [".db-tuiles"], "cadre": "haut", "mobile": false, "pause": 8000 },
+ { "nom": "do-concurrence-tableau", "vue": "concurrence", "attendre": ".bm-tab", "cibles": [".db-tuiles + .db-card"], "cadre": "centre", "mobile": false, "pause": 8000 },
+ { "nom": "do-concurrence-produit", "vue": "concurrence", "clics": ["tr[data-bmtop]"], "attendre": ".db-tuiles + .db-card", "cibles": [".db-tuiles"], "cadre": "haut", "mobile": false, "pause": 15000 },
+ { "nom": "do-concurrence-situer", "vue": "concurrence", "clics": ["tr[data-bmtop]"], "attendre": ".db-tuiles + .db-card", "cibles": [".db-tuiles + .db-card"], "cadre": "centre", "mobile": false, "pause": 15000 },
+ { "nom": "do-concurrence-concurrents", "vue": "concurrence", "clics": ["tr[data-bmtop]"], "attendre": ".db-tuiles + .db-card + .db-card", "cibles": [".db-tuiles + .db-card + .db-card"], "cadre": "centre", "mobile": false, "pause": 15000 },
+ { "nom": "do-concurrence-proches", "vue": "concurrence", "clics": ["tr[data-bmtop]"], "attendre": ".db-tuiles + .db-card + .db-card + .db-card", "cibles": [".db-tuiles + .db-card + .db-card + .db-card"], "cadre": "centre", "mobile": false, "pause": 15000 },
+ { "nom": "do-concurrence-web", "vue": "concurrence", "clics": ["[data-bmf=\"cougnou\"]"], "attendre": ".bm-bas", "cibles": [".bm-bas"], "cadre": "centre", "mobile": false, "pause": 8000 },
+ { "nom": "do-concurrence-releve", "vue": "concurrence", "clics": ["[data-bmf=\"cougnou\"]", ".db-sec [data-bmform]"], "attendre": ".bm-form", "cibles": [".bm-form"], "cadre": "haut", "mobile": false, "pause": 8000 }
+]

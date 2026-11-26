@@ -1,0 +1,213 @@
+{
+ "id": "art-dash-assistant",
+ "code": "0.0.36",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "6 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’Assistant",
+  "nl": "Het dashboard: de Assistent"
+ },
+ "objectif": {
+  "fr": "Savoir utiliser l’Assistant du dashboard : l’ouvrir, choisir son assistant, poser une question en Bilan, lire la réponse et ses priorités, passer en Conversation et utiliser les questions toutes prêtes.",
+  "nl": "De Assistent van het dashboard kunnen gebruiken: hem openen, je assistent kiezen, een vraag stellen in Bilan, het antwoord en zijn prioriteiten lezen, naar Conversation gaan en de kant-en-klare vragen gebruiken."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05.",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Comprendre le dashboard magasin » (0.0.15), in opleiding FO-05."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Ouvrir et choisir",
+    "nl": "Openen en kiezen"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Ouvrir l’Assistant",
+      "nl": "De Assistent openen"
+     },
+     "texte": {
+      "fr": "En haut, le bouton bordeaux « Assistant », à côté de « ↻ Relire ». Il n’apparaît que si l’Assistant est activé au cockpit.\nIl ouvre une fenêtre « Assistant du magasin » : « il lit les chiffres de votre magasin, rien d’autre ».\nEn haut de la fenêtre, deux modes : « Bilan » (d’office) et « Conversation » ; × ou Échap ferme.\nL’Assistant lit les chiffres au moment de la question ; il ne change rien au magasin.\nSi le bouton n’est pas là : l’Assistant n’est pas activé pour le réseau, demande au responsable du cockpit.",
+      "nl": "Bovenaan de bordeauxrode knop « Assistant », naast « ↻ Relire ». Hij verschijnt alleen als de Assistent in de cockpit geactiveerd is.\nHij opent een venster « Assistant du magasin »: « il lit les chiffres de votre magasin, rien d’autre ».\nBovenaan het venster twee modi: « Bilan » (standaard) en « Conversation »; × of Escape sluit.\nDe Assistent leest de cijfers op het moment van de vraag; hij verandert niets aan de winkel.\nAls de knop er niet is: de Assistent is niet geactiveerd voor het netwerk, vraag het aan de verantwoordelijke van de cockpit."
+     },
+     "critique": false,
+     "photo": "do-assist-ouvrir.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Choisir son assistant",
+      "nl": "Je assistent kiezen"
+     },
+     "texte": {
+      "fr": "Sous l’en-tête, « Votre assistant » : deux portraits, avec leur nom et leur ton.\n« Mr. Pierre » : bienveillant, motivateur. « Le Coach » : à la dure, ici on joue pour gagner.\nLe choisi est encadré en bordeaux. Le choix ne change que le ton des réponses, pas les chiffres lus.\nIl est gardé sur cet appareil (ce navigateur).\nSi les réponses te semblent trop dures ou trop douces : change d’assistant, les chiffres restent les mêmes.",
+      "nl": "Onder de kop « Votre assistant »: twee portretten, met hun naam en hun toon.\n« Mr. Pierre »: welwillend, motiverend. « Le Coach »: hard, hier speel je om te winnen.\nDe gekozen assistent is bordeaux omkaderd. De keuze verandert alleen de toon van de antwoorden, niet de gelezen cijfers.\nZe blijft bewaard op dit toestel (deze browser).\nAls de antwoorden te hard of te zacht lijken: kies een andere assistent, de cijfers blijven dezelfde."
+     },
+     "critique": false,
+     "photo": "do-assist-choix.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le Bilan",
+    "nl": "De Bilan"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "La question et la réponse",
+      "nl": "De vraag en het antwoord"
+     },
+     "texte": {
+      "fr": "En mode « Bilan » : un champ « Posez votre question… » et « Demander », puis quatre questions en tuiles.\nLes tuiles : « Comment s’est passée ma semaine ? », « Que puis-je améliorer ? », « Qu’est-ce qui marche le mieux ? », « Comment va ma journée ? ».\nPendant la lecture : « Mr. Pierre lit les chiffres du magasin… » et la question.\nLa réponse : un titre, « chiffres lus à HH:MM », un résumé, quatre chiffres au plus, des puces, une phrase de fin.\nEn pied : « Rédigé par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir. »\nSi la réponse étonne : vérifie le chiffre dans l’onglet du dashboard avant d’agir.",
+      "nl": "In de modus « Bilan »: een veld « Posez votre question… » en « Demander », dan vier vragen in tegels.\nDe tegels: « Comment s’est passée ma semaine ? », « Que puis-je améliorer ? », « Qu’est-ce qui marche le mieux ? », « Comment va ma journée ? ».\nTijdens het lezen: « Mr. Pierre lit les chiffres du magasin… » en de vraag.\nHet antwoord: een titel, « chiffres lus à HH:MM », een samenvatting, maximaal vier cijfers, opsommingstekens, een slotzin.\nOnderaan: « Rédigé par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir. »\nAls het antwoord verrast: controleer het cijfer in het tabblad van het dashboard voor je handelt."
+     },
+     "critique": true,
+     "photo": "do-assist-bilan.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les priorités et leurs boutons",
+      "nl": "De prioriteiten en hun knoppen"
+     },
+     "texte": {
+      "fr": "Dans la réponse, les priorités numérotées 1, 2, 3 : un titre, le constat, et parfois ce que ça peut rapporter.\nÀ droite de chacune, un bouton vers l’écran où agir : « Voir mes produits », « Ouvrir les contrôles », « Voir ma semaine », « Voir mon mois », « Voir mes clients », « Voir ma journée » ou « Voir mes promotions ».\nLe bouton ferme l’Assistant et ouvre l’onglet du dashboard.\n« Creuser : » propose jusqu’à trois questions de suite ; « Continuer en conversation › » passe en mode « Conversation ».\nSi une priorité ne colle pas au magasin : ouvre son écran et regarde les chiffres toi-même.",
+      "nl": "In het antwoord de genummerde prioriteiten 1, 2, 3: een titel, de vaststelling, en soms wat het kan opbrengen.\nRechts van elke prioriteit een knop naar het scherm waar je handelt: « Voir mes produits », « Ouvrir les contrôles », « Voir ma semaine », « Voir mon mois », « Voir mes clients », « Voir ma journée » of « Voir mes promotions ».\nDe knop sluit de Assistent en opent het tabblad van het dashboard.\n« Creuser : » stelt tot drie vervolgvragen voor; « Continuer en conversation › » gaat naar de modus « Conversation ».\nAls een prioriteit niet bij de winkel past: open zijn scherm en kijk zelf naar de cijfers."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La Conversation",
+    "nl": "De Conversation"
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Conversation",
+      "nl": "Conversation"
+     },
+     "texte": {
+      "fr": "En mode « Conversation » : à droite le fil, les questions et les réponses l’une sous l’autre.\nChaque réponse porte le nom de l’assistant, le résumé, les chiffres, les priorités et « Chiffres du magasin lus à HH:MM ».\nEn bas : « Posez votre question sur votre magasin… » et → ; sous la dernière réponse, « Creuser : » et ses questions.\nLe fil ne vit que le temps de la page : un rechargement le vide.\nSi tu veux garder une réponse : note-la avant de fermer la page.",
+      "nl": "In de modus « Conversation »: rechts de draad, de vragen en antwoorden onder elkaar.\nElk antwoord draagt de naam van de assistent, de samenvatting, de cijfers, de prioriteiten en « Chiffres du magasin lus à HH:MM ».\nOnderaan: « Posez votre question sur votre magasin… » en →; onder het laatste antwoord « Creuser : » en zijn vragen.\nDe draad bestaat alleen zolang de pagina open is: herladen maakt hem leeg.\nAls je een antwoord wil bewaren: noteer het voor je de pagina sluit."
+     },
+     "critique": false,
+     "photo": "do-assist-conversation.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Les questions toutes prêtes",
+      "nl": "De kant-en-klare vragen"
+     },
+     "texte": {
+      "fr": "À gauche, « Questions toutes prêtes », rangées par thème : « Ma semaine », « Mes ventes », « Mon équipe », « Mes clients », « Ma production ».\nPar exemple « Quel est mon jour le plus faible, et pourquoi ? », « Mes salaires collent-ils à mes ventes ? », « Qu’est-ce que je jette le plus ? ».\nUn toucher pose la question ; la réponse arrive dans le fil.\nLa liste est réglée au cockpit ; on peut toujours taper sa propre question en bas.\nSi aucune question ne colle : tape la tienne, courte, sur ton magasin.",
+      "nl": "Links « Questions toutes prêtes », per thema gerangschikt: « Ma semaine », « Mes ventes », « Mon équipe », « Mes clients », « Ma production ».\nBijvoorbeeld « Quel est mon jour le plus faible, et pourquoi ? », « Mes salaires collent-ils à mes ventes ? », « Qu’est-ce que je jette le plus ? ».\nEen tik stelt de vraag; het antwoord komt in de draad.\nDe lijst wordt in de cockpit ingesteld; je kan altijd onderaan je eigen vraag typen.\nAls geen enkele vraag past: typ de jouwe, kort, over je winkel."
+     },
+     "critique": false,
+     "photo": "do-assist-questions.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "L’Assistant rédige à partir des chiffres du magasin : vérifie le chiffre dans le dashboard avant d’agir.",
+   "nl": "De Assistent schrijft op basis van de cijfers van de winkel: controleer het cijfer in het dashboard voor je handelt."
+  },
+  {
+   "fr": "Le choix de l’assistant change le ton, jamais les chiffres.",
+   "nl": "De keuze van de assistent verandert de toon, nooit de cijfers."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Tu passes de « Mr. Pierre » à « Le Coach ». Qu’est-ce qui change ?",
+    "nl": "Je wisselt van « Mr. Pierre » naar « Le Coach ». Wat verandert er?"
+   },
+   "choix": {
+    "fr": [
+     "Les chiffres lus",
+     "Le ton des réponses",
+     "Le magasin regardé"
+    ],
+    "nl": [
+     "De gelezen cijfers",
+     "De toon van de antwoorden",
+     "De bekeken winkel"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Une priorité dit « Voir mes produits ». Que fait ce bouton ?",
+    "nl": "Een prioriteit zegt « Voir mes produits ». Wat doet die knop?"
+   },
+   "choix": {
+    "fr": [
+     "Il modifie les prix",
+     "Il ferme l’Assistant et ouvre l’onglet « Produits »",
+     "Il envoie la réponse au cockpit"
+    ],
+    "nl": [
+     "Hij past de prijzen aan",
+     "Hij sluit de Assistent en opent het tabblad « Produits »",
+     "Hij stuurt het antwoord naar de cockpit"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "remarques": [
+  "Captures en lecture seule : poser une question envoie un POST /assistant/magasin, refusé par le navigateur. La réponse, les priorités et leurs boutons n’ont pas pu être montrés : photo null pour « Les priorités et leurs boutons » ; la photo du Bilan montre la question, pas la réponse.",
+  "Noms et tons des assistants, tuiles et questions toutes prêtes viennent de GET /assistant/magasin/questions (réglage du cockpit, lu le 13/11/2026), pas du code.",
+  "Où se règle l’activation de l’Assistant au cockpit : non trouvé dans le code du dashboard (seul le drapeau « actif » est lu)."
+ ]
+}

@@ -1,0 +1,248 @@
+[
+ {
+  "nom": "do-ops-reseau",
+  "vue": "ops",
+  "cibles": [
+   ".db-bench"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-objectif",
+  "vue": "ops",
+  "cibles": [
+   ".op-duel:not(.b2b)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-commandes",
+  "vue": "ops",
+  "date": "2026-11-10",
+  "clics": [
+   ".op-cmdl"
+  ],
+  "attendre": "#db-cmdm .bm-rap",
+  "cibles": [
+   "#db-cmdm .fi-modale"
+  ],
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-b2b",
+  "vue": "ops",
+  "date": "2026-11-10",
+  "clics": [
+   ".op-duel.b2b .op-tap"
+  ],
+  "attendre": "#db-b2b .bm-k4",
+  "cibles": [
+   "#db-b2b .fi-modale"
+  ],
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-heures",
+  "vue": "ops",
+  "cibles": [
+   ".db-card.op-bloc:has(.op-crb-w)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-duel",
+  "vue": "ops",
+  "cibles": [
+   ".db-card.op-bloc:has(.op-dt)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-pl",
+  "vue": "ops",
+  "date": "2026-11-12",
+  "cibles": [
+   ".db-card:has(.db-cascade)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-invendus",
+  "vue": "ops",
+  "date": "2026-11-12",
+  "clics": [
+   ".db-cascade [data-invmodale]"
+  ],
+  "attendre": "#db-invm .im-tab",
+  "cibles": [
+   "#db-invm .fi-modale"
+  ],
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-categories",
+  "vue": "ops",
+  "date": "2026-11-12",
+  "clics": [
+   ".db-acc .db-al.g[data-cacc]",
+   ".db-bench .tit"
+  ],
+  "cibles": [
+   ".db-card:has(.db-cvue)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-fiche",
+  "vue": "ops",
+  "date": "2026-11-12",
+  "clics": [
+   ".db-acc .db-al.g[data-cacc]",
+   ".db-acc .db-al.c[data-cacc]",
+   ".db-acc .db-al.p.clic"
+  ],
+  "attendre": "#db-fiche .fi-deux",
+  "cibles": [
+   "#db-fiche .fi-modale"
+  ],
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-c12",
+  "vue": "ops",
+  "date": "2026-11-12",
+  "clics": [
+   ".db-acc .db-c12"
+  ],
+  "attendre": "#db-fiche .fi-deux",
+  "cibles": [
+   "#db-fiche .fi-modale"
+  ],
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-promos",
+  "vue": "ops",
+  "date": "2026-11-12",
+  "clics": [
+   "[data-cvue=\"promo\"]",
+   ".db-bench .tit"
+  ],
+  "cibles": [
+   ".db-card:has(.db-cvue)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-acompleter",
+  "vue": "ops",
+  "date": "2026-11-12",
+  "cibles": [
+   ".db-card.acp"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-journee",
+  "vue": "ops",
+  "cibles": [
+   ".db-card.op-bloc:has(.op-jr)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-equipe",
+  "vue": "ops",
+  "clics": [
+   "[data-eqouvre]",
+   ".db-bench .tit"
+  ],
+  "cibles": [
+   ".db-card.eq-carte"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 12000
+ },
+ {
+  "nom": "do-ops-vitrine",
+  "vue": "ops",
+  "clics": [
+   "[data-vitb=\"S\"]",
+   ".db-bench .tit"
+  ],
+  "cibles": [
+   ".db-card.vt"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-recuire",
+  "vue": "ops",
+  "clics": [
+   "[data-vitb=\"S\"]",
+   ".vt-l.clic.ko, .vt-l.clic.att"
+  ],
+  "attendre": "#db-stk .sk-rep",
+  "cibles": [
+   "#db-stk .fi-modale"
+  ],
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-controles",
+  "vue": "ops",
+  "cibles": [
+   ".db-cq"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-ops-stock",
+  "vue": "ops",
+  "clics": [
+   ".db-stbar .dr",
+   ".db-bench .tit"
+  ],
+  "cibles": [
+   ".op-stock"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ }
+]

@@ -252,6 +252,7 @@
   }
   function periode(P) { return `du ${dfr(P.D.du)} au ${dfr(P.D.au)}`; }
   /** La courbe d'une période : « jour par jour », « semaine par semaine », « mois par mois ». */
+  const moisEnCours = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
   const parTranche = P => ({ jour: 'jour par jour', semaine: 'semaine par semaine', mois: 'mois par mois' }[P.D.pas]);
   /** Le seuil des listes « monte / baisse » : 60 pièces sur 13 semaines, à la longueur de la période (10 au moins). */
   const seuilQ = P => Math.max(10, Math.round(60 * P.jours / 91));
@@ -259,7 +260,8 @@
   /* --- A · l'entrée -------------------------------------------------------------------------------------------------- */
   function vueAccueil(P) {
     const T = P.tot, libs = P.sem.tranches;
-    // Le panier : les tickets de la semaine (Semaine), sinon des mois de la période qui ont leurs tickets (le mois entamé compris).
+    // Le panier : les tickets de la semaine (Semaine), sinon des mois de la période qui ont leurs tickets. /ventes/mensuel
+    // écarte le mois en cours (incomplet) : sur ce seul mois, on le dit au lieu de « pas de tickets relevés » (25/11/2026).
     const M = st.d.mens, SV = st.per.type === 'semaine' ? st.d['sv|' + PER().du] : null;
     const mm = M && Array.isArray(M.mois) ? M.mois.filter(m => m.tickets && m.ca && m.mois >= P.D.du.slice(0, 7) && m.mois <= P.D.au.slice(0, 7)) : [];
     const tickets = SV && SV.totaux ? SV.totaux.tickets : somme(mm.map(m => m.tickets)), caT = SV && SV.totaux ? SV.totaux.ca : somme(mm.map(m => m.ca));
@@ -271,7 +273,7 @@
     const kp = `<div class="an-kpis">${kpi('Chiffre d’affaires TTC', k1(T.v), P.rienAvant ? 'pas de période d’avant à comparer' : fleche(evoT.pct) + ' ' + esc(P.face))}
       ${kpi('Pièces vendues', n0(T.q), n0(P.rythme(T.q)) + ' ' + P.unite)}
       ${kpi('Marge réalisée', k1(T.marge), pc(T.margePct) + ' du CA HT · connue sur ' + n0(T.couverture) + ' % du CA', 'fort')}
-      ${kpi('Panier moyen', tickets ? e2(caT / tickets) : '—', tickets ? n0(tickets) + ' tickets, ' + panierDe : svAttente || !M ? (st.err.mens ? 'tickets illisibles' : 'lecture…') : 'pas de tickets relevés')}
+      ${kpi('Panier moyen', tickets ? e2(caT / tickets) : '—', tickets ? n0(tickets) + ' tickets, ' + panierDe : svAttente || !M ? (st.err.mens ? 'tickets illisibles' : 'lecture…') : (P.D.du.slice(0, 7) === moisEnCours() && P.D.au.slice(0, 7) === moisEnCours() ? 'le mois en cours se lit à sa clôture ; la Semaine a ses tickets' : 'pas de tickets relevés'))}
       ${kpi('Références vendues', n0(P.produits.length), nb('monte') + ' en hausse · ' + nb('baisse') + ' en baisse · ' + nb('nouveau') + ' nouvelles')}
       ${kpi('Recettes sans coût', n0(sansCout), 'marge inconnue : à compléter au panel', sansCout ? 'alerte' : '')}</div>`;
     const maxV = Math.max(...P.groupes.map(g => g.v13), 1);

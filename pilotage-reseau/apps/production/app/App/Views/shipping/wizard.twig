@@ -305,6 +305,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const ordered = p.products.reduce((s, x) => s + (+x.quantity_ordered || 0), 0);
             const scanned = p.products.reduce((s, x) => s + (+x.quantity_scanned || 0), 0);
             const other = (p.other_dates || []).map((d) => dayPl(d.shipping_date) + ' (' + d.order_count + ' zam.)').join(', ');
+            // [442] Zaległe zamówienia klienta (data przed dniem wysyłki, nadal otwarte) : zaznaczone zamykają się razem z wysyłką.
+            c.late ??= new Set();
+            const late = (p.late_orders || []);
+            const lateBox = late.length ? '<div class="at-run-msg" style="margin-top:6px"><span class="text-danger"><i class="bi bi-exclamation-circle"></i> Zaległe, nadal otwarte (' + late.length + ') — zaznacz te, które wyjechały, żeby je zamknąć z tą wysyłką :</span>'
+                + late.map((o) => '<label class="d-block small" style="margin:2px 0 0 18px"><input type="checkbox" class="form-check-input me-1" data-late="' + c.id + ':' + o.id + '"' + (c.late.has(o.id) ? ' checked' : '') + '> '
+                    + '#' + o.id + ' · ' + esc(dayPl(o.shipping_date)) + ' · ' + esc(String(o.cartons)) + ' kart.' + (o.freebie ? ' · GRATIS' : '') + (o.reference ? ' · ' + esc(o.reference) : '') + '</label>').join('') + '</div>' : '';
             const products = p.products.map((x) => {
                 const diff = +x.quantity_diff;
                 const label = diff === 0 ? '<span class="at-run-ok">OK</span>'
@@ -313,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }).join('');
             return '<tr data-client="' + c.id + '">' +
                 '<td style="width:36px"><input type="checkbox" class="form-check-input" data-include="' + c.id + '"' + (c.include ? ' checked' : '') + (p.has_pallets ? '' : ' disabled') + ' aria-label="Wysyłaj: ' + esc(c.company) + '"></td>' +
-                '<td><strong>' + esc(c.company) + '</strong>' + (other ? '<span class="at-run-msg text-warning"><i class="bi bi-calendar-event"></i> Inne aktywne zamówienia: ' + esc(other) + '</span>' : '') + replacementsNote(c.id) + '</td>' +
+                '<td><strong>' + esc(c.company) + '</strong>' + (other ? '<span class="at-run-msg text-warning"><i class="bi bi-calendar-event"></i> Inne aktywne zamówienia: ' + esc(other) + '</span>' : '') + lateBox + replacementsNote(c.id) + '</td>' +
                 '<td class="text-end">' + ordered + '</td><td class="text-end">' + scanned + '</td>' +
                 '<td><span class="at-pill ' + st.cls + '">' + esc(st.text) + '</span></td>' +
                 '<td class="text-end">' + (p.products.length ? '<button type="button" class="at-link-btn" data-products="' + c.id + '">Produkty (' + p.products.length + ')</button>' : '') + '</td>' +
@@ -325,6 +331,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.getElementById('swClients').addEventListener('change', (e) => {
+        if (e.target.dataset.late) {
+            const [cid, oid] = e.target.dataset.late.split(':').map(Number);
+            const cl = state.clients.find((x) => x.id === cid);
+            if (cl) { cl.late ??= new Set(); e.target.checked ? cl.late.add(oid) : cl.late.delete(oid); }
+            return;
+        }
         const id = +e.target.dataset.include;
         const c = state.clients.find((x) => x.id === id);
         if (c) c.include = e.target.checked;
@@ -496,7 +508,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     id_carrier: c.carrier.id_carrier,
                     id_carrier_vehicle: c.carrier.id_vehicle,
                     id_carrier_sec: c.carrier.id_carrier_sec || '-1',
-                    id_carrier_sec_vehicle: c.carrier.id_carrier_sec ? c.carrier.id_sec_vehicle : ''
+                    id_carrier_sec_vehicle: c.carrier.id_carrier_sec ? c.carrier.id_sec_vehicle : '',
+                    late_order_ids: c.late ? [...c.late] : []
                 }
             });
         } catch (err) {

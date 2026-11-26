@@ -45,3 +45,11 @@ Sans numéro, le mot vaut pour tous les thèmes encore « proposé ».
 
 `photos.json` (écrit par l'encodeur) : empreinte de chaque photo → son nom au serveur `u/…` ; une photo inchangée n'est
 jamais renvoyée.
+
+## Captures : toujours (Sam, 22/11/2026)
+
+Sam : « Toujours encoder avec screenshot ». Chaque article proposé porte des captures de l'écran en ligne. Le dashboard
+(`/dashboard/`) se capture en lecture seule sans identifiants : en http, l'API répond `mode ouvert` ; seule la
+redirection http → https de `garde.js` est neutralisée dans le navigateur (le https du serveur coupe la connexion), et
+toute requête autre que GET vers l'API est bloquée. Modèle : `captures_lecture_seule.js` (ce dossier ; ses PLANS).
+Les noms de clients ou d'employés à l'écran sont floutés (ex. « Mes demandes »).

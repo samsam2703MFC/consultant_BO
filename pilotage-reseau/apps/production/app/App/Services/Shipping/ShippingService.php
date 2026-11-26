@@ -281,6 +281,12 @@ class ShippingService
             }
 
             $shipped = $this->fulfilment->markShippedByWdt((int) $wdtInsertedId, 'Wyślij dzień : dokumenty wysyłki ' . $data['shipping_date']);
+            // [442] Commandes en retard du client cochées dans l'assistant : fermées avec cette expédition (« W transporcie »),
+            // sans rattachement au WDT (ni ses produits ni le document de différences ne changent).
+            if (!empty($data['late_order_ids']) && is_array($data['late_order_ids'])) {
+                $this->fulfilment->closeLate($data['late_order_ids'], 'shipped', (string) $data['shipping_date'], (int) $data['id_customer'],
+                    'Wyślij dzień ' . $data['shipping_date'] . ' : zaległe zamówienie zamknięte razem z wysyłką (WDT ' . (int) $wdtInsertedId . ')');
+            }
 
             return $shipmentLogId;
         });

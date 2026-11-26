@@ -817,6 +817,7 @@ function route(string $method, string $path): mixed
             $path === '/scouting/demarchage'            => ep_scouting_demarchage(),
             $path === '/marketing/newsletter'                    => ep_newsletter(),
             $path === '/fidelite'                      => ep_fidelite(),
+            $path === '/fidelite/programme'            => ep_fidelite_programme(),
             $path === '/fidelite/clients'              => ep_fidelite_clients(),
             $path === '/fidelite/profils'              => ep_fidelite_profils(),
             $path === '/fidelite/profils/tendance'     => ep_fidelite_profils_tendance(),
