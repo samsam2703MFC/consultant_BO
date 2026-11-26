@@ -181,3 +181,75 @@
 .pcl-tfb { font-size: 11.5px; color: var(--green); margin-right: 12px; }
 .tfbm-champ { display: grid; gap: 5px; margin-top: 12px; font-size: 11.5px; color: var(--muted); }
 .tfbm-champ input { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font: 14px 'Gotham', system-ui, sans-serif; color: var(--ink); }
+.pcl-tfb-ko { color: var(--danger); }
+
+/* Le tiroir d'un bureau (26/11/2026, maquette A « even larger ») : par-dessus la liste, toute la hauteur de l'écran. */
+.pcl-tir-voile { position: fixed; inset: 0; z-index: 30; background: rgba(28, 26, 23, 0.22); }
+.pcl-tir { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(1080px, 94vw); display: flex; flex-direction: column; background: #fff; box-shadow: -24px 0 48px rgba(0, 0, 0, 0.16); }
+/* L'entrée du tiroir, à l'ouverture seulement (pas à chaque rendu). */
+.pcl-tir.pcl-tir-entre { animation: pcl-tir-in 0.18s ease-out; }
+@keyframes pcl-tir-in { from { transform: translateX(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.pcl-tir-tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 26px 14px; border-bottom: 1px solid var(--line); }
+.pcl-tir-tete svg { width: 15px; height: 15px; }
+.pcl-tir-nom { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 21px; }
+.pcl-tir-nav { display: flex; align-items: center; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+.pcl-tir-nav > button:not(.btn) { margin: 0 0 -1px; padding: 11px 9px; border: 0; border-bottom: 2px solid transparent; background: none; font: 13px 'Gotham', system-ui, sans-serif; color: var(--muted-2); cursor: pointer; white-space: nowrap; }
+.pcl-tir-nav > button:not(.btn):hover { color: var(--accent); border-bottom-color: var(--accent); }
+.pcl-tir-nav svg { width: 15px; height: 15px; }
+.pcl-tir-pos { font-size: 12px; color: var(--muted); min-width: 44px; text-align: center; }
+.pcl-tir-corps { flex: 1; overflow-y: auto; padding: 18px 26px 26px; display: grid; gap: 22px; align-content: start; }
+.pcl-tir-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px 36px; }
+.pcl-tir-sec h4 { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--row-line); font-size: 10.5px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.pcl-tir-sec h4 .linklike { letter-spacing: normal; text-transform: none; color: var(--accent); text-decoration: underline; }
+.pcl-tir-pied { display: flex; align-items: center; gap: 8px; padding: 12px 26px; border-top: 1px solid var(--line); background: var(--table-head); }
+.pcl-tir-pied svg { width: 14px; height: 14px; }
+.pcl-manque { display: flex; gap: 10px; align-items: flex-start; padding: 11px 13px; border-radius: 9px; background: var(--prize-soft); color: var(--prize-ink); font-size: 12.5px; line-height: 1.5; }
+.pcl-manque b { font-weight: 400; }
+.pcl-manque > svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+.pcl-manque .btn svg { width: 14px; height: 14px; }
+.pcl-jours7 { display: inline-flex; gap: 3px; }
+.pcl-jours7 i { font-style: normal; width: 21px; height: 21px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px; background: var(--chip); color: var(--muted); }
+.pcl-jours7 i.on { background: rgba(141, 29, 44, 0.12); color: var(--accent); }
+.pcl-membres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; }
+.pcl-membres div { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--row-line); font-size: 12.5px; }
+.pcl-membres small { color: var(--muted); font-size: 11.5px; text-align: right; }
+@media (max-width: 900px) {
+  .pcl-tir { width: 100vw; }
+  .pcl-tir-2 { grid-template-columns: minmax(0, 1fr); }
+  .pcl-membres { grid-template-columns: minmax(0, 1fr); }
+  .pcl-tir-nav > button:not(.btn) { padding: 10px 5px; font-size: 12px; }
+}
+
+/* L'assistant « Ajouter un bureau » dans le tiroir large (26/11/2026) : le formulaire, et « Ce que l'on crée » à côté. */
+.pcl-tir-ass .pcl-stepper { padding: 14px 26px; }
+.pcl-ass-grille { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.pcl-ass-form .pcl-form2 { padding: 8px 0 12px; }
+.pcl-ass-form .pcl-pad { padding: 0 0 12px; }
+.pcl-ass-form .pcl-site .pcl-h { padding: 8px 0 0; }
+.pcl-ass-grille > .pcl-fiche { position: sticky; top: 0; }
+.pcl-geo { display: flex; flex-direction: column; gap: 2px; margin-top: -6px; }
+.pcl-geo:empty { display: none; }
+.pcl-geo button { text-align: left; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font: 12.5px 'Gotham', system-ui, sans-serif; color: var(--ink); cursor: pointer; }
+.pcl-geo button:hover { border-color: var(--accent); color: var(--accent); }
+.pcl-geo-etat { font-size: 11.5px; color: var(--muted); }
+.pcl-geo-etat.ok { color: var(--green); }
+.pcl-logo { display: flex; align-items: center; gap: 12px; }
+.pcl-logo img { max-height: 54px; max-width: 160px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: #fff; }
+.pcl-logo input[type="file"] { font: 12px 'Gotham', system-ui, sans-serif; }
+@media (max-width: 900px) { .pcl-ass-grille { grid-template-columns: minmax(0, 1fr); } }
+
+/* Les bureaux en développement (26/11/2026) : le bloc en tête de Bureaux, le tiroir d'une demande, le questionnaire. */
+.pcl-dev { margin: 0 0 14px; }
+.pcl-dev-tete { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.pcl-dev-tete > div:first-child { max-width: 720px; }
+.pcl-dev-tete .btn svg { width: 14px; height: 14px; }
+.pcl-dev-titre { font-size: 16px; margin-bottom: 3px; }
+.pcl-vert { font-weight: 400; color: var(--green); }
+.pcl-bon { display: inline-block; padding: 3px 8px; border: 1px dashed var(--accent); border-radius: 6px; color: var(--accent); font-size: 12px; letter-spacing: 0.06em; }
+.pcl-dv-statut { display: grid; gap: 6px; padding-top: 4px; }
+.pcl-dv-statut label { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink); }
+.pcl-dev-valider { padding: 14px 16px; border-radius: 12px; background: #FFFCF8; border: 1px solid var(--line); }
+.pcl-q-lien { display: flex; gap: 16px; align-items: flex-start; margin: 0 0 10px; }
+.pcl-q-qr { flex: none; width: 128px; height: 128px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.pcl-q-qr svg { width: 100%; height: 100%; display: block; }
+.pcl-dv-statut input[type="radio"] { width: auto; flex: none; margin: 0; padding: 0; }

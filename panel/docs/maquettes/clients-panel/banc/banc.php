@@ -33,6 +33,8 @@ if (!str_contains($chemin, '/api/cockpit')) {
         $chemin === '/banc/' || $chemin === '/banc' => __DIR__ . '/index.html',
         str_starts_with($chemin, '/banc/') => __DIR__ . '/' . basename($chemin),
         str_starts_with($chemin, '/dashboard/') => RACINE . '/panel/public/dashboard/' . basename($chemin),
+        $chemin === '/bureau/' || $chemin === '/bureau' => RACINE . '/panel/public/bureau/index.html',
+        str_starts_with($chemin, '/bureau/') => RACINE . '/panel/public/bureau/' . basename($chemin),
         str_starts_with($chemin, '/assets/') => RACINE . '/shared/public' . $chemin,
         default => '',
     };
@@ -42,7 +44,16 @@ if (!str_contains($chemin, '/api/cockpit')) {
     readfile($f); return true;
 }
 
-final class Db { public static function exec(string $s, array $a = []): int { return 1; } public static function row(string $s, array $a = []): ?array { return null; } public static function rows(string $s, array $a = []): array { return []; } }
+// Une vraie base si COCKPIT_DB_NAME est donnée (les bureaux en développement gardent leurs demandes), sinon une doublure.
+if (getenv('COCKPIT_DB_NAME')) { require RACINE . '/shared/src/Db.php'; }
+else { eval('final class Db { public static function exec(string $s, array $a = []): int { return 1; } public static function row(string $s, array $a = []): ?array { return null; } public static function rows(string $s, array $a = []): array { return []; } public static function pdo() { return new class { public function lastInsertId() { return "1"; } }; } }'); }
+function accesNomMagasin(string $s): string { return 'Gosselies'; }
+/* Les bons (module Promotions, marketing/src/promos_*.php) : une promotion du magasin avec un bon à codes personnels. */
+function pmMiennes(int $shop): array { return [[['panelId' => 321, 'nom' => '−20 % sur le premier lunch', 'description' => 'une fois, sur le webshop ou en caisse', 'statut' => 'en_caisse', 'bon' => ['campagne' => 900]]], null]; }
+function pmMienne(int $shop, int $id): ?array { return $id === 321 ? pmMiennes($shop)[0][0] : null; }
+function pbLire(int $camp, array $c = []): ?array { return ['campagne' => $camp, 'cible' => 'clients', 'code' => null]; }
+function pbGenerer(int $n = 8, string $p = ''): string { $c = ''; for ($i = 0; $i < $n; $i++) { $c .= 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[random_int(0, 31)]; } return $p . $c; }
+final class ErpApi { public static function disponible(): bool { return true; } public static function ecrire(string $m, string $p, ?array $b = null): array { return ['code' => 200, 'corps' => ['id' => 5], 'erreur' => null]; } public static function sondeGet(string $p): array { return ['code' => 404, 'corps' => null, 'erreur' => 'banc']; } }
 function setting(string $k, mixed $d = null): mixed { return $d; }
 function body(): array { static $b = null; if ($b === null) { $b = json_decode(file_get_contents('php://input') ?: '[]', true) ?: []; } return $b; }
 function journalAdd(string $a, string $k, ?string $p, string $m): void { error_log('journal : ' . $m); }
@@ -118,7 +129,7 @@ function bancRep(string $m, string $p, ?array $b): array
     if (PanelApi::$jetonImpose !== null && !$magasin) { return [401, ['status' => 401, 'error' => 'PANEL_SESSION_EXPIRED']]; }
     if (str_starts_with($chem, '/panel/') && !bancPanel() && !$magasin) { return [404, ['status' => 'error', 'description' => 'ORDER_NOT_FOUND', 'errors' => []]]; }
     if ($m === 'GET' && $chem === '/shops/3/clients') { $t = ($Q['type'] ?? '') === 'b2b' ? 'b2b' : 'b2c'; return [200, array_values($D[$t])]; }
-    if ($m === 'POST' && $chem === '/shops/3/clients') { return [201, ['success' => true, 'client_created' => true, 'shop_assignment_created' => true, 'data' => ['id' => 1999]]]; }
+    if ($m === 'POST' && $chem === '/shops/3/clients') { return [201, ['success' => true, 'client_created' => true, 'shop_assignment_created' => true, 'data' => ['id' => isset($b['vat_number']) ? 2999 : 1999]]]; }
     if (preg_match('#^/shops/3/clients/(\d+)$#', $chem, $mm)) {
         $c = $D['b2b'][(int) $mm[1]] ?? $D['b2c'][(int) $mm[1]] ?? null;
         if (!$c) { return [404, ['description' => 'CLIENT_NOT_FOUND']]; }
@@ -141,10 +152,38 @@ function bancRep(string $m, string $p, ?array $b): array
     if ($chem === '/panel/shops/3/offices') { return $m === 'GET' ? [200, ['offices' => $D['bureaux']]] : [200, ['id' => 99]]; }
     if ($chem === '/panel/shops/3/offices/options') { return [200, ['companies' => array_map(static fn ($c) => ['id' => $c['id'], 'name' => $c['company_name'], 'tax_number' => $c['tax_number']], array_values($D['b2b'])), 'routes' => [['id' => 1, 'name' => 'Midi · Gosselies – Charleroi', 'start_time' => '11:15:00'], ['id' => 2, 'name' => 'Matin · Jumet', 'start_time' => '08:30:00']],
         'delivery_sites' => [['id' => 5, 'name' => 'Lunchroom', 'address' => 'bd Tirou 45, Charleroi', 'route_id' => 1]], 'vouchers' => [['id' => 3, 'code' => 'BIENVENUE5', 'name' => '5 % la première commande']], 'department_presets' => ['Direction', 'Comptabilité', 'Ressources humaines', 'Commercial', 'Informatique']]]; }
-    if ($chem === '/panel/shops/3/offices/onboard') { return [200, ['office' => ['id' => 47], 'onboarding' => ['notifications' => ['status' => 'queued', 'membership' => 0]]]]; }
+    // Les adresses (geo) : suggestions, une adresse vérifiée, les localités d'un code postal (fictif).
+    if ($chem === '/panel/shops/3/offices/geo/autocomplete') {
+        $qq = (string) ($Q['query'] ?? '');
+        return [200, ['available' => true, 'suggestions' => [['id' => 'banc-1', 'label' => 'Rue de la Station 14, 6040 Jumet, Belgique'], ['id' => 'banc-2', 'label' => 'Rue de la Station 14, 6041 Gosselies, Belgique'], ['id' => 'banc-3', 'label' => $qq . ' (autre)']]]];
+    }
+    if ($chem === '/panel/shops/3/offices/geo/place') {
+        return [200, ['place' => ['verified' => true, 'place_id' => (string) ($Q['id'] ?? ''), 'street' => 'Rue de la Station', 'street_number' => '14', 'postal_code' => ($Q['id'] ?? '') === 'banc-2' ? '6041' : '6040',
+            'city' => ($Q['id'] ?? '') === 'banc-2' ? 'Gosselies' : 'Jumet', 'country' => 'BE', 'lat' => 50.43, 'lng' => 4.43, 'formatted_address' => 'Rue de la Station 14, 6040 Jumet']]];
+    }
+    if ($chem === '/panel/shops/3/offices/geo/postcodes') {
+        $cp = (string) ($Q['postal_code'] ?? '');
+        return [200, ['localities' => $cp === '6000' ? [['city' => 'Charleroi']] : [['city' => 'Gosselies'], ['city' => 'Thiméon']]]];
+    }
+    if ($chem === '/panel/shops/3/offices/onboard') {
+        // Ce que l'assistant envoie, gardé pour le contrôle du banc (le logo réduit à sa longueur).
+        $bb = $b ?? []; if (isset($bb['office']['logo_data_url'])) { $bb['office']['logo_data_url'] = 'data-url ' . strlen((string) $bb['office']['logo_data_url']) . ' car.'; }
+        file_put_contents(sys_get_temp_dir() . '/banc-onboard.json', json_encode($bb, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        return [200, ['office' => ['id' => 40], 'onboarding' => ['notifications' => ['status' => 'queued', 'membership' => 0]]]];
+    }
+    // Un bureau sans site : TF Buddy refuse sa livraison (422 OFFICE_DELIVERY_SITE_REQUIRED, vu à Corbais le 26/11/2026).
+    if (preg_match('#^/panel/shops/3/offices/(\d+)/(delivery-settings|sites)$#', $chem, $mm) && $m === 'GET') {
+        $o = array_values(array_filter($D['bureaux'], static fn ($x) => (int) $x['id'] === (int) $mm[1]))[0] ?? null;
+        if ($o && (int) $o['site_count'] === 0) { return $mm[2] === 'sites' ? [200, []] : [422, ['status' => 'error', 'description' => 'OFFICE_DELIVERY_SITE_REQUIRED']]; }
+    }
+    if (preg_match('#^/panel/shops/3/offices/(\d+)/sites$#', $chem) && $m === 'POST') { return [200, ['id' => 77]]; }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/delivery-settings$#', $chem)) { return [200, ['route' => ['id' => 1, 'name' => 'Midi · Gosselies – Charleroi'], 'delivery_window_start' => '12:00:00', 'delivery_window_end' => '12:30:00', 'cutoff_time' => '16:00:00', 'cutoff_days_before' => 1, 'drop_minutes' => 5]]; }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/sites$#', $chem)) { return [200, [['id' => 5, 'name' => 'Lunchroom', 'address' => 'bd Tirou 45', 'postal_code' => '6000', 'city' => 'Charleroi', 'access_minutes' => 5]]]; }
-    if (preg_match('#^/panel/shops/3/offices/(\d+)/members$#', $chem)) { return [200, [['id' => 1, 'name' => 'Marie', 'surname' => 'Dupont', 'department_name' => 'Comptabilité'], ['id' => 2, 'name' => 'Jean', 'surname' => 'Lambert', 'department_name' => 'Direction']]]; }
+    if (preg_match('#^/panel/shops/3/offices/(\d+)/members$#', $chem)) {
+        $P = ['Marie Dupont', 'Jean Lambert', 'Sophie Renard', 'Thomas Peeters', 'Julie Simon', 'Nicolas Claes', 'Camille Leroy', 'Pierre Hermans', 'Sarah Mertens', 'Antoine Jacobs', 'Emma Wouters', 'Lucas Maes'];
+        $Dp = ['Direction', 'Comptabilité', 'Ressources humaines', 'Sinistres'];
+        return [200, array_map(static fn ($i) => ['id' => $i + 1, 'name' => explode(' ', $P[$i])[0], 'surname' => explode(' ', $P[$i])[1], 'department_name' => $Dp[$i % 4]], array_keys($P))];
+    }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/members/invite$#', $chem)) { return [200, ['invite' => ['status' => 'queued']]]; }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/invite$#', $chem)) { return [200, ['invite' => ['expires_at' => '2026-12-31', 'uses' => 23, 'url' => 'https://webshop.exemple/rejoindre/abc123']]]; }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/assortment$#', $chem)) { return [200, ['mode' => 'restricted', 'products' => array_fill(0, 38, ['id' => 1])]]; }
@@ -162,11 +201,13 @@ final class PanelApi
 }
 require RACINE . '/panel/src/tfb_magasin.php';
 require RACINE . '/panel/src/clients_panel.php';
+require RACINE . '/panel/src/bureaux_dev.php';
 header('Content-Type: application/json; charset=utf-8');
 $path = preg_replace('#^.*/api/cockpit#', '', $chemin);
 parse_str($u['query'] ?? '', $_GET);
 if ($path === '/dashboard/clients/bureaux/pdf') { ep_clients_bureaux_pdf(); }   // comme shared/public/api/index.php : sort le PDF, puis exit
-try { $r = pclRoute($_SERVER['REQUEST_METHOD'], $path) ?? tfbmRoute($_SERVER['REQUEST_METHOD'], $path); }
+if (preg_match('#^/bureau-questionnaire/([a-f0-9]{32})$#', $path, $mq)) { echo json_encode(bdvPublic($_SERVER['REQUEST_METHOD'], $mq[1]), JSON_UNESCAPED_UNICODE); return true; }
+try { $r = pclRoute($_SERVER['REQUEST_METHOD'], $path) ?? tfbmRoute($_SERVER['REQUEST_METHOD'], $path) ?? bdvRoute($_SERVER['REQUEST_METHOD'], $path); }
 catch (Throwable $e) { http_response_code(500); $r = ['error' => get_class($e) . ' : ' . $e->getMessage() . ' @' . $e->getLine()]; }
 echo json_encode($r ?? ['error' => 'route inconnue'], JSON_UNESCAPED_UNICODE);
 return true;

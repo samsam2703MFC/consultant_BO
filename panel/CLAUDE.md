@@ -33,6 +33,10 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   `X-TFB-Jeton`), le consultant, l'admin. Les routes `/panel/shops/{s}/…` n'ouvrent qu'au compte du magasin ; sans lui, le
   module se rabat sur `/shops/{s}/clients…` et le relevé des tickets pro. Commandes lit aussi ses livraisons avec lui.
   Les offres restent la page Offres.
+  **Bureaux en développement** (`src/bureaux_dev.php`, 26/11/2026) : une nouvelle personne et son futur bureau, saisis au
+  dashboard ou par le questionnaire public du magasin (`public/bureau/`, un par magasin, lien et QR dans Clients ›
+  Bureaux) ; la personne, la société (si TVA) et le bon de bienvenue se créent tout de suite, le bureau à la validation
+  (compte du magasin). Tables `panel_bureau_questionnaire`, `panel_bureau_dev`.
 - **Vidéos d'instruction** (23/11/2026) : le carré du rail, à côté d'Assistant IA (`public/dashboard/tutos.js`), le registre
   `public/dashboard/videos/videos.json`, le tournage `panel/tools/videos/` (données fictives). Une nouvelle fonction du
   dashboard peut y annoncer sa vidéo (genre `nouveau`) ; un écran filmé qui change se retourne. Détail : `src/LISEZMOI.md`.

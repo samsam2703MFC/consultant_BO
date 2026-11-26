@@ -25,17 +25,42 @@ const TFBM_ENTETE = 'HTTP_X_TFB_JETON';
 /** Le jeton d'accès du magasin envoyé par le navigateur (en-tête X-TFB-Jeton), s'il a la forme d'un jeton. */
 function tfbmJeton(): ?string
 {
-    $j = trim((string) ($_SERVER[TFBM_ENTETE] ?? ''));
-    return preg_match('/^[A-Za-z0-9._~+\/=\-]{20,4096}$/', $j) ? $j : null;
+    [$j] = tfbmJetonRecu();
+    return $j;
 }
 
-/** L'échéance (timestamp) d'un JWT, lue dans sa charge utile sans la vérifier (TF Buddy la vérifie) ; null sinon. */
-function tfbmExpiration(string $jwt): ?int
+/**
+ * Le jeton du magasin reçu et par où : [jeton | null, "entete" | "cookie" | null]. L'en-tête `X-TFB-Jeton` d'abord ; sinon
+ * le cookie `tfb_jeton_{shop}` que le navigateur pose avec (26/11/2026 : « after code it does not connect » — le jeton
+ * n'arrivait pas au serveur ; le cookie passe même si un intermédiaire retire un en-tête inconnu). Le magasin du cookie
+ * est celui de la requête, que l'accès a déjà vérifié.
+ */
+function tfbmJetonRecu(): array
+{
+    $forme = static fn (string $j) => preg_match('/^[A-Za-z0-9._~+\/=\-]{20,4096}$/', $j) === 1;
+    $j = trim((string) ($_SERVER[TFBM_ENTETE] ?? ''));
+    if ($j !== '' && $forme($j)) { return [$j, 'entete']; }
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0 && function_exists('body')) { $shop = (int) (body()['shop'] ?? 0); }
+    $c = $shop > 0 ? trim((string) ($_COOKIE['tfb_jeton_' . $shop] ?? '')) : '';
+    if ($c !== '' && $forme($c)) { return [$c, 'cookie']; }
+    return [null, null];
+}
+
+/** La charge utile d'un JWT, lue sans la vérifier (TF Buddy la vérifie) ; null si ce n'en est pas un. */
+function tfbmCharge(string $jwt): ?array
 {
     $p = explode('.', $jwt);
     if (count($p) !== 3) { return null; }
     $c = json_decode((string) base64_decode(strtr($p[1], '-_', '+/') . str_repeat('=', (4 - strlen($p[1]) % 4) % 4), true), true);
-    return is_array($c) && isset($c['exp']) && is_numeric($c['exp']) ? (int) $c['exp'] : null;
+    return is_array($c) ? $c : null;
+}
+
+/** L'échéance (timestamp) d'un JWT ; null sinon. */
+function tfbmExpiration(string $jwt): ?int
+{
+    $c = tfbmCharge($jwt);
+    return $c !== null && isset($c['exp']) && is_numeric($c['exp']) ? (int) $c['exp'] : null;
 }
 
 /** Les jetons d'une réponse de connexion ou de renouvellement du panel, dans la forme du dashboard ; null sans jeton. */
@@ -46,8 +71,16 @@ function tfbmJetons($c): ?array
     $acces = $c['token'] ?? $c['access_token'] ?? $d['token'] ?? $d['access_token'] ?? null;
     if (!is_string($acces) || $acces === '') { return null; }
     $ren = $c['refresh_token'] ?? $d['refresh_token'] ?? null;
-    $ses = $c['expires_at'] ?? $d['expires_at'] ?? null;
+    // La fin de la session : celle que porte le jeton du panel (`panel_session_expires_at`, la source sûre), sinon
+    // `expires_at` de la réponse.
+    $ch = tfbmCharge($acces);
+    $ses = isset($ch['panel_session_expires_at']) && is_numeric($ch['panel_session_expires_at']) ? (int) $ch['panel_session_expires_at']
+        : ($c['expires_at'] ?? $d['expires_at'] ?? null);
     $ses = is_numeric($ses) ? (int) $ses : (is_string($ses) && strtotime($ses) ? strtotime($ses) : null);
+    // Une durée (43 200 s) plutôt qu'une date, ou des millisecondes : ramenées à une date en secondes (26/11/2026).
+    if ($ses !== null && $ses > 1_000_000_000_000) { $ses = intdiv($ses, 1000); }
+    elseif ($ses !== null && $ses > 0 && $ses < 1_000_000_000) { $ses = time() + $ses; }
+    elseif ($ses !== null && $ses <= 0) { $ses = null; }
     return ['acces' => $acces, 'renouvellement' => is_string($ren) ? $ren : null,
         'expireAcces' => tfbmExpiration($acces) ?? time() + 240, 'expireSession' => $ses];
 }
@@ -176,9 +209,29 @@ function wr_tfb_deconnexion(): array
     return ['ok' => true];
 }
 
+/**
+ * GET /dashboard/tfb/etat?shop= — le contrôle d'après connexion : le serveur reçoit-il le jeton du magasin (et par où), et
+ * que répond TF Buddy avec lui sur une route du panel du magasin (la liste des bureaux) ? Ni le jeton ni ses données ne
+ * sortent : le code HTTP et le code d'erreur de TF Buddy seulement.
+ */
+function ep_tfb_etat(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    [$j, $par] = tfbmJetonRecu();
+    $out = ['shop' => $shop, 'recu' => $j !== null, 'par' => $par, 'entete' => trim((string) ($_SERVER[TFBM_ENTETE] ?? '')) !== '',
+        'cookie' => isset($_COOKIE['tfb_jeton_' . $shop]), 'expire' => $j !== null ? tfbmExpiration($j) : null, 'maintenant' => time()];
+    if ($j !== null) {
+        $r = tfbmAppel('GET', '/panel/shops/' . $shop . '/offices');
+        $out['tfbuddy'] = $r === null ? null : ['code' => $r['code'], 'erreur' => $r['code'] >= 200 && $r['code'] < 300 ? null : (tfbmCodeErreur($r['corps']) ?: null)];
+    }
+    return $out;
+}
+
 function tfbmRoute(string $method, string $path): ?array
 {
     if (!str_starts_with($path, '/dashboard/tfb/')) { return null; }
+    if ($method === 'GET' && $path === '/dashboard/tfb/etat') { return ep_tfb_etat(); }
     if ($method === 'POST') {
         switch ($path) {
             case '/dashboard/tfb/connexion': return wr_tfb_connexion();

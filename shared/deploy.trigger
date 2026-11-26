@@ -321,3 +321,10 @@
 2026-11-26T03:59:24Z Manuels du 26/11 : bon de commande de Mon catalogue, limites de connexion TF Buddy du magasin, GET /fidelite/programme, anneau des primes de l'année (documentation seulement)
 2026-11-26T04:21:38Z SOP du dashboard magasin : article v1.11, SOP v1.8 (Primes dans Mon équipe ; Commandes et Clients au rail)
 2026-11-26T04:43:30Z Manuel opératoire : thèmes 1 à 10 publiés (codes 0.0.61 à 0.0.70 ; 0.0.66 et 0.0.67 en v1.1 ; nouveaux : 0.0.68 Clients, 0.0.69 Autocontrôle qualité, 0.0.70 Commandes)
+2026-11-26T05:25:37Z Clients : un refus dit l'état du compte TF Buddy du magasin (pas connecté, jeton non reçu, session périmée)
+2026-11-26T05:32:16Z Compte TF Buddy du magasin : le jeton doublé d'un cookie, contrôle après connexion
+2026-11-26T05:41:09Z Connexion TF Buddy du magasin : le clic après le code ne se perd plus, contrôle avant de fermer
+2026-11-26T05:53:23Z Connexion TF Buddy du magasin : la session n'est plus effacée à peine gardée
+2026-11-26T06:20:31Z Clients › Bureaux : la fiche d'un bureau dans un tiroir large, « Ajouter un site »
+2026-11-26T06:45:03Z Clients › Bureaux : l'assistant dans le tiroir large, adresses suggérées par TF Buddy, logo
+2026-11-26T06:59:41Z Clients › Bureaux : bureaux en développement, questionnaire du magasin qui crée la personne et son bon

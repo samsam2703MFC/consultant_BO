@@ -53,7 +53,24 @@
   const tfbEtat = () => window.DashTfb ? window.DashTfb.etat(st.shop) : { connecte: false };
   const tfbBouton = (lib) => window.DashTfb ? `<button type="button" class="btn btn--sm btn--primary" data-act="tfb-connecter">${lib || 'Connecter le compte TF Buddy du magasin'}</button>` : '';
   /** Après une connexion ou une déconnexion : tout se relit avec les nouveaux droits. */
-  function toutRelire() { st.p.d = null; st.e.d = null; st.e.fiche = null; st.b.d = null; st.b.det = {}; st.b.options = null; st.a.d = null; charger(true); }
+  function toutRelire() {
+    st.p.d = null; st.e.d = null; st.e.fiche = null; st.b.d = null; st.b.det = {}; st.b.options = null; st.a.d = null; st.tfbDiag = null;
+    charger(true);
+    // Juste après la connexion : le serveur reçoit-il le jeton, et TF Buddy l'accepte-t-il pour ce magasin ? (26/11/2026)
+    if (window.DashTfb && tfbEtat().connecte && window.DashTfb.controler) { window.DashTfb.controler(st.shop, st.api).then(d => { st.tfbDiag = d; rendre(); }).catch(() => null); }
+  }
+  /** Le résultat du contrôle, dit au magasin (rien quand tout va bien). */
+  function tfbDiagTexte() {
+    const d = st.tfbDiag;
+    if (!d || !tfbEtat().connecte) { return ''; }
+    if (d.error) { return 'contrôle impossible : ' + d.error; }
+    if (!d.recu) { return 'le serveur du cockpit ne reçoit pas le jeton (ni en-tête ni cookie) : rechargez la page ; si cela continue, dites-le'; }
+    const t = d.tfbuddy;
+    if (!t) { return ''; }
+    if (t.code >= 200 && t.code < 300) { return ''; }
+    if (t.code === 401) { return 'TF Buddy refuse le jeton (session terminée) : reconnectez le compte'; }
+    return 'TF Buddy refuse ce magasin à ce compte (HTTP ' + t.code + (t.erreur ? ' : ' + t.erreur : '') + ') : connectez un employé de ce magasin';
+  }
   const memo = (k, v) => { try { if (v === undefined) { return localStorage.getItem(k); } localStorage.setItem(k, v); } catch (e) { /* sans mémoire */ } return null; };
 
   /* ── Les lectures ─────────────────────────────────────────────────────────────────────────────────────────── */
@@ -73,6 +90,11 @@
     const B = st.b; B.lecture = true; rendre();
     return lire('/dashboard/clients/bureaux', { chemin: '' }).then(d => { B.d = d; B.err = null; })
       .catch(e => { B.err = e.message; }).finally(() => { B.lecture = false; rendre(); });
+  }
+  /** Les bureaux en développement (bureaux_dev.php) : les demandes, le questionnaire du magasin, les promotions à bon. */
+  function lireDev() {
+    const B = st.b;
+    return lire('/dashboard/bureaux-dev').then(d => { B.dev = d; B.devErr = null; }).catch(e => { B.devErr = e.message; }).finally(rendre);
   }
   function lireOptions() {
     if (st.b.options) { return Promise.resolve(st.b.options); }
@@ -100,7 +122,7 @@
   function charger(frais) {
     if (st.onglet === 'b2c') { return lireParticuliers(frais); }
     if (st.onglet === 'b2b') { if (!st.b.d && !st.b.lecture) { lireBureaux(); } return lireEntreprises(frais); }
-    if (st.onglet === 'bur') { st.b.det = {}; return lireBureaux(); }
+    if (st.onglet === 'bur') { st.b.det = {}; lireDev(); return lireBureaux(); }
     return lireAnalyse();
   }
 
@@ -124,7 +146,7 @@
   /** Un champ d'un formulaire : sa valeur vit dans st.mo.f[k] (ou l'objet `o`), écrite à la saisie sans rendre. */
   function champ(k, l, o) {
     o = o || {}; const src = o.src || (st.mo && st.mo.f) || {}, v = src[k] == null ? '' : src[k];
-    const attr = `data-f="${esc(k)}"${o.ou ? ` data-ou="${esc(o.ou)}"` : ''}`;
+    const attr = `id="pcl-c-${esc(o.ou || (st.mo ? 'm' : 'f'))}-${esc(k)}" data-f="${esc(k)}"${o.ou ? ` data-ou="${esc(o.ou)}"` : ''}${o.liste ? ` list="${esc(o.liste)}"` : ''}`;
     let w;
     if (o.choix) { w = `<select ${attr}>${o.choix.map(([cv, cl]) => `<option value="${esc(cv)}"${String(v) === String(cv) ? ' selected' : ''}>${esc(cl)}</option>`).join('')}</select>`; }
     else if (o.type === 'case') { return `<label class="pcl-case${o.plein ? ' plein' : ''}"><input type="checkbox" ${attr}${v ? ' checked' : ''}> ${esc(l)}</label>`; }
@@ -144,9 +166,10 @@
     const act = st.b.w && st.onglet === 'bur' ? '' : st.onglet === 'b2c' ? `<button type="button" class="btn btn--primary" data-act="p-ajouter">${SVG(ICO.plus)}Ajouter un client</button>`
       : st.onglet === 'b2b' ? `<button type="button" class="btn btn--primary" data-act="e-ajouter">${SVG(ICO.plus)}Ajouter une entreprise</button>`
       : st.onglet === 'bur' ? `<button type="button" class="btn btn--primary" data-act="w-ouvrir"${st.b.d && st.b.d.ok ? '' : ' disabled title="TF Buddy ne donne pas les bureaux au cockpit"'}>${SVG(ICO.plus)}Ajouter un bureau</button>` : '';
-    return `<div class="pcl-tete"><div><p class="pcl-kicker">${esc(st.nomShop || 'Magasin ' + st.shop)}</p><h1>Clients</h1></div><span class="pcl-sp"></span>${act}</div>
+    // Le titre : le dashboard met déjà le sien (le magasin, « Clients ») ; le module ne garde que son action (26/11/2026).
+    return `<div class="pcl-tete">${st.titre ? `<div><p class="pcl-kicker">${esc(st.nomShop || 'Magasin ' + st.shop)}</p><h1>Clients</h1></div>` : ''}<span class="pcl-sp"></span>${act}</div>
       <nav class="page-tabs pcl-tabs" aria-label="Clients">${ong.map(([k, l, c]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-act="onglet" data-v="${k}">${l}${c}</button>`).join('')}
-      <span class="pcl-sp"></span>${window.DashTfb ? (tfbEtat().connecte ? `<span class="pcl-tfb" title="Les données du panel se lisent avec le compte TF Buddy du magasin, connecté sur cet appareil">TF Buddy : compte du magasin connecté · <button type="button" class="linklike" data-act="tfb-deconnecter">déconnecter</button></span>` : `<button type="button" class="linklike" data-act="tfb-connecter">connecter TF Buddy</button>`) : ''}<button type="button" class="linklike" data-act="aller-offres">Les offres : Vendre › Offres</button></nav>`;
+      <span class="pcl-sp"></span>${window.DashTfb ? (tfbEtat().connecte ? `<span class="pcl-tfb" title="Les données du panel se lisent avec le compte TF Buddy du magasin, connecté sur cet appareil">TF Buddy : compte du magasin connecté${tfbDiagTexte() ? ' — <span class="pcl-tfb-ko">' + esc(tfbDiagTexte()) + '</span>' : ''} · <button type="button" class="linklike" data-act="tfb-deconnecter">déconnecter</button></span>` : `<button type="button" class="linklike" data-act="tfb-connecter">connecter TF Buddy</button>`) : ''}<button type="button" class="linklike" data-act="aller-offres">Les offres : Vendre › Offres</button></nav>`;
   }
 
   /* ── Particuliers ─────────────────────────────────────────────────────────────────────────────────────────── */
@@ -245,18 +268,32 @@
   }
 
   /* ── Bureaux ──────────────────────────────────────────────────────────────────────────────────────────────── */
+  /**
+   * Ce que dit un refus (26/11/2026, « Réponse : HTTP 404 : ORDER_NOT_FOUND · consultant (404) puis admin (404) ») : quels
+   * comptes ont été essayés, et l'état du compte du magasin — pas connecté sur cet appareil (le cas de ce message), connecté
+   * mais son jeton n'est pas arrivé au serveur, session périmée, ou connecté sans droit sur ce magasin.
+   */
+  function etatMagasin(d) {
+    const ici = tfbEtat().connecte;
+    if (d.magasinExpire) { return 'la session a expiré : reconnectez-le'; }
+    if (d.magasin) { return 'connecté, mais TF Buddy lui refuse ce magasin (est-ce bien un employé de ce magasin ?)'; }
+    if (ici) { return 'connecté sur cet appareil, mais son jeton n’est pas arrivé au serveur : rechargez la page, puis réessayez'; }
+    return 'pas connecté sur cet appareil';
+  }
   function refus(d, quoi) {
     const btn = !d.magasin || d.magasinExpire ? tfbBouton(d.magasinExpire ? 'Reconnecter le compte TF Buddy du magasin' : '') : '';
-    return `<section class="card pcl-refus">${SVG(ICO.cadenas)}<div><h3>${esc(quoi)} ne se lisent pas</h3><p>${esc(d.texte || d.motif || '')}</p>${btn ? `<p>${btn}</p>` : ''}${d.motif ? `<p class="muted">Réponse : ${esc(d.motif)}${d.comptes ? ' · ' + esc(d.comptes) : ''}</p>` : ''}</div></section>`;
+    const comptes = String(d.comptes || '').replace(/\((\d+)\)/g, (m, c) => c === '404' || c === '401' || c === '403' ? '(refusé, ' + c + ')' : m);
+    return `<section class="card pcl-refus">${SVG(ICO.cadenas)}<div><h3>${esc(quoi)} ne se lisent pas</h3><p>${esc(d.texte || d.motif || '')}</p>${btn ? `<p>${btn}</p>` : ''}
+      <p class="muted">Compte TF Buddy du magasin : ${esc(etatMagasin(d))}.${comptes ? ' Comptes essayés : ' + esc(comptes) + '.' : ''}${d.motif ? ' Réponse de TF Buddy : ' + esc(d.motif) + '.' : ''}</p></div></section>`;
   }
   const STATUTS = { active: ['Actif', 'chip chip--ok'], pending: ['En attente', 'tag-warn'], inactive: ['Inactif', 'chip chip--draft'], archived: ['Archivé', 'chip chip--draft'] };
   const statut = s => { const x = STATUTS[s] || [s || '—', 'chip chip--draft']; return `<span class="${x[1]}">${esc(x[0])}</span>`; };
   function vueBureaux() {
     const B = st.b, d = B.d;
-    if (B.w) { return vueAssistant(); }
-    if (B.err && !d) { return `<div class="pcl-vide error card">${esc(B.err)}</div>`; }
-    if (!d) { return attente('Lecture des bureaux du magasin…'); }
-    if (!d.ok) { return refus(d, 'Les bureaux du magasin') + note('Ce que montre l’onglet une fois le compte TF Buddy du magasin connecté : une ligne par bureau (statut, catalogue, offres, sites), sa fiche en onglets — Livraison (site, tournée, créneau, heure limite), Catalogue, Offres, Personnes (invitations), Documents (affiche, cartes, brochure) — et « Ajouter un bureau » en sept étapes.', 'pcl-note-doux'); }
+    const dev = blocDev(), tirDev = B.w ? vueAssistant() : B.devSel ? tiroirDemande() : '';
+    if (B.err && !d) { return dev + `<div class="pcl-vide error card">${esc(B.err)}</div>` + tirDev; }
+    if (!d) { return dev + attente('Lecture des bureaux du magasin…') + tirDev; }
+    if (!d.ok) { return dev + tirDev + refus(d, 'Les bureaux du magasin') + note('Ce que montre l’onglet une fois le compte TF Buddy du magasin connecté : une ligne par bureau (statut, catalogue, offres, sites), sa fiche en onglets — Livraison (site, tournée, créneau, heure limite), Catalogue, Offres, Personnes (invitations), Documents (affiche, cartes, brochure) — et « Ajouter un bureau » en sept étapes.', 'pcl-note-doux'); }
     const q = B.q.trim().toLowerCase();
     const L = d.data.bureaux.filter(b => (!B.statut || b.statut === B.statut) && (!q || [b.nom, b.societe, b.tva, b.ville, b.contact].join(' ').toLowerCase().includes(q)));
     const nAct = d.data.bureaux.filter(b => b.statut === 'active').length, nAtt = d.data.bureaux.filter(b => b.statut === 'pending').length;
@@ -264,43 +301,208 @@
       <span class="pcl-grp">Statut ${seg('b-statut', B.statut, [['', 'Tous ' + d.data.bureaux.length], ['active', 'Actifs ' + nAct], ['pending', 'En attente ' + nAtt]])}</span><span class="pcl-sp"></span><button type="button" class="linklike" data-act="relire">relire</button></div>`;
     const lignes = L.map(b => `<tr class="pcl-ligne${B.sel === b.id ? ' is-sel' : ''}" data-act="b-sel" data-id="${b.id}"><td>${esc(b.nom)}<span class="sub">${esc([b.societe, b.ville].filter(Boolean).join(' · '))}</span></td><td>${statut(b.statut)}</td>
       <td>${b.catalogue === 'restricted' || b.catalogue === 'custom' ? 'Réduit' : b.catalogue ? 'Complet' : '—'}</td><td class="num">${nf(b.offres)}</td><td class="num">${nf(b.departements)}</td><td>${b.sites ? nf(b.sites) + ' site' + (b.sites > 1 ? 's' : '') : '<span class="tag-warn">pas de site</span>'}</td></tr>`).join('');
-    return `<div class="pcl-2"><div><section class="card pcl-carte">${barre}${B.lecture ? '<div class="pcl-fil"></div>' : ''}${L.length ? `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Bureau</th><th>Statut</th><th>Catalogue</th><th class="num">Offres</th><th class="num">Départements</th><th>Livraison</th></tr></thead><tbody>${lignes}</tbody></table></div>` : '<div class="pcl-vide">Aucun bureau.</div>'}</section>
-      ${d.data.bureaux.some(b => !b.sites) ? note('Un bureau sans site ne peut être livré par aucune tournée tant qu’il n’a pas de point de livraison.', 'pcl-note-doux') : ''}</div>${ficheBureau()}</div>`;
+    // La liste garde toute la largeur ; un bureau s'ouvre dans le tiroir (26/11/2026, maquette A « even larger »).
+    return dev + `<section class="card pcl-carte">${barre}${B.lecture ? '<div class="pcl-fil"></div>' : ''}${L.length ? `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Bureau</th><th>Statut</th><th>Catalogue</th><th class="num">Offres</th><th class="num">Départements</th><th>Livraison</th></tr></thead><tbody>${lignes}</tbody></table></div>` : '<div class="pcl-vide">Aucun bureau.</div>'}</section>
+      ${d.data.bureaux.some(b => !b.sites) ? note('Un bureau sans site ne peut être livré par aucune tournée tant qu’il n’a pas de point de livraison : ouvrez-le, « Ajouter un site ».', 'pcl-note-doux') : ''}${tirDev || tiroirBureau(L)}`;
   }
   const detDe = ch => st.b.det[st.b.sel + ch];
   const detCorps = (ch, f) => { const x = detDe(ch); if (!x || x.lecture) { lireDet(ch); return attente('Lecture…'); } if (!x.ok) { return `<div class="pcl-aide error">${esc(x.texte || x.motif || 'illisible')}</div>`; } return f(x.data || {}); };
-  function ficheBureau() {
+  /* ── L'adresse d'un site : les suggestions de TF Buddy (26/11/2026) ─────────────────────────────────────────
+   * GET …/offices/geo/autocomplete {query, country, lang} → {available, suggestions: [{id, label}]} ; une suggestion
+   * choisie → geo/place {id, lang} → {place: {verified, street, street_number, postal_code, city, country, place_id,
+   * lat, lng}} ; le code postal → geo/postcodes {postal_code, country} → {localities: [{city}]}. `cle` : « s0 », « s1 »…
+   * (les sites de l'assistant) ou « m » (la fenêtre « Ajouter un site »). */
+  st.geo = {};
+  let tGeo = null, tCp = null;
+  const geoCible = cle => cle === 'm' ? (st.mo && st.mo.f) : (st.b.w ? st.b.w.sites[+cle.slice(1)] : null);
+  function geoBloc(cle, src) {
+    const g = st.geo[cle] || {};
+    const etat = g.lecture ? 'recherche des adresses…' : g.statut === 'verifie' ? '✓ adresse vérifiée par TF Buddy' : g.statut === 'manuel' ? 'suggestions indisponibles : saisissez l’adresse à la main' : '';
+    return `<div class="pcl-geo plein" id="pcl-geo-${esc(cle)}">${etat ? `<span class="pcl-geo-etat${g.statut === 'verifie' ? ' ok' : ''}">${esc(etat)}</span>` : ''}${(g.liste || []).map(x => `<button type="button" data-act="geo-place" data-cle="${esc(cle)}" data-id="${esc(x.id)}">${esc(x.label)}</button>`).join('')}</div>`;
+  }
+  const villes = cle => `<datalist id="pcl-villes-${esc(cle)}">${((st.geo[cle] || {}).villes || []).map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`;
+  function geoMaj(cle) { const el = st.el.querySelector('#pcl-geo-' + cle); if (el) { el.outerHTML = geoBloc(cle); } const dl = st.el.querySelector('#pcl-villes-' + cle); if (dl) { dl.outerHTML = villes(cle); } }
+  function geoChercher(cle, q) {
+    clearTimeout(tGeo);
+    const c = geoCible(cle); if (c) { delete c.place_id; }
+    if (q.trim().length < 3) { st.geo[cle] = {}; geoMaj(cle); return; }
+    tGeo = setTimeout(() => {
+      const t = geoCible(cle), pays = (t && t.country) || 'BE';
+      st.geo[cle] = Object.assign({}, st.geo[cle], { lecture: true, statut: '' }); geoMaj(cle);
+      lire('/dashboard/clients/bureaux', { chemin: '/geo/autocomplete', query: q.trim(), country: pays, lang: 'fr' }).then(d => {
+        const x = d.ok ? (d.data || {}) : {};
+        st.geo[cle] = Object.assign({}, st.geo[cle], { lecture: false, liste: (x.suggestions || []).slice(0, 6), statut: !d.ok || x.available === false ? 'manuel' : '' });
+      }).catch(() => { st.geo[cle] = { lecture: false, statut: 'manuel' }; }).finally(() => geoMaj(cle));
+    }, 350);
+  }
+  function geoCodePostal(cle, cp) {
+    clearTimeout(tCp);
+    if (cp.trim().length < 4) { return; }
+    tCp = setTimeout(() => {
+      const t = geoCible(cle), pays = (t && t.country) || 'BE';
+      lire('/dashboard/clients/bureaux', { chemin: '/geo/postcodes', postal_code: cp.trim(), country: pays }).then(d => {
+        const L = d.ok ? ((d.data || {}).localities || []).map(x => x.city).filter(Boolean) : [];
+        st.geo[cle] = Object.assign({}, st.geo[cle], { villes: L });
+        const t2 = geoCible(cle);
+        if (t2 && L.length === 1 && !String(t2.city || '').trim()) { t2.city = L[0]; const i = st.el.querySelector('#pcl-c-' + cle + '-city'); if (i) { i.value = L[0]; } }
+        geoMaj(cle);
+      }).catch(() => null);
+    }, 300);
+  }
+  function geoChoisir(cle, id) {
+    st.geo[cle] = Object.assign({}, st.geo[cle], { lecture: true }); geoMaj(cle);
+    lire('/dashboard/clients/bureaux', { chemin: '/geo/place', id, lang: 'fr' }).then(d => {
+      const p = d.ok ? ((d.data || {}).place || null) : null, t = geoCible(cle);
+      if (!p || !p.verified || !t) { st.geo[cle] = { lecture: false, statut: 'manuel' }; geoMaj(cle); return; }
+      Object.assign(t, { address: [p.street, p.street_number].filter(Boolean).join(' ') || p.formatted_address || t.address, postal_code: p.postal_code || t.postal_code, city: p.city || t.city,
+        country: p.country || t.country, place_id: p.place_id || id, street: p.street || '', street_number: p.street_number || '', latitude: p.lat != null ? p.lat : null, longitude: p.lng != null ? p.lng : null });
+      st.geo[cle] = { lecture: false, statut: 'verifie', liste: [] };
+      rendre(); if (st.b.w) { majResume(); }
+    }).catch(() => { st.geo[cle] = { lecture: false, statut: 'manuel' }; geoMaj(cle); });
+  }
+  /** Le logo : redimensionné à 600 px au plus dans le navigateur, en PNG (WebP s'il dépasse 800 ko), comme le panel. */
+  function logoLire(fichier) {
+    const w = st.b.w; if (!w || !fichier) { return; }
+    w.logoErr = null;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(fichier.type) || fichier.size > 8 * 1024 * 1024) { w.logoErr = 'Un logo PNG, JPEG ou WebP de 8 Mo au plus.'; rendre(); return; }
+    createImageBitmap(fichier).then(bm => {
+      const k = Math.min(1, 600 / Math.max(bm.width, bm.height)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(bm.width * k)); c.height = Math.max(1, Math.round(bm.height * k));
+      c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); if (bm.close) { bm.close(); }
+      let u = c.toDataURL('image/png'); if (u.length > 800000) { u = c.toDataURL('image/webp', 0.85); }
+      if (u.length > 800000) { throw new Error('trop lourd'); }
+      w.logo = u; rendre();
+    }).catch(() => { w.logoErr = 'Ce logo ne se lit pas (ou reste trop lourd).'; rendre(); });
+  }
+
+  /* ── Les bureaux en développement (26/11/2026, bureaux_dev.php) ─────────────────────────────────────────────
+   * « Relier directement une nouvelle personne et un nouveau bureau (development) ou par après je peux valider le
+   * bureau » ; « un questionnaire directement (1 par magasin) qui crée directement aussi un voucher ». */
+  const SOURCES = { questionnaire: 'questionnaire', dashboard: 'saisi ici' };
+  function blocDev() {
+    const B = st.b, D = B.dev;
+    if (!D) { return B.devErr ? note('Les bureaux en développement ne se lisent pas : ' + esc(B.devErr), 'pcl-note-doux') : ''; }
+    const A = D.demandes.filter(x => x.statut === 'a_valider'), T = D.demandes.filter(x => x.statut !== 'a_valider'), q = D.questionnaire;
+    const promo = q.promo ? (D.promos.find(p => p.id === q.promo) || null) : null;
+    const tab = L => `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Bureau</th><th>Personne</th><th>Reçu</th><th>Bon</th><th></th></tr></thead><tbody>${L.map(x => `<tr class="pcl-ligne${B.devSel === x.id ? ' is-sel' : ''}" data-act="dev-sel" data-id="${x.id}">
+      <td>${esc(x.bureau)}${x.erreurs.length ? ' <span class="tag-warn" title="' + esc(x.erreurs.join(' · ')) + '">à reprendre</span>' : ''}<span class="sub">${esc([x.societe, x.tva, x.ville].filter(Boolean).join(' · '))}</span></td>
+      <td>${esc(x.personne)}<span class="sub">${esc(x.fonction || x.email)}</span></td><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(SOURCES[x.source] || x.source)}</span></td>
+      <td>${x.bon ? `<span class="pcl-bon">${esc(x.bon.code)}</span>` : '<span class="muted">—</span>'}</td>
+      <td class="num">${x.statut === 'a_valider' ? '<span class="btn btn--sm">Valider</span>' : x.statut === 'cree' ? '<span class="chip chip--ok">Créé</span>' : '<span class="chip chip--draft">Refusé</span>'}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<section class="card pcl-carte pcl-dev"><div class="pcl-dev-tete"><div><div class="pcl-dev-titre">Bureaux en développement${A.length ? ` <span class="page-tabs__count">${A.length} à valider</span>` : ''}</div>
+        <div class="pcl-aide">Questionnaire du magasin ${q.actif ? '<b class="pcl-vert">ouvert</b>' : 'fermé'}${promo ? ' · bon de bienvenue : ' + esc(promo.nom) : ' · sans bon'} — chaque réponse crée la personne${promo ? ', son bon' : ''} et la société dans TF Buddy ; le bureau attend ici votre validation.</div></div>
+        <span class="pcl-sp"></span><button type="button" class="btn btn--sm" data-act="dev-questionnaire">Questionnaire du magasin</button><button type="button" class="btn btn--sm btn--primary" data-act="dev-nouveau">${SVG(ICO.plus)}Nouveau bureau en développement</button></div>
+      ${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}</section>`;
+  }
+  /** Le tiroir d'une demande : ce qu'elle a créé dans TF Buddy, et la validation (le bureau créé, la personne reliée). */
+  function tiroirDemande() {
+    const B = st.b, D = B.dev, x = D && D.demandes.find(y => y.id === B.devSel);
+    if (!x) { return ''; }
+    const o = B.options || {}, R = [['', 'Aucune tournée pour l’instant'], ...(o.routes || []).map(r => [r.id, r.name + (r.start_time ? ' (' + String(r.start_time).slice(0, 5) + ')' : '')])];
+    const sec = (titre, corps) => `<section class="pcl-tir-sec"><h4>${titre}</h4>${corps}</section>`;
+    const tfbId = (id, l) => id ? `<span class="chip chip--ok">client TF Buddy n° ${id}</span>` : `<span class="tag-warn">${l}</span>`;
+    const jours = x.jours.length ? `<span class="pcl-jours7">${JOURS.map(j => `<i class="${x.jours.includes(j[0]) ? 'on' : ''}">${j[1]}</i>`).join('')}</span>` : '';
+    // Valider demande l'accès aux bureaux de TF Buddy : le compte du magasin connecté, ou des bureaux déjà lisibles.
+    const connecte = tfbEtat().connecte || !!(B.d && B.d.ok);
+    const ouverte = x.statut === 'a_valider';
+    const form = ouverte ? `<section class="pcl-tir-sec pcl-dev-valider"><h4>Valider : créer le bureau dans TF Buddy</h4>
+        ${connecte ? '' : `<div class="pcl-manque">${SVG(ICO.alerte)}<div>Le bureau se crée avec le compte TF Buddy du magasin.<div style="margin-top:8px">${tfbBouton()}</div></div></div>`}
+        <div class="pcl-form2" style="padding:8px 0 0"><label class="pcl-champ"><span>Nom du bureau</span><input id="pcl-dv-nom" value="${esc(x.bureau)}"></label>
+          <label class="pcl-champ"><span>TVA de la société${x.societeId ? '' : ' <em>*</em>'}</span><input id="pcl-dv-tva" value="${esc(x.tva)}" placeholder="BE0123456789"${x.societeId ? ' readonly' : ''}></label>
+          <label class="pcl-champ"><span>Livré par</span><select id="pcl-dv-route">${R.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></label>
+          <div class="pcl-champ"><span>Statut dans TF Buddy</span><div class="pcl-dv-statut"><label><input type="radio" name="pcl-dv-statut" value="active" checked> Actif : livrable, ouvert au webshop</label><label><input type="radio" name="pcl-dv-statut" value="pending"> En attente : en développement</label></div></div></div>
+        ${B.devMsg ? `<p class="${B.devMsg.err ? 'error' : 'pcl-ok'}">${esc(B.devMsg.err || B.devMsg.texte)}</p>` : ''}</section>` : `${B.devMsg ? `<p class="${B.devMsg.err ? 'error' : 'pcl-ok'}">${esc(B.devMsg.err || B.devMsg.texte)}</p>` : ''}`;
+    return `<div class="pcl-tir-voile" data-act="dev-fermer-fond"></div>
+      <aside class="pcl-tir${entree()}" role="dialog" aria-modal="true" aria-label="${esc(x.bureau)}">
+        <div class="pcl-tir-tete"><div><div class="pcl-tir-nom">${esc(x.bureau)} ${ouverte ? '<span class="tag-warn">À valider</span>' : x.statut === 'cree' ? '<span class="chip chip--ok">Créé</span>' : '<span class="chip chip--draft">Refusé</span>'}</div>
+          <div class="pcl-fmeta">Bureau en développement · reçu le ${fD(x.le.slice(0, 10))} à ${esc(x.le.slice(11, 16))} · ${esc(SOURCES[x.source] || x.source)}${x.traite ? ' · traité le ' + fD(x.traite.slice(0, 10)) : ''}</div></div>
+          <button type="button" class="btn btn--sm btn--icon" data-act="dev-fermer" aria-label="Fermer">${SVG(ICO.x)}</button></div>
+        <div class="pcl-tir-corps">
+          ${x.erreurs.length ? `<div class="pcl-manque">${SVG(ICO.alerte)}<div><b>À reprendre dans TF Buddy :</b> ${x.erreurs.map(esc).join(' · ')}</div></div>` : ''}
+          <div class="pcl-tir-2">${sec('La personne', ligneF('Nom', esc(x.personne)) + ligneF('Fonction', esc(x.fonction)) + ligneF('E-mail', x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : '') + ligneF('Téléphone', x.tel ? `<a href="tel:${esc(x.tel)}">${esc(x.tel)}</a>` : '') + ligneF('Dans TF Buddy', tfbId(x.clientId, 'pas encore créée')))}
+            ${sec('La société', ligneF('Nom', esc(x.societe)) + ligneF('TVA', esc(x.tva)) + ligneF('Dans TF Buddy', tfbId(x.societeId, x.tva ? 'pas encore créée' : 'sans TVA : à donner pour valider')))}</div>
+          <div class="pcl-tir-2">${sec('Le bureau', ligneF('Adresse', esc([x.adresse, [x.cp, x.ville].filter(Boolean).join(' ')].filter(Boolean).join(', '))) + ligneF('Personnes', x.personnes ? nf(x.personnes) : '') + ligneF('Jours souhaités', jours) + (x.remarque ? `<div class="pcl-aide" style="margin-top:6px">« ${esc(x.remarque)} »</div>` : ''))}
+            ${sec('Le bon de bienvenue', x.bon ? ligneF('Code', `<span class="pcl-bon">${esc(x.bon.code)}</span>`) + (x.bon.texte ? `<div class="pcl-aide" style="margin-top:6px">${esc(x.bon.texte)}</div>` : '') : '<div class="pcl-aide">Pas de bon pour cette demande.</div>')}</div>
+          ${form}
+        </div>
+        <div class="pcl-tir-pied">${ouverte ? `<button type="button" class="btn btn--primary btn--sm${B.devBusy ? ' is-busy' : ''}" data-act="dev-valider"${B.devBusy || !connecte ? ' disabled' : ''}>Créer le bureau dans TF Buddy</button>
+          <button type="button" class="btn btn--ghost btn--sm" data-act="dev-refuser">Refuser</button>` : x.officeId ? `<button type="button" class="btn btn--sm" data-act="dev-bureau" data-id="${x.officeId}">Ouvrir le bureau</button>` : ''}<span class="pcl-sp"></span><button type="button" class="btn btn--ghost btn--sm" data-act="dev-fermer">Fermer</button></div>
+      </aside>`;
+  }
+  /** Le QR d'une adresse (assets/vendor/qrcode, chargé à la demande). */
+  let qrCharge = null;
+  function qrSvg(texte) {
+    if (typeof window.qrcode === 'function') { try { const q = window.qrcode(0, 'M'); q.addData(texte); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true, alt: 'QR code du questionnaire' }); } catch (e) { return ''; } }
+    if (!qrCharge) { qrCharge = new Promise(res => { const sc = document.createElement('script'); sc.src = (st.api.replace(/api\/cockpit\/?$/, '') || '../') + 'assets/vendor/qrcode/qrcode.js'; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); }).then(rendre); }
+    return '';
+  }
+  const lienQuestionnaire = j => new URL(st.api.replace(/api\/cockpit\/?$/, '') + 'bureau/?j=' + j, location.href).href;
+
+  /** Le nom de la société d'un bureau : celui de la liste, sinon celui de l'entreprise B2B du même numéro. */
+  function societeDe(b) {
+    if (b.societe) { return b.societe; }
+    const e = st.e.d && st.e.d.entreprises ? st.e.d.entreprises.find(x => x.id === b.idSociete) : null;
+    return e ? e.nom : (b.idSociete ? 'entreprise n° ' + b.idSociete : '—');
+  }
+  /** L'animation d'entrée du tiroir : au premier rendu après l'ouverture seulement. */
+  const entree = () => { if (st.b.entre) { st.b.entre = false; return ' pcl-tir-entre'; } return ''; };
+  const SECTIONS = [['livraison', 'Livraison'], ['catalogue', 'Catalogue et offres'], ['personnes', 'Personnes'], ['documents', 'Documents']];
+  /**
+   * Le tiroir d'un bureau (26/11/2026, Sam : « A, even larger ») : un panneau large sur la droite, par-dessus la liste,
+   * toutes les rubriques visibles en défilant — livraison et sites, catalogue et offres, personnes et invitation,
+   * documents. Les onglets du haut font défiler jusqu'à la rubrique ; bureau précédent / suivant ; Échap ferme.
+   */
+  function tiroirBureau(L) {
     const B = st.b;
-    if (!B.sel) { return `<aside class="card pcl-fiche pcl-fiche-vide">Choisissez un bureau : sa livraison, son catalogue, ses offres, ses personnes et ses documents s’ouvrent ici.</aside>`; }
+    if (!B.sel) { return ''; }
     const b = B.d.data.bureaux.find(x => x.id === B.sel);
     if (!b) { return ''; }
-    const O = [['livraison', 'Livraison'], ['catalogue', 'Catalogue'], ['offres', 'Offres'], ['personnes', 'Personnes'], ['documents', 'Documents']];
-    let corps = '';
-    if (B.ong === 'livraison') {
-      corps = detCorps('/delivery-settings', s => {
-        const r = s.route || {};
-        return `<div class="pcl-bloc"><h4>Livraison<span><button type="button" class="linklike" data-act="b-livraison">modifier</button></span></h4>${ligneF('Tournée', r.name ? `<span class="pcl-tchip">${SVG(ICO.camion)}${esc(r.name)}</span>` : '<span class="tag-warn">aucune tournée</span>')}
-          ${ligneF('Créneau', s.delivery_window_start ? esc(String(s.delivery_window_start).slice(0, 5) + ' – ' + String(s.delivery_window_end || '').slice(0, 5)) : '')}
-          ${ligneF('Commandes jusqu’à', s.cutoff_time ? esc(String(s.cutoff_time).slice(0, 5)) + ' ' + (+s.cutoff_days_before === 1 ? 'la veille' : +s.cutoff_days_before > 1 ? s.cutoff_days_before + ' jours avant' : 'le jour même') : '')}${ligneF('Remise sur place', s.drop_minutes ? nf(s.drop_minutes) + ' min' : '')}
-          ${ligneF('Jours', b.jours.length ? JOURS.filter(j => b.jours.includes(j[0])).map(j => ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'][j[0] - 1]).join(', ') : '')}</div>`;
-      }) + detCorps('/sites', s => { const L = Array.isArray(s) ? s : (s.sites || []); return `<div class="pcl-bloc"><h4>Sites<span>${L.length}</span></h4>${L.length ? L.map(x => ligneF(x.name || 'Site', esc([x.address, x.postal_code, x.city].filter(Boolean).join(' ')) + (x.access_minutes ? ` <span class="muted">· accès ${nf(x.access_minutes)} min</span>` : ''))).join('') : '<div class="pcl-aide">Aucun site : ce bureau ne peut pas être livré.</div>'}</div>`; });
-    } else if (B.ong === 'catalogue') {
-      corps = detCorps('/assortment', a => { const P = a.products || a.items || a.product_ids || []; return `<div class="pcl-bloc"><h4>Catalogue</h4>${ligneF('Mode', esc(a.mode || a.assortment_mode || b.catalogue || 'complet'))}${ligneF('Produits', Array.isArray(P) ? nf(P.length) : '')}${ligneF('Prix affichés', b.prix ? 'oui' : 'non')}<div class="pcl-aide">Le catalogue se règle produit par produit dans TF Buddy (Biura › Catalogue).</div></div>`; });
-    } else if (B.ong === 'offres') {
-      corps = detCorps('', o => { const L = o.offers || []; return `<div class="pcl-bloc"><h4>Offres du bureau<span>${L.length || nf(b.offres)}</span></h4>${L.length ? L.map(x => ligneF(x.name || x.title || 'Offre n° ' + x.id, esc([x.discount_percent != null ? x.discount_percent + ' %' : '', x.valid_to ? 'jusqu’au ' + fD(String(x.valid_to).slice(0, 10)) : ''].filter(Boolean).join(' · ')))).join('') : '<div class="pcl-aide">' + (b.offres ? nf(b.offres) + ' offre(s) : le détail se lit dans TF Buddy.' : 'Aucune offre.') + '</div>'}</div>`; });
-    } else if (B.ong === 'personnes') {
-      corps = detCorps('/members', m => { const L = Array.isArray(m) ? m : (m.members || []); return `<div class="pcl-bloc"><h4>Personnes<span>${L.length}</span></h4>${L.slice(0, 40).map(x => ligneF([x.name, x.surname].filter(Boolean).join(' ') || 'Membre n° ' + (x.id || ''), esc(x.department_name || x.department || ''))).join('') || '<div class="pcl-aide">Personne encore.</div>'}</div>`; })
-        + `<div class="pcl-bloc"><h4>Inviter</h4><div class="pcl-ligne-in"><input id="pcl-inv" type="email" placeholder="prenom.nom@societe.be"><button type="button" class="btn btn--sm btn--primary" data-act="b-inviter">Envoyer l’invitation</button></div>
-          ${detCorps('/invite', i => { const v = i.invite || null; return v ? `<div class="pcl-aide">Lien d’invitation actif${v.expires_at ? ' jusqu’au ' + fD(String(v.expires_at).slice(0, 10)) : ''}${v.uses != null ? ' · ' + nf(v.uses) + ' inscrits' : ''}. <button type="button" class="linklike" data-act="b-lien-retirer">retirer le lien</button></div>${v.url ? `<div class="pcl-lien">${esc(v.url)}</div>` : ''}` : '<div class="pcl-aide">Pas de lien d’invitation. <button type="button" class="linklike" data-act="b-lien">créer un lien</button></div>'; })}</div>`;
+    const pos = L.findIndex(x => x.id === b.id), n = L.length;
+    const dj = (k) => detDe(k);
+    // Livraison : un bureau sans site rend 422 OFFICE_DELIVERY_SITE_REQUIRED — dit en clair, avec le geste.
+    const liv = dj('/delivery-settings');
+    if (!liv) { lireDet('/delivery-settings'); }
+    const sansSite = !b.sites || (liv && !liv.ok && /OFFICE_DELIVERY_SITE_REQUIRED/.test(String(liv.motif || '')));
+    let sLiv;
+    if (sansSite) {
+      sLiv = `<div class="pcl-manque">${SVG(ICO.alerte)}<div><b>Pas de site de livraison.</b> Aucune tournée ne peut livrer ce bureau tant qu’il n’a pas d’adresse.<div style="margin-top:8px"><button type="button" class="btn btn--sm btn--primary" data-act="b-site">${SVG(ICO.plus)}Ajouter un site</button></div></div></div>`;
     } else {
-      corps = `<div class="pcl-bloc"><h4>Documents</h4><div class="pcl-aide">Les PDF que TF Buddy fabrique pour le bureau.</div><div class="pcl-acts" style="margin-top:8px">
-        <button type="button" class="btn btn--sm" data-act="b-pdf" data-v="poster">${SVG(ICO.doc)}Affiche A2</button><button type="button" class="btn btn--sm" data-act="b-pdf" data-v="cards">${SVG(ICO.doc)}Cartes de bienvenue</button><button type="button" class="btn btn--sm" data-act="b-pdf" data-v="brochure">${SVG(ICO.doc)}Brochure</button></div>
-        ${B.pdf ? `<p class="${B.pdf.err ? 'error' : 'pcl-aide'}">${esc(B.pdf.err || B.pdf.texte)}</p>` : ''}</div>`;
+      sLiv = detCorps('/delivery-settings', s => {
+        const r = s.route || {};
+        return ligneF('Tournée', r.name ? `<span class="pcl-tchip">${SVG(ICO.camion)}${esc(r.name)}</span>` : '<span class="tag-warn">aucune tournée</span>')
+          + ligneF('Créneau', s.delivery_window_start ? esc(String(s.delivery_window_start).slice(0, 5) + ' – ' + String(s.delivery_window_end || '').slice(0, 5)) : '')
+          + ligneF('Commandes jusqu’à', s.cutoff_time ? esc(String(s.cutoff_time).slice(0, 5)) + ' ' + (+s.cutoff_days_before === 1 ? 'la veille' : +s.cutoff_days_before > 1 ? s.cutoff_days_before + ' jours avant' : 'le jour même') : '')
+          + ligneF('Remise sur place', s.drop_minutes ? nf(s.drop_minutes) + ' min' : '')
+          + ligneF('Jours', b.jours.length ? `<span class="pcl-jours7">${JOURS.map(j => `<i class="${b.jours.includes(j[0]) ? 'on' : ''}">${j[1]}</i>`).join('')}</span>` : '');
+      });
     }
-    // Le message d'un geste (invitation, lien, document) : sous les onglets, quel que soit l'onglet ouvert.
-    const msg = B.pdf && B.ong !== 'documents' ? `<div class="pcl-bloc"><p class="${B.pdf.err ? 'error' : 'pcl-ok'}" style="margin:0">${esc(B.pdf.err || B.pdf.texte)}</p></div>` : '';
-    return `<aside class="card pcl-fiche"><div class="pcl-ft"><div class="pcl-fnom">${esc(b.nom)} ${statut(b.statut)}</div><div class="pcl-fmeta">${esc(['Société : ' + (b.societe || '—'), b.contact, b.facturation === 'company' ? 'facturé à la société' : b.facturation === 'person' ? 'chaque personne paie' : ''].filter(Boolean).join(' · '))}</div></div>
-      <div class="pcl-ong2">${O.map(([k, l]) => `<button type="button" class="${B.ong === k ? 'is-on' : ''}" data-act="b-ong" data-v="${k}">${l}</button>`).join('')}</div>${msg}${corps}</aside>`;
+    const sSites = detCorps('/sites', s => { const S = Array.isArray(s) ? s : (s.sites || []); return S.length ? S.map(x => ligneF(x.name || 'Site', esc([x.address, x.postal_code, x.city].filter(Boolean).join(' ')) + (x.access_minutes ? ` <span class="muted">· accès ${nf(x.access_minutes)} min</span>` : ''))).join('') : '<div class="pcl-aide">Aucun site.</div>'; });
+    const sCat = detCorps('/assortment', a => { const P = a.products || a.items || a.product_ids || []; return ligneF('Assortiment', esc((a.mode || a.assortment_mode || b.catalogue) === 'restricted' ? 'Réduit' : 'Complet') + (Array.isArray(P) && P.length ? ' · ' + nf(P.length) + ' produits' : '')) + ligneF('Prix affichés', b.prix ? 'oui' : 'non') + ligneF('Facturation', b.facturation === 'company' ? 'facturé à la société' : b.facturation === 'person' ? 'chaque personne paie' : ''); });
+    const sOff = detCorps('', o => { const O = o.offers || []; return O.length ? O.map(x => ligneF(x.name || x.title || 'Offre n° ' + x.id, esc([x.discount_percent != null ? '−' + x.discount_percent + ' %' : '', x.valid_to ? 'jusqu’au ' + fD(String(x.valid_to).slice(0, 10)) : ''].filter(Boolean).join(' · ')))).join('') : '<div class="pcl-aide">' + (b.offres ? nf(b.offres) + ' offre(s) : le détail se lit dans TF Buddy.' : 'Aucune offre pour ce bureau.') + '</div>'; });
+    const sPers = detCorps('/members', m => { const M = Array.isArray(m) ? m : (m.members || []); return M.length ? `<div class="pcl-membres">${M.slice(0, 80).map(x => `<div><span>${esc([x.name, x.surname].filter(Boolean).join(' ') || 'Membre n° ' + (x.id || ''))}</span><small>${esc(x.department_name || x.department || '')}</small></div>`).join('')}</div>${M.length > 80 ? `<div class="pcl-aide">et ${nf(M.length - 80)} de plus</div>` : ''}` : '<div class="pcl-aide">Personne encore.</div>'; });
+    const sInv = detCorps('/invite', i => { const v = i.invite || null; return v ? `<div class="pcl-aide">Lien d’invitation actif${v.expires_at ? ' jusqu’au ' + fD(String(v.expires_at).slice(0, 10)) : ''}${v.uses != null ? ' · ' + nf(v.uses) + ' inscrits' : ''}. <button type="button" class="linklike" data-act="b-lien-retirer">retirer le lien</button></div>${v.url ? `<div class="pcl-lien">${esc(v.url)}</div>` : ''}` : '<div class="pcl-aide">Pas de lien d’invitation. <button type="button" class="linklike" data-act="b-lien">créer un lien</button></div>'; });
+    const msg = B.pdf ? `<p class="${B.pdf.err ? 'error' : 'pcl-ok'}" style="margin:0 0 4px">${esc(B.pdf.err || B.pdf.texte)}</p>` : '';
+    const sec = (id, titre, lien, corps) => `<section class="pcl-tir-sec" id="pcl-sec-${id}"><h4>${titre}${lien || ''}</h4>${corps}</section>`;
+    const lien = (act, l) => `<button type="button" class="linklike" data-act="${act}">${l}</button>`;
+    return `<div class="pcl-tir-voile" data-act="b-fermer-fond"></div>
+      <aside class="pcl-tir${entree()}" role="dialog" aria-modal="true" aria-label="${esc(b.nom)}">
+        <div class="pcl-tir-tete"><div><div class="pcl-tir-nom">${esc(b.nom)} ${statut(b.statut)}</div>
+          <div class="pcl-fmeta">${esc([societeDe(b), b.ville, b.contact ? 'contact : ' + b.contact : '', b.tva].filter(Boolean).join(' · '))}</div></div>
+          <button type="button" class="btn btn--sm btn--icon" data-act="b-fermer" aria-label="Fermer">${SVG(ICO.x)}</button></div>
+        <nav class="pcl-tir-nav">${SECTIONS.map(([k, l]) => `<button type="button" data-act="b-aller" data-v="${k}">${l}</button>`).join('')}<span class="pcl-sp"></span>
+          <button type="button" class="btn btn--icon btn--sm" data-act="b-pas" data-v="-1"${pos <= 0 ? ' disabled' : ''} aria-label="Bureau précédent">${SVG(ICO.g)}</button><span class="pcl-tir-pos">${pos + 1} / ${n}</span>
+          <button type="button" class="btn btn--icon btn--sm" data-act="b-pas" data-v="1"${pos >= n - 1 ? ' disabled' : ''} aria-label="Bureau suivant">${SVG(ICO.d)}</button></nav>
+        <div class="pcl-tir-corps">${msg}
+          <div class="pcl-tir-2">${sec('livraison', 'Livraison', sansSite ? '' : lien('b-livraison', 'modifier'), sLiv)}${sec('sites', 'Sites', lien('b-site', 'ajouter'), sSites)}</div>
+          <div class="pcl-tir-2">${sec('catalogue', 'Catalogue', '', sCat + '<div class="pcl-aide" style="margin-top:6px">Le catalogue se règle produit par produit dans TF Buddy (Biura › Catalogue).</div>')}${sec('offres', 'Offres', '', sOff)}</div>
+          ${sec('personnes', 'Personnes', '', sPers)}
+          <div class="pcl-tir-2">${sec('inviter', 'Inviter', '', `<div class="pcl-ligne-in"><input id="pcl-inv" type="email" placeholder="prenom.nom@societe.be"><button type="button" class="btn btn--sm btn--primary" data-act="b-inviter">Envoyer l’invitation</button></div>${sInv}`)}
+            ${sec('documents', 'Documents', '', `<div class="pcl-acts"><button type="button" class="btn btn--sm" data-act="b-pdf" data-v="poster">${SVG(ICO.doc)}Affiche A2</button><button type="button" class="btn btn--sm" data-act="b-pdf" data-v="cards">${SVG(ICO.doc)}Cartes de bienvenue</button><button type="button" class="btn btn--sm" data-act="b-pdf" data-v="brochure">${SVG(ICO.doc)}Brochure</button></div><div class="pcl-aide" style="margin-top:6px">Les PDF que TF Buddy fabrique pour le bureau.</div>`)}</div>
+        </div>
+        <div class="pcl-tir-pied">${sansSite ? `<button type="button" class="btn btn--primary btn--sm" data-act="b-site">${SVG(ICO.plus)}Ajouter un site</button>` : `<button type="button" class="btn btn--primary btn--sm" data-act="b-livraison">Modifier la livraison</button>`}
+          <button type="button" class="btn btn--sm" data-act="b-aller" data-v="inviter">Inviter des personnes</button><span class="pcl-sp"></span>
+          <button type="button" class="btn btn--ghost btn--sm" data-act="b-pas" data-v="-1"${pos <= 0 ? ' disabled' : ''}>Bureau précédent</button><button type="button" class="btn btn--ghost btn--sm" data-act="b-pas" data-v="1"${pos >= n - 1 ? ' disabled' : ''}>Bureau suivant</button></div>
+      </aside>`;
   }
 
   /* L'assistant « Ajouter un bureau » : les sept étapes du panel (offices-onboarding.js), envoyées d'un coup (POST /onboard). */
@@ -321,7 +523,9 @@
       corps = `<div class="pcl-form2">${champ('id_company_client', 'Société (client B2B du magasin)', { src: f, requis: true, plein: true, choix: [['', 'Choisir…'], ...(o.companies || []).map(c => [c.id, [c.name || c.company_name, c.tax_number].filter(Boolean).join(' · ')])] })}
         ${champ('name', 'Nom du bureau', { src: f, requis: true })}${champ('tax_number', 'TVA', { src: f, requis: true, aide: 'BE0123456789' })}
         ${champ('segment', 'Segment', { src: f, choix: [['', '—'], ['horeca', 'Horeca'], ['retail', 'Commerce'], ['corporate', 'Entreprise'], ['event', 'Événement']] })}${champ('payment_terms', 'Paiement', { src: f, choix: [['Comptant', 'Comptant'], ['Différé', 'Différé']] })}
-        ${champ('credit_limit', 'Limite de crédit (€)', { src: f, type: 'number' })}</div><div class="pcl-aide pcl-pad">La société est une entreprise B2B du magasin : ajoutez-la d’abord dans Entreprises B2B si elle n’y est pas.</div>`;
+        ${champ('credit_limit', 'Limite de crédit (€)', { src: f, type: 'number' })}
+        <div class="pcl-champ plein"><span>Logo de la société (facultatif, PNG, JPEG ou WebP)</span><div class="pcl-logo">${w.logo ? `<img src="${esc(w.logo)}" alt="Logo"><button type="button" class="linklike" data-act="w-logo-retirer">retirer</button>` : ''}<input type="file" accept="image/png,image/jpeg,image/webp" data-logo="1"></div>${w.logoErr ? `<span class="error">${esc(w.logoErr)}</span>` : ''}</div></div>
+        <div class="pcl-aide pcl-pad">La société est une entreprise B2B du magasin : ajoutez-la d’abord dans Entreprises B2B si elle n’y est pas.</div>`;
     } else if (E === 1) {
       corps = `<div class="pcl-form2">${champ('contact_name', 'Responsable', { src: f, requis: true })}${champ('contact_function', 'Fonction', { src: f, aide: 'Office manager' })}${champ('contact_email', 'E-mail', { src: f, requis: true, type: 'email' })}${champ('contact_phone', 'Téléphone', { src: f, type: 'tel' })}</div>`;
     } else if (E === 2) {
@@ -329,7 +533,7 @@
       corps = `<div class="pcl-pad"><div class="pcl-h">Où livrer ?</div>${(o.delivery_sites || []).length ? `<div class="pcl-ligne-in">${champ('site_existant', 'Un point de livraison existant', { src: f, choix: [['', 'Choisir…'], ...(o.delivery_sites || []).map(s => [s.id, [s.name, s.address].filter(Boolean).join(' · ')])] })}<button type="button" class="btn btn--sm" data-act="w-site-existant">Ajouter</button></div>` : ''}</div>
         ${w.sites.map((s, i) => `<div class="pcl-site"><div class="pcl-h">Site ${i + 1}${s.delivery_site_id ? ' · point existant' : ''}${i ? ` <button type="button" class="linklike" data-act="w-site-retirer" data-i="${i}">retirer</button>` : ''}</div><div class="pcl-form2">
           ${champ('name', 'Nom du site', { src: s, ou: 's' + i })}${champ('country', 'Pays', { src: s, ou: 's' + i, choix: [['BE', 'Belgique'], ['PL', 'Pologne'], ['FR', 'France'], ['NL', 'Pays-Bas'], ['LU', 'Luxembourg']] })}
-          ${champ('address', 'Adresse', { src: s, ou: 's' + i, requis: true, plein: true, aide: 'Rue et numéro' })}${champ('postal_code', 'Code postal', { src: s, ou: 's' + i })}${champ('city', 'Ville', { src: s, ou: 's' + i })}
+          ${champ('address', 'Adresse', { src: s, ou: 's' + i, requis: true, plein: true, aide: 'Commencez à taper : TF Buddy propose les adresses' })}${geoBloc('s' + i, s)}${champ('postal_code', 'Code postal', { src: s, ou: 's' + i })}${champ('city', 'Ville', { src: s, ou: 's' + i, liste: 'pcl-villes-s' + i })}${villes('s' + i)}
           ${champ('building', 'Bâtiment', { src: s, ou: 's' + i })}${champ('floor', 'Étage', { src: s, ou: 's' + i })}${champ('access_minutes', 'Temps d’accès sur place (min)', { src: s, ou: 's' + i, type: 'number' })}${champ('route_id', 'Livré par', { src: s, ou: 's' + i, choix: R })}</div></div>`).join('')}
         <div class="pcl-pad"><button type="button" class="btn btn--sm" data-act="w-site-plus">${SVG(ICO.plus)}Un autre site</button></div>
         <div class="pcl-form2">${champ('delivery_window_start', 'Créneau : de', { src: f, type: 'time' })}${champ('delivery_window_end', 'à', { src: f, type: 'time' })}${champ('delivery_validation', 'Validation de la remise', { src: f, choix: [['', '—'], ['qr', 'QR'], ['signature', 'Signature'], ['dropoff', 'Dépôt']] })}
@@ -353,11 +557,16 @@
         <div class="pcl-pad pcl-aide">Tout part d’un coup vers TF Buddy (une clé de requête évite le double envoi si l’on clique deux fois).</div>`;
     }
     const resume = resumeAssistant();
-    return `<div class="pcl-2"><section class="card pcl-carte pcl-ass"><div class="pcl-ft"><div class="pcl-fnom">Ajouter un bureau${f.name ? ' · ' + esc(f.name) : ''}</div><div class="pcl-fmeta">Étape ${E + 1} sur 7 · ce qui est saisi se garde si l’on revient en arrière</div></div>
-      <div class="pcl-stepper">${ETAPES.map((x, i) => `<button type="button" class="${i < E ? 'fait' : i === E ? 'on' : ''}" data-act="w-aller" data-v="${i}"${i > E ? ' disabled' : ''}><i></i>${i + 1} · ${x}</button>`).join('')}</div>
-      ${corps}${w.err ? `<p class="error pcl-pad">${esc(w.err)}</p>` : ''}${w.ok ? `<p class="pcl-ok pcl-pad">${esc(w.ok)}</p>` : ''}
-      <div class="pcl-pied-ass"><button type="button" class="btn btn--ghost" data-act="${E ? 'w-retour' : 'w-fermer'}">${E ? 'Retour' : 'Annuler'}</button><span class="pcl-aide">${['La société, le nom du bureau, la TVA', 'Le responsable et son e-mail', 'Au moins un site avec une adresse, pour pouvoir livrer', 'Les départements, facultatifs', 'Les conditions du webshop', 'Les personnes, facultatives', 'Relisez, puis créez'][E]}</span>
-        <button type="button" class="btn btn--primary${w.busy ? ' is-busy' : ''}" data-act="${E === 6 ? 'w-creer' : 'w-suivant'}"${w.busy ? ' disabled' : ''}>${E === 6 ? 'Créer le bureau' : 'Suivant · ' + ETAPES[E + 1]}</button></div></section>${resume}</div>`;
+    // L'assistant dans le même tiroir large que la fiche d'un bureau (26/11/2026) ; un clic à côté ne le ferme pas (la saisie se perdrait).
+    return `<div class="pcl-tir-voile"></div>
+      <aside class="pcl-tir pcl-tir-ass${entree()}" role="dialog" aria-modal="true" aria-label="Ajouter un bureau">
+        <div class="pcl-tir-tete"><div><div class="pcl-tir-nom">Ajouter un bureau${f.name ? ' · ' + esc(f.name) : ''}</div><div class="pcl-fmeta">Étape ${E + 1} sur 7 · ce qui est saisi se garde si l’on revient en arrière</div></div>
+          <button type="button" class="btn btn--sm btn--icon" data-act="w-fermer" aria-label="Fermer">${SVG(ICO.x)}</button></div>
+        <div class="pcl-stepper">${ETAPES.map((x, i) => `<button type="button" class="${i < E ? 'fait' : i === E ? 'on' : ''}" data-act="w-aller" data-v="${i}"${i > E ? ' disabled' : ''}><i></i>${i + 1} · ${x}</button>`).join('')}</div>
+        <div class="pcl-tir-corps"><div class="pcl-ass-grille"><div class="pcl-ass-form">${corps}${w.err ? `<p class="error pcl-pad">${esc(w.err)}</p>` : ''}${w.ok ? `<p class="pcl-ok pcl-pad">${esc(w.ok)}</p>` : ''}</div>${resume}</div></div>
+        <div class="pcl-tir-pied"><button type="button" class="btn btn--ghost" data-act="${E ? 'w-retour' : 'w-fermer'}">${E ? 'Retour' : 'Annuler'}</button><span class="pcl-aide" style="flex:1;text-align:center">${['La société, le nom du bureau, la TVA', 'Le responsable et son e-mail', 'Au moins un site avec une adresse, pour pouvoir livrer', 'Les départements, facultatifs', 'Les conditions du webshop', 'Les personnes, facultatives', 'Relisez, puis créez'][E]}</span>
+          <button type="button" class="btn btn--primary${w.busy ? ' is-busy' : ''}" data-act="${E === 6 ? 'w-creer' : 'w-suivant'}"${w.busy ? ' disabled' : ''}>${E === 6 ? 'Créer le bureau' : 'Suivant · ' + ETAPES[E + 1]}</button></div>
+      </aside>`;
   }
   /** « Ce que l’on crée » : la chaîne société › bureau › site › tournée, refaite à chaque saisie (saisie()). */
   function resumeAssistant() {
@@ -382,10 +591,11 @@
     const w = st.b.w, f = w.f, num = v => v === '' || v == null ? null : Number(v);
     const office = { id_company_client: Number(f.id_company_client), name: f.name.trim(), tax_number: f.tax_number.replace(/[\s.\-]/g, '').toUpperCase(), status: 'active', segment: f.segment || null,
       payment_terms: f.payment_terms || null, credit_limit: f.credit_limit === '' ? null : f.credit_limit, billing_mode: f.billing_mode, show_prices: !!f.show_prices,
-      webshop_discount_percent: f.webshop_discount_percent === '' ? null : f.webshop_discount_percent, free_shipping_terms: f.free_shipping_terms || null,
+      webshop_discount_percent: f.webshop_discount_percent === '' ? null : f.webshop_discount_percent, free_shipping_terms: f.free_shipping_terms || null, logo_data_url: w.logo || null,
       delivery_window_start: f.delivery_window_start || null, delivery_window_end: f.delivery_window_end || null, delivery_validation: f.delivery_validation || null, delivery_days: w.jours.slice().sort() };
     const sites = w.sites.filter(s => s.address.trim()).map((s, i) => ({ name: s.name.trim() || office.name, address: s.address.trim(), postal_code: s.postal_code.trim(), city: s.city.trim(), building: s.building.trim(),
-      floor: s.floor.trim(), country: s.country, notes: s.notes, route_id: num(s.route_id), access_minutes: num(s.access_minutes), delivery_site_id: s.delivery_site_id, is_default: i === 0, active: true }));
+      floor: s.floor.trim(), country: s.country, notes: s.notes, route_id: num(s.route_id), access_minutes: num(s.access_minutes), delivery_site_id: s.delivery_site_id, is_default: i === 0, active: true,
+      ...(s.place_id ? { place_id: s.place_id, street: s.street, street_number: s.street_number, latitude: s.latitude, longitude: s.longitude } : {}) }));
     const corps = { office, contact: { name: f.contact_name.trim(), email: f.contact_email.trim(), phone: f.contact_phone.trim(), function: f.contact_function.trim(), role: 'contact' },
       sites, departments: w.deps, staff: w.staff, voucher_ids: w.vouchers, request_key: w.cle, send_summary: !!f.send_summary, send_membership: !!f.send_membership, locale: 'fr' };
     w.busy = true; w.err = null; rendre();
@@ -456,6 +666,31 @@
       return fenetre('Profil commercial', `<div class="pcl-form2">${champ('score', 'Score', { choix: [['', '—'], ['A', 'A'], ['B', 'B'], ['C', 'C'], ['D', 'D']] })}${champ('type', 'Type de client', { choix: [['', '—'], ...TYPES] })}
         ${champ('mode', 'Mode de service', { choix: [['', '—'], ...MODES] })}<span></span>${champ('creditActif', 'Crédit accordé', { type: 'case' })}${champ('creditLimite', 'Limite de crédit (€)', { type: 'number' })}</div>`, pied('Enregistrer', 'e-profil-ok'));
     }
+    if (m.type === 'dev-questionnaire') {
+      const D = st.b.dev, lien = lienQuestionnaire(D.questionnaire.jeton);
+      const P = [['', 'Aucun bon'], ...D.promos.map(p => [p.id, p.nom + (p.enCaisse ? '' : ' (pas encore en caisse)')])];
+      return fenetre('Le questionnaire du magasin', `<div class="pcl-q-lien"><div class="pcl-q-qr">${qrSvg(lien)}</div><div style="flex:1;min-width:0">
+          <label class="pcl-champ"><span>Le lien à partager (e-mail, affiche, réseaux)</span><input id="pcl-q-url" value="${esc(lien)}" readonly></label>
+          <div class="pcl-acts" style="margin-top:8px"><button type="button" class="btn btn--sm" data-act="dev-copier">Copier le lien</button><a class="btn btn--sm" href="${esc(lien)}" target="_blank" rel="noopener">Ouvrir</a></div>
+          ${m.copie ? '<p class="pcl-ok">Lien copié.</p>' : ''}</div></div>
+        <div class="pcl-form2">${champ('actif', 'Questionnaire ouvert', { type: 'case', plein: true })}${champ('titre', 'Titre', { plein: true })}${champ('message', 'Message d’accueil', { type: 'zone', plein: true, lignes: 3 })}
+          ${champ('promo', 'Bon de bienvenue (une promotion du magasin avec un bon)', { plein: true, choix: P })}${champ('regenerer', 'Changer le lien (l’ancien ne marchera plus)', { type: 'case', plein: true })}</div>
+        <p class="pcl-aide">${D.promos.length ? 'Un bon avec un code commun : chacun reçoit ce code. Un bon à codes personnels : chaque réponse reçoit son code, d’une utilisation, à son nom.' : 'Aucune promotion du magasin n’a de bon : créez-en une dans Vendre › Promotions (avec un bon), elle apparaîtra ici.'}</p>`, pied('Enregistrer', 'dev-questionnaire-ok'), true);
+    }
+    if (m.type === 'dev-nouveau') {
+      const q = st.b.dev && st.b.dev.questionnaire, promo = q && q.promo ? (st.b.dev.promos.find(p => p.id === q.promo) || null) : null;
+      return fenetre('Nouveau bureau en développement', `<p class="pcl-aide" style="margin:0 0 6px">La personne et la société se créent dans TF Buddy tout de suite ; le bureau s’ouvre ensuite à la validation.</p>
+        <div class="pcl-form2">${champ('prenom', 'Prénom', { requis: true })}${champ('nom', 'Nom', { requis: true })}${champ('email', 'E-mail', { requis: true, type: 'email' })}${champ('tel', 'Téléphone', { requis: true, type: 'tel' })}
+          ${champ('fonction', 'Fonction', { plein: true })}${champ('societe', 'Société', { requis: true })}${champ('tva', 'TVA', { aide: 'BE0123456789' })}
+          ${champ('address', 'Adresse du bureau', { requis: true, plein: true, ou: 'm', aide: 'Commencez à taper : TF Buddy propose les adresses' })}${geoBloc('m', m.f)}${champ('postal_code', 'Code postal', { ou: 'm' })}${champ('city', 'Ville', { requis: true, ou: 'm', liste: 'pcl-villes-m' })}${villes('m')}
+          ${champ('personnes', 'Personnes au bureau', { type: 'number' })}${promo ? champ('bon', 'Donner le bon de bienvenue : ' + promo.nom, { type: 'case', plein: true }) : '<span></span>'}${champ('remarque', 'Remarque', { type: 'zone', plein: true, lignes: 2 })}</div>`, pied('Créer et valider', 'dev-nouveau-ok'), true);
+    }
+    if (m.type === 'b-site') {
+      const o = st.b.options || {}, R = [['', 'Aucune tournée pour l’instant'], ...(o.routes || []).map(r => [r.id, r.name + (r.start_time ? ' (' + String(r.start_time).slice(0, 5) + ')' : '')])];
+      return fenetre('Ajouter un site de livraison', `<div class="pcl-form2">${champ('name', 'Nom du site', { aide: 'Accueil, lunchroom, salle 2…' })}${champ('access_minutes', 'Temps d’accès sur place (min)', { type: 'number' })}
+        ${champ('address', 'Adresse', { requis: true, plein: true, aide: 'Commencez à taper : TF Buddy propose les adresses', ou: 'm' })}${geoBloc('m', m.f)}${champ('postal_code', 'Code postal', { ou: 'm' })}${champ('city', 'Ville', { ou: 'm', liste: 'pcl-villes-m' })}${villes('m')}${champ('building', 'Bâtiment')}${champ('floor', 'Étage')}
+        ${champ('route_id', 'Livré par', { choix: R, plein: true })}</div><p class="pcl-aide">Le premier site devient le site par défaut du bureau ; la tournée choisie le livre.</p>`, pied('Ajouter le site', 'b-site-ok'));
+    }
     if (m.type === 'b-livraison') {
       const o = st.b.options || {}, R = [['', 'Aucune tournée'], ...(o.routes || []).map(r => [r.id, r.name])];
       return fenetre('Livraison du bureau', `<div class="pcl-form2">${champ('route_id', 'Tournée', { choix: R, plein: true })}${champ('delivery_window_start', 'Créneau : de', { type: 'time' })}${champ('delivery_window_end', 'à', { type: 'time' })}
@@ -470,7 +705,10 @@
     if (!st.el) { return; }
     const actif = document.activeElement, id = actif && st.el.contains(actif) && actif.id ? actif.id : null, pos = id && actif.selectionStart != null ? actif.selectionStart : null;
     const corps = st.onglet === 'b2c' ? vueParticuliers() : st.onglet === 'b2b' ? vueEntreprises() : st.onglet === 'bur' ? vueBureaux() : vueAnalyse();
+    const tc = st.el.querySelector('.pcl-tir-corps'), haut = tc ? tc.scrollTop : null;
     st.el.innerHTML = tete() + corps + fenCourante();
+    // Le tiroir garde son défilement d'un rendu à l'autre, sauf quand on change de bureau (hautTiroir = 0).
+    const tc2 = st.el.querySelector('.pcl-tir-corps'); if (tc2 && haut != null) { if (st.b.hautTiroir === 0) { st.b.hautTiroir = null; } else { tc2.scrollTop = haut; } }
     if (id) { const i = st.el.querySelector('#' + id); if (i) { i.focus(); if (pos != null && i.setSelectionRange) { try { i.setSelectionRange(pos, pos); } catch (e) { /* champ sans curseur */ } } } }
   }
   const ouvrir = (type, f, plus) => { st.mo = Object.assign({ type, f: Object.assign({}, f || {}), err: null, busy: false }, plus || {}); rendre(); };
@@ -506,12 +744,14 @@
     if (!a || !st.el.contains(a)) { return; }
     const act = a.dataset.act, id = a.dataset.id ? +a.dataset.id : null, v = a.dataset.v;
     if (act === 'fermer-fond') { if (ev.target === a) { st.mo = null; rendre(); } return; }
+    if (act === 'b-fermer-fond') { if (ev.target === a) { st.b.sel = null; st.b.pdf = null; rendre(); } return; }
+    if (act === 'dev-fermer-fond') { if (ev.target === a) { st.b.devSel = null; st.b.devMsg = null; rendre(); } return; }
     if (a.tagName === 'TR' && ev.target.closest('button')) { return; }
     ev.preventDefault();
     const P = st.p, E = st.e, B = st.b, A = st.a, m = st.mo;
     switch (act) {
       case 'fermer': st.mo = null; rendre(); break;
-      case 'onglet': st.onglet = v; memo('pcl-onglet:' + st.shop, v); st.mo = null; if (v === 'b2c' && !P.d) { lireParticuliers(); } else if (v === 'b2b' && !E.d) { charger(); } else if (v === 'bur' && !B.d) { lireBureaux(); } else if (v === 'an' && !A.d) { lireAnalyse(); } else { rendre(); } break;
+      case 'onglet': st.onglet = v; memo('pcl-onglet:' + st.shop, v); st.mo = null; if (v === 'b2c' && !P.d) { lireParticuliers(); } else if (v === 'b2b' && !E.d) { charger(); } else if (v === 'bur' && !B.d) { lireBureaux(); lireDev(); } else if (v === 'an' && !A.d) { lireAnalyse(); } else { rendre(); } break;
       case 'aller-offres': if (st.aller) { st.aller('offres'); } break;
       case 'tfb-connecter': if (window.DashTfb) { window.DashTfb.ouvrir(st.shop, st.api, toutRelire); } break;
       case 'tfb-deconnecter': if (window.DashTfb) { window.DashTfb.deconnecter(st.shop, st.api).then(toutRelire); } break;
@@ -543,8 +783,18 @@
       case 'e-profil-ok': ecrire({ action: 'profil', id: m.id, champs: m.f }, () => lireEntreprises(true).then(() => lireFiche(E, m.id))); break;
       // Bureaux
       case 'b-statut': B.statut = v; rendre(); break;
-      case 'b-sel': B.sel = id; B.pdf = null; rendre(); if (window.innerWidth <= 1100) { const f = st.el.querySelector('.pcl-fiche'); if (f && f.scrollIntoView) { f.scrollIntoView({ behavior: 'smooth', block: 'start' }); } } break;
-      case 'b-ong': B.ong = v; B.pdf = null; rendre(); break;
+      case 'b-sel': B.entre = !B.sel; B.sel = id; B.pdf = null; B.hautTiroir = 0; rendre(); break;
+      case 'b-fermer': B.sel = null; B.pdf = null; rendre(); break;
+      case 'b-pas': { const q = B.q.trim().toLowerCase(), L = B.d.data.bureaux.filter(b => (!B.statut || b.statut === B.statut) && (!q || [b.nom, b.societe, b.tva, b.ville, b.contact].join(' ').toLowerCase().includes(q)));
+        const k = L.findIndex(x => x.id === B.sel) + (+v); if (L[k]) { B.sel = L[k].id; B.pdf = null; B.hautTiroir = 0; rendre(); } break; }
+      case 'b-aller': { const c = st.el.querySelector('.pcl-tir-corps'), x = st.el.querySelector('#pcl-sec-' + v); if (c && x) { c.scrollTo({ top: x.offsetTop - c.offsetTop - 8, behavior: 'smooth' }); } if (v === 'inviter') { setTimeout(() => { const i = st.el.querySelector('#pcl-inv'); if (i) { i.focus(); } }, 350); } break; }
+      case 'b-site': lireOptions().then(() => ouvrir('b-site', { name: '', address: '', postal_code: '', city: '', building: '', floor: '', access_minutes: '', route_id: '' }, { id: B.sel })); break;
+      case 'b-site-ok': { const f = m.f; if (!String(f.address || '').trim()) { m.err = 'L’adresse est attendue.'; rendre(); break; } m.busy = true; m.err = null; rendre();
+        const b = B.d.data.bureaux.find(x => x.id === m.id) || {};
+        ecrireBureau('POST', '/' + m.id + '/sites', { name: String(f.name || '').trim() || b.nom, address: String(f.address).trim(), postal_code: String(f.postal_code || '').trim(), city: String(f.city || '').trim(), building: String(f.building || '').trim(), floor: String(f.floor || '').trim(),
+          country: f.country || 'BE', access_minutes: f.access_minutes === '' ? null : Number(f.access_minutes), route_id: f.route_id ? Number(f.route_id) : null, is_default: !b.sites, active: true,
+          ...(f.place_id ? { place_id: f.place_id, street: f.street, street_number: f.street_number, latitude: f.latitude, longitude: f.longitude } : {}) },
+          () => { st.mo = null; B.det = {}; B.pdf = { texte: 'Site ajouté.' }; lireBureaux(); }); break; }
       case 'b-livraison': { const s = (detDe('/delivery-settings') || {}).data || {}; lireOptions().then(() => ouvrir('b-livraison', { route_id: s.route && s.route.id || s.route_id || '', delivery_window_start: String(s.delivery_window_start || '').slice(0, 5), delivery_window_end: String(s.delivery_window_end || '').slice(0, 5),
         cutoff_time: String(s.cutoff_time || '').slice(0, 5), cutoff_days_before: String(s.cutoff_days_before || 0), drop_minutes: String(s.drop_minutes || 5) }, { id: B.sel })); break; }
       case 'b-livraison-ok': { const f = m.f; m.busy = true; m.err = null; rendre();
@@ -556,11 +806,34 @@
       case 'b-lien-retirer': if (window.confirm('Retirer le lien d’invitation ? Les personnes déjà inscrites le restent.')) { ecrireBureau('DELETE', '/' + B.sel + '/invite', null, () => { delete B.det[B.sel + '/invite']; rendre(); }); } break;
       case 'b-pdf': telechargerPdf(v); break;
       // L'assistant
-      case 'w-ouvrir': B.w = nouvelAssistant({}); rendre(); lireOptions().then(o => { if (B.w) { B.w.opt = o; rendre(); } }); break;
-      case 'w-fermer': B.w = null; rendre(); break;
-      case 'w-retour': B.w.etape--; B.w.err = null; rendre(); window.scrollTo(0, 0); break;
-      case 'w-aller': if (+v <= B.w.etape) { B.w.etape = +v; B.w.err = null; rendre(); } break;
-      case 'w-suivant': { const e = assistantValide(B.w); B.w.err = e; if (!e) { B.w.etape++; window.scrollTo(0, 0); } rendre(); break; }
+      case 'w-ouvrir': B.w = nouvelAssistant({}); B.entre = true; rendre(); lireOptions().then(o => { if (B.w) { B.w.opt = o; rendre(); } }); break;
+      case 'w-fermer': { const w = B.w, f = w.f; if ((f.name || f.contact_name || w.sites.some(x => x.address)) && !window.confirm('Abandonner ce bureau ? Ce qui est saisi sera perdu.')) { break; } B.w = null; st.geo = {}; rendre(); break; }
+      case 'w-retour': B.w.etape--; B.w.err = null; B.hautTiroir = 0; rendre(); break;
+      case 'w-aller': if (+v <= B.w.etape) { B.w.etape = +v; B.w.err = null; B.hautTiroir = 0; rendre(); } break;
+      case 'w-suivant': { const e = assistantValide(B.w); B.w.err = e; if (!e) { B.w.etape++; B.hautTiroir = 0; } rendre(); break; }
+      case 'w-logo-retirer': B.w.logo = null; B.w.logoErr = null; rendre(); break;
+      case 'geo-place': geoChoisir(a.dataset.cle, a.dataset.id); break;
+      case 'dev-traitees': B.devTraitees = !B.devTraitees; rendre(); break;
+      case 'dev-sel': B.devSel = id; B.entre = true; B.devMsg = null; B.sel = null; rendre(); if (B.d && B.d.ok) { lireOptions().then(rendre); } break;
+      case 'dev-fermer': B.devSel = null; B.devMsg = null; rendre(); break;
+      case 'dev-bureau': B.devSel = null; B.sel = id; B.entre = true; rendre(); break;
+      case 'dev-valider': { const v2 = sel => (st.el.querySelector(sel) || {}).value || '', r = st.el.querySelector('input[name="pcl-dv-statut"]:checked');
+        B.devBusy = true; B.devMsg = null; rendre();
+        envoyer('/dashboard/bureaux-dev/valider', { id: B.devSel, nom: v2('#pcl-dv-nom'), tva: v2('#pcl-dv-tva'), route_id: v2('#pcl-dv-route'), statut: r ? r.value : 'active' })
+          .then(d => { B.devMsg = { texte: 'Bureau créé dans TF Buddy' + (d.statut === 'pending' ? ' (en attente)' : '') + (d.notes && d.notes.length ? ' — ' + d.notes.join(' ; ') : '') + '.' }; B.det = {}; return Promise.all([lireDev(), lireBureaux()]).then(() => { if (d.officeId) { B.devSel = null; B.sel = d.officeId; B.entre = true; B.pdf = { texte: 'Bureau créé depuis la demande.' }; } }); })
+          .catch(e => { B.devMsg = { err: e.message }; }).finally(() => { B.devBusy = false; rendre(); }); break; }
+      case 'dev-refuser': if (window.confirm('Refuser ce bureau ? La personne et la société restent dans TF Buddy ; le bureau ne sera pas créé.')) {
+        envoyer('/dashboard/bureaux-dev/refuser', { id: B.devSel }).then(() => { B.devSel = null; return lireDev(); }).catch(e => { B.devMsg = { err: e.message }; rendre(); }); } break;
+      case 'dev-questionnaire': { const q = B.dev.questionnaire; ouvrir('dev-questionnaire', { actif: q.actif, titre: q.titre, message: q.message, promo: q.promo || '', regenerer: false }); break; }
+      case 'dev-copier': { const i = st.el.querySelector('#pcl-q-url'); const t = i ? i.value : ''; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(() => { if (i) { i.select(); document.execCommand('copy'); } }).finally(() => { if (st.mo) { st.mo.copie = true; rendre(); } }); break; }
+      case 'dev-questionnaire-ok': { m.busy = true; m.err = null; rendre();
+        envoyer('/dashboard/bureaux-dev/questionnaire', { actif: !!m.f.actif, titre: m.f.titre, message: m.f.message, promo: m.f.promo ? Number(m.f.promo) : null, regenerer: !!m.f.regenerer })
+          .then(d => { B.dev = d; st.mo = null; rendre(); }).catch(e => { if (st.mo) { m.busy = false; m.err = e.message; } rendre(); }); break; }
+      case 'dev-nouveau': ouvrir('dev-nouveau', { prenom: '', nom: '', email: '', tel: '', fonction: '', societe: '', tva: '', address: '', postal_code: '', city: '', personnes: '', remarque: '', bon: true }); break;
+      case 'dev-nouveau-ok': { const f = m.f; m.busy = true; m.err = null; rendre();
+        envoyer('/dashboard/bureaux-dev', { bon: !!f.bon, donnees: { prenom: f.prenom, nom: f.nom, email: f.email, tel: f.tel, fonction: f.fonction, societe: f.societe, tva: f.tva, adresse: f.address, cp: f.postal_code, ville: f.city, personnes: f.personnes, remarque: f.remarque } })
+          .then(d => { st.mo = null; return lireDev().then(() => { B.devSel = d.demande.id; B.entre = true; B.devMsg = d.demande.erreurs.length ? { err: 'Créé au cockpit, avec des soucis dans TF Buddy : voir en tête.' } : { texte: 'La personne' + (d.demande.societeId ? ', la société' : '') + (d.demande.bon ? ' et son bon' : '') + ' sont dans TF Buddy. Validez pour créer le bureau.' }; if (B.d && B.d.ok) { lireOptions().then(rendre); } rendre(); }); })
+          .catch(e => { if (st.mo) { m.busy = false; m.err = e.message; } rendre(); }); break; }
       case 'w-creer': creerBureau(); break;
       case 'w-jour': { const n = +v, J = B.w.jours; B.w.jours = J.includes(n) ? J.filter(x => x !== n) : J.concat(n).sort(); rendre(); break; }
       case 'w-site-plus': B.w.sites.push({ name: '', address: '', postal_code: '', city: '', building: '', floor: '', country: 'BE', route_id: '', access_minutes: '', notes: '', delivery_site_id: null }); rendre(); break;
@@ -588,25 +861,30 @@
     if (t.id === 'pcl-pq') { st.p.q = t.value; clearTimeout(tRech); tRech = setTimeout(() => lireParticuliers(), 300); return; }
     if (t.id === 'pcl-eq') { st.e.q = t.value; rendre(); return; }
     if (t.id === 'pcl-bq') { st.b.q = t.value; rendre(); return; }
+    if (t.dataset && t.dataset.logo && ev.type === 'change') { logoLire(t.files && t.files[0]); return; }
     if (!t.dataset || !t.dataset.f) { return; }
     const val = t.type === 'checkbox' ? t.checked : t.value;
     const ou = t.dataset.ou;
+    if (ou && ev.type === 'input') { if (t.dataset.f === 'address') { geoChercher(ou, val); } else if (t.dataset.f === 'postal_code') { geoCodePostal(ou, val); } }
     if (ou && ou[0] === 's' && st.b.w) { const s = st.b.w.sites[+ou.slice(1)]; if (s) { s[t.dataset.f] = val; } majResume(); return; }
     if (st.onglet === 'bur' && st.b.w && !st.mo) { st.b.w.f[t.dataset.f] = val; majResume(); return; }
     if (st.mo) { st.mo.f[t.dataset.f] = val; }
   }
-  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && st.mo && st.el && document.body.contains(st.el)) { st.mo = null; rendre(); } });
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Escape' || !st.el || !document.body.contains(st.el)) { return; }
+    if (st.mo) { st.mo = null; rendre(); } else if (st.onglet === 'bur' && st.b.devSel && !st.b.w) { st.b.devSel = null; st.b.devMsg = null; rendre(); } else if (st.onglet === 'bur' && st.b.sel && !st.b.w) { st.b.sel = null; st.b.pdf = null; rendre(); }
+  });
 
   window.DashClients = {
     racine(shop, o) {
       o = o || {};
-      st.aller = o.aller || st.aller; st.nomShop = o.nomShop || st.nomShop; st.api = o.apiBase || st.api;
+      st.aller = o.aller || st.aller; st.nomShop = o.nomShop || st.nomShop; st.api = o.apiBase || st.api; st.titre = o.titre !== false;
       if (!st.el || st.shop !== String(shop)) {
         const auj = new Date();
         Object.assign(st, { shop: String(shop), mo: null });
         st.p = { q: '', filtre: '', d: null, err: null, lecture: false, sel: null, fiche: null, ficheErr: null };
         st.e = { d: null, err: null, lecture: false, q: '', score: '', ca: '', freq: '', incompl: false, sel: null, fiche: null, ficheErr: null };
-        st.b = { d: null, err: null, lecture: false, q: '', statut: '', sel: null, ong: 'livraison', det: {}, options: null, w: null, pdf: null };
+        st.b = { d: null, err: null, lecture: false, q: '', statut: '', sel: null, ong: 'livraison', det: {}, options: null, w: null, pdf: null, dev: null, devErr: null, devSel: null, devMsg: null, devBusy: false, devTraitees: false };
         st.a = { annee: auj.getFullYear(), mois: auj.getMonth() + 1, d: null, err: null, lecture: false, metrique: 'ventes' };
         const on = o.onglet || memo('pcl-onglet:' + st.shop);
         st.onglet = ['b2c', 'b2b', 'bur', 'an'].includes(on) ? on : 'b2b';

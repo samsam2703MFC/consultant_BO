@@ -3449,8 +3449,11 @@ navigateur, le cockpit ne garde ni le PIN ni les jetons et ne les journalise pas
     POST /dashboard/tfb/sms         {shop, challenge}             → {ok}   (POST /panel/auth/resend)
     POST /dashboard/tfb/renouveler  {shop, renouvellement}        → {ok, jetons} | 401 {error, expire}   (POST /panel/auth/refresh)
     POST /dashboard/tfb/deconnexion {shop, renouvellement}        → {ok}   (POST /panel/auth/logout)
+    GET  /dashboard/tfb/etat?shop=                                → {recu, par: entete|cookie|null, entete, cookie, expire, tfbuddy: {code, erreur}}
+                                                                    le contrôle d'après connexion : le jeton arrive-t-il, TF Buddy l'accepte-t-il (liste des bureaux) ?
 
-Le jeton d'accès part dans l'en-tête **`X-TFB-Jeton`** des appels de Clients (`/dashboard/clients/*`) et de Commandes
+Le jeton d'accès part dans l'en-tête **`X-TFB-Jeton`**, doublé d'un cookie court `tfb_jeton_{shop}` (5 min, SameSite=Strict,
+Secure ; 26/11/2026 : le jeton n'arrivait pas au serveur après la connexion), des appels de Clients (`/dashboard/clients/*`) et de Commandes
 (`/dashboard/commandes/*`) ; le navigateur le renouvelle 45 s avant son échéance (un seul renouvellement à la fois : TF
 Buddy fait tourner le jeton de renouvellement). Le serveur l'impose à PanelApi le temps d'un appel
 (`PanelApi::$jetonImpose`). L'ordre des comptes : pour une route `/panel/…`, le magasin, puis le consultant, puis
@@ -3465,6 +3468,34 @@ d'essais pour ce téléphone ou depuis l'adresse du serveur du cockpit, la même
 au format international), `PANEL_SMS_UNAVAILABLE`, `PANEL_AUTH_UNAVAILABLE`. Le navigateur garde le code SMS en cours 5 minutes
 dans l'onglet (`sessionStorage`, `tfb-challenge:{shop}`) : rouvrir la fenêtre, ou redonner le même téléphone après
 `attente`, reprend sa saisie au lieu de renvoyer un SMS ; « renvoyer le code » attend la fin d'un compte à rebours de 60 s.
+
+### `/dashboard/bureaux-dev*` et `/bureau-questionnaire/{jeton}` — les bureaux en développement, le questionnaire du magasin (26/11/2026)
+
+Sam : « relier directement une nouvelle personne et un nouveau bureau (development) ou par après je peux valider le
+bureau », puis « fais aussi un questionnaire directement (1 par magasin) qui crée directement aussi un voucher »
+(`panel/src/bureaux_dev.php`, Clients › Bureaux, page publique `panel/public/bureau/`). Une demande naît du questionnaire
+public ou du dashboard et crée tout de suite dans TF Buddy, avec les comptes du cockpit : la personne (client du
+magasin), la société si un numéro de TVA est donné (client B2B), le bon de bienvenue si le magasin en a choisi un (le code
+commun de la campagne, ou un code personnel d'une utilisation au nom de la personne). Le bureau ne se crée qu'à la
+validation, avec le compte TF Buddy du magasin (les routes `/panel/shops/{s}/offices` n'ouvrent qu'à lui) ; il lui faut
+une société B2B, donc un numéro de TVA.
+
+    GET  /bureau-questionnaire/{jeton}       PUBLIC (avant la garde) → {magasin, titre, message, bon: texte | null} | 404
+    POST /bureau-questionnaire/{jeton}       PUBLIC {prenom, nom, email, tel, societe, tva?, adresse, cp, ville, personnes?, jours?, remarque?, accord, site_web (piège)}
+                                             → {ok, magasin, bon: {code, texte} | null} | 422 {error, manque} | 429 (5 réponses / heure / appareil)
+    GET  /dashboard/bureaux-dev?shop=        → {demandes: [{id, source, statut: a_valider|cree|refuse, personne, donnees, clientId, societeId, bon, erreurs, officeId, le}],
+                                                questionnaire: {jeton, actif, promo, titre, message}, promos: [{id, nom}]}
+    POST /dashboard/bureaux-dev              {shop, donnees}   une demande saisie au dashboard (l'accord n'y est pas demandé)
+    POST /dashboard/bureaux-dev/questionnaire {shop, actif, promo, titre, message, regenerer}   (regenerer : un nouveau jeton, l'ancien lien meurt)
+    POST /dashboard/bureaux-dev/valider      {shop, id, statut: active|pending, nom, tva, route_id}
+                                             → {ok, officeId} | 422 (TVA manquante) | 409 (déjà traitée) | refus du compte du magasin
+    POST /dashboard/bureaux-dev/refuser      {shop, id}
+
+Valider : la société si elle manque (`POST /shops/{s}/clients {vat_number}`), puis `POST /panel/shops/{s}/offices/onboard`
+(`request_key` `bdv-{id}` : une validation rejouée ne crée pas un second bureau), le site (avec sa tournée), puis
+`POST …/offices/{id}/members {client_id}` relie la personne. Tables `panel_bureau_questionnaire` (un par magasin, le jeton
+de 32 caractères hexadécimaux) et `panel_bureau_dev` (les demandes ; effacées 90 jours après traitement ; l'adresse IP
+n'y est qu'en empreinte). Tests : `php panel/bin/tests_bureaux_dev.php`.
 
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 

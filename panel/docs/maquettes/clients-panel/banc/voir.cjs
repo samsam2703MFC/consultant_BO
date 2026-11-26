@@ -22,7 +22,7 @@ const OUT = process.argv[2] || path.join(__dirname, '..');
   p = await page(8098, 'bur'); await p.waitForSelector('.pcl-refus'); await prise(p, 'code-bureaux-refus'); await p.close();
   // Avec l'accès de service (R1) : le profil commercial, les bureaux, l'assistant.
   p = await page(8099, 'b2b'); await p.click('tr.pcl-ligne >> nth=0'); await p.waitForSelector('.pcl-kpis'); await prise(p, 'code-b2b-r1'); await p.close();
-  p = await page(8099, 'bur'); await p.click('tr.pcl-ligne >> nth=0'); await p.waitForSelector('.pcl-ong2'); await p.waitForTimeout(400); await prise(p, 'code-bureaux-r1'); await p.close();
+  p = await page(8099, 'bur'); await p.click('tr.pcl-ligne >> nth=0'); await p.waitForSelector('.pcl-tir'); await p.waitForTimeout(700); await prise(p, 'code-bureaux-r1'); await p.close();
   p = await page(8099, 'bur'); await p.click('[data-act="w-ouvrir"]'); await p.waitForSelector('.pcl-stepper');
   await p.selectOption('select[data-f="id_company_client"]', '801'); await p.fill('input[data-f="name"]', 'Horizon · Jumet'); await p.fill('input[data-f="tax_number"]', 'BE0789114256');
   await p.click('[data-act="w-suivant"]'); await p.fill('input[data-f="contact_name"]', 'Office manager'); await p.fill('input[data-f="contact_email"]', 'accueil@horizon.be');

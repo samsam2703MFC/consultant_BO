@@ -1,0 +1,67 @@
+/* Maquettes de la fiche d'un bureau (26/11/2026, « retravailler car non visible pour toutes les informations, faire
+ * une drop list ou autre, 2-3 maquettes »). Les composants viennent de global.css et clients.css. */
+body { margin: 0; background: #F7F4EF; }
+main { max-width: 1560px; margin: 0 auto; padding: 22px 28px 60px; }
+.fb-kicker { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.fb-h1 { margin: 2px 0 12px; font-size: 24px; font-weight: 400; }
+.fb-bandeau { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: #fff; border: 1px dashed var(--accent); color: var(--accent); font-size: 13px; }
+.fb-bandeau b { font-weight: 400; font-size: 15px; }
+.fb-tfb { font-size: 11.5px; color: var(--green); margin-right: 12px; }
+.fb-sec { display: grid; gap: 8px; }
+.fb-sec h4 { margin: 0 0 4px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; align-items: baseline; }
+.fb-sec h4 a { letter-spacing: normal; text-transform: none; font-size: 12px; color: var(--accent); text-decoration: underline; cursor: pointer; }
+.fb-manque { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; background: var(--prize-soft); color: var(--prize-ink); font-size: 12.5px; line-height: 1.45; }
+.fb-manque svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+.fb-pers { display: flex; flex-wrap: wrap; gap: 6px; }
+.fb-pers span { padding: 4px 8px; border-radius: 6px; background: var(--chip); font-size: 12px; }
+.fb-docs { display: flex; flex-wrap: wrap; gap: 6px; }
+.fb-docs .btn svg { width: 14px; height: 14px; }
+.fb-jours { display: inline-flex; gap: 3px; }
+.fb-jours i { font-style: normal; width: 20px; height: 20px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px; background: var(--chip); color: var(--muted); }
+.fb-jours i.on { background: rgba(141, 29, 44, 0.12); color: var(--accent); }
+/* A — le tiroir */
+.fbA { position: relative; min-height: 1060px; }
+.fbA > .card { position: relative; }
+.fbA .fbA-voile { position: absolute; inset: 0; background: rgba(28, 26, 23, 0.18); border-radius: 12px; }
+.fbA-tiroir { position: absolute; top: -8px; right: -8px; bottom: -8px; width: 640px; background: #fff; border-radius: 14px; box-shadow: -18px 0 40px rgba(0, 0, 0, 0.14); display: flex; flex-direction: column; overflow: hidden; }
+.fbA-tete { padding: 18px 22px 14px; border-bottom: 1px solid var(--line); }
+.fbA-tete .n { font-size: 19px; display: flex; gap: 10px; align-items: center; }
+.fbA-tete .m { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.fbA-nav { display: flex; gap: 2px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+.fbA-nav span { padding: 10px 8px; font-size: 12.5px; color: var(--muted-2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.fbA-nav span.on { color: var(--accent); border-bottom-color: var(--accent); }
+.fbA-corps { padding: 16px 22px; display: grid; gap: 18px; overflow: auto; }
+.fbA-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.fbA-pied { margin-top: auto; padding: 12px 22px; border-top: 1px solid var(--line); background: var(--table-head); display: flex; gap: 8px; }
+.fbA-x { position: absolute; top: 16px; right: 16px; }
+/* B — la ligne dépliée */
+.fbB-ouvert td { background: rgba(141, 29, 44, 0.05) !important; }
+.fbB-ouvert td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.fbB-detail td { padding: 0 !important; background: #FFFCF8 !important; border-top: 0 !important; }
+.fbB-grille { display: grid; grid-template-columns: 1.15fr 1fr 1fr 1fr; gap: 0; border-top: 1px solid var(--row-line); border-bottom: 2px solid var(--accent); }
+.fbB-grille > div { padding: 14px 18px; border-left: 1px solid var(--row-line); }
+.fbB-grille > div:first-child { border-left: 0; }
+.fbB-actions { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; padding: 10px 18px !important; border-left: 0 !important; border-top: 1px solid var(--row-line); background: var(--table-head); }
+.fbB-chev { display: inline-block; width: 16px; color: var(--muted); }
+/* C — la page du bureau */
+.fbC-fil { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; flex-wrap: wrap; }
+.fbC-fil .lien { color: var(--accent); text-decoration: underline; font-size: 13px; }
+.fbC-select { display: inline-flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 9px; background: #fff; font-size: 15px; min-width: 360px; justify-content: space-between; position: relative; }
+.fbC-select small { color: var(--muted); font-size: 12px; }
+.fbC-liste { position: static; width: 420px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px rgba(0,0,0,0.12); z-index: 5; padding: 6px; }
+.fbC-liste input { width: 100%; box-sizing: border-box; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; font: 13px 'Gotham', system-ui, sans-serif; margin-bottom: 4px; }
+.fbC-liste div { display: flex; justify-content: space-between; padding: 7px 9px; border-radius: 6px; font-size: 13px; }
+.fbC-liste div.on { background: rgba(141, 29, 44, 0.07); color: var(--accent); }
+.fbC-liste div small { color: var(--muted); }
+.fbC-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 0 0 14px; }
+.fbC-kpis .card { padding: 12px 14px; }
+.fbC-kpis .v { font-size: 20px; font-weight: 700; }
+.fbC-kpis .k { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+.fbC-grille { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 14px; align-items: start; }
+.fbC-grille .card { padding: 16px 18px; }
+.legende { margin-top: 18px; padding: 14px 18px; border-radius: 12px; background: #fff; border: 1px solid var(--line); font-size: 12.5px; line-height: 1.55; color: var(--muted-2); }
+.legende h3 { margin: 0 0 6px; font-size: 13px; font-weight: 400; color: var(--ink); }
+.legende ol { margin: 0; padding-left: 18px; }
+
+.fbC-zoom { display: flex; gap: 18px; align-items: flex-start; margin-top: 14px; }
+.fbC-zoom .titre { font-size: 12px; color: var(--muted); margin-bottom: 6px; }

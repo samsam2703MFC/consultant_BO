@@ -132,6 +132,7 @@ verifie('les lectures permises', pclCheminBureau('GET', '') && pclCheminBureau('
 verifie('les écritures permises', pclCheminBureau('POST', '/onboard') && pclCheminBureau('PUT', '/12/delivery-settings') && pclCheminBureau('PATCH', '/12/sites/4') && pclCheminBureau('DELETE', '/12/invite') && pclCheminBureau('PUT', '/12/offers/3/products'));
 verifie('le reste non', !pclCheminBureau('GET', '/../clients') && !pclCheminBureau('DELETE', '') && !pclCheminBureau('GET', '/12/poster') && !pclCheminBureau('POST', '/12/settings') && !pclCheminBureau('GET', '/12?x=1') && !pclCheminBureau('TRACE', ''));
 verifie('les paramètres transmis : la liste seule', pclParams(['query' => 'dup', 'shop' => '3', 'chemin' => '/x']) === '?query=dup');
+verifie('les paramètres des adresses (geo/place, geo/autocomplete)', pclParams(['id' => 'ChIJabc', 'lang' => 'fr', 'shop' => '3']) === '?id=ChIJabc&lang=fr' && pclCheminBureau('GET', '/geo/place') && pclCheminBureau('GET', '/geo/postcodes'));
 $b = pclBureau(['id' => '7', 'name' => 'Lunchroom', 'company_name' => 'Hainaut Assurances', 'id_company_client' => '12', 'primary_city' => 'Charleroi', 'site_count' => 1, 'offer_count' => 2, 'status' => 'pending', 'delivery_days' => ['1', '2']]);
 verifie('une ligne de bureau', $b['id'] === 7 && $b['idSociete'] === 12 && $b['sites'] === 1 && $b['offres'] === 2 && $b['statut'] === 'pending' && $b['jours'] === [1, 2]);
 
@@ -198,6 +199,11 @@ $jwt = 'eyJhbGciOiJIUzI1NiJ9.' . rtrim(strtr(base64_encode(json_encode(['exp' =>
 verifie('l’échéance d’un JWT', tfbmExpiration($jwt) === 1795600000 && tfbmExpiration('pas-un-jwt') === null);
 $J = tfbmJetons(['status' => 200, 'token' => $jwt, 'refresh_token' => 'r1', 'expires_at' => 1795596336]);
 verifie('les jetons d’une connexion', $J['acces'] === $jwt && $J['renouvellement'] === 'r1' && $J['expireAcces'] === 1795600000 && $J['expireSession'] === 1795596336);
+$Jd = tfbmJetons(['token' => $jwt, 'refresh_token' => 'r', 'expires_at' => 43200]);
+$jwtS = 'eyJhbGciOiJIUzI1NiJ9.' . rtrim(strtr(base64_encode(json_encode(['exp' => 1795600000, 'panel_session_expires_at' => 1795640000])), '+/', '-_'), '=') . '.c2lnbmF0dXJl';
+verifie('la fin de session portée par le jeton passe avant expires_at', tfbmJetons(['token' => $jwtS, 'expires_at' => 300])['expireSession'] === 1795640000);
+verifie('une durée de session devient une date', $Jd['expireSession'] >= time() + 43190 && $Jd['expireSession'] <= time() + 43210);
+verifie('des millisecondes deviennent des secondes', tfbmJetons(['token' => $jwt, 'expires_at' => 1795596336000])['expireSession'] === 1795596336);
 verifie('une réponse sans jeton : rien', tfbmJetons(['status' => 401, 'error' => 'PANEL_SESSION_EXPIRED']) === null);
 verifie('le motif d’un refus, avec le code de TF Buddy', tfbmMotif(401, ['error' => 'PANEL_SESSION_EXPIRED']) === 'la session TF Buddy a expiré : reconnectez-vous (TF Buddy : PANEL_SESSION_EXPIRED)');
 verifie('les limites sont dites comme celles de TF Buddy', str_contains(tfbmMotif(429, ['error' => 'PANEL_AUTH_LIMIT']), 'limite de TF Buddy, pas du dashboard') && str_contains(tfbmMotif(429, null), '(TF Buddy : HTTP 429)'));
