@@ -338,3 +338,4 @@
 2026-11-26T14:14:21Z Formation : la médiathèque des vidéos (sections du rail, pages, onglets, titres ; recherche avec synonymes, début de mot et faute de frappe)
 2026-11-26T14:21:26Z Bureaux : formulaire d'inscription en six étapes, générateur de liens par magasin
 2026-11-26T14:52:57Z Formation : la médiathèque en collections (Utilisation du dashboard, Production, Vente et comptoir, Hygiène et sécurité, Ouverture et fermeture), les vidéos filmées ajoutées dans le portail (rail › Médiathèque : fichier ou lien), « Voir dans la médiathèque » dans le lecteur du dashboard
+2026-11-26T18:14:10Z Autocontrôle qualité : l'onglet Qualité de la fiche produit (admin), le contrôle qualité dans les fiches techniques (ce qu'on regarde, bon, à surveiller, pas bon), le formulaire pour l'équipe, le manager, le franchisé et le consultant (3 produits dans la visite, dans le rapport)
