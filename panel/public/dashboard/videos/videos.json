@@ -1341,16 +1341,16 @@
       ],
       "fichier": "09-05-frais.mp4",
       "debut": 0,
-      "fin": 55.98,
+      "fin": 56.83,
       "affiche": "frais-du-mois.jpg",
-      "duree": "56 s",
+      "duree": "57 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-tva-comprise",
@@ -1364,8 +1364,8 @@
         "frais"
       ],
       "fichier": "09-05-frais.mp4",
-      "debut": 55.98,
-      "fin": 88.61,
+      "debut": 56.83,
+      "fin": 89.64,
       "affiche": "frais-tva-comprise.jpg",
       "duree": "33 s",
       "sources": [
@@ -1373,8 +1373,8 @@
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-taux-tva",
@@ -1388,17 +1388,17 @@
         "frais"
       ],
       "fichier": "09-05-frais.mp4",
-      "debut": 88.61,
-      "fin": 112.41,
+      "debut": 89.64,
+      "fin": 113.1,
       "affiche": "frais-taux-tva.jpg",
-      "duree": "24 s",
+      "duree": "23 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-ajouter",
@@ -1412,17 +1412,17 @@
         "frais"
       ],
       "fichier": "09-05-frais.mp4",
-      "debut": 112.41,
-      "fin": 161.55,
+      "debut": 113.1,
+      "fin": 159.58,
       "affiche": "frais-ajouter.jpg",
-      "duree": "49 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-annuler-ajout",
@@ -1436,17 +1436,17 @@
         "frais"
       ],
       "fichier": "09-05-frais.mp4",
-      "debut": 161.55,
-      "fin": 190.31,
+      "debut": 159.58,
+      "fin": 186.98,
       "affiche": "frais-annuler-ajout.jpg",
-      "duree": "29 s",
+      "duree": "27 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-mode-emploi",
@@ -1461,14 +1461,14 @@
       ],
       "fichier": "09-06-mode-emploi.mp4",
       "debut": 0,
-      "fin": 56.6,
+      "fin": 58.03,
       "affiche": "treso-mode-emploi.jpg",
-      "duree": "57 s",
+      "duree": "58 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "analyse",
