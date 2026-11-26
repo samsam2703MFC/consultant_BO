@@ -7652,6 +7652,29 @@
       "tourne_le": "2026-11-26"
     },
     {
+      "id": "bureaux-film",
+      "genre": "nouveau",
+      "titre": "Un bureau, du QR à la tournée",
+      "resume": "Le film des bureaux : le lien et son QR, le client qui s’inscrit en six étapes et reçoit son bon, la demande validée dans TF Buddy, le bureau mis dans sa tournée, ses commandes rangées toutes seules.",
+      "vues": [
+        "clients",
+        "commandes"
+      ],
+      "fichier": "26-film-bureaux.mp4",
+      "affiche": "26-film-bureaux.jpg",
+      "depuis": "2026-11-26",
+      "sources": [
+        "panel/public/bureau/bureau.js",
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/commandes.js",
+        "panel/src/bureaux_dev.php",
+        "panel/src/commandes_tournees.php"
+      ],
+      "duree": "1 min 40",
+      "tourne_sur": "d2d40aa8a5f06a225ea217c4778fbb423a1e3e61",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "clients-particuliers",
       "genre": "tuto",
       "depuis": "2026-11-26",
