@@ -1601,6 +1601,174 @@
       "tourne_le": "2026-11-25"
     },
     {
+      "id": "equipe-primes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Les primes",
+      "resume": "Où en sont les vendeuses : les primes d’équipe, le tableau prime par prime et l’acquis ; trier, changer de mois, celles du magasin, l’année. La page se lit : les primes se règlent au cockpit.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-15-primes.mp4",
+      "debut": 0,
+      "fin": 88.81,
+      "affiche": "equipe-primes.jpg",
+      "duree": "1 min 29",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/primes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "equipe-fiche",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "La fiche d’une personne",
+      "resume": "« Fiche complète » ou un clic sur un nom au planning : identité et contrat, heures et coût du mois, compétences et postes, primes.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-16-fiche.mp4",
+      "debut": 0,
+      "fin": 84.1,
+      "affiche": "equipe-fiche.jpg",
+      "duree": "1 min 24",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe_fiche.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "equipe-fiche-identite",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "equipe-fiche",
+      "titre": "Modifier l’identité et le contrat",
+      "resume": "Dans « Identité et contrat » : le nom affiché, la langue, le type de contrat ou le rôle ; rien n’est envoyé avant « Enregistrer », puis c’est écrit dans TF Buddy.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-16-fiche.mp4",
+      "debut": 84.1,
+      "fin": 121.69,
+      "affiche": "equipe-fiche-identite.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe_fiche.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "equipe-fiche-taux",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "equipe-fiche",
+      "titre": "Changer le taux horaire",
+      "resume": "Le taux horaire dans « Identité et contrat » : avant d’enregistrer, ce que le mois au planning coûte avec ce taux et la part du personnel dans le CA ; ensuite, les coûts suivent.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-16-fiche.mp4",
+      "debut": 121.69,
+      "fin": 163.69,
+      "affiche": "equipe-fiche-taux.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe_fiche.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "equipe-evaluations",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Les évaluations d’une personne",
+      "resume": "Dans sa fiche : une note de 1 à 5 par service du planning, avec un mot ; sa moyenne, la répartition des notes, les services à noter et l’historique.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-17-evaluations.mp4",
+      "debut": 0,
+      "fin": 46.05,
+      "affiche": "equipe-evaluations.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe_fiche.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "equipe-noter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "equipe-evaluations",
+      "titre": "Noter un service",
+      "resume": "Dans « Évaluations », un service à noter : de une à cinq étoiles, un mot facultatif, puis « Enregistrer la note » ; il passe dans l’historique.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-17-evaluations.mp4",
+      "debut": 46.05,
+      "fin": 86.79,
+      "affiche": "equipe-noter.jpg",
+      "duree": "41 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe_fiche.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "equipe-ventes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Les ventes d’une personne",
+      "resume": "Dans sa fiche, ses 12 dernières semaines complètes : vendu, panier moyen, pièces par ticket, tickets et rang, face à l’équipe et à la cible du réseau ; en graphique ou en tableau.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-18-ventes.mp4",
+      "debut": 0,
+      "fin": 70.33,
+      "affiche": "equipe-ventes.jpg",
+      "duree": "1 min 10",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe_fiche.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "formation-horaires",
       "genre": "formation",
       "titre": "Formation : construire le planning de la semaine",
