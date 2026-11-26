@@ -171,7 +171,14 @@ function cofDatesListe(int $shop): array
     $auj = date('Y-m-d');
     $tout = cofPeutTout();
     $docs = [];
-    foreach (Db::rows('SELECT id, titre, sorte, echeance, visible_franchise FROM con_doc WHERE shop = ?', [$shop]) as $d) { $docs[(int) $d['id']] = $d; }
+    $lignes = [];
+    foreach (Db::rows('SELECT * FROM con_doc WHERE shop = ?', [$shop]) as $d) {
+        $docs[(int) $d['id']] = $d;
+        if (function_exists('docLigne')) { $l = docLigne($d); $lignes[] = ['id' => (int) $d['id'], 'piece' => $l['piece'] ?? null, 'date' => $l['date'] ?? substr((string) ($l['deposeLe'] ?? ''), 0, 10)]; }
+    }
+    // L'échéance d'un document remplacé par un plus récent de la même pièce ne compte plus (26/11/2026 : l'ancienne
+    // attestation restait la « prochaine grande date » après un renouvellement).
+    $remplaces = function_exists('cofRemplaces') ? cofRemplaces($lignes) : [];
     $out = []; $reprises = [];
     foreach (Db::rows('SELECT * FROM con_coffre_date WHERE shop = ? ORDER BY le, id', [$shop]) as $r) {
         $doc = $r['doc_id'] !== null ? ($docs[(int) $r['doc_id']] ?? null) : null;
@@ -185,7 +192,7 @@ function cofDatesListe(int $shop): array
     }
     foreach ($docs as $id => $d) {
         $ech = cofDateOk($d['echeance'] ?? null);
-        if ($ech === null || empty($d['visible_franchise']) || in_array($ech, $reprises[$id] ?? [], true)) { continue; }
+        if ($ech === null || empty($d['visible_franchise']) || in_array($ech, $reprises[$id] ?? [], true) || isset($remplaces[$id])) { continue; }
         $out[] = ['id' => null, 'sorte' => $d['sorte'] === 'contrat_franchise' ? 'contrat_fin' : 'echeance', 'sorteLib' => $d['sorte'] === 'contrat_franchise' ? COF_DATE_SORTES['contrat_fin'] : COF_DATE_SORTES['echeance'],
             'titre' => 'Échéance — ' . (string) $d['titre'], 'le' => $ech, 'fin' => null, 'note' => 'L’échéance posée sur le document.', 'source' => 'document',
             'docId' => $id, 'docTitre' => (string) $d['titre'], 'docCoffre' => true, 'par' => '', 'role' => '', 'etat' => cofDateEtat($ech, null, $auj), 'modifiable' => false];

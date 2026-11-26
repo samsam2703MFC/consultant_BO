@@ -65,6 +65,8 @@
 .cf2-fr .ev.or i{background:var(--prize)}
 .cf2-fr .ev span{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:11px;white-space:nowrap;background:#fff;border:1px solid var(--line);border-radius:7px;padding:2px 7px;color:var(--ink);box-shadow:0 1px 3px rgba(28,26,23,.05);font-family:inherit}
 .cf2-fr .ev.bas span{bottom:auto;top:24px}
+/* Au bord de la frise, l'étiquette s'aligne vers l'intérieur (26/11/2026). */
+.cf2-fr .ev.g span{left:-4px;transform:none}.cf2-fr .ev.d span{left:auto;right:-4px;transform:none}
 .cf2-fr .ev:hover span{border-color:var(--accent);color:var(--accent)}
 
 /* Le corps : les dossiers à gauche, le contenu au centre */

@@ -7835,7 +7835,7 @@
       ['Automatisations', [
         { k: 'rappel', ic: 'horloge', nom: 'Rappel la veille du retrait', desc: 'un e-mail ou un SMS au client, la veille de sa commande',
           et: apres || (R ? (R.actif ? ['ok', 'à ' + String(R.heure).replace(':', ' h ')] : ['off', 'éteint']) : null), detail: 'rappel' },
-        { k: 'equipe', ic: 'equipe', nom: 'L’équipe', desc: 'qui reçoit les e-mails du magasin', et: eq != null ? ['', eq + ' personne' + (eq > 1 ? 's' : '')] : apres, aller: ['mails', null] }]],
+        { k: 'equipe', ic: 'equipe', nom: 'L’équipe', desc: 'qui reçoit les fiches des promotions', et: eq != null ? ['', eq + ' personne' + (eq > 1 ? 's' : '')] : apres, aller: ['mails', null] }]],
       ['Cet appareil', [
         { k: 'alertes', ic: 'cloche', nom: 'Alertes de stock', desc: alerteKo ? (S.pushMotif || 'indisponibles sur cet appareil') : 'une notification quand une référence passe sous son minimum',
           sw: S.pushEtat === 'abonne', swKo: alerteKo || S.pushOccupe }]]
@@ -7886,6 +7886,8 @@
     PAR.occupe = true; PAR.flash = null; parRendre();
     ecrire('/dashboard/boite/automatisations', { shop: S.shop, auto: 'rappel_retrait', [champ]: v }).then(d => {
       PAR.auto = d; const g = d.rappel.reglage;
+      // Mails et automatisations, ouverte derrière, se relit (26/11/2026 : ses tuiles gardaient l'ancien réglage).
+      if (window.DashAuto && window.DashAuto.relire) { window.DashAuto.relire(); }
       PAR.flash = { ok: true, texte: d.note || (champ === 'actif' ? (g.actif ? 'Rappel allumé : il part chaque jour à ' + g.heure + '.' : 'Rappel éteint.') : 'Enregistré.') };
     }).catch(er => { PAR.flash = { ok: false, texte: er.message }; }).finally(() => { PAR.occupe = false; parRendre(); });
   }
