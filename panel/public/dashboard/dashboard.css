@@ -3722,3 +3722,12 @@ body.db-vue-social{overflow:hidden}
   .tm-r1{grid-template-columns:auto minmax(200px,1fr) minmax(180px,1fr)}
   .tm-r1>.tm-q:last-child{grid-column:1 / -1;padding:10px 0 0;border-left:0;border-top:1px solid var(--line);flex-direction:row;gap:8px}
 }
+
+/* Le chiffre clé devant « À corriger » (26/11/2026, Sam : « oui ») : une ligne, puis À corriger sous un filet. */
+.ac.ac-av{flex-wrap:wrap}
+.ac-cle{flex:0 0 100%;display:flex;align-items:baseline;gap:14px;padding-bottom:10px;margin-bottom:2px;border-bottom:1px solid var(--line)}
+.ac-cle .v{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);font-variant-numeric:tabular-nums}
+.ac-cle .q{font-size:13px;color:var(--ink)}
+.ac-cle .q small{display:block;margin-top:2px;font-size:12px;color:var(--muted-2)}
+.ac.ac-av .ac-ok{flex:0 0 100%}
+.ac.ac-av .ac-l{flex:1 1 0}

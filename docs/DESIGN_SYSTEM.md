@@ -542,6 +542,11 @@ Décidé par Sam le 26/11/2026 (« adapte ce style à tout le dashboard ») à p
   `overflow` autre que visible annule `sticky` : au-dessus de 1366 px le conteneur passe en `overflow: visible` ; en
   dessous, il défile de côté sans tête collée. Une grille très large (le mois) défile dans sa propre fenêtre
   (`max-height`), sa tête collée en haut de celle-ci.
+- **Une échelle par mesure, partout** (Sam, 26/11/2026 : « uniformiser les échelles de couleur partout ») : les mêmes trois
+  jetons d'état, avec leurs mots dans la légende. Marge brute (catégorie, produit, taux, offres) : sous 40 % `--stop`
+  « faible », 40–60 % `--prize`, 60 % et plus `--green` « bonne ». Marge nette (jour, heure) et écart à la référence :
+  une perte `--stop`, 0–20 % `--prize`, 20 % et plus `--green`. Plus d'orange vif ni d'or « excellent » à part.
+- **« Prête »** (Commandes) : bleu-gris `#4A6478` (5,5:1 sur son fond), distinct du bleu d'identification du Webshop.
 - **Petits textes sur fond teinté** : sur `--table-head` ou `--paper`, `--muted` ne fait que 4,45:1 (sous 4,5:1) ; un
   texte de 12 px ou moins y prend `--muted-2` (6,7:1).
 

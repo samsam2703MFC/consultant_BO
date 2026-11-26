@@ -3829,9 +3829,11 @@
    * passe ce qu'il compte déjà. Un point : { sig: 'stop' | 'prize', txt, attr } ; attr : data-ac="id du bloc" et, s'il y a un
    * geste à faire avant d'y aller, data-acg (vit:S,L · cq:nc · stock · tjcl:clé) — ou l'attribut d'un geste existant. Un point
    * qui vit ici ne reste pas ailleurs (la vignette Dossier de formation, la pastille des non-conformités) : un chiffre, une place. */
-  function acBloc(L, pret) {
-    if (!L.length) { return pret ? '<div class="ac"><p class="ac-ok">Rien à corriger pour l’instant.</p></div>' : ''; }
-    return `<div class="ac" role="region" aria-label="À corriger"><span class="ac-t">À corriger</span><span class="ac-l">${L.map(x => `<button type="button" class="btn btn--sm ac-b" ${x.attr}><i class="ac-ic ac-${x.sig}" aria-hidden="true"></i>${x.txt}</button>`).join('')}</span></div>`;
+  function acBloc(L, pret, cle) {
+    // Le chiffre clé (Sam, 26/11/2026 : « oui ») : la valeur (700, le seul gras), ce qu'elle mesure, son contexte ; puis « À corriger ».
+    const tete = cle ? `<div class="ac-cle"><span class="v">${cle.v}</span><span class="q">${esc(cle.q)}<small>${esc(cle.s || '')}</small></span></div>` : '';
+    if (!L.length) { return pret || cle ? `<div class="ac${cle ? ' ac-av' : ''}">${tete}${pret ? '<p class="ac-ok">Rien à corriger pour l’instant.</p>' : ''}</div>` : ''; }
+    return `<div class="ac${cle ? ' ac-av' : ''}" role="region" aria-label="À corriger">${tete}<span class="ac-t">À corriger</span><span class="ac-l">${L.map(x => `<button type="button" class="btn btn--sm ac-b" ${x.attr}><i class="ac-ic ac-${x.sig}" aria-hidden="true"></i>${x.txt}</button>`).join('')}</span></div>`;
   }
   /** Le geste d'un point : l'état qu'il demande (rendre), puis le bloc à l'écran, mis en évidence un instant. */
   function acAller(id, g) {
@@ -3869,7 +3871,10 @@
       else if (E.vieux) { L.push({ sig: 'prize', txt: `Inventaire non recompté depuis ${fN(E.jours)} jours`, attr: 'data-ac="op-stock" data-acg="stock"' }); }
     }
     if (fcAFaire()) { L.push({ sig: 'prize', txt: `Dossier de formation : ${fN(fcAFaire())} à faire`, attr: 'data-fcouvrir="1" title="Mon dossier de formation : les formations continues du magasin, la photo du jour, le Professeur"' }); }
-    return acBloc(L, !!(D.U && S.aux['stock|' + S.shop] && (!auj || C)));
+    const m = D.m, obj = m && m.objectifJour ? m.objectifJour : null, ca = D.ca;
+    const proj = auj && m && !D.fin && m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? m.projection : null;
+    const cle = ca != null ? { v: fE(ca), q: 'de chiffre d’affaires' + (auj ? ' aujourd’hui, en direct' : ''), s: obj ? `${fP(100 * ca / obj)} de l’objectif de ${fE(obj)}${proj != null && ca < obj ? ' · projection ' + fE(proj) : ''}` : 'pas d’objectif du jour' } : null;
+    return acBloc(L, !!(D.U && S.aux['stock|' + S.shop] && (!auj || C)), cle);
   }
 
   function rendOps() {
@@ -7031,7 +7036,8 @@
         attr: `data-ac="tj-cl-${i}" data-acg="tjcl:${esc(c.cle)}" title="ouvrir la checklist"` }); });
     const N = tjNcACorriger();
     if (N) { L.push({ sig: 'stop', txt: `${N.n} non-conformité${N.n > 1 ? 's' : ''} en 30 jours · ${N.rep} reprise${N.rep > 1 ? 's' : ''}`, attr: 'data-tjallerret="1" title="les notes sous 4 des 30 derniers jours : voir les retours"' }); }
-    return acBloc(L, !!R);
+    const r = tjRes(D), cle = r.T.length ? { v: (r.p == null ? '—' : r.p + ' %'), q: 'des tâches obligatoires faites, en cours', s: `${r.f} / ${r.T.length}${r.ph ? ' · ' + r.phR + ' / ' + r.ph + ' photos' : ''}` } : null;
+    return acBloc(L, !!R, cle);
   }
   /** Les résultats d'un jour lu : tâches obligatoires faites, photos rendues, note moyenne du contrôle, non-conformités. */
   function tjRes(D) {
@@ -8787,11 +8793,14 @@
   }
 
   /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
-  /** L'échelle commune, 5 sections du noir à l'or, de 0 à +40 % : marge nette en % des ventes (le jour dans le mois) et écart à la référence (catégories). */
-  const PALIERS = [{ s: -Infinity, c: '#1c1a17', l: '< 0 %' }, { s: 0, c: '#A32014', l: '0 – 10 %' }, { s: 10, c: '#F08A2C', l: '10 – 20 %' }, { s: 20, c: '#3f7a52', l: '20 – 40 %' }, { s: 40, c: 'or', l: '≥ 40 % or' }];
+  /** Les échelles de couleur, une seule par mesure et sur les jetons d'état (Sam, 26/11/2026 : « uniformiser les échelles de
+   *  couleur partout » ; DESIGN_SYSTEM.md §7.13) : --stop, --prize, --green, toujours avec leurs mots dans la légende.
+   *  La marge nette (en % des ventes, le jour dans le mois, une heure) et l'écart à la référence : une perte, moins de 20 %, 20 % et plus. */
+  const PALIERS = [{ s: -Infinity, c: '#A32014', l: '< 0 % : perte' }, { s: 0, c: '#B0792A', l: '0 – 20 %' }, { s: 20, c: '#3f7a52', l: '≥ 20 %' }];
   const ECARTS = PALIERS;
-  /** La marge brute d'une catégorie (CA − coût matière, en % du CA) : 5 sections, l'or au-delà de 75 %. Une bonne marge commence à 60 %. */
-  const MARGES = [{ s: -Infinity, c: '#1c1a17', l: '< 40 %' }, { s: 40, c: '#A32014', l: '40 – 50 %' }, { s: 50, c: '#F08A2C', l: '50 – 60 %' }, { s: 60, c: '#3f7a52', l: '60 – 70 %' }, { s: 70, c: 'or', l: '≥ 70 % or' }];
+  /** La marge brute d'une catégorie (CA − coût matière, en % du CA) : la même règle que la colonne Taux, la fiche produit et les offres
+   *  (× 1,67 et × 2,5) — faible sous 40 %, à surveiller de 40 à 60 %, bonne à partir de 60 %. */
+  const MARGES = [{ s: -Infinity, c: '#A32014', l: '< 40 % : faible' }, { s: 40, c: '#B0792A', l: '40 – 60 %' }, { s: 60, c: '#3f7a52', l: '≥ 60 % : bonne' }];
   function palier(pct) { let r = PALIERS[0]; for (const p of PALIERS) { if (pct >= p.s) { r = p; } } return r; }
 
   /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
@@ -9695,7 +9704,7 @@
     if (!st) { return `<div class="db-card">${tete}</div><div class="db-sk" style="height:110px;margin:14px"></div></div>`; }
     const L = (st.heures || []).filter(l => l.ca > 0);
     if (!L.length) { return `<div class="db-card">${tete}</div><p class="db-note" style="padding:14px 16px">Aucune heure vendue sur cette période.</p></div>`; }
-    const teinte = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#A32014' : (pct < 20 ? '#B0792A' : (pct < 40 ? '#A8B545' : '#3f7a52')));
+    const teinte = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#A32014' : (pct < 20 ? '#B0792A' : '#3f7a52'));
     const best = L.reduce((a, b) => b.moy.res > a.moy.res ? b : a), worst = L.reduce((a, b) => b.moy.res < a.moy.res ? b : a);
     const cols = `grid-template-columns:repeat(${L.length},minmax(0,1fr))`;
     return `<div class="db-card">${tete}<span class="db-mini">${best.h}–${best.h + 1} h rapporte le plus (${fS(best.moy.res)} par jour) · ${worst.h}–${worst.h + 1} h ${worst.moy.res < 0 ? 'perd' : 'rapporte le moins'} (${fS(worst.moy.res)})</span></div>
@@ -11470,7 +11479,7 @@
     // empilée (matière, rémunération, marge nette ; une perte hachurée) et,
     // exactement dessous, la case de la marge nette en euros.
     const max = Math.max(...L.map(l => val(l, 'ca')), 1) * 1.04;
-    const teinteMn = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#A32014' : (pct < 20 ? '#B0792A' : (pct < 40 ? '#A8B545' : '#3f7a52')));
+    const teinteMn = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#A32014' : (pct < 20 ? '#B0792A' : '#3f7a52'));
     const HB = 210;
     let barres = '', heures = '', cases = '';
     L.forEach(l => {

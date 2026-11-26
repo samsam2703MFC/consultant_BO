@@ -175,12 +175,12 @@
     const S = D.commandes.filter(c => c.sansTournee);
     if (S.length > 2) { L.push({ attrs: `data-act="cmd" data-id="${S[0].id}"`, titre: 'Placer la première', lead: `${S.length} livraisons`, segs: [{ ic: 'pt', txt: 'dans aucune tournée' }, { txt: 'à placer' }] }); }
     else { S.forEach(c => L.push({ attrs: `data-act="cmd" data-id="${c.id}"`, titre: 'Placer la commande dans une tournée', lead: `${c.heure} · ${esc(c.client.nom)}`, segs: [{ ic: 'pt', txt: c.mode === 'hors' ? 'hors de ses tournées' : 'livraison sans tournée' }, { txt: 'à placer' }] })); }
-    // Une tournée qui n'est pas encore partie aujourd'hui et dont toutes les commandes ne sont pas prêtes.
+    // La prochaine tournée à partir aujourd'hui (Sam, 26/11/2026 : seulement elle), si toutes ses commandes ne sont pas prêtes.
     if (D.date === AUJ() && now) {
-      D.tournees.forEach(t => {
-        if (['terminee', 'route', 'vide'].includes(t.etat)) { return; }
+      D.tournees.filter(t => !['terminee', 'route', 'vide'].includes(t.etat) && mn(t.depart) >= mn(now))
+        .sort((a, b) => mn(a.depart) - mn(b.depart)).slice(0, 1).forEach(t => {
         const dans = mn(t.depart) - mn(now), C = t.commandes.map(cmdDe).filter(Boolean), pretes = C.filter(c => c.statut === 'prete').length;
-        if (dans < 0 || !C.some(c => c.statut !== 'prete' && c.statut !== 'fait')) { return; }
+        if (!C.some(c => c.statut !== 'prete' && c.statut !== 'fait')) { return; }
         L.push({ attrs: `data-act="corr-tournee" data-id="${t.id}"`, titre: 'Ouvrir la tournée', lead: esc(t.nom), segs: [{ txt: 'départ dans ' + duree(dans) }, { ic: 'pt', txt: `${pretes} ${pl(pretes, 'prête')} sur ${C.length}` }] });
       });
     }

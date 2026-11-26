@@ -4,7 +4,9 @@
  * Refonte du 26/11/2026 (style de panel/docs/maquettes/equipe-gestion/semaine-avant-apres/) : le résumé et « À corriger »,
  * la tête des tableaux collée au-dessus de 1366 px, les petits textes sur fond teinté en --muted-2 (--muted sur
  * --table-head ne fait que 4,45:1). */
-.pco { --pco-web: #1B6FA8; --pco-comp: #8D1D2C; --pco-bur: #3f7a52; font-size: 13px; color: var(--ink); }
+/* « Prête » en bleu-gris (Sam, 26/11/2026 : « garder le bleu (ou bleu gris) ») : distinct du bleu d'identification du
+   Webshop ; #4A6478 fait 5,5:1 sur son fond, 6,2:1 sur blanc. */
+.pco { --pco-web: #1B6FA8; --pco-comp: #8D1D2C; --pco-bur: #3f7a52; --pco-pret: #4A6478; font-size: 13px; color: var(--ink); }
 .pco-sp { flex: 1; }
 .pco-attente { padding: 40px 0; text-align: center; color: var(--muted); }
 .pco-err { margin: 0 0 12px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--danger); font-size: 12.5px; }
@@ -36,7 +38,7 @@
 .pco-canal { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-2); white-space: nowrap; }
 .pco-canal svg { width: 14px; height: 14px; }
 .pco-st-ok { background: rgba(63, 122, 82, 0.12); color: var(--green); }
-.pco-st-pret { background: rgba(27, 111, 168, 0.10); color: #1B5E8C; }
+.pco-st-pret { background: rgba(74, 100, 120, 0.12); color: var(--pco-pret); }
 .pco-st-prep { background: var(--prize-soft); color: var(--prize-ink); }
 .pco-st-neutre { background: var(--chip); color: var(--muted-2); }
 .pco-tchip { display: inline-flex; align-items: center; gap: 6px; max-width: 220px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 11.5px; white-space: nowrap; }
@@ -46,7 +48,7 @@
 .pco-acc { color: var(--accent); }
 .pco-rond { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: #fff; color: var(--muted-2); font-size: 11px; }
 .pco-rond.is-fait { background: var(--green); border-color: var(--green); color: #fff; }
-.pco-rond.is-pret { border-color: #1B6FA8; color: #1B5E8C; }
+.pco-rond.is-pret { border-color: var(--pco-pret); color: var(--pco-pret); }
 .pco-rond.is-prep { border-color: var(--prize); color: var(--prize-ink); }
 .pco-rond.is-vide { border-style: dashed; color: var(--faint); }
 
@@ -156,7 +158,7 @@
 .pco-prog { display: flex; gap: 3px; margin-top: 9px; }
 .pco-prog i { flex: 1; height: 5px; border-radius: 999px; background: var(--chip); }
 .pco-prog i.is-fait { background: var(--green); }
-.pco-prog i.is-pret { background: #1B6FA8; }
+.pco-prog i.is-pret { background: var(--pco-pret); }
 .pco-prog i.is-prep { background: var(--prize); }
 .pco-colcorps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px; background: var(--table-head); }
 .pco-colcorps > .pco-aide { color: var(--muted-2); }
