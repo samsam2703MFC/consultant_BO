@@ -185,7 +185,9 @@
 
 /* Le tiroir d'un bureau (26/11/2026, maquette A « even larger ») : par-dessus la liste, toute la hauteur de l'écran. */
 .pcl-tir-voile { position: fixed; inset: 0; z-index: 30; background: rgba(28, 26, 23, 0.22); }
-.pcl-tir { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(1080px, 94vw); display: flex; flex-direction: column; background: #fff; box-shadow: -24px 0 48px rgba(0, 0, 0, 0.16); animation: pcl-tir-in 0.18s ease-out; }
+.pcl-tir { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(1080px, 94vw); display: flex; flex-direction: column; background: #fff; box-shadow: -24px 0 48px rgba(0, 0, 0, 0.16); }
+/* L'entrée du tiroir, à l'ouverture seulement (pas à chaque rendu). */
+.pcl-tir.pcl-tir-entre { animation: pcl-tir-in 0.18s ease-out; }
 @keyframes pcl-tir-in { from { transform: translateX(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
 .pcl-tir-tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 26px 14px; border-bottom: 1px solid var(--line); }
 .pcl-tir-tete svg { width: 15px; height: 15px; }
@@ -217,3 +219,21 @@
   .pcl-membres { grid-template-columns: minmax(0, 1fr); }
   .pcl-tir-nav > button:not(.btn) { padding: 10px 5px; font-size: 12px; }
 }
+
+/* L'assistant « Ajouter un bureau » dans le tiroir large (26/11/2026) : le formulaire, et « Ce que l'on crée » à côté. */
+.pcl-tir-ass .pcl-stepper { padding: 14px 26px; }
+.pcl-ass-grille { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.pcl-ass-form .pcl-form2 { padding: 8px 0 12px; }
+.pcl-ass-form .pcl-pad { padding: 0 0 12px; }
+.pcl-ass-form .pcl-site .pcl-h { padding: 8px 0 0; }
+.pcl-ass-grille > .pcl-fiche { position: sticky; top: 0; }
+.pcl-geo { display: flex; flex-direction: column; gap: 2px; margin-top: -6px; }
+.pcl-geo:empty { display: none; }
+.pcl-geo button { text-align: left; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font: 12.5px 'Gotham', system-ui, sans-serif; color: var(--ink); cursor: pointer; }
+.pcl-geo button:hover { border-color: var(--accent); color: var(--accent); }
+.pcl-geo-etat { font-size: 11.5px; color: var(--muted); }
+.pcl-geo-etat.ok { color: var(--green); }
+.pcl-logo { display: flex; align-items: center; gap: 12px; }
+.pcl-logo img { max-height: 54px; max-width: 160px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: #fff; }
+.pcl-logo input[type="file"] { font: 12px 'Gotham', system-ui, sans-serif; }
+@media (max-width: 900px) { .pcl-ass-grille { grid-template-columns: minmax(0, 1fr); } }
