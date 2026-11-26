@@ -253,3 +253,16 @@
 .pcl-q-qr { flex: none; width: 128px; height: 128px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .pcl-q-qr svg { width: 100%; height: 100%; display: block; }
 .pcl-dv-statut input[type="radio"] { width: auto; flex: none; margin: 0; padding: 0; }
+
+/* Le générateur de liens du formulaire des bureaux (26/11/2026) : le QR, le lien du magasin choisi, ses gestes. */
+.pcl-lien { display: flex; gap: 18px; align-items: flex-start; margin: 12px 0 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--table-head); }
+.pcl-lien-qr { flex: none; width: 132px; height: 132px; padding: 8px; box-sizing: border-box; border-radius: 12px; background: #fff; border: 1px solid var(--line); }
+.pcl-lien-qr svg, .pcl-lien-qr img { width: 100%; height: 100%; display: block; }
+.pcl-lien-corps { flex: 1; min-width: 0; }
+.pcl-lien-titre { font-size: 15px; margin: 0 0 2px; }
+.pcl-lien-ligne { display: flex; gap: 12px; margin: 10px 0 8px; align-items: flex-end; flex-wrap: wrap; }
+.pcl-lien-mag { flex: 0 0 220px; margin: 0; }
+.pcl-lien-url { flex: 1 1 280px; margin: 0; }
+.pcl-lien-url input { font-size: 13px; color: var(--accent); }
+.pcl-lien .pcl-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) { .pcl-lien { flex-direction: column; } .pcl-lien-qr { width: 120px; height: 120px; } }
