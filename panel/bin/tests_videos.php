@@ -101,10 +101,27 @@ $v('le rail pose la place du carré, à côté d’Assistant IA ou de la Boîte 
 $tu = (string) file_get_contents("$dash/tutos.js");
 $v('tutos.js rend le carré et son annonce (plus de bulle en bas à droite)', str_contains($tu, 'carre()') && str_contains($tu, 'tu-annonce') && !str_contains($tu, 'tu-bulle'));
 $cat = (string) @file_get_contents(dirname(__DIR__, 2) . '/formation/public/formation/catalogue/catalogue.js');
-$v('la vidéothèque du catalogue de formation lit le même registre (#/videos)', str_contains($cat, "r.ecran === 'videos'") && str_contains($cat, 'dashboard/videos/') && str_contains($cat, 'carteVideotheque()'));
-$v('le lecteur du dashboard mène à la vidéothèque', str_contains($tu, '../formation/catalogue/#/videos'));
+$v('la médiathèque du catalogue de formation lit le même registre (#/videos)', str_contains($cat, "r.ecran === 'videos'") && str_contains($cat, 'dashboard/videos/') && str_contains($cat, 'carteVideotheque()'));
+$v('le lecteur du dashboard mène à la médiathèque', str_contains($tu, '../formation/catalogue/#/videos'));
 $v('le lecteur joue un passage (#t=debut,fin) et montre la page onglet par onglet', str_contains($tu, "'#t='") && str_contains($tu, 'function arbre(') && str_contains($tu, 'estPage'));
-$v('la vidéothèque montre une page onglet par onglet (#/videos/<page>)', str_contains($cat, 'function rendrePageVideos(') && str_contains($cat, "'#t='"));
+$v('la médiathèque montre une page onglet par onglet (#/videos/<page>)', str_contains($cat, 'function vCategorie(') && str_contains($cat, "'#t='"));
+// La médiathèque (26/11/2026) : sections du rail, pages, onglets, titres ; la recherche ; chaque page du registre rangée.
+$v('la médiathèque cherche (accents, synonymes, début de mot, faute de frappe) et classe titre, lieu, section, résumé',
+    str_contains($cat, 'function vChercher(') && str_contains($cat, 'var VSYN') && str_contains($cat, 'function vDist1(') && str_contains($cat, "normalize('NFD')") && str_contains($cat, 'id="ct-vq"'));
+$secs = []; $alias = [];
+if (preg_match('/var VSECTIONS = \[(.*?)\n  \];/s', $cat, $m)) { preg_match_all("/\['([a-z]+)', '/", $m[1], $mm); $secs = $mm[1]; }
+if (preg_match('/var VALIAS = \{([^}]*)\}/', $cat, $m)) { preg_match_all("/([a-z]+): '([a-z]+)'/", $m[1], $mm, PREG_SET_ORDER); foreach ($mm as $x) { $alias[$x[1]] = $x[2]; } }
+$horsSec = [];
+foreach ($videos as $x) {
+    if (!empty($x['niveau']) && $x['niveau'] !== 'page') { continue; }
+    $p0 = ($x['vues'] ?? ['?'])[0];
+    if (!in_array($alias[$p0] ?? $p0, $secs, true)) { $horsSec[] = ($x['id'] ?? '?') . " ($p0)"; }
+}
+$v('chaque vidéo de page se range dans une section de la médiathèque (VSECTIONS, VALIAS)', $secs !== [] && $horsSec === [], implode(', ', $horsSec));
+$v('les sections de la médiathèque ne nomment que des pages du dashboard', $pages === [] || array_diff($secs, $pages) === [], implode(', ', array_diff($secs, $pages)));
+$ccss = (string) @file_get_contents(dirname(__DIR__, 2) . '/formation/public/formation/catalogue/catalogue.css');
+$ccss = (string) strstr($ccss, '/* La médiathèque (26/11/2026)');   // la feuille de la médiathèque (les fiches produits gardent leur Gotham Medium)
+$v('catalogue.css, la médiathèque : aucune pilule, ni 500 ni 600', $ccss !== '' && !preg_match('/border-radius:\s*(999|9999)px/', $ccss) && !preg_match('/font-weight:\s*[56]00/', $ccss));
 $css = (string) file_get_contents("$dash/tutos.css");
 $v('tutos.css : aucune pilule', !preg_match('/border-radius:\s*(999|9999)px/', $css));
 $v('tutos.css : ni 500 ni 600', !preg_match('/font-weight:\s*[56]00|font:\s*[56]00/', $css));
