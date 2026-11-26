@@ -325,3 +325,4 @@
 2026-11-26T05:32:16Z Compte TF Buddy du magasin : le jeton doublé d'un cookie, contrôle après connexion
 2026-11-26T05:41:09Z Connexion TF Buddy du magasin : le clic après le code ne se perd plus, contrôle avant de fermer
 2026-11-26T05:53:23Z Connexion TF Buddy du magasin : la session n'est plus effacée à peine gardée
+2026-11-26T06:20:31Z Clients › Bureaux : la fiche d'un bureau dans un tiroir large, « Ajouter un site »
