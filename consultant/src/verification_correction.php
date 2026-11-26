@@ -6,13 +6,21 @@ declare(strict_types=1);
  * « dans les problèmes de recette, qu'on puisse en direct si possible corriger, ou un lien direct » — « tout, CEO
  * seul »). Maquette : docs/maquettes/recettes-correction ; plan : docs/plan-verification.md § 3.5.
  *
- * Le cockpit ÉCRIT au panel, avec son compte consultant, comme il écrit déjà les tâches et les réclamations. Les
- * routes d'écriture sont dans le swagger du panel mais SANS CONTRAT (« runtime routes ») : aucune forme de corps n'est
- * documentée. D'où une seule façon d'écrire, prudente :
+ * Le cockpit ÉCRIT au panel, avec son compte consultant, comme il écrit déjà les tâches et les réclamations. Depuis le
+ * swagger du 26/11/2026, les routes d'écriture ont un contrat (docs/audit-api-ecriture-recettes.md), et il ne fusionne
+ * pas, il REMPLACE :
+ *   - PATCH /recipes/{id} avec des lignes exige les DEUX listes (`materials`, `subrecipes`), remplace aussi les
+ *     préparations, et ignore les champs simples : le rendement part dans un second PATCH, sans liste ;
+ *   - PATCH /subrecipes/{id} avec des lignes exige aussi name, yield_quantity, id_unit, id_storage, id_category ; une
+ *     liste omise y est vidée et les préparations sont remises à zéro ;
+ *   - une portion n'a pas de fraction libre : seulement `portion_type` (ONE_QUARTER, ONE_HALF…) ;
+ *   - jamais de champ photo dans un PATCH de recette (bug documenté : les fichiers sont effacés).
+ * D'où une seule façon d'écrire, prudente :
  *
  *   1. lire l'objet tel que le panel le rend (GET /recipes/{id}, /subrecipes/{id}, /products/{id}, /product-portions/{id}) ;
- *   2. ne changer QUE la clé visée (la liste `materials` avec une quantité changée, `yield_quantity`, `id_recipe`…),
- *      dans la forme lue, et n'envoyer que les clés changées ;
+ *      GET /recipes/{id} ne rend pas le rendement d'une recette de produit : il se lit dans /recipes/{id}/cost ;
+ *   2. ne changer QUE la clé visée, puis envoyer le corps COMPLET qu'exige le contrat (vrcCorpsContrat) : la liste non
+ *      touchée et les préparations telles que lues, les champs simples d'une sous-recette ;
  *   3. relire l'objet et CONSTATER que le changement y est. Un 2xx sans changement visible est « sans effet » ;
  *   4. tout noter au registre `con_verif_correction` : l'avant (le corps inverse, pour « Annuler »), l'après, la route,
  *      le code HTTP, le résultat.
@@ -27,7 +35,8 @@ declare(strict_types=1);
  *   copier     — remplir une recette vide avec les lignes d'une recette proche ;
  *   rattacher  — rattacher une recette existante à un produit vendu sans recette (PATCH /products/{id}) ;
  *   portion    — la fraction d'une portion (PATCH /product-portions/{id}) ;
- *   prix       — le prix d'une matière dans un magasin (route réglable : `vrcFormatPrix`) ;
+ *   prix       — le prix d'une matière dans un magasin (route réglable : `vrcFormatPrix`), puis le food cost relu au
+ *                panel dans les recettes qui la portent, avant et après (vrcEffet) : on voit si le prix a pris ;
  *   recalculer — recalculer le coût des recettes d'un magasin (POST /shops/{id}/recipes/recalculate), sans retour ;
  *   horsRecette — marquer une matière « hors recette » : rien n'est écrit au panel, elle ne remonte plus.
  *
@@ -46,6 +55,16 @@ const VRC_CLES_REND = ['yield_quantity', 'yield'];
 const VRC_CLES_PART = ['portion_size', 'size', 'fraction', 'portion'];
 const VRC_CLES_LISTES = ['materials', 'subrecipes'];
 const VRC_GESTES = ['quantite', 'recette', 'rendement', 'copier', 'rattacher', 'portion', 'prix', 'recalculer', 'horsRecette'];
+/** Les champs simples qu'exige le PATCH des lignes d'une sous-recette (contrat du 26/11/2026). */
+const VRC_SOUS_SIMPLES = ['name', 'yield_quantity', 'id_unit', 'id_storage', 'id_category'];
+/** Ce qui repart avec les lignes sans être relu : les préparations reviennent sous une autre forme, l'identité ne change pas. */
+const VRC_NON_RELUS = ['preparation_types', 'preparation_steps', 'name', 'id_unit', 'id_storage', 'id_category'];
+/** Les types de portion du panel et leur fraction : il n'y en a pas d'autre (contrat du 26/11/2026). */
+const VRC_PORTIONS = ['ONE_EIGHTH' => 1 / 8, 'ONE_SIXTH' => 1 / 6, 'ONE_QUARTER' => 1 / 4, 'ONE_THIRD' => 1 / 3, 'ONE_HALF' => 1 / 2,
+    'TWO_THIRDS' => 2 / 3, 'THREE_QUARTERS' => 3 / 4];
+/** Le nombre de recettes dont le food cost est relu après un prix, par magasin (trois magasins au plus). */
+const VRC_EFFET_MAX = 30;
+const VRC_EFFET_MAGASINS = 3;
 
 /* ---------------------------------------------------------------------------------------------
  * Lire ce que le panel rend — fonctions pures (bin/tests_verification_correction.php)
@@ -146,9 +165,98 @@ function vrcLigneContrat(array $e, string $liste): ?array
     $o = ['id' => (int) substr($id, 1), 'quantity' => (float) $q];
     $lien = $e['connection_id'] ?? ($e['pivot']['id'] ?? null);
     if (is_numeric($lien)) { $o['connection_id'] = (int) $lien; }
+    // La perte ne vaut que pour une matière : le contrat exige zéro sur une sous-recette, on ne l'envoie donc pas.
     $perte = $e['waste_amount_perc'] ?? ($e['pivot']['waste_amount_perc'] ?? null);
-    if (is_numeric($perte)) { $o['waste_amount_perc'] = (float) $perte; }
+    if (is_numeric($perte) && $liste !== 'subrecipes') { $o['waste_amount_perc'] = (float) $perte; }
     return $o;
+}
+
+/** Les étapes de préparation comme PATCH les attend : des textes, dans l'ordre (GET rend {step_number, step_description}). */
+function vrcEtapesContrat(mixed $etapes): array
+{
+    $l = [];
+    foreach (array_values((array) $etapes) as $i => $e) {
+        if (is_string($e)) { $t = trim($e); $n = (float) $i; }
+        elseif (is_array($e)) { $t = trim((string) ($e['step_description'] ?? ($e['description'] ?? ''))); $n = is_numeric($e['step_number'] ?? null) ? (float) $e['step_number'] : (float) $i; }
+        else { continue; }
+        if ($t !== '') { $l[] = [$n, $i, $t]; }
+    }
+    usort($l, static fn ($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
+    return array_column($l, 2);
+}
+
+/** Les types de préparation comme PATCH les attend : {id, duration_second} (GET y ajoute le nom). */
+function vrcTypesContrat(mixed $types): array
+{
+    $l = [];
+    foreach ((array) $types as $t) { if (is_array($t) && is_numeric($t['id'] ?? null)) { $l[] = ['id' => (int) $t['id'], 'duration_second' => (int) ($t['duration_second'] ?? 0)]; } }
+    return $l;
+}
+
+/**
+ * Le corps qu'exige le contrat (swagger du 26/11/2026) pour des clés changées ($corps, celles de vrcModifier), à partir
+ * de l'objet lu ($o). Fonction pure. Rend :
+ *   lignes  — le PATCH des lignes, ou null : les DEUX listes (la non touchée telle que lue), les préparations telles
+ *             que lues et, pour une sous-recette, ses champs simples (le rendement changé y voyage) ;
+ *   simples — le PATCH des champs simples (le rendement d'une recette de produit), ou null : le panel les ignore dans
+ *             un PATCH de lignes ;
+ *   erreurs — ce qui empêche d'écrire sans rien perdre.
+ */
+function vrcCorpsContrat(string $objet, array $o, array $corps): array
+{
+    $simples = array_diff_key($corps, array_flip(VRC_CLES_LISTES));
+    $erreurs = [];
+    $lignes = null;
+    if (array_intersect_key($corps, array_flip(VRC_CLES_LISTES)) !== []) {
+        $lignes = [];
+        foreach (VRC_CLES_LISTES as $l) {
+            $src = array_values(array_filter((array) (array_key_exists($l, $corps) ? $corps[$l] : ($o[$l] ?? [])), 'is_array'));
+            $lignes[$l] = array_values(array_filter(array_map(static fn ($e) => vrcLigneContrat($e, $l), $src)));
+            $lues = array_filter((array) ($o[$l] ?? []), 'is_array');
+            $illisible = count($lignes[$l]) !== count($src) || array_filter($lues, static fn ($e) => vrcLigneContrat($e, $l) === null) !== [];
+            if ($illisible) { $erreurs[] = 'Une ligne de « ' . $l . ' » n’a pas d’identifiant ou de quantité lisible : la liste repartirait sans elle, rien n’est écrit.'; }
+        }
+        if ($objet === 'recette' && $lignes['materials'] === [] && $lignes['subrecipes'] === []) { $erreurs[] = 'Le panel refuse une recette de produit sans aucune ligne.'; }
+        // Les préparations repartent telles que lues ; absentes de la lecture, on ne les invente pas.
+        if (array_key_exists('preparation_types', $o)) { $lignes['preparation_types'] = vrcTypesContrat($o['preparation_types']); }
+        if (array_key_exists('preparation_steps', $o)) { $lignes['preparation_steps'] = vrcEtapesContrat($o['preparation_steps']); }
+        if ($objet === 'sousRecette') {
+            foreach (VRC_SOUS_SIMPLES as $k) {
+                $v = array_key_exists($k, $simples) ? $simples[$k] : ($o[$k] ?? null);
+                unset($simples[$k]);
+                if ($v === null || $v === '') { $erreurs[] = 'La sous-recette n’a pas été lue en entier (« ' . $k . ' » manque) : le panel exige ce champ avec ses lignes.'; continue; }
+                $lignes[$k] = $k === 'name' ? (string) $v : (is_numeric($v) ? $v + 0 : $v);
+            }
+        }
+    }
+    return ['lignes' => $lignes, 'simples' => $simples === [] ? null : $simples, 'erreurs' => $erreurs];
+}
+
+/** La fraction d'une portion telle que le panel la rend : son type, sa valeur de calcul, sa fraction ; null sinon. */
+function vrcFractionPortion(array $p): ?float
+{
+    $t = (string) ($p['portion_type'] ?? '');
+    if (isset(VRC_PORTIONS[$t])) { return VRC_PORTIONS[$t]; }
+    if (is_numeric($p['portion_calculation_value'] ?? null)) { return (float) $p['portion_calculation_value']; }
+    $f = $p['portion_fraction'] ?? null;
+    if (is_array($f) && is_numeric($f['numerator'] ?? null) && (float) ($f['denominator'] ?? 0) > 0) { return (float) $f['numerator'] / (float) $f['denominator']; }
+    $v = vrcCle($p, VRC_CLES_PART)[1];
+    return $v !== null && $v > 0 && $v < 1 ? $v : null;
+}
+
+/** Le type de portion du panel pour une fraction (1/8, 1/6, 1/4, 1/3, 1/2, 2/3, 3/4) ; null s'il n'existe pas. */
+function vrcTypePortion(float $f): ?string
+{
+    foreach (VRC_PORTIONS as $t => $v) { if (abs($v - $f) < 0.002) { return $t; } }
+    return null;
+}
+
+/** Une fraction lisible : « 1/4 », « 2/3 ». */
+function vrcFractionTexte(?float $f): string
+{
+    if ($f === null) { return '—'; }
+    foreach ([2, 3, 4, 6, 8] as $d) { $n = $f * $d; if (abs($n - round($n)) < 0.01) { return (int) round($n) . '/' . $d; } }
+    return vrcQte($f, '');
 }
 
 /** Pose une quantité dans une entrée, là où le panel la met (à plat ou dans son pivot). */
@@ -183,9 +291,9 @@ function vrcModifier(array $o, array $changements): array
             $n = (float) ($c['n'] ?? 0);
             if ($n <= 0) { $erreurs[] = 'Le rendement doit être positif.'; continue; }
             [$cr, $avant] = vrcCle($o, VRC_CLES_REND);
-            // Mesuré le 13/11/2026 : GET /recipes/{id} ne rend pas le rendement (seul /cost le dit). Sans clé lue, on
-            // n'écrit pas une clé devinée : le rendement se pose au panel.
-            if ($cr === null) { $erreurs[] = 'Le panel ne rend pas le rendement de cette recette (GET /recipes/{id}) : il se pose au panel.'; continue; }
+            // Mesuré le 13/11 et le 26/11/2026 : GET /recipes/{id} ne rend pas le rendement d'une recette de produit ;
+            // vrcObjet le reprend de /recipes/{id}/cost. Sans clé lue, on n'écrit pas une clé devinée.
+            if ($cr === null) { $erreurs[] = 'Le rendement de cette recette n’a été lu ni par GET /recipes/{id} ni par /recipes/{id}/cost : il se pose au panel.'; continue; }
             $corps[$cr] = $n;
             $lisible[] = 'Rendement ' . ($avant === null ? '—' : vrcQte($avant, '')) . ' → ' . vrcQte($n, '');
             continue;
@@ -384,11 +492,24 @@ function vrcChemin(string $objet, int $id): string
     };
 }
 
-/** Lit un objet du panel, déballé. */
+/** Lit un objet du panel, déballé. Une recette de produit reprend son rendement de /recipes/{id}/cost (GET ne le rend pas). */
 function vrcObjet(string $objet, int $id): ?array
 {
     $c = vrcChemin($objet, $id);
-    return $c === '' || $id <= 0 ? null : vrcDeballer(PanelApi::get($c));
+    $o = $c === '' || $id <= 0 ? null : vrcDeballer(PanelApi::get($c));
+    if ($o !== null && $objet === 'recette' && vrcCle($o, VRC_CLES_REND)[0] === null) {
+        $y = vrcRendementLu($id);
+        if ($y !== null) { $o['yield_quantity'] = $y; }
+    }
+    return $o;
+}
+
+/** Le rendement d'une recette lu par /recipes/{id}/cost ; null s'il ne s'y lit pas. */
+function vrcRendementLu(int $rid): ?float
+{
+    $c = PanelApi::get('/recipes/' . $rid . '/cost');
+    $c = is_array($c) && isset($c['data']) && is_array($c['data']) ? $c['data'] : $c;
+    return is_array($c) ? vfNum($c, ['yield_quantity']) : null;
 }
 
 /**
@@ -405,7 +526,10 @@ function vrcEcrireObjet(array $e): array
     if (!$ok) {
         $r['resultat'] = 'refuse'; $r['message'] = vrcMessage($res);
     } else {
-        $ecarts = vrcConstater($e['corps'], vrcObjet($e['objet'], (int) $e['id']));
+        // Une recette repart en entier (contrat) : on ne relit que ce qui devait changer, pas les préparations (rendues
+        // sous une autre forme) ni l'identité de la sous-recette.
+        $verifier = $e['verifier'] ?? (in_array($e['objet'], ['recette', 'sousRecette'], true) ? array_values(array_diff(array_keys($e['corps']), VRC_NON_RELUS)) : array_keys($e['corps']));
+        $ecarts = vrcConstater(array_intersect_key($e['corps'], array_flip($verifier)), vrcObjet($e['objet'], (int) $e['id']));
         $r['resultat'] = $ecarts === [] ? 'ok' : 'sans_effet';
         $r['message'] = $ecarts === [] ? '' : 'Le panel a répondu 2xx, mais à la relecture ' . implode(', ', $ecarts) . ' n’a pas changé : le format attendu par le panel diffère.';
     }
@@ -426,7 +550,8 @@ function vrcLigneRegistre(array $r): array
         'coutAvant' => isset($r['cout_avant']) ? (float) $r['cout_avant'] : ($r['coutAvant'] ?? null), 'coutApres' => isset($r['cout_apres']) ? (float) $r['cout_apres'] : ($r['coutApres'] ?? null),
         'annulable' => ($r['resultat'] ?? '') === 'ok' || ($r['resultat'] ?? '') === 'local' ? (($r['inverse'] ?? null) !== null && ($r['annule_par'] ?? null) === null && ($r['annule_de'] ?? null) === null) : false,
         'annuleDe' => isset($r['annule_de']) ? (int) $r['annule_de'] : null, 'annulePar' => isset($r['annule_par']) ? (int) $r['annule_par'] : null,
-        'reponse' => $r['reponse'] ?? null, 'httpPanel' => $r['httpPanel'] ?? null, 'corps' => isset($r['corps']) && is_array($r['corps']) ? $r['corps'] : null];
+        'reponse' => $r['reponse'] ?? null, 'httpPanel' => $r['httpPanel'] ?? null, 'corps' => isset($r['corps']) && is_array($r['corps']) ? $r['corps'] : null,
+        'effet' => isset($r['effet']) && is_array($r['effet']) ? $r['effet'] : null];
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -609,11 +734,15 @@ function vrcGeste(array $b): array
         if ($apercu) {
             $ec = [];
             foreach ($shops as $s) { $ec[] = vrcPrixPlan($s, $mid, $prix, $format, $fid) + ['annulable' => $format === null && ($avants[$s][(string) $mid]['prix'] ?? null) > 0, 'resume' => vrcPrixResume($matiere, $s, $prix, $avants[$s][(string) $mid]['prix'] ?? null)]; }
-            return ['apercu' => true, 'resume' => $matiere . ' : ' . count($shops) . ' magasin(s), ' . vfEur($prix, 4) . ' l’unité de base', 'ecritures' => $ec];
+            $nRec = count(vrcRecettesDeMatiere($mid, [(int) ($b['rid'] ?? 0)]));
+            return ['apercu' => true, 'resume' => $matiere . ' : ' . count($shops) . ' magasin(s), ' . vfEur($prix, 4) . ' l’unité de base'
+                . ($nRec > 0 ? ' ; puis le food cost de ' . $nRec . ' recette(s) relu au panel, avant et après' . (count($shops) > VRC_EFFET_MAGASINS ? ' (dans les ' . VRC_EFFET_MAGASINS . ' premiers magasins)' : '') : ''), 'ecritures' => $ec];
         }
         $faites = [];
-        foreach ($shops as $s) {
-            $faites[] = vrcLigneRegistre(vrcEcrirePrix(['shop' => $s] + $base, $s, $mid, $prix, $matiere, $avants[$s][(string) $mid]['prix'] ?? null, $format, $fid));
+        foreach ($shops as $i => $s) {
+            // Le food cost relu avant / après dans les recettes qui portent la matière : les premiers magasins seulement.
+            $faites[] = vrcLigneRegistre(vrcEcrirePrix(['shop' => $s] + $base, $s, $mid, $prix, $matiere, $avants[$s][(string) $mid]['prix'] ?? null, $format, $fid,
+                $i < VRC_EFFET_MAGASINS, (int) ($b['rid'] ?? 0)));
         }
         $okN = count(array_filter($faites, static fn ($f) => $f['resultat'] === 'ok'));
         // Le format qui a pris devient celui de tous les prix, si on le demande (« Garder ce format »).
@@ -643,19 +772,32 @@ function vrcGeste(array $b): array
     if ($geste === 'portion') {
         $fr = (float) ($b['fraction'] ?? 0);
         if ($pid <= 0 || !($fr > 0 && $fr < 1)) { http_response_code(400); return ['error' => 'produit et fraction (entre 0 et 1) requis']; }
+        // Le contrat (26/11/2026) : pas de fraction libre, seulement un type (ONE_QUARTER…).
+        $type = vrcTypePortion($fr);
+        if ($type === null) { return ['ok' => false, 'error' => 'Le panel ne connaît que les parts 1/8, 1/6, 1/4, 1/3, 1/2, 2/3 et 3/4 : une part de ' . vrcQte($fr, '') . ' ne se pose pas.']; }
         $portions = array_values(array_filter(array_map(static fn ($x) => vrcDeballer($x, ['data', 'portion']), analyseListe(PanelApi::get('/products/' . $pid . '/portions'))), 'is_array'));
+        $actives = array_values(array_filter($portions, static fn ($x) => !array_key_exists('is_active', $x) || (int) $x['is_active'] === 1));
         $cible = null;
-        foreach ($portions as $x) { [, $v] = vrcCle($x, VRC_CLES_PART); if ($v === null || $v <= 0 || $v >= 1) { $cible = $x; break; } }
-        if ($cible === null && count($portions) === 1) { $cible = $portions[0]; }
-        $poid = $cible !== null ? (int) ($cible['id'] ?? 0) : (int) ($b['portion'] ?? 0);
-        if ($poid <= 0) { return ['ok' => false, 'error' => 'La portion du produit n’a pas été trouvée au panel (/products/' . $pid . '/portions) : à régler au panel.']; }
-        $o = vrcObjet('portion', $poid) ?? $cible ?? [];
-        [$cleP, $avant] = vrcCle($o, VRC_CLES_PART);
-        $cleP ??= 'portion_size';
-        $resume = 'Portion ' . $poid . ' : part ' . ($avant === null ? '—' : vrcQte($avant, '')) . ' → ' . vrcQte($fr, '');
-        $e = $base + ['objet' => 'portion', 'id' => $poid, 'objetId' => $poid, 'corps' => [$cleP => $fr], 'inverse' => [$cleP => $avant], 'resume' => $resume];
-        if ($apercu) { return ['apercu' => true, 'resume' => $resume, 'ecritures' => [['methode' => 'PATCH', 'route' => vrcChemin('portion', $poid), 'corps' => $e['corps'], 'annulable' => true]]]; }
+        foreach ($portions as $x) { if ((int) ($x['id'] ?? 0) === (int) ($b['portion'] ?? 0)) { $cible = $x; } }
+        if ($cible === null) { foreach ($actives as $x) { if (vrcFractionPortion($x) === null) { $cible = $x; break; } } }
+        if ($cible === null && count($actives) === 1) { $cible = $actives[0]; }
+        $poid = $cible !== null ? (int) ($cible['id'] ?? 0) : 0;
+        if ($poid <= 0) {
+            return ['ok' => false, 'error' => $portions === [] ? 'Le produit n’a pas de portion au panel (/products/' . $pid . '/portions) : à créer au panel.'
+                : 'Le produit a plusieurs portions au panel (' . implode(', ', array_map(static fn ($x) => vrcFractionTexte(vrcFractionPortion($x)), $actives)) . ') : précisez laquelle, ou réglez-la au panel.'];
+        }
+        $o = vrcObjet('portion', $poid) ?? $cible;
+        $avantType = isset(VRC_PORTIONS[(string) ($o['portion_type'] ?? '')]) ? (string) $o['portion_type'] : null;
+        if ($avantType === $type) {
+            return ['ok' => false, 'error' => 'La portion ' . $poid . ' est déjà de ' . vrcFractionTexte($fr) . ' au panel : c’est la fiche du produit qui ne la rend pas (products/available), à vérifier au panel.'];
+        }
+        $resume = 'Portion ' . $poid . ' : part ' . vrcFractionTexte(vrcFractionPortion($o)) . ' → ' . vrcFractionTexte($fr);
+        $e = $base + ['objet' => 'portion', 'id' => $poid, 'objetId' => $poid, 'corps' => ['portion_type' => $type], 'inverse' => $avantType === null ? null : ['portion_type' => $avantType], 'resume' => $resume];
+        if ($apercu) { return ['apercu' => true, 'resume' => $resume, 'ecritures' => [['methode' => 'PATCH', 'route' => vrcChemin('portion', $poid), 'corps' => $e['corps'], 'annulable' => $avantType !== null]]]; }
         $r = vrcEcrireObjet($e);
+        if ($r['resultat'] === 'refuse' && (int) ($r['http'] ?? 0) === 409) {
+            $r['message'] .= ' — le type d’une portion déjà vendue ne change plus : créez la portion voulue au panel, puis désactivez l’ancienne.';
+        }
         if ($r['resultat'] === 'ok') { vrcOublierDispo(); }
         return ['ok' => $r['resultat'] === 'ok', 'ecritures' => [vrcLigneRegistre($r)], 'liste' => $r['resultat'] === 'ok' ? vrcApres([], $sid) : null];
     }
@@ -683,8 +825,21 @@ function vrcGeste(array $b): array
         $m = vrcModifier($o, $chs);
         foreach ($m['erreurs'] as $x) { $erreurs[] = $x; }
         if ($m['corps'] === []) { continue; }
-        $plans[] = $base + ['objet' => $objet, 'id' => $id, 'objetId' => $id, 'corps' => $m['corps'], 'inverse' => $m['inverse'],
-            'resume' => ($objet === 'sousRecette' ? 'Sous-recette « ' . vfTxt($o, ['name']) . ' » : ' : '') . implode(' · ', $m['lisible'])];
+        // Le corps complet du contrat : les lignes d'un côté, le rendement d'une recette de produit de l'autre.
+        $c = vrcCorpsContrat($objet, $o, $m['corps']);
+        $inv = vrcCorpsContrat($objet, $o, $m['inverse']);
+        foreach ($c['erreurs'] as $x) { $erreurs[] = $x; }
+        $prefixe = $objet === 'sousRecette' ? 'Sous-recette « ' . vfTxt($o, ['name']) . ' » : ' : '';
+        $rend = array_values(array_filter($m['lisible'], static fn ($t) => str_starts_with($t, 'Rendement ')));
+        $autres = array_values(array_diff($m['lisible'], $rend));
+        if ($c['lignes'] !== null) {
+            $plans[] = $base + ['objet' => $objet, 'id' => $id, 'objetId' => $id, 'corps' => $c['lignes'], 'inverse' => $inv['lignes'],
+                'resume' => $prefixe . implode(' · ', $objet === 'sousRecette' ? $m['lisible'] : $autres)];
+        }
+        if ($c['simples'] !== null) {
+            $plans[] = $base + ['objet' => $objet, 'id' => $id, 'objetId' => $id, 'corps' => $c['simples'], 'inverse' => $inv['simples'],
+                'resume' => $prefixe . implode(' · ', $rend !== [] ? $rend : $m['lisible'])];
+        }
     }
     if ($erreurs !== [] || $plans === []) { return ['ok' => false, 'error' => $erreurs !== [] ? implode(' ', $erreurs) : 'Rien à changer.']; }
     if ($apercu) {
@@ -746,10 +901,89 @@ function vrcPrixResume(string $matiere, int $sid, float $prix, ?float $avant): s
     return $matiere . ' à ' . (vfMagasins()[$sid] ?? ('magasin ' . $sid)) . ' : ' . ($avant > 0 ? vfEur((float) $avant, 4) . ' → ' : '') . vfEur($prix, 4) . ' l’unité de base';
 }
 
-/** Écrit le prix d'une matière dans un magasin, le relit, le note. L'inverse (l'ancien prix) n'existe que s'il y avait un prix. */
-function vrcEcrirePrix(array $base, int $sid, int $mid, float $prix, string $matiere, ?float $avant, ?array $format = null, int $fid = 0): array
+/**
+ * Les recettes qui portent une matière, d'après les recettes déjà lues (cache `vfRec:*`, sous-recettes dépliées) :
+ * [rid => nom], celles de $plus d'abord, VRC_EFFET_MAX au plus.
+ */
+function vrcRecettesDeMatiere(int $mid, array $plus = []): array
+{
+    $out = [];
+    foreach ($plus as $r) { if ((int) $r > 0) { $out[(int) $r] = ''; } }
+    if ($mid <= 0) { return $out; }
+    try {
+        foreach (Db::rows("SELECT `key`, value FROM ceo_app_setting WHERE `key` LIKE 'vfRec:%' LIMIT 1500") as $row) {
+            if (count($out) >= VRC_EFFET_MAX) { break; }
+            $v = json_decode((string) $row['value'], true);
+            foreach ((array) ($v['v']['lignes'] ?? []) as $l) {
+                if ((int) ($l['mid'] ?? 0) === $mid) { $out[(int) substr((string) $row['key'], 6)] = (string) ($v['v']['nom'] ?? ''); break; }
+            }
+        }
+    } catch (Throwable $e) { /* sans cache : seules les recettes demandées sont relues */ }
+    return array_slice($out, 0, VRC_EFFET_MAX, true);
+}
+
+/**
+ * Le food cost (coût matière d'une pièce, rendement compris) de recettes dans un magasin, relu au panel
+ * (/shops/{id}/recipes/{rid}/cost), avec le prix de la matière $mid dans chacune : [rid => [nom, cout, complet, prix]].
+ */
+function vrcCoutsRecettes(int $sid, array $rids, int $mid = 0): array
+{
+    $chemins = [];
+    foreach ($rids as $rid) { if ((int) $rid > 0) { $chemins[(int) $rid] = '/shops/' . $sid . '/recipes/' . (int) $rid . '/cost'; } }
+    if ($sid <= 0 || $chemins === []) { return []; }
+    $out = [];
+    foreach (PanelApi::getParallele($chemins, 4, 20) as $rid => $r) {
+        if (is_array($r) && isset($r['data']['elements']) && is_array($r['data'])) { $r = $r['data']; }
+        if (!is_array($r) || !isset($r['elements']) || !is_array($r['elements'])) { continue; }
+        $c = vfRecetteCompacte($r, $sid);
+        $px = null;
+        foreach ($c['lignes'] as $l) { if ($mid > 0 && (int) $l['mid'] === $mid) { $px = $l['prix']; break; } }
+        $out[(int) $rid] = ['nom' => (string) $c['nom'], 'cout' => $c['coutNet'], 'complet' => (bool) $c['complet'], 'prix' => $px];
+    }
+    return $out;
+}
+
+/** Le food cost avant / après, recette par recette, ce qui a le plus bougé d'abord. Fonction pure. */
+function vrcEffet(array $avant, array $apres): array
+{
+    $l = [];
+    foreach ($apres as $rid => $a) {
+        $b = $avant[$rid] ?? [];
+        $ca = isset($b['cout']) ? (float) $b['cout'] : null; $cp = isset($a['cout']) ? (float) $a['cout'] : null;
+        $ecart = $ca !== null && $cp !== null ? round($cp - $ca, 6) : null;
+        $l[] = ['rid' => (int) $rid, 'nom' => (string) ($a['nom'] ?? '') !== '' ? (string) $a['nom'] : (string) ($b['nom'] ?? ''), 'avant' => $ca, 'apres' => $cp, 'ecart' => $ecart,
+            'pct' => $ecart !== null && $ca > 0 ? round($ecart / $ca * 100, 2) : null, 'complet' => (bool) ($a['complet'] ?? false),
+            'prixAvant' => $b['prix'] ?? null, 'prixApres' => $a['prix'] ?? null];
+    }
+    usort($l, static fn ($x, $y) => [abs((float) ($y['ecart'] ?? 0)), $x['nom']] <=> [abs((float) ($x['ecart'] ?? 0)), $y['nom']]);
+    return $l;
+}
+
+/** Une phrase sur l'effet : combien de food costs ont bougé, les trois plus forts, et un drapeau si rien n'a bougé. */
+function vrcEffetResume(array $effet, string $matiere = ''): string
+{
+    if ($effet === []) { return ''; }
+    $bouge = array_values(array_filter($effet, static fn ($x) => $x['ecart'] !== null && abs($x['ecart']) > 1e-6));
+    $n = count($effet);
+    if ($bouge === []) {
+        $prixVu = array_filter($effet, static fn ($x) => $x['prixApres'] !== null && $x['prixAvant'] !== null && abs((float) $x['prixApres'] - (float) $x['prixAvant']) > 1e-9) !== [];
+        return 'Food cost relu au panel sur ' . $n . ' recette(s) : aucun n’a bougé' . ($prixVu ? ', alors que le prix de la matière y a changé.' : ' : la recette ne lit pas ce prix (prix du fournisseur, ou coût saisi à la main).');
+    }
+    $fmt = static fn ($x) => $x['nom'] . ' ' . vfEur($x['avant'], 3) . ' → ' . vfEur($x['apres'], 3) . ($x['pct'] !== null ? ' (' . ($x['pct'] > 0 ? '+' : '') . number_format($x['pct'], 1, ',', ' ') . ' %)' : '');
+    return 'Food cost relu au panel : ' . count($bouge) . ' recette(s) sur ' . $n . ' ont bougé — ' . implode(' ; ', array_map($fmt, array_slice($bouge, 0, 3)))
+        . (count($bouge) > 3 ? ' ; …' : '') . (count($bouge) < $n ? ' ; ' . ($n - count($bouge)) . ' sans changement.' : '.');
+}
+
+/**
+ * Écrit le prix d'une matière dans un magasin, le relit, le note. L'inverse (l'ancien prix) n'existe que s'il y avait un
+ * prix. Avec $effet, le food cost des recettes qui portent la matière est relu avant et après (vrcEffet) : la réponse
+ * le porte (`effet`), le message le résume, et le coût de la recette $rid va au registre (coût avant → après).
+ */
+function vrcEcrirePrix(array $base, int $sid, int $mid, float $prix, string $matiere, ?float $avant, ?array $format = null, int $fid = 0, bool $effet = false, int $rid = 0): array
 {
     $pl = vrcPrixPlan($sid, $mid, $prix, $format, $fid);
+    $rids = $effet && $pl['permise'] ? array_keys(vrcRecettesDeMatiere($mid, [$rid])) : [];
+    $coutsAvant = $rids !== [] ? vrcCoutsRecettes($sid, $rids, $mid) : [];
     if (!$pl['permise']) {
         $r = $base + ['objet' => 'prixMagasin', 'objetId' => $mid, 'shop' => $sid, 'methode' => $pl['methode'], 'route' => $pl['route'], 'corps' => $pl['corps'], 'http' => 0,
             'resume' => vrcPrixResume($matiere, $sid, $prix, $avant), 'resultat' => 'refuse', 'message' => 'Route refusée par le cockpit : seules les routes de prix du panel sont permises.'];
@@ -771,6 +1005,15 @@ function vrcEcrirePrix(array $base, int $sid, int $mid, float $prix, string $mat
         $lu = (mfMatieresApi([$sid], true)[$sid][(string) $mid]['prix'] ?? null);
         $r['resultat'] = $lu !== null && abs((float) $lu - $prix) <= 0.0001 + 1e-6 * $prix ? 'ok' : 'sans_effet';
         $r['message'] = $r['resultat'] === 'ok' ? '' : 'Le panel a accepté, mais le prix du magasin relu vaut ' . ($lu === null ? 'toujours rien' : vfEur((float) $lu, 4)) . ' : la route ou le corps sont à régler (réglage vrcFormatPrix, dans le registre).';
+        // L'effet sur les food costs, relu au panel (le prix recalcule les recettes du magasin, selon le contrat).
+        if ($rids !== []) {
+            $r['effet'] = vrcEffet($coutsAvant, vrcCoutsRecettes($sid, $rids, $mid));
+            $phrase = vrcEffetResume($r['effet'], $matiere);
+            $r['message'] = trim($r['message'] . ($r['message'] !== '' && $phrase !== '' ? ' ' : '') . $phrase);
+            foreach ($r['effet'] as $x) {
+                if ($x['rid'] === $rid || ($rid <= 0 && $x['ecart'] !== null)) { $r['coutAvant'] ??= $x['avant']; $r['coutApres'] ??= $x['apres']; break; }
+            }
+        }
     }
     $r['id'] = vrcNoter($r);
     return $r;
@@ -835,7 +1078,7 @@ function wr_verification_annuler(): array
         if ($n['resultat'] !== 'ok') { return ['ok' => false, 'ecritures' => [vrcLigneRegistre($n)], 'error' => 'L’annulation n’a pas pris : ' . ($n['message'] ?? '')]; }
     } elseif ((string) $r['objet'] === 'prixMagasin') {
         if (!is_array($inv) || !isset($inv['prix'])) { return ['ok' => false, 'error' => 'L’ancien prix n’a pas été gardé.']; }
-        $n = vrcEcrirePrix($base + ['objetId' => (int) $inv['mid']], (int) $inv['sid'], (int) $inv['mid'], (float) $inv['prix'], (string) ($inv['matiere'] ?? ''), null);
+        $n = vrcEcrirePrix($base + ['objetId' => (int) $inv['mid']], (int) $inv['sid'], (int) $inv['mid'], (float) $inv['prix'], (string) ($inv['matiere'] ?? ''), null, null, 0, true);
         $n['resume'] = 'Annulation de la correction n° ' . $id . ' : ' . $n['resume'];
         if ($n['resultat'] !== 'ok') { return ['ok' => false, 'ecritures' => [vrcLigneRegistre($n)], 'error' => 'L’annulation n’a pas pris : ' . ($n['message'] ?? '')]; }
         vrcOublier('vmpTable');

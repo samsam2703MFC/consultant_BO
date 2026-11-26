@@ -49,8 +49,8 @@ export function tplOuverte(O, ncol, x){
 function tplFaite(e, x, avecRoute){
   const { esc } = x;
   return `<tr class="${e.annule ? 'rc-annulee' : (e.ok ? 'rc-fait' : 'rc-rate')}"><td class="g">${esc(e.quand)}</td><td class="g nom"><b>${esc(e.nom)}</b></td>
-    <td class="g rc-w">${esc(e.resume)}</td><td>${esc(e.cout)}</td>${avecRoute ? `<td class="g"><span class="rc-code">${esc(e.route)}</span></td>` : ''}
-    <td class="g rc-w">${e.ok ? `<span class="rc-ok"><i>✓</i>${esc(e.resultat)}</span>` : `<span class="${e.annule ? 'vr-mu' : 'rc-ko'}">${e.annule ? '' : '✕ '}${esc(e.resultat)}${e.message ? ' : ' + esc(e.message) : ''}</span>`}${e.annulErreur ? `<span class="rc-ko"> — ${esc(e.annulErreur)}</span>` : ''}</td>
+    <td class="g rc-w">${esc(e.resume)}${(e.effet || []).length ? `<div class="vr-mu">${e.effet.map(f => `${f.bouge ? '<b>' : ''}${esc(f.nom)}${f.bouge ? '</b>' : ''} : ${esc(f.txt)}`).join('<br>')}</div>` : ''}</td><td>${esc(e.cout)}</td>${avecRoute ? `<td class="g"><span class="rc-code">${esc(e.route)}</span></td>` : ''}
+    <td class="g rc-w">${e.ok ? `<span class="rc-ok"><i>✓</i>${esc(e.resultat)}</span>${e.message ? `<span class="vr-mu"> — ${esc(e.message)}</span>` : ''}` : `<span class="${e.annule ? 'vr-mu' : 'rc-ko'}">${e.annule ? '' : '✕ '}${esc(e.resultat)}${e.message ? ' : ' + esc(e.message) : ''}</span>`}${e.annulErreur ? `<span class="rc-ko"> — ${esc(e.annulErreur)}</span>` : ''}</td>
     <td>${e.annuler ? `<button class="rc-btn gris" ${x.A(e.annuler)}${e.annulEnCours ? ' disabled' : ''}>${e.annulEnCours ? 'Annulation…' : 'Annuler'}</button>` : (e.lien ? `<a class="vr-lien" href="${esc(e.lien)}" target="_blank" rel="noopener">Ouvrir au panel ↗</a>` : '')}</td></tr>`;
 }
 

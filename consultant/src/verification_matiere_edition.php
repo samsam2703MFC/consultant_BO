@@ -295,7 +295,8 @@ function wr_verification_matiere(): array
         $okP = $rt['resultat'] === 'ok';
     }
     if ($okP) {
-        foreach ($prix as $s => $p) { $faites[] = vrcLigneRegistre(vrcEcrirePrix(['geste' => 'prix', 'cle' => 'mat:' . $mid, 'pid' => null, 'nom' => $nom, 'shop' => $s], $s, $mid, $p, $nom, $avants[$s][(string) $mid]['prix'] ?? null)); }
+        $i = 0;   // le food cost relu avant / après (vrcEffet), dans les premiers magasins
+        foreach ($prix as $s => $p) { $faites[] = vrcLigneRegistre(vrcEcrirePrix(['geste' => 'prix', 'cle' => 'mat:' . $mid, 'pid' => null, 'nom' => $nom, 'shop' => $s], $s, $mid, $p, $nom, $avants[$s][(string) $mid]['prix'] ?? null, null, 0, $i++ < VRC_EFFET_MAGASINS)); }
     }
     $ok = $faites !== [] && array_reduce($faites, static fn ($a, $f) => $a && $f['resultat'] === 'ok', true);
     if (array_filter($faites, static fn ($f) => $f['resultat'] === 'ok') !== []) {
