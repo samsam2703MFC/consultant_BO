@@ -1108,6 +1108,23 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   écriture au serveur : `tools/formation/apercu_tablette.js <module> <sortie> <fichiers.json…>` (partie 1, sommaire,
   parties critiques, dernière partie, NL, onglet Manuel au bon bouton).
 
+### Passe du 22/11/2026 (première passe ; réponse de Sam : « Toujours encoder avec screenshot »)
+
+- 0.0.61 « Le dashboard : la Boîte mail et ses modes IA » — à valider, v1.0 (14 parties, 1 photo).
+- 0.0.62 « Le dashboard : la demande au bureau » — à valider, v1.0 (12 parties, 3 photos, noms floutés).
+- 0.0.63 « Le dashboard : l'onglet Frais » — à valider, v1.0 (13 parties, 5 photos).
+- Règle de Sam : chaque article encodé porte des captures de l'écran en ligne ; le dashboard se capture en lecture
+  seule (`data/formation/nouveautes/captures_lecture_seule.js`, voir `LISEZMOI.md` › Captures).
+
+### Passe du 23/11/2026 (réponse de Sam : « Encoder »)
+
+- 0.0.64 « Le dashboard : Mon coffre-fort » — à valider, v1.0 (12 parties, 6 photos ; coffre de Halle vide, pas de
+  capture du tiroir ni de l'assistant).
+- 0.0.65 « Le dashboard : Formations et suivi » — à valider, v1.0 (11 parties, 4 photos ; aucune formation continue
+  diffusée, pas de capture d'une formation ouverte). Recoupe les deux articles de `data/formation/continue/`, toujours
+  pas encodés (leurs codes proposés 0.0.61 et 0.0.62 sont pris : ils recevront le premier code libre).
+- Captures : `data/formation/nouveautes/captures_coffre_formation.js` (lecture seule).
+
 ## FO-41, pôle vente : « Les leviers du chiffre d'affaires » (16/11/2026, encodé le 18/11/2026)
 
 - Client : « faire une mini formation pour expliquer les leviers de développement du chiffre d'affaires et l'intégrer
@@ -1554,6 +1571,26 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
 - **À savoir** : l'éditeur du Manuel exige le néerlandais pour publier une nouvelle version ; une FC créée par le
   formulaire du siège démarre avec une étape « À rédiger » à compléter dans l'éditeur (FR et NL).
 - Tests : `php formation/bin/tests_formation_continue.php` (37 points).
+
+### Passe du 24/11/2026 (réponse de Sam : « Push all online »)
+
+- 0.0.66 « Le dashboard : Mon équipe (responsabilités et horaires) » — à valider, v1.0 (13 parties, 6 photos, noms
+  floutés). La publication demandée n'a pas été faite : le PATCH du statut a été refusé par le contrôle des permissions
+  de la session.
+- 0.0.67 « Le dashboard : les vidéos d'instruction » — à valider, v1.0 (7 parties, 3 photos). Classement refusé par le
+  serveur (422 : « codes inconnus du référentiel v25 », compétence `C-ID.FB`) : la fiche est encodée sans classement ;
+  pas publiée.
+
+### Passe du 26/11/2026 (publication automatique, décision de Sam du 24/11/2026)
+
+- 0.0.61 à 0.0.65 (Boîte mail, demande au bureau, Frais, Mon coffre-fort, Formations et suivi) — publiées, v1.0.
+- 0.0.66 « Le dashboard : Mon équipe (responsabilités, planning, fiches, primes) » — publiée, v1.1 (ETP et CA par ETP,
+  fiche complète d'une personne, onglet Primes).
+- 0.0.67 « Le dashboard : les vidéos d'instruction » — publiée, v1.1 (onglet par onglet ; classement D6.3, sans
+  `C-ID.FB`).
+- 0.0.68 « Le dashboard : Vendre › Clients (particuliers, entreprises B2B, bureaux) » — publiée, v1.0 (thème 10).
+- 0.0.69 « L'autocontrôle qualité d'un produit, sur la tablette » — publiée, v1.0 (thème 8).
+- 0.0.70 « Le dashboard : la page Commandes » — publiée, v1.0 (thème 9).
 
 ## L'autocontrôle qualité par produit, dans l'app Cuisine — maquettes (24/11/2026)
 

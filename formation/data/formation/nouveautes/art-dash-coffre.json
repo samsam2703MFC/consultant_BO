@@ -1,0 +1,363 @@
+{
+  "aConfirmer": [
+    "Captures : le coffre de Halle est vide le 23/11/2026. Le tiroir d’un document, l’assistant qui a lu un document et la frise des 12 mois ne se montrent qu’avec des documents : ils sont décrits d’après le code (panel/public/dashboard/coffre.js), sans capture.",
+    "Accès : le coffre n’impose pas de connexion (il suit le réglage d’accès du cockpit, comme le reste du dashboard, décision de Sam notée dans consultant/src/coffre.php). L’accès « responsable » de l’article (bouton Franchisé de la tablette) est un choix, à confirmer.",
+    "Taille et sortes de fichiers acceptées : la limite vient du réglage du serveur (docMaxOctets) et s’affiche dans le message « Trop lourd : … au plus » ; elle n’est pas écrite dans l’article. Même chose pour la liste des extensions.",
+    "Le consultant dépose le DIP, le contrat, les annexes, le dossier d’implantation, les pièces Finances et l’attestation de formation initiale depuis le cockpit (fiche franchisé › Documents) : ce côté n’est pas décrit ici (écran du siège).",
+    "Classement : sous-catégorie D8.3 (Obligations légales) choisie pour les pièces légales ; D7.3 (Obligations financières franchise) serait possible. Formations FO-05, FO-32 et FO-36. Durée (« 20 min de lecture ») estimée, pas lue dans le code."
+  ],
+  "id": "art-dash-coffre",
+  "code": "0.0.64",
+  "type": "Article",
+  "dossier": "05",
+  "version": "1.0",
+  "statut": "a_valider",
+  "langue_origine": "FR",
+  "poste": "vente",
+  "moment": null,
+  "acces": "responsable",
+  "duree": "20 min de lecture, avec le coffre ouvert sur son magasin",
+  "titre": {
+    "fr": "Le dashboard : Mon coffre-fort",
+    "nl": "Het dashboard: Mon coffre-fort (de kluis)"
+  },
+  "objectif": {
+    "fr": "Savoir ce que le coffre-fort du magasin doit contenir et qui dépose quoi, lire son état (pièces reçues, à traiter, prochaine grande date), déposer une pièce légale avec l’assistant, tenir les grandes dates (bail, assurances, autorisations) et retrouver, ouvrir ou envoyer un document.",
+    "nl": "Weten wat de kluis van de winkel moet bevatten en wie wat oplaadt, de staat ervan lezen (ontvangen stukken, te behandelen, volgende belangrijke datum), een wettelijk stuk opladen met de assistent, de belangrijke data bijhouden (huur, verzekeringen, vergunningen) en een document terugvinden, openen of versturen."
+  },
+  "pour": {
+    "fr": "Franchisé, locataire gérant, manager et adjoint manager (P7 à P12), et candidat franchisé. À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05, avec le coffre-fort ouvert sur son magasin.",
+    "nl": "Franchisenemer, locataire-gérant, manager en adjunct-manager (P7 tot P12), en kandidaat-franchisenemer. Te lezen na « Het winkeldashboard begrijpen » (0.0.15), in opleiding FO-05, met de kluis open op de eigen winkel."
+  },
+  "classement": {
+    "souscat": "D8.3",
+    "phases": [
+      "ouverture",
+      "operationnel"
+    ],
+    "postes": [
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12"
+    ],
+    "competences": [
+      "C-PILOTAGE.Franchise",
+      "C-TRANS.Conformité"
+    ],
+    "formations": [
+      "FO-05",
+      "FO-32",
+      "FO-36"
+    ],
+    "checklists": []
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Avant de commencer",
+        "nl": "Voor je begint"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Où se trouve le coffre",
+            "nl": "Waar de kluis staat"
+          },
+          "texte": {
+            "fr": "Au bureau : tout en bas du rail, « Mon coffre-fort », à droite de la roue des paramètres.\nLe chiffre à côté : les documents que le magasin n’a pas encore ouverts.\nAu téléphone : le bouton « Mon coffre-fort » en bas de page (« contrat, légal, formation, rapports de visite ») ; la même page, en une colonne.\nUn coffre par boutique.\nIl rassemble les documents du magasin, ceux du consultant et les rapports de visite envoyés.\nEn haut de la page : « Vos documents et ceux de votre consultant. Chaque ouverture est notée. »",
+            "nl": "Op kantoor: helemaal onderaan de rail, « Mon coffre-fort », rechts van het tandwiel van de instellingen.\nHet cijfer ernaast: de documenten die de winkel nog niet geopend heeft.\nOp de telefoon: de knop « Mon coffre-fort » onderaan de pagina (« contrat, légal, formation, rapports de visite »); dezelfde pagina, in één kolom.\nEén kluis per winkel.\nZe bundelt de documenten van de winkel, die van de consultant en de verstuurde bezoekrapporten.\nBovenaan de pagina: « Vos documents et ceux de votre consultant. Chaque ouverture est notée. »"
+          },
+          "critique": false,
+          "photo": "art-dash-coffre-lien.jpg",
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "L’état du coffre, en trois blocs",
+            "nl": "De staat van de kluis, in drie blokken"
+          },
+          "texte": {
+            "fr": "« Votre coffre » : le cercle compte les pièces attendues reçues, sur le total (« 0 sur 16 » pour un coffre neuf).\n« À traiter » : trois points au plus, dans cet ordre : une pièce à renouveler ou échue, les nouveaux documents, les pièces légales qui manquent.\nChaque point a son bouton : « Déposer la nouvelle », « Voir », « Compléter ».\nRien à faire : « Rien à traiter : votre coffre est à jour. »\n« Prochaine grande date » : la plus proche, avec le temps qui reste, et « 📅 Toutes les grandes dates ».",
+            "nl": "« Votre coffre »: de cirkel telt de ontvangen verwachte stukken, op het totaal (« 0 sur 16 » voor een nieuwe kluis).\n« À traiter »: hoogstens drie punten, in deze volgorde: een stuk dat vernieuwd moet worden of vervallen is, de nieuwe documenten, de ontbrekende wettelijke stukken.\nElk punt heeft zijn knop: « Déposer la nouvelle », « Voir », « Compléter ».\nNiets te doen: « Rien à traiter : votre coffre est à jour. »\n« Prochaine grande date »: de dichtstbijzijnde, met de resterende tijd, en « 📅 Toutes les grandes dates »."
+          },
+          "critique": false,
+          "photo": "art-dash-coffre-etat.jpg",
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Les dossiers et les pièces attendues",
+        "nl": "De mappen en de verwachte stukken"
+      },
+      "etapes": [
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Six dossiers, et qui les remplit",
+            "nl": "Zes mappen, en wie ze vult"
+          },
+          "texte": {
+            "fr": "À gauche : « Tout », les six dossiers, puis « Grandes dates ».\n« Contrat & DIP » (par le consultant) : DIP et accusé de réception, Contrat de franchise signé, Annexes (zone, cahier des charges), Dossier d’implantation.\n« Légal » (par le magasin) : les sept pièces légales.\n« Formation » : Attestation de formation initiale (le consultant), Formations continues validées (d’office).\n« Rapports de visite » : chaque rapport envoyé après une visite du consultant, d’office.\n« Finances » (par le consultant) : Dossier d’analyse du mois, Budget de l’année, Relevé des redevances.\n« Courriers & réunions » : libre, les comptes rendus et les courriers échangés avec le réseau.\nChaque dossier montre ses pièces reçues sur le total (« 0/7 pièces »).",
+            "nl": "Links: « Tout », de zes mappen, dan « Grandes dates ».\n« Contrat & DIP » (door de consultant): DIP en ontvangstbewijs, ondertekend franchisecontract, bijlagen (zone, lastenboek), vestigingsdossier.\n« Légal » (door de winkel): de zeven wettelijke stukken.\n« Formation »: attest van de initiële opleiding (de consultant), gevalideerde permanente opleidingen (automatisch).\n« Rapports de visite »: elk rapport dat na een bezoek van de consultant verstuurd wordt, automatisch.\n« Finances » (door de consultant): analysedossier van de maand, budget van het jaar, overzicht van de royalty’s.\n« Courriers & réunions »: vrij, de verslagen en de briefwisseling met het netwerk.\nElke map toont de ontvangen stukken op het totaal (« 0/7 pièces »)."
+          },
+          "critique": false,
+          "photo": "art-dash-coffre-contenu.jpg",
+          "video": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Les sept pièces légales du magasin",
+            "nl": "De zeven wettelijke stukken van de winkel"
+          },
+          "texte": {
+            "fr": "Statuts de la société ; Extrait de la BCE ; Attestation d’assurance RC exploitation ; Assurance incendie ; Bail commercial ; Autorisation AFSCA ; Permis d’environnement.\nLe magasin les dépose ; le consultant peut aussi.\nUne carte par pièce : « à déposer par vous », « Déposer ».\nUne pièce qui ne concerne pas le magasin : « pas concernée ? ». Elle ne compte plus dans le coffre ; « la réintégrer » la remet.\nUne pièce déposée par le consultant ne s’écarte que par lui.",
+            "nl": "Statuten van de vennootschap; uittreksel uit de KBO; attest verzekering BA uitbating; brandverzekering; handelshuurovereenkomst; FAVV-toelating; omgevingsvergunning.\nDe winkel laadt ze op; de consultant kan het ook.\nEén kaart per stuk: « à déposer par vous », « Déposer ».\nEen stuk dat de winkel niet aangaat: « pas concernée ? ». Het telt niet meer mee in de kluis; « la réintégrer » zet het terug.\nEen stuk dat de consultant oplaadt, kan alleen hij weglaten."
+          },
+          "critique": false,
+          "photo": "art-dash-coffre-legal.jpg",
+          "video": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Les états d’une pièce",
+            "nl": "De statussen van een stuk"
+          },
+          "texte": {
+            "fr": "Reçue (✓) : le document est là.\nÀ renouveler : son échéance tombe dans les 60 jours.\nÉchue : l’échéance est passée.\nManquante : pas encore déposée.\nÉcartée : « pas concernée ».\nUne pièce se dépose une fois, puis se renouvelle à son échéance : « Déposer la nouvelle ».\nUn document sans échéance reste « déposé ».",
+            "nl": "Ontvangen (✓): het document is er.\nTe vernieuwen: de vervaldatum valt binnen 60 dagen.\nVervallen: de vervaldatum is voorbij.\nOntbrekend: nog niet opgeladen.\nWeggelaten: « pas concernée ».\nEen stuk wordt één keer opgeladen en daarna vernieuwd op de vervaldatum: « Déposer la nouvelle ».\nEen document zonder vervaldatum blijft « déposé »."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Déposer un document",
+        "nl": "Een document opladen"
+      },
+      "etapes": [
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "La fenêtre du dépôt",
+            "nl": "Het venster om op te laden"
+          },
+          "texte": {
+            "fr": "« ＋ Déposer un document » en haut, « Déposer » sur une pièce, ou « ＋ Déposer une pièce légale » dans Légal.\nLe fichier : le glisser, ou cliquer pour le choisir ; au téléphone, une photo.\n« C’est quelle pièce ? » : une des sept pièces légales, ou « Autre document ».\nPuis le titre, la date du document, l’échéance et une note (facultatif).\n« Déposer » : le document rejoint le coffre ; le consultant le voit aussi.\nUn fichier refusé le dit : trop lourd, ou sorte de fichier refusée.",
+            "nl": "« ＋ Déposer un document » bovenaan, « Déposer » op een stuk, of « ＋ Déposer une pièce légale » in Légal.\nHet bestand: slepen, of klikken om het te kiezen; op de telefoon, een foto.\n« C’est quelle pièce ? »: een van de zeven wettelijke stukken, of « Autre document ».\nDan de titel, de datum van het document, de vervaldatum en een notitie (facultatief).\n« Déposer »: het document komt in de kluis; de consultant ziet het ook.\nEen geweigerd bestand zegt het: te zwaar, of soort bestand geweigerd."
+          },
+          "critique": false,
+          "photo": "art-dash-coffre-depot.jpg",
+          "video": null
+        },
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "L’assistant lit le document",
+            "nl": "De assistent leest het document"
+          },
+          "texte": {
+            "fr": "Dès le dépôt, l’assistant lit les PDF, les photos et les fichiers Word.\nIl propose un titre lisible, l’échéance, la pièce qu’il reconnaît (« L’assistant y reconnaît cette pièce : elle est choisie pour vous. ») et ses grandes dates.\nChaque date vient avec la phrase du document qui la justifie, et sa page.\nQuelques secondes, parfois une minute pour un long bail.\nLes dates déjà passées ne sont pas cochées.\nOn décoche, on corrige une date, on change le titre ou la pièce.\n« Ranger le document et n grandes dates » garde le tout ; sans date cochée, « Terminer ».\nUn autre fichier est rangé tel quel : une date s’ajoute alors à la main.\nSur un document déjà rangé : « ✦ Relever les dates ».",
+            "nl": "Bij het opladen leest de assistent de pdf’s, de foto’s en de Word-bestanden.\nHij stelt een leesbare titel voor, de vervaldatum, het stuk dat hij herkent (« L’assistant y reconnaît cette pièce : elle est choisie pour vous. ») en de belangrijke data.\nElke datum komt met de zin uit het document die ze staaft, en de pagina.\nEnkele seconden, soms een minuut voor een lange huurovereenkomst.\nData die al voorbij zijn, worden niet aangevinkt.\nJe vinkt af, verbetert een datum, wijzigt de titel of het stuk.\n« Ranger le document et n grandes dates » bewaart alles; zonder aangevinkte datum, « Terminer ».\nEen ander bestand wordt bewaard zoals het is: een datum voeg je dan met de hand toe.\nOp een document dat al in de kluis zit: « ✦ Relever les dates »."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "8",
+          "titre": {
+            "fr": "Le bail commercial : des dates calculées",
+            "nl": "De handelshuur: berekende data"
+          },
+          "texte": {
+            "fr": "Dans un bail, l’assistant lit la prise de cours, la durée et le préavis.\nLes autres dates se calculent : la fin de chaque triennat, le dernier jour pour donner congé, la fenêtre de la demande de renouvellement, la fin du bail.\nRègle générale des baux commerciaux : 9 ans au moins ; congé possible à la fin de chaque triennat, avec un préavis de 6 mois ; demande de renouvellement entre le 18e et le 15e mois avant la fin.\nDurée ou préavis non lus : 9 ans et 6 mois par défaut, et la fenêtre le dit.\nÀ l’écran : « Les dates du bail suivent la règle générale des baux commerciaux : à vérifier dans votre bail. »",
+            "nl": "In een huurovereenkomst leest de assistent de aanvangsdatum, de duur en de opzegtermijn.\nDe andere data worden berekend: het einde van elke driejarige periode, de laatste dag om op te zeggen, het venster voor de hernieuwingsaanvraag, het einde van de huur.\nAlgemene regel van de handelshuur: minstens 9 jaar; opzeggen kan op het einde van elke driejarige periode, met een opzeg van 6 maanden; hernieuwing aanvragen tussen de 18e en de 15e maand voor het einde.\nDuur of opzeg niet gelezen: standaard 9 jaar en 6 maanden, en het venster zegt het.\nOp het scherm: « Les dates du bail suivent la règle générale des baux commerciaux : à vérifier dans votre bail. »"
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Les grandes dates",
+        "nl": "De belangrijke data"
+      },
+      "etapes": [
+        {
+          "numero": "9",
+          "titre": {
+            "fr": "Lire les grandes dates",
+            "nl": "De belangrijke data lezen"
+          },
+          "texte": {
+            "fr": "Le bouton « 📅 Grandes dates » (en haut), ou « Grandes dates » sous les dossiers.\nUne grande date oblige le magasin à agir ou change ses droits : triennat, préavis, renouvellement, échéance d’assurance, autorisation…\nPar année, la prochaine en tête ; les passées sont repliées.\nChaque date dit d’où elle vient : calculée, relevée par l’assistant, échéance du document, ajoutée par une personne.\nEn or : dans les quatre mois (120 jours), ou en cours.\nLes échéances des documents s’y ajoutent d’office.\nAvec des dates à venir : la frise des 12 prochains mois s’affiche sous l’état du coffre.",
+            "nl": "De knop « 📅 Grandes dates » (bovenaan), of « Grandes dates » onder de mappen.\nEen belangrijke datum verplicht de winkel om te handelen of verandert zijn rechten: driejarige periode, opzeg, hernieuwing, vervaldatum van een verzekering, vergunning…\nPer jaar, de volgende bovenaan; de voorbije zijn ingeklapt.\nElke datum zegt waar ze vandaan komt: berekend, gevonden door de assistent, vervaldatum van het document, toegevoegd door iemand.\nIn goud: binnen vier maanden (120 dagen), of lopend.\nDe vervaldata van de documenten komen er automatisch bij.\nMet komende data verschijnt de tijdlijn van de volgende 12 maanden onder de staat van de kluis."
+          },
+          "critique": false,
+          "photo": "art-dash-coffre-dates.jpg",
+          "video": null
+        },
+        {
+          "numero": "10",
+          "titre": {
+            "fr": "Ajouter ou retirer une date",
+            "nl": "Een datum toevoegen of verwijderen"
+          },
+          "texte": {
+            "fr": "« ＋ Ajouter une date » : Sorte, Titre (ex. « Contrôle AFSCA annuel »), Date, Jusqu’au (facultatif), Document (facultatif), Note.\n« Ajouter » range la date.\nLes sortes : congé, triennat, renouvellement, fin et prise de cours du bail ; indexation du loyer ; fin et préavis du contrat ; échéance d’assurance ; autorisation, permis, contrôle ; autre.\n« × » retire une date rangée, après confirmation.\nL’échéance d’un document ne se retire pas ici : elle suit le document.",
+            "nl": "« ＋ Ajouter une date »: Sorte, Titre (bv. « Contrôle AFSCA annuel »), Date, Jusqu’au (facultatief), Document (facultatief), Note.\n« Ajouter » bewaart de datum.\nDe soorten: opzeg, driejarige periode, hernieuwing, einde en aanvang van de huur; indexering van de huur; einde en opzeg van het contract; vervaldatum van een verzekering; vergunning, controle; andere.\n« × » verwijdert een bewaarde datum, na bevestiging.\nDe vervaldatum van een document verwijder je hier niet: ze volgt het document."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Retrouver, ouvrir, envoyer",
+        "nl": "Terugvinden, openen, versturen"
+      },
+      "etapes": [
+        {
+          "numero": "11",
+          "titre": {
+            "fr": "Le tiroir d’un document",
+            "nl": "De lade van een document"
+          },
+          "texte": {
+            "fr": "Un clic sur un document ouvre son tiroir, à droite.\nL’aperçu (PDF, photo), puis « Ouvrir », « Télécharger », « ✉️ Joindre à un e-mail ».\n« Joindre à un e-mail » ouvre la Boîte mail du magasin, le document en pièce jointe.\nUne pièce du magasin : « Remplacer » ; un autre document lisible : « ✦ Relever les dates ».\nPuis la date, l’échéance, la pièce, qui l’a déposé et quand, ses grandes dates.\n« Qui l’a ouvert » : chaque ouverture, téléchargement ou envoi par mail est noté, avec le nom ; le siège est signalé.\nUn rapport de visite : « Lire le rapport ↗ » l’ouvre dans « Mon suivi ».",
+            "nl": "Een klik op een document opent zijn lade, rechts.\nDe preview (pdf, foto), dan « Ouvrir », « Télécharger », « ✉️ Joindre à un e-mail ».\n« Joindre à un e-mail » opent de mailbox van de winkel, met het document als bijlage.\nEen stuk van de winkel: « Remplacer »; een ander leesbaar document: « ✦ Relever les dates ».\nDan de datum, de vervaldatum, het stuk, wie het opgeladen heeft en wanneer, de belangrijke data.\n« Qui l’a ouvert »: elke opening, download of verzending per mail wordt genoteerd, met de naam; het hoofdkantoor wordt vermeld.\nEen bezoekrapport: « Lire le rapport ↗ » opent het in « Mon suivi »."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "12",
+          "titre": {
+            "fr": "Nouveau, filtres et recherche",
+            "nl": "Nieuw, filters en zoeken"
+          },
+          "texte": {
+            "fr": "« nouveau » : tant que le magasin n’a pas ouvert le document. Ce que le magasin dépose lui-même n’est pas nouveau pour lui.\nRapports de visite : « à lire », puis « lu ».\n« Tout » : les filtres Tous, Nouveaux, À renouveler, Déposés par moi ; les groupes « Ce mois-ci » et « Avant » ; « tout afficher » au-delà de 12 lignes.\n« Chercher un document… » cherche dans les titres, les détails et les noms des dossiers.\n« ↻ Relire » relit le coffre.",
+            "nl": "« nouveau »: zolang de winkel het document niet geopend heeft. Wat de winkel zelf oplaadt, is voor hem niet nieuw.\nBezoekrapporten: « à lire », dan « lu ».\n« Tout »: de filters Tous, Nouveaux, À renouveler, Déposés par moi; de groepen « Ce mois-ci » en « Avant »; « tout afficher » boven 12 regels.\n« Chercher un document… » zoekt in de titels, de details en de namen van de mappen.\n« ↻ Relire » leest de kluis opnieuw."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Rien n’est rangé sans accord : l’assistant propose le titre, la pièce et les grandes dates ; la personne coche, corrige, puis range.",
+      "nl": "Niets wordt bewaard zonder akkoord: de assistent stelt de titel, het stuk en de belangrijke data voor; de persoon vinkt aan, verbetert en bewaart dan."
+    },
+    {
+      "fr": "Les dates d’un bail sont calculées selon la règle générale des baux commerciaux (9 ans, préavis de 6 mois, renouvellement du 18e au 15e mois avant la fin) : toujours les vérifier dans le bail.",
+      "nl": "De data van een huurovereenkomst worden berekend volgens de algemene regel van de handelshuur (9 jaar, opzeg van 6 maanden, hernieuwing van de 18e tot de 15e maand voor het einde): altijd nakijken in de huurovereenkomst."
+    },
+    {
+      "fr": "Une pièce passe « à renouveler » 60 jours avant son échéance : déposer la nouvelle avant qu’elle soit échue.",
+      "nl": "Een stuk wordt « à renouveler » 60 dagen voor de vervaldatum: de nieuwe opladen voor het vervallen is."
+    },
+    {
+      "fr": "Chaque ouverture est notée, avec le nom : le consultant voit le coffre et ce que le magasin y dépose.",
+      "nl": "Elke opening wordt genoteerd, met de naam: de consultant ziet de kluis en wat de winkel erin oplaadt."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Qui dépose le contrat de franchise signé et le DIP dans le coffre ?",
+        "nl": "Wie laadt het ondertekende franchisecontract en het DIP op in de kluis?"
+      },
+      "choix": {
+        "fr": [
+          "Le magasin, dans Légal",
+          "Le consultant, dans Contrat & DIP",
+          "L’assistant, d’office"
+        ],
+        "nl": [
+          "De winkel, in Légal",
+          "De consultant, in Contrat & DIP",
+          "De assistent, automatisch"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "L’attestation d’assurance RC du magasin échoit dans 45 jours. Que montre le coffre ?",
+        "nl": "Het attest BA-verzekering van de winkel vervalt over 45 dagen. Wat toont de kluis?"
+      },
+      "choix": {
+        "fr": [
+          "Rien : elle est encore valable",
+          "Elle est échue",
+          "Elle est « à renouveler », avec « Déposer la nouvelle »"
+        ],
+        "nl": [
+          "Niets: ze is nog geldig",
+          "Ze is vervallen",
+          "Ze is « à renouveler », met « Déposer la nouvelle »"
+        ]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {
+        "fr": "L’assistant a lu le bail et propose ses grandes dates. Que faut-il faire ?",
+        "nl": "De assistent heeft de huurovereenkomst gelezen en stelt de belangrijke data voor. Wat moet je doen?"
+      },
+      "choix": {
+        "fr": [
+          "Vérifier les dates dans le bail, décocher ou corriger, puis « Ranger »",
+          "Rien : elles sont rangées d’office",
+          "Les recopier à la main dans « Ajouter une date »"
+        ],
+        "nl": [
+          "De data nakijken in de huurovereenkomst, afvinken of verbeteren, dan « Ranger »",
+          "Niets: ze worden automatisch bewaard",
+          "Ze met de hand overnemen in « Ajouter une date »"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Le magasin n’a pas de permis d’environnement. Que faire de cette pièce ?",
+        "nl": "De winkel heeft geen omgevingsvergunning. Wat doe je met dit stuk?"
+      },
+      "choix": {
+        "fr": [
+          "La laisser manquante",
+          "Déposer un document vide",
+          "« pas concernée ? » : elle ne compte plus dans le coffre"
+        ],
+        "nl": [
+          "Ze laten ontbreken",
+          "Een leeg document opladen",
+          "« pas concernée ? »: ze telt niet meer mee in de kluis"
+        ]
+      },
+      "bonne": 2
+    }
+  ]
+}

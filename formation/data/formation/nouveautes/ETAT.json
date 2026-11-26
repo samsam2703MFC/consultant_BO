@@ -1,9 +1,654 @@
 {
   "brancheEnLigne": "claude/deploiement-application-serveur-lmz1bm",
-  "dernierCommitLu": "9a997ce2be7dd2bff2da0e77d5e6d682aa54940a",
-  "dernierCommitLuLe": "2026-11-16T20:49:20+00:00",
-  "passeLe": null,
-  "prochainNumero": 1,
-  "themes": [],
-  "ecartes": []
+  "dernierCommitLu": "ce02b8e9abfb38f3f34be28407cda8a170ad5d9b",
+  "dernierCommitLuLe": "2026-11-26T05:21:57+01:00",
+  "passeLe": "2026-11-26",
+  "prochainNumero": 11,
+  "themes": [
+    {
+      "n": 1,
+      "theme": "Le dashboard : la Boîte mail et ses modes IA",
+      "id": "art-boite-mail",
+      "fichier": "data/formation/nouveautes/art-boite-mail.json",
+      "sources": [
+        "a07c91d4 Mise en ligne : la boîte mail (archives créées, sélection multiple, rangement par l'IA)",
+        "d1908a48 Mise en ligne : les modes IA de la boîte mail (briefing, pilote, radar)",
+        "6088239b Mise en ligne : les dossiers de Corbais reconnus, la boîte sans vignettes"
+      ],
+      "etat": "publie",
+      "proposeLe": "2026-11-22",
+      "valideLe": "2026-11-22",
+      "reponse": "Toujours encoder avec screenshot",
+      "encodeLe": "2026-11-22",
+      "code": "0.0.61",
+      "version": "1.0",
+      "statut": "publiee",
+      "note": "encodé avec captures du dashboard en ligne (lecture seule), à la demande de Sam",
+      "publieLe": "2026-11-26"
+    },
+    {
+      "n": 2,
+      "theme": "Le dashboard : la demande au bureau",
+      "id": "art-demandes-bureau",
+      "fichier": "data/formation/nouveautes/art-demandes-bureau.json",
+      "sources": [
+        "c888e5ad Helpdesk : SMS au bureau, date limite du consultant, réclamations fournisseur (20/11)",
+        "e4023a3c Panel : « Mes demandes » s'ouvre sur le filtre « Ouvertes » (20/11)",
+        "a413eb0a Helpdesk : relances tant que pas en cours (21/11)",
+        "44802262 Helpdesk : demande urgente, SMS au franchisé à la réponse (21/11)"
+      ],
+      "etat": "publie",
+      "proposeLe": "2026-11-22",
+      "valideLe": "2026-11-22",
+      "reponse": "Toujours encoder avec screenshot",
+      "encodeLe": "2026-11-22",
+      "code": "0.0.62",
+      "version": "1.0",
+      "statut": "publiee",
+      "note": "encodé avec captures du dashboard en ligne (lecture seule), à la demande de Sam",
+      "publieLe": "2026-11-26"
+    },
+    {
+      "n": 3,
+      "theme": "Le dashboard : l'onglet Frais",
+      "id": "art-dash-frais",
+      "fichier": "data/formation/nouveautes/art-dash-frais.json",
+      "sources": [
+        "5acb3420 Frais : ajouter un frais au panel, pour le mois ou toute l'année (21/11)",
+        "af4ddd2e Frais : le libellé saisi au panel comme poste, la TVA du formulaire appliquée (21/11)",
+        "4f851e8f Frais : retirer « indiqué le … » sous le poste du tableau (21/11)"
+      ],
+      "etat": "publie",
+      "proposeLe": "2026-11-22",
+      "valideLe": "2026-11-22",
+      "reponse": "Toujours encoder avec screenshot",
+      "encodeLe": "2026-11-22",
+      "code": "0.0.63",
+      "version": "1.0",
+      "statut": "publiee",
+      "note": "encodé avec captures du dashboard en ligne (lecture seule), à la demande de Sam",
+      "publieLe": "2026-11-26"
+    },
+    {
+      "n": 4,
+      "theme": "Le dashboard : Mon coffre-fort",
+      "id": "art-dash-coffre",
+      "fichier": "data/formation/nouveautes/art-dash-coffre.json",
+      "sources": [
+        "696fc94f Mise en ligne : formation continue, coffre-fort et grandes dates, pièces jointes de la Boîte mail",
+        "adf344b9 Mise en ligne : le coffre-fort v2",
+        "7a71553e Mise en ligne : les paramètres dans une roue"
+      ],
+      "etat": "publie",
+      "proposeLe": "2026-11-23",
+      "valideLe": "2026-11-23",
+      "reponse": "Encoder",
+      "encodeLe": "2026-11-23",
+      "code": "0.0.64",
+      "version": "1.0",
+      "statut": "publiee",
+      "publieLe": "2026-11-26"
+    },
+    {
+      "n": 5,
+      "theme": "Le dashboard : Formations et suivi",
+      "id": "art-dash-formation",
+      "fichier": "data/formation/nouveautes/art-dash-formation.json",
+      "sources": [
+        "696fc94f Mise en ligne : formation continue, coffre-fort et grandes dates, pièces jointes de la Boîte mail",
+        "5b07b99c Mise en ligne : Formations et suivi"
+      ],
+      "etat": "publie",
+      "proposeLe": "2026-11-23",
+      "note": "recoupe les deux articles rédigés le 22/11 et pas encore encodés : data/formation/continue/ (art-nouveau-produit, art-fonctionnement-formations)",
+      "valideLe": "2026-11-23",
+      "reponse": "Encoder",
+      "encodeLe": "2026-11-23",
+      "code": "0.0.65",
+      "version": "1.0",
+      "statut": "publiee",
+      "publieLe": "2026-11-26"
+    },
+    {
+      "n": 6,
+      "theme": "Le dashboard : Mon équipe (responsabilités et horaires)",
+      "id": "art-dash-equipe",
+      "fichier": "data/formation/nouveautes/art-dash-equipe.json",
+      "sources": [
+        "65123230 Mise en ligne : Mon équipe dans le dashboard franchisé",
+        "6e4ebb9c Mise en ligne : Mon équipe avec le compte admin de l'ERP en reprise",
+        "c9827f06 Mise en ligne : étiquettes des temps morts courts",
+        "11cdb559 Mise en ligne : le tableau de la semaine et la fenêtre d'un service"
+      ],
+      "etat": "publie",
+      "proposeLe": "2026-11-24",
+      "note": "6 photos, noms et initiales des employés floutés (captures_equipe_videos.js) ; options éteintes à Halle, non capturées ; publication (PATCH statut) refusée par le contrôle des permissions de la session, reste « à valider » ; v1.1 le 26/11 : ETP et CA par ETP, fiche complète d’une personne, onglet Primes (mises en ligne 71bbdc43, d062030c, 8c4c0269, 3046c820) ; 4 photos de plus, noms floutés",
+      "valideLe": "2026-11-24",
+      "reponse": "Push all online",
+      "encodeLe": "2026-11-24",
+      "code": "0.0.66",
+      "version": "1.1",
+      "statut": "publiee",
+      "publieLe": "2026-11-26"
+    },
+    {
+      "n": 7,
+      "theme": "Le dashboard : les vidéos d’instruction",
+      "id": "art-dash-videos",
+      "fichier": "data/formation/nouveautes/art-dash-videos.json",
+      "sources": [
+        "e83d6917 Mise en ligne : les vidéos d'instruction du dashboard magasin et leur bulle",
+        "32717fa0 Mise en ligne : le carré des vidéos à côté d'Assistant IA",
+        "8977a6a9 Mise en ligne : la vidéothèque du catalogue de formation, « Plus tard » pour la journée",
+        "0ab1c2cb Mise en ligne : l'annonce d'une nouvelle vidéo en bulle minimaliste",
+        "9819715d Mise en ligne : une vidéo d'instruction par entrée du rail"
+      ],
+      "etat": "publie",
+      "proposeLe": "2026-11-24",
+      "note": "3 photos ; classement refusé par le serveur (422, compétence C-ID.FB inconnue du référentiel v25) : la fiche est sans classement ; pas publiée ; v1.1 le 26/11 : onglet par onglet, fonction par fonction (1153d4cb, 8705a6d5) ; classement D6.3 sans C-ID.FB",
+      "valideLe": "2026-11-24",
+      "reponse": "Push all online",
+      "encodeLe": "2026-11-24",
+      "code": "0.0.67",
+      "version": "1.1",
+      "statut": "publiee",
+      "publieLe": "2026-11-26"
+    },
+    {
+      "n": 8,
+      "theme": "L’autocontrôle qualité d’un produit, sur la tablette",
+      "id": "art-autocontrole",
+      "fichier": "data/formation/nouveautes/art-autocontrole.json",
+      "sources": [
+        "ff7e1e65 Mise en ligne : l'autocontrôle qualité (tablette du magasin, résultats et grilles au siège)",
+        "2026-11-24T12:24:01Z Autocontrôle qualité : la tablette du magasin"
+      ],
+      "etat": "publie",
+      "redigeLe": "2026-11-26",
+      "publieLe": "2026-11-26",
+      "code": "0.0.69",
+      "version": "1.0",
+      "statut": "publiee",
+      "note": "5 photos en mode essai (&essai=1) ; grilles d’exemple"
+    },
+    {
+      "n": 9,
+      "theme": "Le dashboard : la page Commandes",
+      "id": "art-dash-commandes",
+      "fichier": "data/formation/nouveautes/art-dash-commandes.json",
+      "sources": [
+        "dc6bd62d Mise en ligne : la page Commandes du dashboard (Liste et Tournées)",
+        "ec747f6c Mise en ligne : Commandes, les vues Semaine et Mois",
+        "e770a50f Commandes : un jour sans commande n'est pas une panne",
+        "9fd4d141 Mise en ligne : la lecture des livraisons de TF Buddy",
+        "eab1755e / de052ced compte TF Buddy du magasin"
+      ],
+      "etat": "publie",
+      "redigeLe": "2026-11-26",
+      "publieLe": "2026-11-26",
+      "code": "0.0.70",
+      "version": "1.0",
+      "statut": "publiee",
+      "note": "6 photos, noms des clients floutés ; Halle sans tournée ni commande Bureau"
+    },
+    {
+      "n": 10,
+      "theme": "Le dashboard : Vendre › Clients (particuliers, entreprises B2B, bureaux)",
+      "id": "art-dash-clients",
+      "fichier": "data/formation/nouveautes/art-dash-clients.json",
+      "sources": [
+        "de471d36 Mise en ligne : Vendre › Clients",
+        "eab1755e Mise en ligne : le compte TF Buddy du magasin dans Clients et Commandes",
+        "de052ced Mise en ligne : connexion TF Buddy du magasin, la limite dite et le code SMS repris"
+      ],
+      "etat": "publie",
+      "redigeLe": "2026-11-26",
+      "publieLe": "2026-11-26",
+      "code": "0.0.68",
+      "version": "1.0",
+      "statut": "publiee",
+      "note": "5 photos, clients floutés ; Bureaux non capturé (connexion du compte du magasin requise)"
+    }
+  ],
+  "ecartes": [
+    {
+      "sujet": "Atelier de production : demandes [338]–[366] (commandes, proforma, Poczta, palettes, Śledzenie partii, Ścieżka cen, Stan ogólny, prévision 13 semaines, lots matières KSeF, échantillons QR, procédures SOP [353], tablette de bureau, kiosque atelier, réclamations au carton, heures de nuit)",
+      "sources": [
+        "17/11 → 19/11"
+      ],
+      "raison": "atelier de production (apps/production, écrans en polonais)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Réorganisation du dépôt en domaines, module Marketing lu par son API (lots 1 à 5b), nettoyage du code mort",
+      "sources": [
+        "19/11 → 21/11"
+      ],
+      "raison": "changement interne, rien ne change à l'écran",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Boîte mail : dossiers « INBOX.INBOX.* » reconnus",
+      "sources": [
+        "6088239b"
+      ],
+      "raison": "correctif, repris dans le thème 1",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Réclamations fournisseur : tableau annuel des produits réclamés (cockpit)",
+      "sources": [
+        "83ec1b96",
+        "ba36c9e6"
+      ],
+      "raison": "écran du siège (la photo obligatoire côté magasin est signalée en mise à jour de 0.0.37)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Helpdesk côté cockpit : carte « Demandes à traiter », réglage des SMS, essai de remise",
+      "sources": [
+        "a413eb0a",
+        "44802262"
+      ],
+      "raison": "écran du siège (le côté magasin est le thème 2)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Fil du franchisé (cockpit seulement)",
+      "sources": [
+        "7623e748",
+        "17aea5e9"
+      ],
+      "raison": "écran du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Rail du cockpit réorganisé ; Chiffre d'affaires et Fidélité retirés ; MétaDonnée › Formulaires ; onglet KPI des coachs (réglage)",
+      "sources": [
+        "70e7d724",
+        "796d74a2"
+      ],
+      "raison": "écrans du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Catalogue des manuels (feuilleter, PDF, QR, dépliant), manuel de pré-ouverture, manuel « Fiches techniques », couvertures, typographie",
+      "sources": [
+        "fdac7b23",
+        "38d290b4",
+        "f6e3d757",
+        "eca96d54",
+        "df223508",
+        "fc932b2e"
+      ],
+      "raison": "outil du siège pour diffuser les manuels (cockpit › Formation)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Fidélité : la page « app client en direct »",
+      "sources": [
+        "7e2b727c",
+        "a9c3b135"
+      ],
+      "raison": "page à part du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Contrôles qualité : consigne générale pour l'IA ; entraînement de l'IA (photos 5/5)",
+      "sources": [
+        "c24ba39f",
+        "488d75a0",
+        "b69d3211"
+      ],
+      "raison": "réglages du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Cibles du réseau : food cost 40 %, personnel 17 %, panier et articles par ticket",
+      "sources": [
+        "291994b9",
+        "0dbc58db",
+        "f1cd3590"
+      ],
+      "raison": "déjà dans 0.0.53 « Les chiffres clés du réseau 2026 », écrit après",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Checklist 5.6.02 « Une franchise bien tenue », nomenclature et code des checklists en couleurs",
+      "sources": [
+        "cbe74457",
+        "88a4bb8d",
+        "a4ae6b5c"
+      ],
+      "raison": "déjà au Manuel (5.6.02, publiée)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Inventaire (un seul pourcentage), produit (le panel fait foi), PDF 20/80 (Structure de gamme)",
+      "sources": [
+        "deeaf5fd"
+      ],
+      "raison": "écrans du cockpit (siège)",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Consultant : la page du food cost de Sombreffe",
+      "sources": [
+        "f67f0cb5"
+      ],
+      "raison": "page ponctuelle d'un magasin, données figées du 20/11",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Portail Commercial (prospection, Leads Meta, échantillons, Ma semaine)",
+      "sources": [
+        "19/11 → 20/11"
+      ],
+      "raison": "portail du commercial B2B du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Étiquettes NL (script, sonde, envoi à TF Buddy)",
+      "sources": [
+        "21/11"
+      ],
+      "raison": "outil du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Fiche du ticket « Vos achats » (page client du QR du ticket)",
+      "sources": [
+        "fd4476ec",
+        "d245fb7e"
+      ],
+      "raison": "page vue par le client ; aucun geste du magasin dans le code livré",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Pointage retiré partout (app employé, borne, caisse)",
+      "sources": [
+        "eeb7ff4f"
+      ],
+      "raison": "retrait ; aucun document du Manuel n'en parle",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Visites : remettre toutes les visites à zéro",
+      "sources": [
+        "af527407"
+      ],
+      "raison": "geste du siège",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Correctifs : ruban des canaux, seuil de main-d'œuvre des rapports, photos des tâches sans drapeau, SMS (clé, expéditeur), app employés /employee/",
+      "sources": [
+        "662c67ad",
+        "4653d50e",
+        "d77cd27e",
+        "2bc690db",
+        "1e456945"
+      ],
+      "raison": "correctifs sans changement de geste",
+      "le": "2026-11-22"
+    },
+    {
+      "sujet": "Atelier de production : [367] réclamations (photos), [368] Struktura i obowiązki (organigramme, matrice), [376]–[378] assistants (Zamówienia dnia, Klienci bez zamówienia, Domówienia dnia, Płynność i gotówka, Opóźnienia dostaw, OTIF, Partie i kontrola dnia, Faktury i KSeF dnia), SMS aux clients",
+      "sources": [
+        "22/11"
+      ],
+      "raison": "atelier de production (apps/production, écrans en polonais)",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Formation continue côté siège (module Formation › #/rfcontinue : créer, envoyer à la validation, diffuser)",
+      "sources": [
+        "d9a19422",
+        "696fc94f"
+      ],
+      "raison": "écran du siège",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Formation continue côté consultant (cockpit › Franchisés › Formations continues : vérifier, adapter, relire les photos, valider)",
+      "sources": [
+        "d1d61e86",
+        "696fc94f"
+      ],
+      "raison": "écran du cockpit (connexion requise) ; le rôle du consultant est décrit dans « Comment fonctionnent les formations » (data/formation/continue/, en attente)",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Cockpit › Documents : dépôt du consultant dans le coffre, pièce attendue, grandes dates et assistant au dépôt",
+      "sources": [
+        "cf0672a3",
+        "9a7f6527",
+        "a2b3984a"
+      ],
+      "raison": "écran du cockpit (le côté magasin est le thème 4)",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Trésorerie du siège : les Frais",
+      "sources": [
+        "9a5e34a9"
+      ],
+      "raison": "écran du siège (au dashboard, signalé en mise à jour de 0.0.63)",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Paramètres du dashboard dans une roue",
+      "sources": [
+        "7a71553e"
+      ],
+      "raison": "repris dans le thème 4 (la roue à gauche de Mon coffre-fort) ; signalé en mise à jour de 0.0.34",
+      "le": "2026-11-23"
+    },
+    {
+      "sujet": "Atelier de production : [380]–[408] (assistants P3 à P9, Kierownik produkcji [400]–[406], Plan zespołu et Lista produkcyjna, Rutyny AI, PPWR, Intrastat, réassort au min., commandes GRATIS, clients et quantités sur la feuille d'équipe)",
+      "sources": [
+        "6f1704b7",
+        "7a905231",
+        "4562842a",
+        "b2e02b4f",
+        "d4632cce",
+        "81ae8bdb",
+        "a9316ab4",
+        "aa355f48",
+        "ff739a82",
+        "8e1a6c50"
+      ],
+      "raison": "atelier de production (apps/production, écrans en polonais)",
+      "le": "2026-11-24"
+    },
+    {
+      "sujet": "Les manuels du 22/11/2026 (documentation seulement)",
+      "sources": [
+        "a2d6f525"
+      ],
+      "raison": "changement interne, rien ne change à l'écran",
+      "le": "2026-11-24"
+    },
+    {
+      "sujet": "Outil de tournage des vidéos (panel/tools/videos), revue « à refaire », maquettes",
+      "sources": [
+        "65d458a5",
+        "ba3cf07d",
+        "e54a74b8"
+      ],
+      "raison": "outil interne ; l'écran est le thème 7",
+      "le": "2026-11-24"
+    },
+    {
+      "sujet": "Demandes des franchisés : le statut posé ne revient plus en arrière",
+      "sources": [
+        "6db1d15f"
+      ],
+      "raison": "correctif sans changement de geste",
+      "le": "2026-11-24"
+    },
+    {
+      "sujet": "Mon équipe : compte admin de l'ERP quand le panel refuse le compte du cockpit",
+      "sources": [
+        "fabbd3d7"
+      ],
+      "raison": "changement interne, repris dans le thème 6",
+      "le": "2026-11-24"
+    },
+    {
+      "sujet": "Atelier de production : [409]–[443] (tablettes de hala et qualité, fiches de fonction, Jakość, Stan ogólny, fiches produit et visite des frigos, Różnice kursowe, commandes en retard fermées en lot)",
+      "sources": [
+        "43b19dfe",
+        "967cf752",
+        "e0f0cb5c",
+        "3d10c5ae",
+        "55aea285",
+        "cce8fa94",
+        "ce811bed",
+        "be24e084"
+      ],
+      "raison": "atelier de production (apps/production, écrans en polonais)",
+      "le": "2026-11-26"
+    },
+    {
+      "sujet": "Autocontrôle qualité côté siège (résultats des magasins, grilles : autocontrole/grilles.html)",
+      "sources": [
+        "ff7e1e65"
+      ],
+      "raison": "écran du siège (le côté magasin est le thème 8)",
+      "le": "2026-11-26"
+    },
+    {
+      "sujet": "Fidélité : GET /fidelite/programme pour le Recrutement",
+      "sources": [
+        "8356fad7"
+      ],
+      "raison": "API sans effet à l’écran",
+      "le": "2026-11-26"
+    },
+    {
+      "sujet": "Correctifs : « Plus tard » ferme toujours la bulle des vidéos ; défauts relevés au tournage des vidéos (Mon catalogue, Trésorerie, Mon équipe, Boîte mail, Promotions, Fidélité, Concurrence, newsletter) ; Boîte mail : modèles et messages automatiques gardent ce qui est tapé",
+      "sources": [
+        "a2585c76",
+        "610c9e66",
+        "648bda44",
+        "e45d6060"
+      ],
+      "raison": "correctifs sans changement de geste",
+      "le": "2026-11-26"
+    },
+    {
+      "sujet": "Mon catalogue : le bon de commande (Export PDF) et « Mes conditions »",
+      "sources": [
+        "dcf8c447"
+      ],
+      "raison": "mise à jour signalée de 0.0.52 « Le dashboard : l’onglet Mon catalogue »",
+      "le": "2026-11-26"
+    },
+    {
+      "sujet": "Manuels du 23/11 et du 26/11, SOP du dashboard magasin (article v1.11, SOP v1.8)",
+      "sources": [
+        "ba467f94",
+        "7a8952de",
+        "d64e22cc"
+      ],
+      "raison": "documentation des routines",
+      "le": "2026-11-26"
+    }
+  ],
+  "misesAJourSignalees": [
+    {
+      "code": "0.0.36",
+      "titre": "Le dashboard : l'Assistant",
+      "change": "assistant IA en pleine page (rail « Assistant IA »), le Professeur (manuel entier), le Coach Vente (portrait, objectifs 2026, prix face à la concurrence, bundles, radar catégories et marges), tableaux et graphiques, « Mes modèles », réponse en PDF, coachs qui citent le manuel et reprennent les contrôles photos (17–19/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.43",
+      "titre": "Le dashboard : l'onglet Produits",
+      "change": "fiche produit › Recette & marge : « Adapter mon prix de vente » et « Demander au réseau de relever le maximum » (21/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.37",
+      "titre": "Le dashboard : l'onglet Opérationnel",
+      "change": "« Réclamer au fournisseur » : photo obligatoire (21/11) ; La journée : lignes Four, Vitrine et Commandes retirées (19/11) ; comptoir et webshop dans la jauge (18/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.35",
+      "titre": "Le dashboard : la revue du soir",
+      "change": "tuile des tâches pas faites (« 8 / 11 »), caisse sans écart quand le magasin a un monnayeur (19/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.38",
+      "titre": "Le dashboard : l'onglet Tâches",
+      "change": "résultats du jour dans la bande de la semaine, vue téléphone refaite (18/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.40",
+      "titre": "Le dashboard : l'onglet Mois",
+      "change": "trafic sur les douze derniers mois glissants (18/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.49",
+      "titre": "Le dashboard : au téléphone",
+      "change": "refonte du téléphone, feuille « L'équipe du jour », Contrôle : carte du jour en tête, cuissons retirées de la frise (18–19/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.52",
+      "titre": "Le dashboard : l'onglet Mon catalogue",
+      "change": "pleine page, assistant de mise en page, produits montrés/cachés, feuilleter avant d'imprimer, couverture et dernière page (17/11, après la v1.1)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.32",
+      "titre": "La visite du consultant en magasin",
+      "change": "audit des sept outils de gestion (score sur 100, rapport et courriel), assistant en barre horizontale, onglet « Non signées » (18–19/11)",
+      "le": "2026-11-22"
+    },
+    {
+      "code": "0.0.63",
+      "titre": "Le dashboard : l’onglet Frais",
+      "change": "les Frais deviennent un onglet de la Trésorerie ; le rail perd l’entrée « Frais » (73e483b0, 22/11) : la partie 1 « Où se trouve l’onglet » ne tient plus",
+      "le": "2026-11-23"
+    },
+    {
+      "code": "0.0.61",
+      "titre": "Le dashboard : la Boîte mail et ses modes IA",
+      "change": "pièce jointe en trois choix : importer, coffre-fort, catalogues (b2308e0f, 22/11)",
+      "le": "2026-11-23"
+    },
+    {
+      "code": "0.0.38",
+      "titre": "Le dashboard : l’onglet Tâches",
+      "change": "relire les photos quand une tâche rendue n’a pas la sienne ; vignettes des photos sur l’Opérationnel seulement (1ab9119a, 22/11)",
+      "le": "2026-11-23"
+    },
+    {
+      "code": "0.0.34",
+      "titre": "Le dashboard : le haut de l’écran",
+      "change": "bouton abricot « Dossier de formation » en tête ; les paramètres dans une roue en bas du rail, à gauche de Mon coffre-fort (ef905815, 69e53f8d, 22/11)",
+      "le": "2026-11-23"
+    },
+    {
+      "code": "0.0.34",
+      "titre": "Le dashboard : le haut de l’écran",
+      "change": "le rail gagne « Mon équipe » (La journée, sous Temps morts) et le carré des vidéos à côté d’« Assistant IA » (23/11)",
+      "le": "2026-11-24"
+    },
+    {
+      "code": "0.0.65",
+      "titre": "Le dashboard : Formations et suivi",
+      "change": "la vidéo « Formation : construire le planning de la semaine » s’ouvre aussi depuis Formations et suivi (carré des vidéos, 23/11)",
+      "le": "2026-11-24"
+    }
+  ],
+  "regles": [
+    "Sam (22/11/2026) : « Toujours encoder avec screenshot » : chaque article porte des captures de l’écran en ligne (voir LISEZMOI.md › Captures)."
+  ]
 }

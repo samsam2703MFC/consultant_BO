@@ -1,0 +1,336 @@
+{
+  "aConfirmer": [
+    "Aucune formation continue n’est encore diffusée au réseau le 23/11/2026 (« Formation continue · 0 » dans la méga-barre, dossier de Halle vide). Les Nouveautés, une formation ouverte, « Qui la suit », la grille de la photo du jour et le suivi de l’équipe sont décrits d’après le code (panel/public/dashboard/formation.js, formation/src/formation_continue.php), sans capture. À reprendre en photo à la première diffusion.",
+    "Les 14 jours de photo : le code les compte à partir de la première photo envoyée ; les deux articles en attente (data/formation/continue/) disent « à partir de la mise en vente ». L’article dit « une photo par jour pendant 14 jours », sans trancher.",
+    "Ce thème recoupe les deux articles déjà rédigés le 22/11 et pas encore encodés (data/formation/continue/ : « Un nouveau produit arrive : la procédure », « Comment fonctionnent les formations »). Celui-ci décrit l’écran du dashboard ; les deux autres, la procédure. Les renvois se font par titre.",
+    "Accès : l’écran est ouvert au magasin ; l’accès « responsable » (bouton Franchisé de la tablette) est un choix, à confirmer.",
+    "Classement : D6.3 (Ressources humaines › Formation), FO-06, C-RH.Évaluation, comme « Comment fonctionnent les formations » ; FO-36 ajoutée (outils). Durée (« 20 min de lecture ») estimée."
+  ],
+  "id": "art-dash-formation",
+  "code": "0.0.65",
+  "type": "Article",
+  "dossier": "05",
+  "version": "1.0",
+  "statut": "a_valider",
+  "langue_origine": "FR",
+  "poste": "vente",
+  "moment": null,
+  "acces": "responsable",
+  "duree": "20 min de lecture, avec « Formations et suivi » ouvert sur son magasin",
+  "titre": {
+    "fr": "Le dashboard : Formations et suivi",
+    "nl": "Het dashboard: Formations et suivi (opleidingen en opvolging)"
+  },
+  "objectif": {
+    "fr": "Ouvrir « Formations et suivi », chercher n’importe quel contenu de la formation avec la méga-barre, lire le dossier de formation du magasin (en retard, en cours, à valider, validées), faire avancer une formation continue (qui la suit, mise en place, photo du jour) jusqu’à la validation du consultant, et poser ses questions au Professeur.",
+    "nl": "« Formations et suivi » openen, elke inhoud van de opleiding zoeken met de grote zoekbalk, het opleidingsdossier van de winkel lezen (te laat, lopend, te valideren, gevalideerd), een permanente opleiding laten vorderen (wie volgt ze, invoering, foto van de dag) tot de validatie door de consultant, en vragen stellen aan de Professeur."
+  },
+  "pour": {
+    "fr": "Franchisé, locataire gérant, manager et adjoint manager (P7 à P12), et chef de section vente (P4). À lire après « Comprendre le dashboard magasin » (0.0.15), avec « Formations et suivi » ouvert sur son magasin ; la procédure elle-même : « Comment fonctionnent les formations ».",
+    "nl": "Franchisenemer, locataire-gérant, manager en adjunct-manager (P7 tot P12), en sectiechef verkoop (P4). Te lezen na « Het winkeldashboard begrijpen » (0.0.15), met « Formations et suivi » open op de eigen winkel; de procedure zelf: « Comment fonctionnent les formations »."
+  },
+  "classement": {
+    "souscat": "D6.3",
+    "phases": [
+      "operationnel",
+      "formation"
+    ],
+    "postes": [
+      "P4",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12"
+    ],
+    "competences": [
+      "C-RH.Évaluation"
+    ],
+    "formations": [
+      "FO-06",
+      "FO-36"
+    ],
+    "checklists": []
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Avant de commencer",
+        "nl": "Voor je begint"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Où se trouve la page",
+            "nl": "Waar de pagina staat"
+          },
+          "texte": {
+            "fr": "Le bouton abricot « Dossier de formation », en tête du dashboard : il dit « à jour », ou « n à faire » (les formations en retard et en cours).\nUn clic ouvre « Formations et suivi ».\nDans le rail : groupe « Se former », « Formations et suivi » ; « n nouv. » à côté : les nouvelles formations pas encore ouvertes.\nAu téléphone : l’icône 🎓 de l’en-tête, avec le même chiffre ; la même page, en une colonne.",
+            "nl": "De abrikooskleurige knop « Dossier de formation », bovenaan het dashboard: hij zegt « à jour », of « n à faire » (de opleidingen die te laat en lopend zijn).\nEen klik opent « Formations et suivi ».\nIn de rail: groep « Se former », « Formations et suivi »; « n nouv. » ernaast: de nieuwe opleidingen die nog niet geopend zijn.\nOp de telefoon: het icoon 🎓 in de kop, met hetzelfde cijfer; dezelfde pagina, in één kolom."
+          },
+          "critique": false,
+          "photo": "art-dash-formation-bouton.jpg",
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "L’accueil de la formation",
+            "nl": "Het onthaal van de opleiding"
+          },
+          "texte": {
+            "fr": "La page s’ouvre sur l’accueil.\nEn tête : « Mon dossier de formation » et ses quatre nombres (en retard, en cours, à valider, validée), « Ouvrir › » ; à côté, « 🎩 Demander au Professeur ».\nPuis la méga-barre de recherche.\nPuis l’accueil du module Formation : « En une phrase : la formation apprend le métier, le manuel explique pourquoi, la SOP montre comment faire, la checklist vérifie chaque jour que c’est fait. »\nEt le tableau Formations · Manuel opératoire · SOP · Checklists : c’est quoi, pour qui, quand, où, comment, pourquoi, comment c’est validé, le code, un exemple.",
+            "nl": "De pagina opent op het onthaal.\nBovenaan: « Mon dossier de formation » en zijn vier getallen (te laat, lopend, te valideren, gevalideerd), « Ouvrir › »; ernaast, « 🎩 Demander au Professeur ».\nDan de grote zoekbalk.\nDan het onthaal van de module Opleiding: « En une phrase : la formation apprend le métier, le manuel explique pourquoi, la SOP montre comment faire, la checklist vérifie chaque jour que c’est fait. »\nEn de tabel Formations · Manuel opératoire · SOP · Checklists: wat, voor wie, wanneer, waar, hoe, waarom, hoe gevalideerd, de code, een voorbeeld."
+          },
+          "critique": false,
+          "photo": "art-dash-formation-accueil.jpg",
+          "video": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "La méga-barre : chercher dans toute la formation",
+            "nl": "De grote zoekbalk: in de hele opleiding zoeken"
+          },
+          "texte": {
+            "fr": "« Chercher dans toute la formation : un produit, un geste, une règle, une checklist, un article… »\nElle cherche dans les formations FO-xx, le Manuel opératoire, les standards (SOP, mémos, fiches), les checklists, le Manuel du réseau et la formation continue.\nDans les titres, les codes, les objectifs et le texte des étapes, sans tenir compte des accents.\nChaque résultat : l’étiquette de son catalogue, à sa couleur, l’extrait avec le mot trouvé, où mène le lien, la photo s’il y en a une.\nÀ gauche, les catalogues et leur nombre de résultats ; à droite, l’aperçu : « Ouvrir la fiche », « Feuilleter dans le catalogue ↗ », « Demander au Professeur ».\nAu clavier : ↑ ↓ pour choisir, Entrée pour ouvrir, Échap pour fermer.",
+            "nl": "« Chercher dans toute la formation : un produit, un geste, une règle, une checklist, un article… »\nHij zoekt in de opleidingen FO-xx, het Manuel opératoire, de standaarden (SOP’s, memo’s, fiches), de checklists, het Manuel du réseau en de permanente opleiding.\nIn de titels, de codes, de doelen en de tekst van de stappen, zonder rekening te houden met accenten.\nElk resultaat: het label van zijn catalogus, in zijn kleur, het uittreksel met het gevonden woord, waar de link naartoe gaat, de foto als er een is.\nLinks de catalogi en hun aantal resultaten; rechts de preview: « Ouvrir la fiche », « Feuilleter dans le catalogue ↗ », « Demander au Professeur ».\nMet het toetsenbord: ↑ ↓ om te kiezen, Enter om te openen, Esc om te sluiten."
+          },
+          "critique": false,
+          "photo": "art-dash-formation-recherche.jpg",
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Mon dossier de formation",
+        "nl": "Mijn opleidingsdossier"
+      },
+      "etapes": [
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Les quatre nombres et la liste",
+            "nl": "De vier getallen en de lijst"
+          },
+          "texte": {
+            "fr": "« Mon dossier de formation » : la formation continue du magasin.\nEn retard : l’échéance est passée.\nEn cours : à terminer ; « n photo(s) du jour à faire » quand une photo est attendue.\nÀ valider : terminées, chez le consultant.\nValidées : archivées dans le coffre-fort.\nLa liste : Formation, Statut, Avancement, Échéance, « Ouvrir ».\nSous le titre : la catégorie, « adaptée pour votre magasin par … » le cas échéant, les photos conformes (« photos 3/14 »), « validée par … le … ».\nVide : « Aucune formation continue pour l’instant : elles arrivent ici dès que le réseau les diffuse. »\n« ← Accueil de la formation » revient à l’accueil.",
+            "nl": "« Mon dossier de formation »: de permanente opleiding van de winkel.\nTe laat: de deadline is voorbij.\nLopend: af te werken; « n photo(s) du jour à faire » als er een foto verwacht wordt.\nTe valideren: afgewerkt, bij de consultant.\nGevalideerd: gearchiveerd in de kluis.\nDe lijst: Formation, Statut, Avancement, Échéance, « Ouvrir ».\nOnder de titel: de categorie, eventueel « adaptée pour votre magasin par … », de conforme foto’s (« photos 3/14 »), « validée par … le … ».\nLeeg: « Aucune formation continue pour l’instant : elles arrivent ici dès que le réseau les diffuse. »\n« ← Accueil de la formation » gaat terug naar het onthaal."
+          },
+          "critique": false,
+          "photo": "art-dash-formation-dossier.jpg",
+          "video": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Les Nouveautés",
+            "nl": "De nieuwigheden"
+          },
+          "texte": {
+            "fr": "En haut du dossier : les formations continues reçues ces deux derniers mois, la plus récente d’abord.\nChaque carte : la catégorie (Technique, Connaissance, Nouveau produit, Nouvelle technique), le titre, « reçue le … », le code, « Ouvrir la formation → ».\n« NOUVEAU » tant que le magasin ne l’a pas ouverte.",
+            "nl": "Bovenaan het dossier: de permanente opleidingen die de laatste twee maanden ontvangen zijn, de recentste eerst.\nElke kaart: de categorie (Technique, Connaissance, Nouveau produit, Nouvelle technique), de titel, « reçue le … », de code, « Ouvrir la formation → ».\n« NOUVEAU » zolang de winkel ze niet geopend heeft."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "Le suivi de l’équipe",
+            "nl": "De opvolging van het team"
+          },
+          "texte": {
+            "fr": "Un tableau : une ligne par personne, une colonne par formation pas encore validée.\nPour chacun : vu faire, quiz, lue, ou pas commencé.\nC’est ce que le franchisé a déclaré dans chaque formation.",
+            "nl": "Een tabel: één rij per persoon, één kolom per opleiding die nog niet gevalideerd is.\nVoor elk: voorgedaan, quiz, gelezen, of niet begonnen.\nHet is wat de franchisenemer in elke opleiding aangegeven heeft."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Une formation, jusqu’à la validation",
+        "nl": "Een opleiding, tot de validatie"
+      },
+      "etapes": [
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "Ouvrir une formation",
+            "nl": "Een opleiding openen"
+          },
+          "texte": {
+            "fr": "En tête : le code, la catégorie, la version, le statut et l’avancement.\nPuis l’objectif, les étapes, les points critiques.\nUne formation adaptée par le consultant le dit : « Adaptée pour votre magasin par … le … ». C’est cette version que le magasin suit.\nEn bas : « À terminer avant le … ».\n« ← Mon dossier » revient à la liste.",
+            "nl": "Bovenaan: de code, de categorie, de versie, de status en de vordering.\nDan het doel, de stappen, de kritieke punten.\nEen opleiding die de consultant aangepast heeft, zegt het: « Adaptée pour votre magasin par … le … ». Die versie volgt de winkel.\nOnderaan: « À terminer avant le … ».\n« ← Mon dossier » gaat terug naar de lijst."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "8",
+          "titre": {
+            "fr": "Qui la suit, et la mise en place",
+            "nl": "Wie ze volgt, en de invoering"
+          },
+          "texte": {
+            "fr": "« Qui la suit » (déclaré par le franchisé) : une ligne par personne, trois cases : Lu, Quiz, Vu faire.\nAjouter une personne : son nom (« prénom N. »), puis « Ajouter ».\nCocher chaque case quand c’est fait.\n« ✓ Mise en place en magasin : c’est fait » quand la formation est appliquée au magasin ; « annuler » la retire.\nUne formation validée ne se modifie plus.",
+            "nl": "« Qui la suit » (aangegeven door de franchisenemer): één rij per persoon, drie vakjes: Lu, Quiz, Vu faire.\nEen persoon toevoegen: de naam (« voornaam N. »), dan « Ajouter ».\nElk vakje aanvinken als het gedaan is.\n« ✓ Mise en place en magasin : c’est fait » als de opleiding in de winkel toegepast wordt; « annuler » haalt het weg.\nEen gevalideerde opleiding verandert niet meer."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "9",
+          "titre": {
+            "fr": "La photo du jour",
+            "nl": "De foto van de dag"
+          },
+          "texte": {
+            "fr": "Pour un nouveau produit : une photo qualité du produit par jour, pendant 14 jours.\nLa grille montre chaque jour : conforme, à refaire, envoyée pas encore relue, pas de photo, à faire aujourd’hui, à venir.\n« 📷 Envoyer la photo du jour » (au téléphone, l’appareil photo s’ouvre) ; 12 Mo au plus.\nLe consultant relit chaque photo : conforme, ou à refaire avec un commentaire.\nUne photo à refaire du jour : « Refaire la photo du jour ».\nÀ l’écran : « Une photo par jour, photo obligatoire ; un jour manqué ou une photo à refaire ajoute un jour. »",
+            "nl": "Voor een nieuw product: één kwaliteitsfoto van het product per dag, gedurende 14 dagen.\nHet rooster toont elke dag: conform, opnieuw te doen, verstuurd maar nog niet nagekeken, geen foto, vandaag te doen, komt nog.\n« 📷 Envoyer la photo du jour » (op de telefoon opent de camera); hoogstens 12 MB.\nDe consultant kijkt elke foto na: conform, of opnieuw te doen met een opmerking.\nEen foto van vandaag die opnieuw moet: « Refaire la photo du jour ».\nOp het scherm: « Une photo par jour, photo obligatoire ; un jour manqué ou une photo à refaire ajoute un jour. »"
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "10",
+          "titre": {
+            "fr": "L’avancement et la validation",
+            "nl": "De vordering en de validatie"
+          },
+          "texte": {
+            "fr": "L’avancement : la moitié pour l’équipe (lu, quiz et vu faire de chaque personne, et la mise en place), la moitié pour les photos s’il en faut ; sans photos, l’équipe compte pour tout.\nQuand tout est fait, la formation passe d’office « À valider » : « Tout est fait : votre consultant relit et valide. »\nLe consultant valide : « ✓ Validée par … le … à … ».\nL’archive de la formation (qui, quand, l’équipe, les photos) entre dans le coffre-fort, onglet Formation.\nDans le dossier : « Mon document de formation », « Ouvrir → », mène au coffre-fort.",
+            "nl": "De vordering: de helft voor het team (gelezen, quiz en voorgedaan van elke persoon, en de invoering), de helft voor de foto’s als die nodig zijn; zonder foto’s telt het team voor alles.\nAls alles gedaan is, wordt de opleiding automatisch « À valider »: « Tout est fait : votre consultant relit et valide. »\nDe consultant valideert: « ✓ Validée par … le … à … ».\nHet archief van de opleiding (wie, wanneer, het team, de foto’s) komt in de kluis, tabblad Formation.\nIn het dossier: « Mon document de formation », « Ouvrir → », leidt naar de kluis."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Le Professeur",
+        "nl": "De Professeur"
+      },
+      "etapes": [
+        {
+          "numero": "11",
+          "titre": {
+            "fr": "Demander au Professeur",
+            "nl": "De Professeur vragen"
+          },
+          "texte": {
+            "fr": "« Il répond à partir de votre dossier de formation — vos formations continues, avec les adaptations faites pour votre magasin — et du Manuel opératoire. »\nDes questions toutes prêtes : « Qu’est-ce que je dois terminer en premier ? », « Résume-moi la formation … », « Prépare 3 questions pour vérifier l’équipe … ».\nDans une formation ouverte, ses questions parlent de cette formation (points critiques, allergènes pour un nouveau produit).\nOu une question libre : « Posez votre question au Professeur… », « Demander ».\n« Il ne voit que le dossier de votre magasin. Il cite la formation et l’étape qu’il a lues. »",
+            "nl": "« Il répond à partir de votre dossier de formation — vos formations continues, avec les adaptations faites pour votre magasin — et du Manuel opératoire. »\nKant-en-klare vragen: « Qu’est-ce que je dois terminer en premier ? », « Résume-moi la formation … », « Prépare 3 questions pour vérifier l’équipe … ».\nIn een geopende opleiding gaan zijn vragen over die opleiding (kritieke punten, allergenen voor een nieuw product).\nOf een vrije vraag: « Posez votre question au Professeur… », « Demander ».\n« Il ne voit que le dossier de votre magasin. Il cite la formation et l’étape qu’il a lues. »"
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Pour un nouveau produit, la photo du jour est obligatoire : un jour manqué ou une photo à refaire ajoute un jour.",
+      "nl": "Voor een nieuw product is de foto van de dag verplicht: een gemiste dag of een foto die opnieuw moet, voegt een dag toe."
+    },
+    {
+      "fr": "Lu, quiz et vu faire sont déclarés par le franchisé : ne cocher que ce qui est vraiment fait.",
+      "nl": "Gelezen, quiz en voorgedaan worden aangegeven door de franchisenemer: alleen aanvinken wat echt gedaan is."
+    },
+    {
+      "fr": "Une formation adaptée par le consultant se suit dans sa version adaptée, celle du dossier du magasin.",
+      "nl": "Een opleiding die de consultant aangepast heeft, volg je in de aangepaste versie, die van het dossier van de winkel."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Le bouton abricot « Dossier de formation » affiche « 2 à faire ». Qu’est-ce que ça compte ?",
+        "nl": "De abrikooskleurige knop « Dossier de formation » toont « 2 à faire ». Wat telt dat?"
+      },
+      "choix": {
+        "fr": [
+          "Les formations en retard et en cours",
+          "Les photos refusées",
+          "Les nouvelles formations pas ouvertes"
+        ],
+        "nl": [
+          "De opleidingen die te laat en lopend zijn",
+          "De geweigerde foto’s",
+          "De nieuwe opleidingen die niet geopend zijn"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Un nouveau produit : le magasin oublie la photo du mardi. Que se passe-t-il ?",
+        "nl": "Een nieuw product: de winkel vergeet de foto van dinsdag. Wat gebeurt er?"
+      },
+      "choix": {
+        "fr": [
+          "Rien, la photo est facultative",
+          "Un jour s’ajoute à la grille",
+          "La formation est refusée"
+        ],
+        "nl": [
+          "Niets, de foto is facultatief",
+          "Er komt een dag bij in het rooster",
+          "De opleiding wordt geweigerd"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Toute l’équipe a lu, réussi le quiz, été vue faire, la mise en place est faite et les photos sont conformes. Et ensuite ?",
+        "nl": "Het hele team heeft gelezen, de quiz gehaald, is voorgedaan, de invoering is gedaan en de foto’s zijn conform. En dan?"
+      },
+      "choix": {
+        "fr": [
+          "Le franchisé clique « Valider »",
+          "Elle reste « En cours » jusqu’à l’échéance",
+          "Elle passe d’office « À valider » ; le consultant relit et valide"
+        ],
+        "nl": [
+          "De franchisenemer klikt « Valider »",
+          "Ze blijft « En cours » tot de deadline",
+          "Ze wordt automatisch « À valider »; de consultant kijkt na en valideert"
+        ]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {
+        "fr": "Où se retrouve l’archive d’une formation validée ?",
+        "nl": "Waar komt het archief van een gevalideerde opleiding terecht?"
+      },
+      "choix": {
+        "fr": [
+          "Dans la Boîte mail",
+          "Dans le coffre-fort, onglet Formation",
+          "Nulle part : elle disparaît du dossier"
+        ],
+        "nl": [
+          "In de mailbox",
+          "In de kluis, tabblad Formation",
+          "Nergens: ze verdwijnt uit het dossier"
+        ]
+      },
+      "bonne": 1
+    }
+  ]
+}

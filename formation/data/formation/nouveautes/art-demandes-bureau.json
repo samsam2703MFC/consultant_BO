@@ -1,0 +1,356 @@
+{
+  "aConfirmer": [
+    "Statut d’une demande neuve : le cockpit l’appelle « Nouvelle », le dashboard du magasin l’affiche « Envoyée » (puis « En cours », « Résolue », « Fermée », « Annulée »). L’article cite les libellés du dashboard ; confirmer que c’est le bon choix pour le magasin.",
+    "« Urgent ? » : le libellé de l’écran dit « le bureau est prévenu tout de suite par SMS, en « URGENT » ». En réalité chaque demande envoie déjà un SMS au bureau ; l’urgente ajoute « URGENT - » en tête, et au cockpit elle passe en rouge, en tête de liste. L’article l’écrit ainsi ; faut-il revoir le libellé de l’écran ?",
+    "Relances : l’article cite le réglage par défaut (tous les 7 jours après l’envoi, à 08:30, jours ouvrés, au consultant de la demande, sinon à tous les numéros du bureau, tant que la demande n’est pas « En cours »). Le cockpit permet 3, 7 ou 14 jours et d’autres règles (« sans réponse », « en attente », « en retard »). Confirmer le réglage en place.",
+    "SMS au magasin à la réponse : il part au GSM du magasin gardé au cockpit (« Qui fait quoi », sinon le numéro des alertes SMS des leads) ; sans GSM, pas de SMS. Il peut être coupé au cockpit. Il n’existe qu’en français et en néerlandais : un magasin réglé en allemand le reçoit en français. Le SMS néerlandais renvoie à « Aanvraag aan het kantoor », alors que le bouton du dashboard reste « Demande au bureau ».",
+    "Accès : rien dans le code ne réserve le bouton au responsable ; toute personne qui a le dashboard ouvert peut envoyer une demande au nom du magasin. Accès « responsable » gardé comme demandé ; confirmer qui doit l’utiliser.",
+    "Le filtre « Répondues » compte les demandes qui ont une réponse du bureau, même encore ouvertes ; une demande « Résolue » sans texte de réponse n’y figure pas. À vérifier avec le bureau.",
+    "La date limite n’est pas obligatoire : une demande peut passer « En cours » sans date (et alors sans « réponse prévue d’ici le … »). Le dashboard ne montre ni qui l’a fixée ni le retard.",
+    "Classement : aucune sous-catégorie du référentiel ne vise la relation magasin-bureau ; D7.1 « Pilotage de l’activité » (celle des autres articles du dashboard) a été retenue, avec C-PILOTAGE.Franchise."
+  ],
+  "id": "art-demandes-bureau",
+  "code": "0.0.62",
+  "type": "Article",
+  "dossier": "05",
+  "version": "1.0",
+  "statut": "a_valider",
+  "langue_origine": "FR",
+  "poste": "vente",
+  "moment": null,
+  "acces": "responsable",
+  "duree": "15 min de lecture, puis une demande d’essai sur le dashboard de son magasin",
+  "titre": {
+    "fr": "Le dashboard : la demande au bureau",
+    "nl": "Het dashboard: de aanvraag aan het kantoor"
+  },
+  "objectif": {
+    "fr": "Envoyer au bureau une demande claire depuis le dashboard (sujet, titre, texte, photos, urgence), suivre sa réponse dans « Mes demandes », et savoir ce que le bureau en fait : date limite, relances, réponse annoncée par SMS.",
+    "nl": "Vanuit het dashboard een duidelijke aanvraag naar het kantoor sturen (onderwerp, titel, tekst, foto’s, dringendheid), het antwoord volgen in « Mes demandes », en weten wat het kantoor ermee doet: deadline, herinneringen, antwoord aangekondigd per sms."
+  },
+  "pour": {
+    "fr": "Franchisé, candidat franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05, avec le dashboard ouvert sur son magasin.",
+    "nl": "Franchisenemer, kandidaat-franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Het winkeldashboard begrijpen » (0.0.15), in opleiding FO-05, met het dashboard open op de eigen winkel."
+  },
+  "classement": {
+    "souscat": "D7.1",
+    "phases": [
+      "ouverture",
+      "operationnel"
+    ],
+    "postes": [
+      "P4",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12"
+    ],
+    "competences": [
+      "C-PILOTAGE.Franchise"
+    ],
+    "formations": [
+      "FO-05"
+    ],
+    "checklists": []
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Poser une demande",
+        "nl": "Een aanvraag indienen"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Où se trouve le bouton",
+            "nl": "Waar de knop staat"
+          },
+          "texte": {
+            "fr": "Pour une question, un besoin, un changement dans la caisse ou un passage du consultant : une seule porte, « ✉ Demande au bureau ».\nSur l’ordinateur et la tablette : en haut de l’écran, le bouton « ✉ Demande au bureau » ou la vignette « Demande au bureau » de la barre du haut.\nSur le téléphone : l’onglet Contrôle, à côté de « ✎ Réclamation » (la réclamation, c’est pour un produit du fournisseur).\nLe petit chiffre sur le bouton : le nombre de demandes du magasin encore ouvertes ; la vignette dit « 2 ouvertes », ou « nouvelle » quand il n’y en a aucune.",
+            "nl": "Voor een vraag, een behoefte, een wijziging in de kassa of een bezoek van de consultant: één deur, « ✉ Demande au bureau ».\nOp de computer en de tablet: bovenaan het scherm, de knop « ✉ Demande au bureau » of het tegeltje « Demande au bureau » in de bovenste balk.\nOp de telefoon: het tabblad Contrôle, naast « ✎ Réclamation » (de klacht is voor een product van de leverancier).\nHet cijfertje op de knop: het aantal aanvragen van de winkel dat nog open staat; het tegeltje zegt « 2 ouvertes », of « nouvelle » als er geen enkele is."
+          },
+          "critique": false,
+          "photo": "art-demandes-bureau-bouton.jpg",
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "La fenêtre de la demande",
+            "nl": "Het venster van de aanvraag"
+          },
+          "texte": {
+            "fr": "La demande s’ouvre dans la fenêtre de l’assistant, sur le mode « Demande au bureau » (à côté de « Bilan » et « Conversation » quand l’assistant est actif).\nEn tête, l’avatar de l’assistant : il « transmet votre demande au bureau » ; « La réponse revient ici. »\nÀ gauche, le formulaire ; à droite (dessous sur le téléphone), « Mes demandes ».",
+            "nl": "De aanvraag opent in het venster van de assistent, in de modus « Demande au bureau » (naast « Bilan » en « Conversation » als de assistent actief is).\nBovenaan de avatar van de assistent: hij « transmet votre demande au bureau »; « La réponse revient ici. »\nLinks het formulier; rechts (eronder op de telefoon) « Mes demandes »."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Remplir la demande",
+            "nl": "De aanvraag invullen"
+          },
+          "texte": {
+            "fr": "« Le sujet » : un des six domaines, « Stratégie », « Produit », « Activités opérationnelles », « Ventes », « Application », « Réseaux sociaux ». Il décide qui la reçoit au bureau.\n« Le titre » : en quelques mots (190 caractères au plus).\n« La demande » : ce dont le magasin a besoin, le plus précisément possible (8 000 caractères au plus) : quoi, depuis quand, quel produit, quelle caisse.\n« Photos » : facultatif, 4 au plus ; « ＋ Ajouter » prend une photo, ✕ la retire. Elle est réduite avant l’envoi, pour partir vite même du téléphone.\n« Un passage du consultant ? » : « Oui, à la prochaine visite » ou « Non, une réponse suffit ».\nSans sujet, ou sans titre et texte, rien ne part : « Choisissez le sujet de la demande. », « Le titre et la demande sont requis. »",
+            "nl": "« Le sujet »: één van de zes domeinen, « Stratégie », « Produit », « Activités opérationnelles », « Ventes », « Application », « Réseaux sociaux ». Het bepaalt wie ze op het kantoor krijgt.\n« Le titre »: in een paar woorden (maximaal 190 tekens).\n« La demande »: wat de winkel nodig heeft, zo precies mogelijk (maximaal 8 000 tekens): wat, sinds wanneer, welk product, welke kassa.\n« Photos »: niet verplicht, maximaal 4; « ＋ Ajouter » neemt een foto, ✕ haalt ze weg. Ze wordt vóór het versturen verkleind, zodat ze snel vertrekt, ook van de telefoon.\n« Un passage du consultant ? »: « Oui, à la prochaine visite » of « Non, une réponse suffit ».\nZonder onderwerp, of zonder titel en tekst, vertrekt er niets: « Choisissez le sujet de la demande. », « Le titre et la demande sont requis. »"
+          },
+          "critique": true,
+          "photo": "art-demandes-bureau-formulaire.jpg",
+          "video": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Urgent ou pas, puis envoyer",
+            "nl": "Dringend of niet, dan versturen"
+          },
+          "texte": {
+            "fr": "« Urgent ? » : « Oui, urgent » ou « Non » (d’office : « Non »).\nToute demande prévient déjà le bureau par SMS ; une urgente part en « URGENT » et passe en tête de la liste du bureau, en rouge.\nUrgent : ce qui bloque la vente ou le magasin aujourd’hui. Le reste attend sa date limite.\n« Envoyer au bureau » : « ✓ Demande envoyée au bureau (sa référence). La réponse s’affichera ici. » Le formulaire se vide.\nEn cas de souci : « La demande n’est pas partie : … » ; le texte reste, on renvoie.",
+            "nl": "« Urgent ? »: « Oui, urgent » of « Non » (standaard: « Non »).\nElke aanvraag verwittigt het kantoor al per sms; een dringende vertrekt als « URGENT » en komt bovenaan de lijst van het kantoor, in het rood.\nDringend: wat vandaag de verkoop of de winkel blokkeert. De rest wacht op zijn deadline.\n« Envoyer au bureau »: « ✓ Demande envoyée au bureau (de referentie). La réponse s’affichera ici. » Het formulier wordt leeggemaakt.\nBij een probleem: « La demande n’est pas partie : … »; de tekst blijft staan, je verstuurt opnieuw."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Mes demandes",
+        "nl": "Mes demandes (mijn aanvragen)"
+      },
+      "etapes": [
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "La liste et ses filtres",
+            "nl": "De lijst en haar filters"
+          },
+          "texte": {
+            "fr": "« Mes demandes » : les demandes du magasin, la plus récente en haut.\nEn tête, le résumé : « 2 ouvertes », et « · 1 sans réponse depuis plus de 30 jours » quand c’est le cas.\nTrois filtres, chacun avec son nombre : « Toutes », « Ouvertes », « Répondues ». La liste s’ouvre d’office sur « Ouvertes ».\nOuvertes : celles qui sont « Envoyée » ou « En cours ». Répondues : celles qui ont une réponse du bureau.\nRien dans le filtre : « Aucune demande ouverte. » ou « Aucune demande répondue pour l’instant. »",
+            "nl": "« Mes demandes »: de aanvragen van de winkel, de recentste bovenaan.\nBovenaan de samenvatting: « 2 ouvertes », en « · 1 sans réponse depuis plus de 30 jours » als dat zo is.\nDrie filters, elk met zijn aantal: « Toutes », « Ouvertes », « Répondues ». De lijst opent standaard op « Ouvertes ».\nOpen: die « Envoyée » of « En cours » zijn. Beantwoord: die een antwoord van het kantoor hebben.\nNiets in de filter: « Aucune demande ouverte. » of « Aucune demande répondue pour l’instant. »"
+          },
+          "critique": false,
+          "photo": "art-demandes-bureau-liste.jpg",
+          "video": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "La carte d’une demande et ses statuts",
+            "nl": "De kaart van een aanvraag en haar statussen"
+          },
+          "texte": {
+            "fr": "En haut : le statut, la date d’envoi et la référence ; puis le titre (« Urgente » devant, si elle l’est), le sujet et le texte envoyé.\n« Envoyée » : partie, le bureau ne l’a pas encore prise en main (au bureau, elle s’appelle « Nouvelle »).\n« En cours » : un consultant l’a reçue et s’en occupe.\n« Résolue » ou « Fermée » : terminée. « Annulée » : abandonnée.",
+            "nl": "Bovenaan: de status, de verzenddatum en de referentie; dan de titel (« Urgente » ervoor, als ze dringend is), het onderwerp en de verstuurde tekst.\n« Envoyée »: vertrokken, het kantoor heeft ze nog niet in handen genomen (op het kantoor heet ze « Nouvelle »).\n« En cours »: een consultant heeft ze ontvangen en volgt ze op.\n« Résolue » of « Fermée »: afgerond. « Annulée »: stopgezet."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "Le bas de la carte : où en est la réponse",
+            "nl": "Onderaan de kaart: waar het antwoord staat"
+          },
+          "texte": {
+            "fr": "Pas encore prise en main : « Envoyée il y a 3 jours — pas encore lue par le bureau ».\nPrise en main : « En cours chez » le consultant, et « · réponse prévue d’ici le » la date limite qu’il a donnée.\nReprise dans une visite : « Reprise dans la visite de … du … — réponse après la visite ».\nRépondue : « Le bureau · date : » et la réponse, en entier.",
+            "nl": "Nog niet in handen genomen: « Envoyée il y a 3 jours — pas encore lue par le bureau ».\nIn handen genomen: « En cours chez » de consultant, en « · réponse prévue d’ici le » de deadline die hij gaf.\nOpgenomen in een bezoek: « Reprise dans la visite de … du … — réponse après la visite ».\nBeantwoord: « Le bureau · datum : » en het volledige antwoord."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Ce que le bureau en fait",
+        "nl": "Wat het kantoor ermee doet"
+      },
+      "etapes": [
+        {
+          "numero": "8",
+          "titre": {
+            "fr": "Le bureau est prévenu tout de suite",
+            "nl": "Het kantoor wordt meteen verwittigd"
+          },
+          "texte": {
+            "fr": "À l’envoi, un SMS part au bureau : le magasin, le sujet, le titre, le début de la demande, le passage souhaité, le nombre de photos et la référence.\nUne demande urgente commence par « URGENT - ».\nLe magasin ne voit ni les numéros ni l’envoi du SMS ; un SMS qui ne part pas n’empêche jamais la demande d’arriver.\nInutile d’appeler en plus : la demande est au bureau dès le « ✓ ».",
+            "nl": "Bij het versturen vertrekt een sms naar het kantoor: de winkel, het onderwerp, de titel, het begin van de aanvraag, het gewenste bezoek, het aantal foto’s en de referentie.\nEen dringende aanvraag begint met « URGENT - ».\nDe winkel ziet de nummers en de verzending van de sms niet; een sms die niet vertrekt, houdt de aanvraag nooit tegen.\nNiet nodig om ook nog te bellen: de aanvraag is op het kantoor vanaf het « ✓ »."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "9",
+          "titre": {
+            "fr": "La date limite du consultant",
+            "nl": "De deadline van de consultant"
+          },
+          "texte": {
+            "fr": "À la réception, le consultant donne à la demande un délai : 2, 5, 10, 30 ou 90 jours à partir du jour même.\nLa demande passe alors « En cours ».\nSur la carte, le magasin lit « réponse prévue d’ici le » et la date. C’est l’engagement du bureau.\nLa date passée sans réponse : la demande ressort en retard au cockpit. Le magasin peut le rappeler à la visite.",
+            "nl": "Bij ontvangst geeft de consultant de aanvraag een termijn: 2, 5, 10, 30 of 90 dagen vanaf die dag.\nDe aanvraag gaat dan naar « En cours ».\nOp de kaart leest de winkel « réponse prévue d’ici le » en de datum. Dat is het engagement van het kantoor.\nDatum voorbij zonder antwoord: de aanvraag staat te laat in de cockpit. De winkel kan het bij het bezoek aankaarten."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "10",
+          "titre": {
+            "fr": "Les relances tant qu’elle n’est pas en cours",
+            "nl": "De herinneringen zolang ze niet in behandeling is"
+          },
+          "texte": {
+            "fr": "Une demande restée « Envoyée » revient au bureau par SMS : 7 jours après l’envoi, puis tous les 7 jours, à 08:30, les jours ouvrés.\nLe SMS va au consultant de la demande (sinon à tout le bureau).\nLes relances s’arrêtent quand la demande passe « En cours ».\nPour le magasin : rien à faire, pas besoin de renvoyer la même demande. Une deuxième demande sur le même sujet se traite deux fois.",
+            "nl": "Een aanvraag die « Envoyée » blijft, komt per sms terug bij het kantoor: 7 dagen na het versturen, daarna om de 7 dagen, om 08:30, op werkdagen.\nDe sms gaat naar de consultant van de aanvraag (anders naar heel het kantoor).\nDe herinneringen stoppen als de aanvraag naar « En cours » gaat.\nVoor de winkel: niets te doen, dezelfde aanvraag hoeft niet opnieuw. Een tweede aanvraag over hetzelfde onderwerp wordt twee keer behandeld."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "11",
+          "titre": {
+            "fr": "La réponse, annoncée par SMS",
+            "nl": "Het antwoord, aangekondigd per sms"
+          },
+          "texte": {
+            "fr": "Quand le consultant répond (sur la demande, ou par le constat de sa visite), un SMS part au GSM du magasin, dans sa langue (français ou néerlandais).\nIl donne le titre et le début de la réponse : « Le bureau a répondu à votre demande … ».\nLa réponse entière se lit dans le dashboard : « Demande au bureau » › « Mes demandes », filtre « Répondues ».\nPas de SMS reçu ? Le GSM du magasin est peut-être à jour nulle part : le dire au consultant.",
+            "nl": "Als de consultant antwoordt (op de aanvraag, of via het verslag van zijn bezoek), vertrekt er een sms naar de gsm van de winkel, in zijn taal (Frans of Nederlands).\nHij geeft de titel en het begin van het antwoord: « Het kantoor heeft uw aanvraag … beantwoord ».\nHet volledige antwoord lees je in het dashboard: « Demande au bureau » › « Mes demandes », filter « Répondues ».\nGeen sms gekregen? Misschien staat de gsm van de winkel nergens juist: zeg het aan de consultant."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Une demande toute faite",
+        "nl": "Een kant-en-klare aanvraag"
+      },
+      "etapes": [
+        {
+          "numero": "12",
+          "titre": {
+            "fr": "Le prix au-dessus du maximum du réseau",
+            "nl": "De prijs boven het maximum van het netwerk"
+          },
+          "texte": {
+            "fr": "Dans la fiche produit (Recette & marge), un prix testé au-dessus du maximum du réseau ne s’enregistre pas : « Demander au réseau de relever le maximum » envoie une demande au bureau, sujet « Ventes », déjà rédigée (prix demandé, maximum actuel, prix en caisse) ; elle se suit dans « Mes demandes », et le prix en caisse ne change pas en attendant.",
+            "nl": "In de productfiche (Recette & marge) wordt een geteste prijs boven het maximum van het netwerk niet opgeslagen: « Demander au réseau de relever le maximum » stuurt een aanvraag naar het kantoor, onderwerp « Ventes », al opgesteld (gevraagde prijs, huidig maximum, kassaprijs); je volgt ze in « Mes demandes », en de kassaprijs verandert intussen niet."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Une demande au bureau passe par « ✉ Demande au bureau » du dashboard : le bon sujet, un titre court, un texte précis et, si besoin, des photos.",
+      "nl": "Een aanvraag aan het kantoor gaat via « ✉ Demande au bureau » in het dashboard: het juiste onderwerp, een korte titel, een precieze tekst en, indien nodig, foto’s."
+    },
+    {
+      "fr": "« Urgent » est réservé à ce qui bloque le magasin aujourd’hui : chaque demande prévient déjà le bureau par SMS.",
+      "nl": "« Urgent » is voor wat de winkel vandaag blokkeert: elke aanvraag verwittigt het kantoor al per sms."
+    },
+    {
+      "fr": "La date limite donnée par le consultant (« réponse prévue d’ici le … ») est l’engagement du bureau ; tant que la demande est « Envoyée », le bureau est relancé tous les 7 jours, sans rien renvoyer.",
+      "nl": "De deadline die de consultant geeft (« réponse prévue d’ici le … ») is het engagement van het kantoor; zolang de aanvraag « Envoyée » is, krijgt het kantoor om de 7 dagen een herinnering, zonder dat je iets opnieuw stuurt."
+    },
+    {
+      "fr": "La réponse est annoncée par SMS au GSM du magasin ; elle se lit en entier dans « Mes demandes ».",
+      "nl": "Het antwoord wordt per sms aangekondigd op de gsm van de winkel; je leest het volledig in « Mes demandes »."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "La caisse refuse un moyen de paiement depuis ce matin. Comment le signaler au bureau ?",
+        "nl": "De kassa weigert sinds vanochtend een betaalmiddel. Hoe meld je dat aan het kantoor?"
+      },
+      "choix": {
+        "fr": [
+          "Par une réclamation au fournisseur (« ✎ Réclamation »)",
+          "Par « ✉ Demande au bureau » : un sujet, un titre, le détail, une photo de l’écran, et « Oui, urgent » si la vente est bloquée",
+          "En écrivant dans la conversation de l’assistant"
+        ],
+        "nl": [
+          "Met een klacht bij de leverancier (« ✎ Réclamation »)",
+          "Via « ✉ Demande au bureau »: een onderwerp, een titel, de details, een foto van het scherm, en « Oui, urgent » als de verkoop geblokkeerd is",
+          "Door in het gesprek van de assistent te schrijven"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Une demande affiche « En cours » et « réponse prévue d’ici le 30/11 ». Qu’est-ce que cela veut dire ?",
+        "nl": "Een aanvraag toont « En cours » en « réponse prévue d’ici le 30/11 ». Wat betekent dat?"
+      },
+      "choix": {
+        "fr": [
+          "La demande a été refusée",
+          "Il faut renvoyer la demande avant le 30/11",
+          "Un consultant l’a reçue et s’est donné jusqu’au 30/11 pour répondre"
+        ],
+        "nl": [
+          "De aanvraag werd geweigerd",
+          "Je moet de aanvraag vóór 30/11 opnieuw versturen",
+          "Een consultant heeft ze ontvangen en geeft zichzelf tot 30/11 om te antwoorden"
+        ]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {
+        "fr": "Une demande est « Envoyée » depuis 8 jours, sans réponse. Que faire ?",
+        "nl": "Een aanvraag staat al 8 dagen op « Envoyée », zonder antwoord. Wat doe je?"
+      },
+      "choix": {
+        "fr": [
+          "Rien de plus : le bureau est relancé par SMS tous les 7 jours tant qu’elle n’est pas en cours",
+          "Envoyer la même demande une deuxième fois",
+          "La marquer urgente après coup"
+        ],
+        "nl": [
+          "Niets meer: het kantoor krijgt om de 7 dagen een sms-herinnering zolang ze niet in behandeling is",
+          "Dezelfde aanvraag een tweede keer versturen",
+          "Ze achteraf als dringend markeren"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Le GSM du magasin reçoit « Le bureau a répondu à votre demande … ». Où lire la réponse entière ?",
+        "nl": "De gsm van de winkel krijgt « Het kantoor heeft uw aanvraag … beantwoord ». Waar lees je het volledige antwoord?"
+      },
+      "choix": {
+        "fr": [
+          "Dans la boîte mail du magasin",
+          "Dans le dashboard : « Demande au bureau » › « Mes demandes »",
+          "Il faut appeler le consultant"
+        ],
+        "nl": [
+          "In de mailbox van de winkel",
+          "In het dashboard: « Demande au bureau » › « Mes demandes »",
+          "Je moet de consultant bellen"
+        ]
+      },
+      "bonne": 1
+    }
+  ]
+}
