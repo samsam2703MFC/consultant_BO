@@ -948,6 +948,10 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   onglet de la Trésorerie ; le rail du 23/11 (Mon équipe, Se former, la roue des Paramètres et Mon coffre-fort en bas, le
   carré des vidéos) ; les vignettes sur l'Opérationnel seulement. Parties 1, 2, 4, 28 ; SOP 5.7 (le chemin de l'onglet
   Frais). Captures dash-entete, dash-valeur, dash-frais. NL à relire.
+- **26/11/2026 — ART-PIL-01 v1.11, SOP-PIL-01 v1.8** (dashboard jusqu'à `555a9c3d` du 25/11) : les Primes quittent
+  Vendre et deviennent le troisième onglet de Mon équipe (Responsabilités, Planning, Primes) ; Commandes entre dans La
+  journée, Clients dans Vendre. Parties 2 et 35 ; SOP 5.4 (le chemin des Primes, même geste). Captures dash-entete,
+  dash-frise, dash-primes. NL à relire. Pas de partie pour Commandes, Clients ni la fiche d'une personne : à décider.
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
