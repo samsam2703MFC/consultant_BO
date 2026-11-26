@@ -371,6 +371,36 @@ function devEcrire(p, b) {
   return undefined;
 }
 
+/* ── Le formulaire public du magasin (bureaux_dev.php : bdvPublic, bdvPublicTva, bdvNettoyer, bdvCreer) ── */
+function formulaire(m, p, b) {
+  if (!/^\/bureau-questionnaire\/m\/4(\/tva)?$/.test(p)) { return err(404, 'questionnaire introuvable'); }
+  if (!QUEST.actif) { return err(404, 'ce questionnaire n’est plus ouvert'); }
+  const promo = QUEST.promo ? PROMOS.find(x => x.id === QUEST.promo) : null;
+  if (m === 'GET') {
+    return { magasin: 'Magasin démo', shop: SHOP, titre: QUEST.titre, message: QUEST.message,
+      bon: promo ? promo.nom + (promo.description ? ' — ' + promo.description : '') : null, bonDetail: promo ? { nom: promo.nom, description: promo.description } : null };
+  }
+  if (p.endsWith('/tva')) {
+    const t = String(b.tva || '').toUpperCase().replace(/[\s.\-]/g, '');
+    if (!/^[A-Z]{2}[0-9A-Z]{6,14}$/.test(t)) { return err(422, 'Un numéro de TVA a la forme BE0123456789.'); }
+    return { tva: t, verifiee: true, valide: true, societe: 'Imprimerie du Val', rue: 'Rue des Tilleuls', numero: '8', cp: '5002', ville: 'Val-Fleuri' };
+  }
+  const e = [];
+  if (!String(b.prenom || '').trim() || !String(b.nom || '').trim()) { e.push('votre prénom et votre nom'); }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(b.email || '').trim())) { e.push('un e-mail valide'); }
+  if (!String(b.adresse || '').trim() || !String(b.ville || '').trim()) { e.push('l’adresse du bureau (rue et ville)'); }
+  if (!(b.jours || []).length) { e.push('au moins un jour de livraison'); }
+  if (!b.accord) { e.push('votre accord avec les conditions et la vie privée'); }
+  if (e.length) { return err(422, 'Il manque ' + e.join(', ') + '.'); }
+  const d = Object.assign({}, b, { _compte: 'cree' }); delete d.accord; delete d.site_web;
+  const bureau = String(b.bureau || b.societe).trim();
+  const bon = promo ? { code: 'BQ7M4K2X', texte: promo.nom + (promo.description ? ' — ' + promo.description : '') } : null;
+  DEV.push({ id: nextDev++, source: 'questionnaire', statut: 'a_valider', le: '2026-11-19 15:41', bureau, societe: String(b.societe).trim(), tva: String(b.tva || '').toUpperCase().replace(/[\s.\-]/g, ''),
+    personne: (b.prenom + ' ' + b.nom).trim(), fonction: b.fonction || '', email: String(b.email).toLowerCase(), tel: b.tel, adresse: b.adresse, cp: b.cp || '', ville: b.ville,
+    personnes: +b.personnes || 0, jours: b.jours || [], remarque: b.remarque || '', d, compte: 'cree', clientId: nextId++, societeId: 7221, bon, erreurs: [], officeId: null, traite: null });
+  return { ok: true, magasin: 'Magasin démo', bon, compte: 'cree', rejoint: null, bureau };
+}
+
 /* ── L'analyse B2B ── */
 const SAISON = [0.86, 0.9, 0.97, 0.99, 1.02, 0.95, 0.78, 0.74, 0.98, 1.03, 1.06, 0.9];
 function analyse(annee, mois) {
@@ -412,6 +442,9 @@ module.exports = function (m, p, q, c) {
     if (p === '/dashboard/tfb/deconnexion') { TFB.connecte = false; return { ok: true }; }
     return undefined;
   }
+  /* Le formulaire public du magasin (…/bureau/?m=4 ; bdvPublicMagasin, bdvPublicTva) : une réponse crée une demande
+   * « à valider », comme bdvCreer (le compte webshop créé, la société, le bon personnel). */
+  if (p.startsWith('/bureau-questionnaire/m/')) { return formulaire(m, p, c); }
   /* Les bureaux en développement */
   if (p === '/dashboard/bureaux-dev' && m === 'GET') { return devEtat(); }
   if (p.startsWith('/dashboard/bureaux-dev') && m === 'POST') { return devEcrire(p, c); }

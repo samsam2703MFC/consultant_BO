@@ -183,6 +183,7 @@ class Film {
     this.images = []; this.souris = { x: W * 0.6, y: H * 0.55 };
     this.sous = []; this.t0 = null;
     this.chapitres = [];   // f.onglet(), f.fonction() : les passages du MP4, une entrée du registre chacun
+    this.coupes = [];      // f.changerDePage() : les instants du chargement d'une autre page, retirés du montage
   }
   async _demarrer() {
     fs.rmSync(this.dossier, { recursive: true, force: true });
@@ -239,13 +240,13 @@ class Film {
   }
   pied(gauche, droite) { return '<div class="fd-pied"><span>' + gauche + '</span><span class="p">' + (droite || '') + '</span></div>'; }
   /** La couverture : Ruby plein, logo blanc, titre, accroche (Playwrite), le programme à droite. */
-  async couverture({ kicker, titre, accroche, programme, ms = 5200 }) {
+  async couverture({ kicker, titre, accroche, programme, ms = 5200, garder }) {
     const e = Film.esc;
     const html = '<div class="fd fd--marque"><div class="fd-tete"><img src="/assets/img/newsletter/logo-white.png" alt="L’Atelier by"><div class="k">Dashboard magasin<br>' + e(this.opts.serie || 'Tutoriel') + '</div></div>' +
       '<div class="fd-corps"><div class="gauche"><p class="kick">' + e(kicker || '') + '</p><h1>' + titre + '</h1>' + (accroche ? '<p class="acc">' + e(accroche) + '</p>' : '') + '</div>' +
       (programme && programme.length ? '<div class="droite"><p class="kick">Au programme</p><ol>' + programme.map(x => '<li><span>' + x + '</span></li>').join('') + '</ol></div>' : '') + '</div>' +
       this.pied('Les écrans sont ceux du dashboard ; les chiffres et les noms sont fictifs', e(this.opts.duree || '')) + '</div>';
-    await this.diapo(html, ms);
+    await this.diapo(html, ms, garder);   // garder : la diapositive suivante la remplace (le film des bureaux)
   }
   /** L'intercalaire d'un chapitre : papier, logo, filet Ruby, numéro dans un cercle Ruby. */
   async chapitre({ n, total, titre, texte, points, ms }) {
@@ -394,10 +395,47 @@ class Film {
   async annonce(oui, ms = 500) { await this.p.evaluate(o => document.documentElement.classList.toggle('film-sans-annonce', !o), !!oui); await this.pause(ms); }
   async cacher(ms = 300) { await this.p.evaluate(() => window.__film.cadre(null)); await this.pause(ms); }
 
+  /** Un film qui passe d'une page à l'autre (26/11/2026, le film des bureaux : le formulaire public, puis Clients, puis
+   * Commandes). La page se change sous une diapositive : `carton`, le HTML de la diapositive montrée à ce moment, est
+   * reposé sur la nouvelle page avant qu'on la voie ; les images du chargement sont retirées du montage (la diapositive
+   * reste à l'écran le temps de ce chargement). `avant(p)` : l'état de départ, hors film. */
+  async changerDePage(chemin, { query, carton, avant, chargement } = {}) {
+    const t0 = Date.now() / 1000;
+    const q = new URLSearchParams({ shop: DEMO.shop, ...(query || {}) });
+    await this.p.goto(BASE + chemin + '?' + q);
+    await this.p.waitForTimeout(chargement || this.opts.chargement || 2500);
+    await this.p.evaluate(() => window.__film.prets());
+    if (avant) { await avant(this.p); }
+    if (carton) {
+      await this.p.evaluate(h => { const e = document.getElementById('film-carton'); e.style.transition = 'none'; window.__film.curseur(false); window.__film.carton(h); void e.offsetWidth; e.style.transition = ''; }, carton);
+    }
+    await this.p.mouse.move(this.souris.x, this.souris.y);
+    await this.pause(250);
+    this.coupes.push([t0, Date.now() / 1000]);
+  }
+  /** Un zoom doux sur le geste : la page (body) grossit de k autour de l'élément ; le calque (curseur, sous-titres)
+   * reste à sa taille. f.dezoom() revient. Sans défilement pendant le zoom. */
+  async zoom(cible, k = 1.35, ms = 700) {
+    const r = await this.rect(cible);
+    await this.p.evaluate(([r, k, ms]) => {
+      const b = document.body, bb = b.getBoundingClientRect();
+      b.style.transformOrigin = (r.x + r.w / 2 - bb.left) + 'px ' + (r.y + r.h / 2 - bb.top) + 'px';
+      b.style.transition = 'transform ' + ms + 'ms cubic-bezier(.2,.8,.2,1)';
+      b.style.transform = 'scale(' + k + ')';
+    }, [{ x: r.x, y: r.y, w: r.w, h: r.h }, k, ms]);
+    await this.pause(ms + 100);
+  }
+  async dezoom(ms = 600) {
+    await this.p.evaluate(ms => { const b = document.body; b.style.transition = 'transform ' + ms + 'ms cubic-bezier(.2,.8,.2,1)'; b.style.transform = ''; }, ms);
+    await this.pause(ms + 100);
+    await this.p.evaluate(() => { const b = document.body; b.style.transition = ''; b.style.transformOrigin = ''; });
+  }
+
   /* --- la souris --------------------------------------------------------- */
   async aller(x, y, ms) {
     const de = this.souris, dist = Math.hypot(x - de.x, y - de.y);
-    const duree = ms || Math.max(380, Math.min(1100, dist * 1.1));
+    // opts.vitesse (le film des bureaux : 0,6) : une main plus vive, pour un film court et rythmé.
+    const duree = ms || Math.round(Math.max(380, Math.min(1100, dist * 1.1)) * (this.opts.vitesse || 1));
     const n = Math.max(12, Math.round(duree / 16));
     // Une courbe légère, comme une main.
     const cx = (de.x + x) / 2 + (y - de.y) * 0.12, cy = (de.y + y) / 2 - (x - de.x) * 0.12;
@@ -462,7 +500,12 @@ class Film {
   monter() {
     // Sous charge, le screencast livre des images dans le désordre : on les remet dans l'ordre de leur horodatage
     // (sinon des durées négatives, ramenées au minimum, allongent la vidéo).
-    const imgs = this.images.slice().sort((a, b) => a.t - b.t);
+    // Les coupes (f.changerDePage) : leurs images retirées, et le temps qui suit avancé d'autant — le chargement d'une
+    // page ne dure pas dans le film.
+    const coupe = t => this.coupes.some(([a, b]) => t > a && t < b);
+    const decale = t => t - this.coupes.reduce((s, [a, b]) => s + (b <= t ? b - a : 0), 0);
+    if (this.coupes.length) { this.chapitres.forEach(c => { c.t = decale(c.t); if (c.ecran) { c.ecran = decale(c.ecran); } }); if (this.tFin) { this.tFin = decale(this.tFin); } }
+    const imgs = this.images.filter(x => !coupe(x.t)).map(x => ({ fichier: x.fichier, t: decale(x.t) })).sort((a, b) => a.t - b.t);
     if (!imgs.length) { throw new Error('aucune image filmée'); }
     const fin = (Date.now() - this.debut) / 1000; // garde-fou : la dernière image dure jusqu'à la fin
     const lignes = ['ffconcat version 1.0'];

@@ -64,6 +64,16 @@ routes manquantes dans `mocks/` (`capture.js` les liste), et `node tourner.js 04
 fonction : `genre: "nouveau"` et `depuis` à la date de mise en ligne ; la carte « Nouveau » s'efface après 60 jours ou
 une fois la vidéo ouverte.
 
+## Un film qui change de page (26/11/2026)
+
+Le film des bureaux (`scenarios/26-film-bureaux.js`, Sam : « un petit film spécialisé, disponible dans un coin dans
+bureau, très mimi et dynamique ») passe du dashboard au formulaire public du magasin (`/bureau/?m=4`), puis à Commandes.
+`f.changerDePage(chemin, { query, carton, avant })` charge l'autre page sous une diapositive : la diapositive est reposée
+sur la nouvelle page, et les images du chargement sont retirées du montage (le temps qui suit est avancé d'autant).
+`f.zoom(cible, k)` et `f.dezoom()` grossissent la page autour d'un geste (le calque garde sa taille) ;
+`Film.ouvrir(…, { vitesse: 0.5 })` rend la main plus vive ; `f.couverture({ …, garder: true })` laisse la couverture à
+l'écran jusqu'à la diapositive suivante. Les cartes d'étape animées du film sont dans son scénario.
+
 ## Une vidéo par onglet, ses fonctions en chapitres (24/11/2026)
 
 Sam : « chaque vidéo dans le rail, ensuite une vidéo par onglet interne, ensuite une vidéo spécifique à chaque
