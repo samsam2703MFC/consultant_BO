@@ -595,20 +595,22 @@
   }
 
   /** Le bloc du bureau : un bandeau qui se déplie sur les alertes. */
-  function rendStock() {
+  function rendStock(o) {
     const E = stockEtat();
     if (E && !E.indispo && !E.n) { return ''; }        // pas d'inventaire : on se tait
     const al = E && !E.indispo ? E.alertes : 0;
     const bouton = pushBouton();
     const vieux = E && !E.indispo && E.vieux;
-    const cls = al ? ' ko' : (vieux ? ' wa' : (E && !E.indispo ? ' ok' : ' mu'));
-    const titre = al ? al + ' référence' + (al > 1 ? 's' : '') + ' sous le minimum'
+    // neutre (Opérationnel, 26/11/2026) : l'alerte est dans « À corriger », la barre ne la répète pas.
+    const neutre = !!(o && o.neutre && (al || vieux));
+    const cls = neutre ? ' neutre' : (al ? ' ko' : (vieux ? ' wa' : (E && !E.indispo ? ' ok' : ' mu')));
+    const titre = neutre ? 'Stock du magasin' : al ? al + ' référence' + (al > 1 ? 's' : '') + ' sous le minimum'
       : (vieux ? 'Inventaire non recompté depuis ' + E.jours + ' jours'
         : (E && !E.indispo ? 'Stock au complet' : 'Stock'));
     return `<div class="db-stbar${cls}${S.stockOuvert ? ' ouv' : ''}">
-      <span class="ic" data-stdrop="1">${al ? '!' : (vieux ? '…' : (E && !E.indispo ? '✓' : '·'))}</span>
+      ${neutre ? '' : `<span class="ic" data-stdrop="1">${al ? '!' : (vieux ? '…' : (E && !E.indispo ? '✓' : '·'))}</span>`}
       <span class="t" data-stdrop="1">${titre}<small>${stockSous(E)}</small></span>
-      ${al ? `<span class="chips" data-stdrop="1">${E.ruptures ? `<span class="ch ko">${E.ruptures} à zéro</span>` : ''}${E.negatifs ? `<span class="ch ko">${E.negatifs} négatif${E.negatifs > 1 ? 's' : ''}</span>` : ''}</span>` : ''}
+      ${al && !neutre ? `<span class="chips" data-stdrop="1">${E.ruptures ? `<span class="ch ko">${E.ruptures} à zéro</span>` : ''}${E.negatifs ? `<span class="ch ko">${E.negatifs} négatif${E.negatifs > 1 ? 's' : ''}</span>` : ''}</span>` : ''}
       <span class="sp"></span>${bouton}
       ${E && !E.indispo ? `<span class="dr" data-stdrop="1">${S.stockOuvert ? 'replier ▴' : 'la liste ▾'}</span>` : ''}
     </div>${S.stockOuvert && E && !E.indispo ? `<div class="db-stdl">${stockTiroir(E)}</div>` : ''}`;
@@ -2824,15 +2826,19 @@
       const cls = st <= 0.05 ? (prevH(h + 1) >= 0.3 || (h === H[H.length - 1] && d >= 0.3) ? 'ko' : 'vd') : (fut && st < prevH(h + 1) ? 'att' : 'ok');
       return `<i class="${cls}${fut ? ' fut' : ''}${h === nowH ? ' now' : ''}" title="${h} h · ${fN(Math.max(0, st))} en vitrine${fut ? ' (prévu)' : ''} · ${h < nowH ? 'vendu ' + fN(+c.v || 0) : 'prévu ' + nf(prevH(h), 1)}"></i>`; }).join('')}</span>`;
   }
+  /** Ce qui va manquer en vitrine (l'état de chaque produit, vitLire) : le compte, les ventes à sauver hors long life, et les
+   * durées de vie touchées. La carte La vitrine et « À corriger » (26/11/2026) lisent le même. */
+  function opVitrineManque(D) {
+    const L = (D.prods || []).map(p => ({ p, e: vitLire(D, p) })), M = L.filter(x => x.e.c !== 'ok');
+    return { L, n: M.length, eur: M.filter(x => opVieDe(x.p) !== 'L').reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0), vies: [...new Set(M.map(x => opVieDe(x.p)))] };
+  }
   function opVitrineE(D) {
     const { now, U, prods } = D;
     const H = Array.isArray(U.heures) ? U.heures : [], fin = now == null;
     const suite = fin ? null : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now).sort((a, b) => opMin(a.de) - opMin(b.de))[0] || null;
     // Les filtres, par durée de vie (10/10/2026) : trois petits carrés discrets en bout de ligne.
     const FB = S.vitFb || (S.vitFb = {}), filtre = k => FB[k] || (FB[k] = { ko: true, att: true, ok: false });
-    const L = prods.map(p => Object.assign({ p, e: vitLire(D, p) }));
-    const nb = c => L.filter(x => x.e.c === c).length;
-    const manque = L.filter(x => x.e.c !== 'ok'), eur = manque.filter(x => opVieDe(x.p) !== 'L').reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0);
+    const L = opVitrineManque(D).L;
     const ordre = { ko: 0, att: 1, ok: 2 };
     const geste = (x, k) => {
       if (x.e.c === 'ok') { const fj = Math.max(0, +x.p.finJour || 0); return k === 'L' ? `<span class="g ok">en stock<small>${x.e.pj ? nf(x.e.st / x.e.pj, 1) + ' jours de vente' : ''}</small></span>` : `<span class="g ok">${fj >= 0.5 ? fN(fj) : '—'}<small>${fj >= 0.5 ? 'restera ce soir' : 'juste assez'}</small></span>`; }
@@ -2866,7 +2872,7 @@
       const ouvert = !!(S.vitOuv || {})[k];
       const M = B.filter(x => x.e.c !== 'ok'), aCuire = M.reduce((a, x) => a + (x.e.n || 0), 0), eurB = k === 'L' ? 0 : M.reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0);
       const resB = !M.length ? '<span class="rs ok">✓ rien ne va manquer</span>'
-        : `<span class="rs">${fN(M.length)} ${fin ? 'ont manqué' : 'vont manquer'}${aCuire && !fin ? ' · <b>+' + fN(aCuire) + '</b> ' + (k === 'L' ? 'à refaire' : 'à cuire') : ''}${eurB >= 1 ? ' · ' + fE(eurB) + (fin ? ' perdus' : ' à sauver') : ''}</span>`;
+        : `<span class="rs">${fN(M.length)} ${fin ? (M.length > 1 ? 'ont manqué' : 'a manqué') : (M.length > 1 ? 'vont manquer' : 'va manquer')}${aCuire && !fin ? ' · <b>+' + fN(aCuire) + '</b> ' + (k === 'L' ? 'à refaire' : 'à cuire') : ''}${eurB >= 1 ? ' · ' + fE(eurB) + (fin ? ' perdus' : ' à sauver') : ''}</span>`;
       const axe = k === 'L' ? '<div class="vt-ax l"><span>stock face à ' + OP_VIE_JOURS + ' jours de vente</span></div>' : `<div class="vt-ax">${H.map(h => `<span>${h} h</span>`).join('')}</div>`;
       const vide = !V.length ? `<div class="vt-vide">${F.ko || F.att ? (B.some(x => x.e.c !== 'ok') ? 'rien dans les filtres choisis' : '✓ rien ne va manquer d’ici la fermeture') : 'aucun produit dans les filtres choisis'}</div>` : '';
       return `<div class="vt-b${ouvert ? ' on' : ''}"><div class="vt-h"><button type="button" class="vt-ht" data-vitb="${k}" aria-expanded="${ouvert ? 'true' : 'false'}"><span class="fl">${ouvert ? '▾' : '▸'}</span><span class="op-vie ${k}">${k}</span><b>${OP_VIE_NOM[k]}</b><span class="r">${fN(B.length)} réf.</span>${resB}</button><span class="cpt">${cpt}</span></div>
@@ -2874,9 +2880,9 @@
         ${V.length > MAX ? `<button type="button" class="vt-plus" data-vitall="${k}">${tout ? '▴ replier' : (V.length - MAX === 1 ? '▸ voir le dernier' : '▸ voir les ' + fN(V.length - MAX) + ' autres')}</button>` : ''}` : ''}</div>`;
     }).join('');
     const tete = `<span class="db-mini" style="margin-left:auto">${suite ? `prochaine cuisson : <b>${esc(suite.nom)}</b> à ${esc(suite.de)}${suite.four ? ' (four ' + esc(suite.four) + ')' : ''}` : (fin ? '' : 'plus de cuisson prévue aujourd’hui')}</span>`;
-    const resume = manque.length ? `<b>${fN(manque.length)}</b><span>produit${manque.length > 1 ? 's' : ''} ${fin ? 'ont manqué' : 'vont manquer d’ici la fermeture'}${eur >= 1 ? ' · ' + fE(eur) + ' de ventes ' + (fin ? 'perdues' : 'à sauver') : ''}</span>` : `<b class="ok">✓</b><span>rien ne va manquer d’ici la fermeture</span>`;
-    return `<div class="db-card op-bloc vt"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div>
-      <div class="vt-top"><span class="vt-res">${resume}</span></div>${blocs}
+    // Le résumé « N produits vont manquer · X € à sauver » est passé dans « À corriger » (26/11/2026, un chiffre, une place) ;
+    // chaque durée de vie garde le sien.
+    return `<div class="db-card op-bloc vt" id="op-vit"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div>${blocs}
       <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span></div></div>`;
   }
 
@@ -3817,10 +3823,62 @@
       <tbody>${T.map(ligne).join('')}${pied}</tbody></table></div>
       <div class="db-note" style="padding:8px 16px 12px">Vendu : le vendeur sur chaque ticket. Par heure : ses ventes ÷ les heures de son poste où le magasin a vendu. Produit : les cuissons de son poste, si elle tient un poste de production. Coût : son taux horaire au panel × ses heures faites (un franchisé ne pèse pas au P&amp;L).</div></div>`;
   }
+  /* --- « À corriger » (26/11/2026, Sam : « ce style », maquette panel/docs/maquettes/equipe-gestion/semaine-avant-apres) ---
+   * En haut d'Opérationnel et de Tâches : ce qui demande un geste aujourd'hui, un bouton par point, qui mène au geste qui existe
+   * déjà (le bloc, mis en évidence un instant ; sa liste, son filtre, l'élément ouvert). Rien n'y est calculé : chaque écran y
+   * passe ce qu'il compte déjà. Un point : { sig: 'stop' | 'prize', txt, attr } ; attr : data-ac="id du bloc" et, s'il y a un
+   * geste à faire avant d'y aller, data-acg (vit:S,L · cq:nc · stock · tjcl:clé) — ou l'attribut d'un geste existant. Un point
+   * qui vit ici ne reste pas ailleurs (la vignette Dossier de formation, la pastille des non-conformités) : un chiffre, une place. */
+  function acBloc(L, pret) {
+    if (!L.length) { return pret ? '<div class="ac"><p class="ac-ok">Rien à corriger pour l’instant.</p></div>' : ''; }
+    return `<div class="ac" role="region" aria-label="À corriger"><span class="ac-t">À corriger</span><span class="ac-l">${L.map(x => `<button type="button" class="btn btn--sm ac-b" ${x.attr}><i class="ac-ic ac-${x.sig}" aria-hidden="true"></i>${x.txt}</button>`).join('')}</span></div>`;
+  }
+  /** Le geste d'un point : l'état qu'il demande (rendre), puis le bloc à l'écran, mis en évidence un instant. */
+  function acAller(id, g) {
+    const [k, v] = String(g || '').split(/:(.*)/s);
+    if (k === 'vit') { const O = S.vitOuv || (S.vitOuv = {}); v.split(',').filter(Boolean).forEach(x => { O[x] = true; }); }
+    else if (k === 'cq') { S.cqFiltre = v; S.cqRaz = true; }
+    else if (k === 'stock') { S.stockOuvert = true; }
+    else if (k === 'tjcl') { S.tjOuv[v] = true; const c = tjChecklists(S.aux[cleTJ(S.date)]).find(x => x.cle === v); if (c && S.tjF !== 'tout' && S.tjF !== c.etat) { S.tjF = 'tout'; } }
+    if (k) { rendre(); }
+    acMontrer(document.getElementById(id));
+  }
+  function acMontrer(el) {
+    if (!el) { return; }
+    const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.style.scrollMarginTop = '16px';
+    el.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+    el.classList.remove('ac-vu'); void el.offsetWidth; el.classList.add('ac-vu');
+    clearTimeout(el._acT); el._acT = setTimeout(() => el.classList.remove('ac-vu'), 1800);
+  }
+  /** Les points d'Opérationnel, dans l'ordre de la page : la vitrine, les contrôles en photo, le stock, le dossier de formation. */
+  function opACorriger(D) {
+    const L = [], pl = (n, s, p) => fN(n) + ' ' + (n > 1 ? p : s);
+    const auj = S.date === AUJ, C = auj ? cqListe() : null, E = stockEtat();
+    if (auj && D.U && D.now != null) {
+      const V = opVitrineManque(D);
+      if (V.n) { L.push({ sig: 'stop', txt: `${pl(V.n, 'produit va', 'produits vont')} manquer${V.eur >= 1 ? ' · ' + fE(V.eur) + ' à sauver' : ''}`, attr: `data-ac="op-vit" data-acg="vit:${V.vies.join(',')}"` }); }
+    }
+    if (C) {
+      const n = c => C.filter(x => x.e.c === c).length;
+      if (n('nc')) { L.push({ sig: 'prize', txt: `${pl(n('nc'), 'écart', 'écarts')} sur les photos`, attr: 'data-ac="op-cq" data-acg="cq:nc"' }); }
+      if (n('ko')) { L.push({ sig: 'stop', txt: `${pl(n('ko'), 'photo pas encore rendue', 'photos pas encore rendues')}`, attr: 'data-ac="op-cq" data-acg="cq:ko"' }); }
+    }
+    if (E && !E.indispo && E.n) {
+      if (E.alertes) { L.push({ sig: 'stop', txt: `${pl(E.alertes, 'référence', 'références')} sous le minimum${E.ruptures ? ' · ' + fN(E.ruptures) + ' à zéro' : ''}`, attr: 'data-ac="op-stock" data-acg="stock"' }); }
+      else if (E.vieux) { L.push({ sig: 'prize', txt: `Inventaire non recompté depuis ${fN(E.jours)} jours`, attr: 'data-ac="op-stock" data-acg="stock"' }); }
+    }
+    if (fcAFaire()) { L.push({ sig: 'prize', txt: `Dossier de formation : ${fN(fcAFaire())} à faire`, attr: 'data-fcouvrir="1" title="Mon dossier de formation : les formations continues du magasin, la photo du jour, le Professeur"' }); }
+    return acBloc(L, !!(D.U && S.aux['stock|' + S.shop] && (!auj || C)));
+  }
+
   function rendOps() {
     const D = opDonnees();
     const { now, fin, U, ST, JD, m, CM, SK, INV, NC, PR, prods, vides, manques, trop, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk } = D;
     let h = '';
+
+    /* À corriger (26/11/2026) : sous la semaine, dont la case du jour porte déjà le chiffre clé (le CA, l'objectif). */
+    h += opACorriger(D);
 
     /* 0. Ta place dans le réseau, la journée (10/10/2026) : juste au-dessus des objectifs, anonyme. */
     if (m && JD) { h += rendBench(m, JD); }
@@ -3839,7 +3897,8 @@
 
     /* 2. Les ventes par catégorie (liste, treemap, promotions, portions) : la carte de la vue Jour, telle quelle.
      * La carte Bundles vendus est retirée (23/10/2026, Sam) : double emploi avec l'onglet Promotions. */
-    h += PJ ? PJ.categories : attente('Ventes par catégorie');
+    // La tête de la liste reste collée en haut quand on y descend (26/11/2026) : la classe op-cats la porte.
+    h += `<div class="op-cats">${PJ ? PJ.categories : attente('Ventes par catégorie')}</div>`;
 
     /* La journée : la frise de 04:00 à 20:00 et les ventes de chaque heure face à la moyenne */
     const H0 = 4 * 60, H1 = 20 * 60, x = mm => (100 * (Math.max(H0, Math.min(H1, mm)) - H0) / (H1 - H0)).toFixed(2) + '%', w = (a, b) => (100 * (Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0)).toFixed(2) + '%';
@@ -3865,7 +3924,8 @@
 
     // Les vignettes Commandes clients, Hier, Poubelle et Promotions sont retirées (23/10/2026, Sam).
     // Le stock du magasin : la barre de la vue Semaine, sa liste en liste déroulante.
-    h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : `<div class="db-stbar mu"><span class="t">Stock<small>lecture de l’inventaire…</small></span></div>`}</div>`;
+    // Ce qui est sous le minimum se dit dans « À corriger » (26/11/2026) : ici la barre garde la liste, sous un titre neutre.
+    h += `<div class="op-stock" id="op-stock">${S.aux['stock|' + S.shop] ? rendStock({ neutre: true }) : `<div class="db-stbar mu"><span class="t">Stock<small>lecture de l’inventaire…</small></span></div>`}</div>`;
     return h;
   }
 
@@ -6814,7 +6874,8 @@
   function rendTempsMorts() {
     const cle = cleTM(), D = S.aux[cle];
     const dj = new Date(S.date + 'T12:00:00'), nomJ = JOUR_L[dj.getDay()];
-    let h = `<div class="db-sec">Temps morts — ${esc(fDL(S.date))}<small>un temps mort : ${S.tmSeuil} minutes ou plus sans un seul ticket, entre le premier et le dernier ticket de la journée</small>
+    // Le titre est celui de la barre (26/11/2026) : ici, le jour, la définition et le seuil.
+    let h = `<div class="db-sous tm-sous"><span>${esc(fDL(S.date))} · un temps mort : ${S.tmSeuil} minutes ou plus sans un seul ticket, entre le premier et le dernier ticket de la journée</span>
       <span class="tm-seuil"><span class="db-lab">Temps mort dès</span><span class="db-ong">${TM_SEUILS.map(s => `<button type="button" data-tmseuil="${s}" class="${s === S.tmSeuil ? 'on' : ''}">${s} min</button>`).join('')}</span></span></div>`;
     if (S.err[cle]) { h += `<div class="db-err">Temps morts : ${esc(S.err[cle])} <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
     if (!D) { return h + (S.err[cle] ? '' : squelette(6)); }
@@ -6826,12 +6887,17 @@
     else if (J.ferme) { h += `<div class="db-card"><div class="db-mini" style="padding:16px">Magasin fermé ce jour-là : ${J.tickets ? J.tickets + ' ticket' + (J.tickets > 1 ? 's' : '') + ', pas de journée' : 'aucun ticket'}.</div></div>`; }
     else {
       const hab = Hb.jours ? `${nomJ}s d’avant` : '';
-      h += `<div class="db-tuiles tm-tuiles">
-        ${`<div class="db-tui"><div class="k">Temps morts${enCours ? ' · en cours' : ''}</div><div class="v">${J.nb}</div><div class="s">${Hb.jours ? 'habitude : ' + nf(Hb.nb, 1) + ' les ' + Hb.jours + ' ' + hab : 'pas d’habitude lue'}</div>${enCours ? '' : tmEcart(J.nb, Hb.nb, 'vs habitude')}</div>`}
-        <div class="db-tui"><div class="k">Sans client</div><div class="v">${fMin(J.mort)}</div><div class="s">sur ${fMin(J.ouvert)}, de ${esc(J.debut)} à ${esc(J.fin)}</div>${enCours ? '' : tmEcart(J.mort, Hb.mort, 'vs habitude', 'min')}</div>
-        <div class="db-tui"><div class="k">Part de l’ouverture</div><div class="v">${fP0(J.pct)}</div><div class="s">${Hb.jours ? 'habitude : ' + fP0(Hb.pct) : ''}</div>${enCours ? '' : tmEcart(J.pct, Hb.pct, 'vs habitude', 'pct')}</div>
-        <div class="db-tui"><div class="k">Le plus long trou</div><div class="v">${fMin(J.plusLong.min)}</div><div class="s">de ${esc(J.plusLong.de)} à ${esc(J.plusLong.a)}</div></div>
-        <div class="db-tui"><div class="k">Tickets</div><div class="v">${fN(J.tickets)}</div><div class="s">${J.isoles ? J.isoles + ' isolé' + (J.isoles > 1 ? 's' : '') + ' en bord de journée, écarté' + (J.isoles > 1 ? 's' : '') + (J.ecartes && J.ecartes.length ? ' (' + J.ecartes.map(tmHm).join(', ') + ')' : '') : 'tous comptés, comptoir et pro'}</div></div></div>`;
+      // Le résumé (26/11/2026, « ce style ») : les cinq tuiles deviennent deux lignes. Le temps sans client en chiffre clé, sa part
+      // de l'ouverture et l'habitude ; puis le nombre de temps morts et le plus long. Le nombre de tickets n'y est plus : la ligne
+      // du jour du tableau de la semaine le porte (un chiffre, une place) ; les tickets isolés écartés restent dits ici.
+      // Pas d'« À corriger » : l'écran ne désigne aucun temps mort comme à surveiller (la journée en cours n'a pas d'écart à l'habitude).
+      const ec = (v, r, f) => enCours ? '' : tmEcart(v, r, 'vs habitude', f);
+      h += `<section class="db-card tm-res" aria-label="Temps morts du jour"><div class="tm-r1">
+          <div class="tm-v"><span class="tm-kv">${fMin(J.mort)}</span><span class="tm-kl">sans client${enCours ? ' · en cours' : ''}</span></div>
+          <div class="tm-q"><span class="tm-q1">${fP0(J.pct)} de l’ouverture${Hb.jours ? ` <span class="tm-hab">habitude : ${fP0(Hb.pct)}</span>` : ''}</span><span class="tm-q2">sur ${fMin(J.ouvert)}, de ${esc(J.debut)} à ${esc(J.fin)}</span>${ec(J.mort, Hb.mort, 'min')}${ec(J.pct, Hb.pct, 'pct')}</div>
+          <div class="tm-q tm-sep"><span class="tm-q1">${J.nb} temps mort${J.nb > 1 ? 's' : ''} de ${S.tmSeuil} min ou plus</span><span class="tm-q2">${Hb.jours ? 'habitude : ' + nf(Hb.nb, 1) + ' les ' + Hb.jours + ' ' + hab : 'pas d’habitude lue'}</span>${ec(J.nb, Hb.nb)}</div>
+          <div class="tm-q tm-sep"><span class="tm-q1">le plus long : ${fMin(J.plusLong.min)}</span><span class="tm-q2">de ${esc(J.plusLong.de)} à ${esc(J.plusLong.a)}</span></div>
+        </div>${J.isoles ? `<p class="tm-r2">${J.isoles} ticket${J.isoles > 1 ? 's' : ''} isolé${J.isoles > 1 ? 's' : ''} en bord de journée, écarté${J.isoles > 1 ? 's' : ''}${J.ecartes && J.ecartes.length ? ' (' + J.ecartes.map(tmHm).join(', ') + ')' : ''}</p>` : ''}</section>`;
       h += `<div class="db-card"><div class="ct"><span class="db-lab">La journée minute par minute</span><span class="db-mini">un carré = une minute · ${J.nb} temps mort${J.nb > 1 ? 's' : ''} de ${S.tmSeuil} min ou plus · survolez un carré pour son heure</span></div>${tmFrise(J)}${tmLegende()}</div>`;
     }
 
@@ -6854,7 +6920,7 @@
     h += `<div class="db-card"><div class="ct"><span class="db-lab">La semaine du ${esc(fdC(W.du))} au ${esc(fdC(W.au))}</span>
         <span class="db-mini">par jour : nombre de temps morts, temps sans client, part de l’ouverture · cliquez un jour pour le lire ci-dessus</span>
         <span class="tm-fl"><button type="button" class="db-btn" data-frsem="-1">‹ semaine d’avant</button><button type="button" class="db-btn" data-frsem="1"${finSem ? ' disabled' : ''}>semaine d’après ›</button></span></div>
-      <div style="overflow-x:auto"><table class="db-t tm-sem"><thead><tr><th>Jour</th><th>Temps morts</th><th>Sans client</th><th>Part de l’ouverture</th><th>Plus long trou</th><th>Tickets</th><th>Premier – dernier</th>${hs.length ? `<th><div class="tm-cases-h" style="grid-template-columns:repeat(${hs.length},1fr)">${hs.map(x => `<span>${x} h</span>`).join('')}</div></th>` : ''}</tr></thead>
+      <div class="tm-sem-w"><table class="db-t tm-sem"><thead><tr><th>Jour</th><th>Temps morts</th><th>Sans client</th><th>Part de l’ouverture</th><th>Plus long trou</th><th>Tickets</th><th>Premier – dernier</th>${hs.length ? `<th><div class="tm-cases-h" style="grid-template-columns:repeat(${hs.length},1fr)">${hs.map(x => `<span>${x} h</span>`).join('')}</div></th>` : ''}</tr></thead>
       <tbody>${W.jours.map(ligne).join('')}${moy('Moyenne par jour', M, P.jours ? P : null)}${moy('Semaine d’avant', P)}</tbody></table></div>
       <div class="db-mini" style="padding:10px 16px 12px">Mesuré sur l’heure de chaque ticket (liste des tickets du panel) : tous les tickets comptent, comptoir et pro. L’attente avant le premier client et ce qui suit le dernier ticket ne comptent pas ; un ticket isolé à ${D.isole || 45} min ou plus du suivant en début ou en fin de journée est écarté. Les moyennes ne prennent que les journées closes. Habitude : les ${(Hb.dates || []).length || 4} mêmes jours de semaine d’avant.</div></div>`;
     return h;
@@ -6889,7 +6955,10 @@
   const tjFaite = t => t.statut === 'notee' || t.statut === 'aControler' || t.statut === 'aValider' || (t.statut === 'sansPhoto' && !t.photoRequise);
   const tjSansPhoto = t => t.statut === 'sansPhoto' && !!t.photoRequise;
   const tjPct = (a, b) => b ? Math.round(100 * a / b) : null;
-  const tjCouleur = p => p == null ? 'var(--color-border-secondary)' : (p >= 90 ? '#2D7A3E' : (p >= 50 ? '#D97706' : '#C0182B'));
+  // Les paliers sur les jetons du design system (26/11/2026) : vert, or (attention), rouge d'arrêt.
+  const tjCouleur = p => p == null ? 'var(--color-border-secondary)' : (p >= 90 ? 'var(--green)' : (p >= 50 ? 'var(--prize)' : 'var(--stop)'));
+  /** La même, pour un petit texte : l'or de texte (--prize-ink), l'or plein ne se lit pas à 12 px. */
+  const tjCouleurT = p => p == null ? '' : (p >= 90 ? 'var(--green)' : (p >= 50 ? 'var(--prize-ink)' : 'var(--stop)'));
   /** « 1.1.02 · Photos des comptoirs » → code, zone, moment, titre ; un ancien code (CO-01) reste lisible, zone 0. */
   function tjCode(nom) {
     const s = String(nom || '').trim();
@@ -6902,7 +6971,7 @@
   /** Le niveau du barème pour une note : nom court et couleur (le barème part avec la journée). */
   function tjNiveau(n, niveaux) {
     const lv = (Array.isArray(niveaux) ? niveaux : []).find(x => +x.n === +n);
-    const def = { 5: ['Exemplaire', '#C9A227'], 4: ['Conforme', '#2D7A3E'], 3: ['NC mineur', '#D97706'], 2: ['NC majeur', '#C0182B'], 1: ['NC critique', '#8D1D2C'] }[n] || ['', '#5c5852'];
+    const def = { 5: ['Exemplaire', '#C9A227'], 4: ['Conforme', 'var(--green)'], 3: ['NC mineur', 'var(--prize)'], 2: ['NC majeur', 'var(--stop)'], 1: ['NC critique', 'var(--ink)'] }[n] || ['', '#5c5852'];
     return { nom: lv && lv.nom ? String(lv.nom).replace(/^Non conforme\s*[—–-]\s*/i, 'NC ') : def[0], couleur: (lv && lv.couleur) || def[1] };
   }
   /** Les checklists de la journée : les tâches obligatoires rangées sous chaque checklist qui les porte (une tâche citée
@@ -6936,7 +7005,7 @@
    * drapeau (16/11/2026 : « Photos rendues 0 / 3 » avec sept photos notées). */
   const tjAPhoto = t => !!(t.photoRequise || t.photo || t.note != null || t.statut === 'notee' || t.statut === 'aControler');
   /** La couleur d'une note moyenne : conforme dès le seuil, à surveiller un point en dessous, sinon à reprendre. */
-  const tjCouleurNote = (m, seuil) => m == null ? '' : (m >= seuil ? '#2D7A3E' : (m >= seuil - 1 ? '#D97706' : '#C0182B'));
+  const tjCouleurNote = (m, seuil) => m == null ? '' : (m >= seuil ? 'var(--green)' : (m >= seuil - 1 ? 'var(--prize-ink)' : 'var(--stop)'));
   /** Les non-conformités des 30 derniers jours, en pastille dans la ligne de la semaine (18/11/2026 : la ligne des quatre
    * tuiles du jour est fondue dans la bande, chaque jour porte ses photos, sa note et ses non-conformités). */
   function tjPastilleNC() {
@@ -6945,6 +7014,24 @@
     const titre = dern ? 'dernier passage du contrôleur : le ' + fD(dern.jour) + (dern.consultant ? ' (' + dern.consultant + ')' : '') : 'les notes sous 4 des 30 derniers jours';
     const s = !ncL ? (S.err[cleTJR()] ? 'pas lues' : 'lecture…') : (ncL.length ? ncRep + ' reprise' + (ncRep > 1 ? 's' : '') : 'aucune note sous 4') + ' · voir les retours ↓';
     return `<button type="button" class="tj-nc${ncL && !ncL.length ? ' bon' : ''}" data-tjallerret="1" title="${esc(titre)}"><span class="k">Non-conformités · 30 jours</span><b>${ncL ? ncL.length : '…'}</b><span>${s}</span></button>`;
+  }
+  /** Les non-conformités des 30 jours vont dans « À corriger » quand il y en a, le jour même (26/11/2026) ; sinon la pastille
+   * reste dans la ligne de la semaine. */
+  function tjNcACorriger() {
+    const R = S.aux[cleTJR()], ncL = R && Array.isArray(R.nc) ? R.nc : null;
+    return S.date === AUJ && ncL && ncL.length ? { n: ncL.length, rep: ncL.filter(n => n.suite && n.suite.conforme).length } : null;
+  }
+  /** À corriger, au bureau (26/11/2026) : chaque checklist commencée sans être finie, ou pas commencée alors que son heure est
+   * passée (l'état que la liste donne déjà), puis les non-conformités des 30 jours. Un clic ouvre la checklist, ou la recherche. */
+  function tjACorriger(D, R) {
+    if (S.date !== AUJ || !D) { return ''; }
+    const CL = tjChecklists(D), L = [];
+    CL.forEach((c, i) => { if (c.etat !== 'partie' && c.etat !== 'pas') { return; }
+      L.push({ sig: c.etat === 'pas' ? 'stop' : 'prize', txt: `<span class="ac-j">${esc(c.code || '—')}</span>${esc(c.titre)} · ${c.etat === 'pas' ? 'pas commencée' : 'en partie'}, ${c.faites} / ${c.total}`,
+        attr: `data-ac="tj-cl-${i}" data-acg="tjcl:${esc(c.cle)}" title="ouvrir la checklist"` }); });
+    const N = tjNcACorriger();
+    if (N) { L.push({ sig: 'stop', txt: `${N.n} non-conformité${N.n > 1 ? 's' : ''} en 30 jours · ${N.rep} reprise${N.rep > 1 ? 's' : ''}`, attr: 'data-tjallerret="1" title="les notes sous 4 des 30 derniers jours : voir les retours"' }); }
+    return acBloc(L, !!R);
   }
   /** Les résultats d'un jour lu : tâches obligatoires faites, photos rendues, note moyenne du contrôle, non-conformités. */
   function tjRes(D) {
@@ -6971,7 +7058,7 @@
       }
       const pl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
       const tNote = [r.N ? pl(r.N, 'photo') + ' notée' + (r.N > 1 ? 's' : '') : 'aucune photo notée', r.ctl ? r.ctl + ' à contrôler' : ''].filter(Boolean).join(' · ');
-      const res = r.T.length ? `<div class="tj-jr"><span title="photos rendues">${TJ_CAM}<em style="color:${r.ph ? tjCouleur(tjPct(r.phR, r.ph)) : ''}">${r.ph ? r.phR + '/' + r.ph : '—'}</em></span>`
+      const res = r.T.length ? `<div class="tj-jr"><span title="photos rendues">${TJ_CAM}<em style="color:${r.ph ? tjCouleurT(tjPct(r.phR, r.ph)) : ''}">${r.ph ? r.phR + '/' + r.ph : '—'}</em></span>`
         + `<span title="note moyenne du contrôle · ${esc(tNote)}">note <em style="color:${tjCouleurNote(r.moy, r.seuil)}">${r.moy != null ? nf(r.moy, 1) : '—'}</em></span>`
         + `<span title="${r.N ? pl(r.nc, 'non-conformité') + ' ce jour (note sous ' + r.seuil + ')' : 'pas encore notée'}"><em class="${!r.N ? 'mu' : (r.nc ? 'ko' : 'ok')}">${r.N ? r.nc : '—'}</em> NC</span></div>` : '';
       return `<div class="tj-j${sel ? ' on' : ''}"${at}><div class="l">${lib}${d === AUJ ? ' · en cours' : ''}</div>`
@@ -6984,7 +7071,7 @@
         + `<button type="button" class="fr-fl" data-frsem="1" aria-label="semaine d’après"${suiv}>›</button></div><div class="tj-bande">${cases}</div>`;
     }
     return `<div class="tj-sem"><span class="db-lab">Semaine du ${esc(fdC(J[0]))} au ${esc(fdC(J[6]))}</span><span class="db-mini">tâches obligatoires faites, photos et contrôle, jour par jour · cliquez un jour pour l’ouvrir</span>
-      ${tjPastilleNC()}<span class="tj-fl"><button type="button" class="db-btn" data-frsem="-1">‹ semaine d’avant</button><button type="button" class="db-btn" data-frsem="1"${suiv}>semaine d’après ›</button></span></div><div class="tj-bande">${cases}</div>`;
+      ${tjNcACorriger() ? '' : tjPastilleNC()}<span class="tj-fl"><button type="button" class="db-btn" data-frsem="-1">‹ semaine d’avant</button><button type="button" class="db-btn" data-frsem="1"${suiv}>semaine d’après ›</button></span></div><div class="tj-bande">${cases}</div>`;
   }
   function tjGuide(CL) {
     const ex = CL.find(c => /^\d/.test(c.code)) || { code: '1.1.02', titre: 'Photos des comptoirs', zone: 1, moment: 1 };
@@ -7024,12 +7111,12 @@
   }
   function tjLigne(c, X, niveaux) {
     // La barre d'une checklist a la couleur de son état : faite, en partie, pas faite, à venir.
-    const p = tjPct(c.faites, c.total), ouv = !!S.tjOuv[c.cle], coul = { faite: '#2D7A3E', partie: '#D97706', pas: '#C0182B', avenir: 'var(--color-border-secondary)' }[c.etat];
+    const p = tjPct(c.faites, c.total), ouv = !!S.tjOuv[c.cle], coul = { faite: 'var(--green)', partie: 'var(--prize)', pas: 'var(--stop)', avenir: 'var(--color-border-secondary)' }[c.etat];
     const zc = c.zone ? TJ_ZONES[c.zone][1] : '#5c5852';
     const st = { faite: '<span class="tj-st ok">faite</span>', partie: '<span class="tj-st wa">en partie</span>', pas: `<span class="tj-st ko">${S.date === AUJ ? 'pas commencée' : 'pas faite'}</span>`, avenir: '<span class="tj-st mu">à venir</span>' }[c.etat];
     const sous = [c.heure ? esc(c.heure) : 'sans heure', c.zone ? TJ_ZONES[c.zone][0] : (c.code ? 'ancien code' : ''), c.moment ? TJ_MOMENTS[c.moment] : ''].filter(Boolean).join(' · ');
     const T = c.T.slice().sort((a, b) => (tjFaite(a) ? 0 : 1) - (tjFaite(b) ? 0 : 1) || String(a.heure || '').localeCompare(String(b.heure || '')) || String(a.tache).localeCompare(String(b.tache)));
-    return `<div class="tj-cl${ouv ? ' open' : ''}"><div class="tj-h" data-tjcl="${esc(c.cle)}" role="button" tabindex="0" aria-expanded="${ouv}">
+    return `<div class="tj-cl${ouv ? ' open' : ''}"${c.i != null ? ` id="tj-cl-${c.i}"` : ''}><div class="tj-h" data-tjcl="${esc(c.cle)}" role="button" tabindex="0" aria-expanded="${ouv}">
         <span class="tj-code" style="background:${zc}">${esc(c.code || '—')}</span><span class="tj-nom">${esc(c.titre)}<small>${sous}</small></span>
         <span class="tj-p"><span class="tj-prog"><i style="width:${Math.max(p || 0, 2)}%;background:${coul}"></i></span><span><b>${c.faites}</b> / ${c.total}</span></span>${st}<span class="tj-repli">${ouv ? 'replier ▴' : 'voir ▾'}</span></div>
       ${ouv ? `<div class="tj-ts">${T.map(t => tjTache(t, X, niveaux)).join('')}</div>` : ''}</div>`;
@@ -7106,12 +7193,16 @@
   }
   function rendTachesMag(mob) {
     const k = cleTJ(S.date), D = S.aux[k], R = S.aux[cleTJR()];
-    let h = `<div class="db-sec">Tâches et checklists${mob ? '' : ' — ' + esc(fDL(S.date))}<small>ce qui a été fait ou pas, checklist par checklist, et ce qu’en dit le contrôle qualité</small></div>`;
+    // Au bureau, le titre est celui de la barre (26/11/2026, « Tâches » sous le nom du magasin) : ici, le jour et ce qu'on y lit.
+    let h = mob ? `<div class="db-sec">Tâches et checklists<small>ce qui a été fait ou pas, checklist par checklist, et ce qu’en dit le contrôle qualité</small></div>`
+      : `<p class="db-sous">${esc(fDL(S.date))} · ce qui a été fait ou pas, checklist par checklist, et ce qu’en dit le contrôle qualité</p>`;
     h += tjBande(mob);
+    if (!mob) { h += tjACorriger(D, R); }
     if (S.err[k]) { h += `<div class="db-err">Tâches : ${esc(S.err[k])} <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
     if (!D) { return h + (S.err[k] ? '' : squelette(6)) + tjGuide([]); }
     if (D.api && D.api.erreur && !tachesJour(D).length) { h += `<div class="db-alerte">Le panel n’a pas répondu pour ce jour : ${esc(D.api.erreur)}</div>`; }
     const T = tachesJour(D), CL = tjChecklists(D), niveaux = D.repartition || (R && R.niveaux) || [];
+    CL.forEach((c, i) => { c.i = i; });   // l'ancre de « À corriger » (tj-cl-i), dans l'ordre des codes
     if (mob) { h += tjJourMobile(D, R); }
     h += tjGuide(CL);
     h += tjRecherche(niveaux);
@@ -7147,7 +7238,7 @@
     $.querySelectorAll('[data-tjtout]').forEach(el => el.addEventListener('click', () => { const o = el.dataset.tjtout === '1', D = S.aux[cleTJ(S.date)];
       tjChecklists(D).filter(c => S.tjF === 'tout' || c.etat === S.tjF).forEach(c => { S.tjOuv[c.cle] = o; }); rendre(); }));
     $.querySelectorAll('[data-tjguide]').forEach(el => cle(el, () => { S.tjGuide = !S.tjGuide; try { localStorage.setItem('db.tjGuide', S.tjGuide ? '1' : '0'); } catch (e) { /* rien */ } rendre(); }));
-    $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => { const r = document.getElementById('tj-recherche'); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
+    $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => acMontrer(document.getElementById('tj-recherche'))));
     const qi = $.querySelector('[data-tjq]');
     if (qi) {
       qi.addEventListener('input', () => { S.tjQ = qi.value; S.tjQPos = qi.selectionStart; const r = document.getElementById('tj-q-res'); if (r) { r.innerHTML = tjResultats(S.tjNiv || []); } tjRechercheCharger(); });
@@ -8006,7 +8097,8 @@
     // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Trésorerie, Mon
     // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
     // Les primes (24/11/2026) : un onglet de Mon équipe, sous son titre, comme Responsabilités et Planning.
-    const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
+    // Tâches et Temps morts reprennent la barre de titre (26/11/2026) : le magasin en kicker, le titre de l'onglet, la date.
+    const propre = ['annee', 'concurrence', 'promos', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
     // Les vignettes (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles, sous le
     // titre, six vignettes égales sur toute la largeur ; le titre et la date au-dessus, s'il y en a.
     const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();
@@ -8017,7 +8109,7 @@
     // onglets gardent leur titre et leur date, et rien du tout quand ils ont déjà leur propre titre.
     if (S.vue !== 'ops') { return haut.trim() ? `<div class="db-nav db-nav--rail db-nav--seul${S.vue === 'boite' ? ' db-nav--boite' : ''}">${haut}</div>` : ''; }
     return `<div class="db-nav db-nav--rail">${haut.trim() ? haut + '<span style="flex:1"></span>' : ''}
-      <span class="db-avs">${av('data-fcouvrir="1" title="Mon dossier de formation : les formations continues du magasin, la photo du jour, le Professeur"', ' db-av--fc', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + RAIL_ICO.formation + '"/></svg>', 'Dossier de formation', fcAFaire() ? fcAFaire() + ' à faire' : 'à jour')}${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
+      <span class="db-avs">${fcAFaire() ? '' : av('data-fcouvrir="1" title="Mon dossier de formation : les formations continues du magasin, la photo du jour, le Professeur"', ' db-av--fc', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + RAIL_ICO.formation + '"/></svg>', 'Dossier de formation', fcAFaire() ? fcAFaire() + ' à faire' : 'à jour')}${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
       <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="db-av__o">${VIGN_ICO.valeur}</span><span class="db-av__t"><span class="k">Valeur du magasin</span><span class="v">${val}</span></span></button></span>
       ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
       ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}
@@ -11553,6 +11645,8 @@
     $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
     // Le bouton abricot « Mon dossier de formation » (22/11/2026) : un clic, la page Formation du magasin.
     $.querySelectorAll('[data-fcouvrir]').forEach(b => b.addEventListener('click', () => allerVers('formation')));
+    // « À corriger » (26/11/2026) : le geste du point, puis son bloc à l'écran.
+    $.querySelectorAll('[data-ac]').forEach(b => b.addEventListener('click', () => acAller(b.dataset.ac, b.dataset.acg)));
     // L'assistant s'ouvre en pleine page au bureau (17/11/2026) ; la fenêtre reste pour la demande au bureau et au téléphone.
     $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => { if (b.dataset.iaouvrir === 'd') { iaOuvrir('d'); } else if (estMobile()) { iaOuvrir(null); } else { iaPage(null); } }));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
