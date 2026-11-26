@@ -9928,8 +9928,8 @@
     const pc = (a, b) => b ? 100 * a / b : 0;
     // Le signe se lit sur la valeur arrondie : −0,3 % s'écrit « 0 % », pas « −0 % ».
     const sg = v => { const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r); };
-    // Bleu au-dessus du N-1, orange en dessous (des couleurs que les daltoniens distinguent), gris autour de zéro.
-    const HAUT = '#2E6DB4', BAS = '#C0632B';
+    // Vert au-dessus du N-1, or en dessous (26/11/2026, jetons d'état) ; les daltoniens les distinguent mal : l'écart signé de chaque période est écrit à côté. Gris autour de zéro.
+    const HAUT = '#3f7a52', BAS = '#B0792A';   // au-dessus du N-1 vert, en dessous or (Sam, 26/11/2026)
     const col = v => v >= 3 ? HAUT : (v <= -3 ? BAS : '#8b8177');
     const lues = (D.semaines || []).filter(w => w.source || (w.n1 && w.n1.source));
     const enCours = lues.length && lues[lues.length - 1].enCours ? lues[lues.length - 1] : null;
