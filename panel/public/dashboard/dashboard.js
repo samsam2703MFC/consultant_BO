@@ -5925,7 +5925,9 @@
   }
   function iaOuvrir(mode) {
     IA.ouvert = true;
-    if (mode === 'd') { IA.mode = 'd'; hdLire(false); } else if (IA.mode === 'd' && !(IA.questions && IA.questions.actif)) { IA.mode = 'd'; }
+    // Le mode demandé est appliqué (26/11/2026 : seul « d » l'était ; « Demander au Professeur » sans question ouvrait la
+    // fenêtre sur son dernier onglet — Bilan, ou Demande au bureau — au lieu de la Conversation).
+    if (mode === 'd') { IA.mode = 'd'; hdLire(false); } else if (mode === 'a' || mode === 'b') { IA.mode = mode; } else if (IA.mode === 'd' && !(IA.questions && IA.questions.actif)) { IA.mode = 'd'; }
     if (!IA.questions) { lire('/assistant/magasin/questions').then(q => { IA.questions = q; iaRendre(); }).catch(() => { IA.questions = { tuiles: [], groupes: [] }; iaRendre(); }); }
     if (!IA.modeles) { iaModelesLire(); }
     iaRendre();
