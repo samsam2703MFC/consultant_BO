@@ -96,7 +96,18 @@ module.exports = async function () {
 - Ces fichiers sortent en **1600 × 900, CRF 34** (≈ 1,3 Mo la minute ; le texte reste net), une image clé au début de
   chaque chapitre : le lecteur y saute (`#t=debut,fin`) et s'arrête à la fin du passage. Il faut un serveur qui
   accepte les requêtes partielles (Apache en production ; `php -S` ne le fait pas : le saut ne marche pas en local).
-- Le lecteur du dashboard (`tutos.js`) et la vidéothèque (`#/videos/<page>`) montrent la page onglet par onglet.
+- Le lecteur du dashboard (`tutos.js`) et la médiathèque (`#/videos/<page>`) montrent la page onglet par onglet.
+
+## La médiathèque (26/11/2026)
+
+Sam : « une vraie médiathèque de vidéos, avec une barre de recherche intelligente, par section, catégorie, onglet et
+titre ». Le catalogue de formation (`formation/public/formation/catalogue/`, `#/videos`) range tout le registre : la
+**section** du rail (`VSECTIONS` : En haut du rail, La journée, Les chiffres, Vendre, Marketing, Se former, En bas du
+rail), la **catégorie** (la page : la première `vues` de la vidéo de page, `VALIAS` pour `jour`, `trimestre`, `frais`),
+l'**onglet**, le **titre**. La recherche ignore accents et majuscules, connaît des synonymes (`VSYN` : « mail »,
+« horaire », « TVA »…), accepte un début de mot et une faute de frappe, et classe titre, onglet et page, section,
+résumé ; « / » y va, Entrée ouvre le premier résultat. Une nouvelle page du rail : l'ajouter à `VSECTIONS`
+(`php panel/bin/tests_videos.php` le vérifie).
 
 ## La routine : adapter et faire les nouvelles vidéos
 

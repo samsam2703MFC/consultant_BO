@@ -10,9 +10,9 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   `formation/tools/formation/` (à lancer depuis `formation/`).
 - **Lu par les autres domaines** : `GET /formation/ref`, `/formation/v25`, `/formation/referentiel`,
   `/formation/procedure` (jeton de service pour les autres portails).
-- **Vidéothèque** (23/11/2026) : le catalogue des manuels (`public/formation/catalogue/`, `#/videos`) liste les vidéos
-  d'instruction du dashboard magasin, lues dans leur registre `panel/public/dashboard/videos/videos.json` (fichier public,
-  à l'adresse du cockpit) : rien à faire ici quand une vidéo s'ajoute (`panel/src/LISEZMOI.md`).
+- **Médiathèque** (23/11/2026, refaite le 26/11 : sections du rail, pages, onglets, titres, recherche) : le catalogue des
+  manuels (`public/formation/catalogue/`, `#/videos`, `#/videos/<page>`) range les vidéos d'instruction du dashboard
+  magasin, lues dans leur registre `panel/public/dashboard/videos/videos.json` (fichier public, à l'adresse du cockpit) : rien à faire ici quand une vidéo s'ajoute (`panel/src/LISEZMOI.md`).
 - **Examens théoriques** (26/11/2026, `src/examens.php`, tables `for_exam_*`, écran `#/rfexamens` — `examens.js`) : la
   banque de questions des candidats franchisés (dix thèmes, sources suivies par empreinte), relue chaque mois
   (`bin/examens_cron.sh`, cron 06:20, une fois par mois) ; le CRM la lit (`GET /formation/examens/banque`, jeton de
