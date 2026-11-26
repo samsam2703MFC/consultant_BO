@@ -2517,6 +2517,78 @@
       "tourne_le": "2026-11-26"
     },
     {
+      "id": "analyse-entree",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "analyse",
+      "titre": "L’entrée : l’essentiel",
+      "resume": "La page s’ouvre sur l’essentiel de la période : six chiffres, les familles et leurs flèches, le chiffre tranche par tranche, quatre classements ; la période se choisit en haut.",
+      "vues": [
+        "analyse"
+      ],
+      "fichier": "10-01-entree.mp4",
+      "debut": 0,
+      "fin": 88.27,
+      "affiche": "analyse-entree.jpg",
+      "duree": "1 min 28",
+      "sources": [
+        "panel/public/dashboard/analyse.js",
+        "panel/public/dashboard/analyse.css",
+        "panel/src/dashboard_analyse.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "analyse-produit",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "analyse",
+      "titre": "La fiche d’un produit",
+      "resume": "Un produit, sept questions : combien j’en vends, ce qu’il rapporte, ce qu’on en jette, quel jour il part, son prix face au réseau, face aux autres magasins, depuis l’ouverture.",
+      "vues": [
+        "analyse"
+      ],
+      "fichier": "10-02-produit.mp4",
+      "debut": 0,
+      "fin": 89.08,
+      "affiche": "analyse-produit.jpg",
+      "duree": "1 min 29",
+      "sources": [
+        "panel/public/dashboard/analyse.js",
+        "panel/public/dashboard/analyse.css",
+        "panel/src/dashboard_analyse.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "analyse-famille",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "analyse",
+      "titre": "La page d’une famille",
+      "resume": "Une famille, huit questions : son poids, sa tendance face au réseau, qui la porte, ce qui monte ou baisse, ce qu’elle perd, à quelle heure elle se vend, chez les autres, depuis l’ouverture.",
+      "vues": [
+        "analyse"
+      ],
+      "fichier": "10-03-famille.mp4",
+      "debut": 0,
+      "fin": 86.54,
+      "affiche": "analyse-famille.jpg",
+      "duree": "1 min 27",
+      "sources": [
+        "panel/public/dashboard/analyse.js",
+        "panel/public/dashboard/analyse.css",
+        "panel/src/dashboard_analyse.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "produits",
       "genre": "tuto",
       "titre": "Produits : est-ce que ça se développe ?",
@@ -2536,6 +2608,30 @@
         "shared/public/assets/ds/global.css"
       ],
       "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "produits-categorie",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "produits",
+      "titre": "La fenêtre d’une catégorie",
+      "resume": "Une tuile de « Vos catégories » ouvre sa fenêtre : sa flèche, ses 13 semaines, ses produits (prix, pièces par semaine, évolution), un produit déplié, et sa fiche complète.",
+      "vues": [
+        "produits"
+      ],
+      "fichier": "11-01-categorie.mp4",
+      "debut": 0,
+      "fin": 76.43,
+      "affiche": "produits-categorie.jpg",
+      "duree": "1 min 16",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/analyse_produits.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
       "tourne_le": "2026-11-26"
     },
     {

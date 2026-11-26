@@ -1,5 +1,6 @@
 /* Vendre › Produits (dashboard.js, rendProduits ; serveur consultant/src/analyse_produits.php, adCalculer) : est-ce que le
- * magasin, chaque catégorie, chaque produit se développe ? Les 6 dernières semaines closes face aux 6 d'avant. Et
+ * magasin, chaque catégorie, chaque produit se développe ? Les 6 dernières semaines closes face aux 6 d'avant (Pâtisserie
+ * y a cinq références de plus que le catalogue de démo : SUPPL, plus bas). Et
  * l'aperçu du nouveau prix de vente de la fiche produit (POST /analyse/produits/prix, panel/src/prix_produit.php :
  * pxpPlan) — l'aperçu seulement ; la confirmation répond comme le panel, mais les vidéos s'arrêtent à l'aperçu.
  * La fiche elle-même (ventes, prix face au réseau, recette) vient de lib/fiche.js, par 10_ops.js. Données fictives.
@@ -37,11 +38,26 @@ function evolution(v, q, lib) {
   return { avant: r2(av / nA), apres: r2(ap / nP), qAvant: r1(qA / nA), qApres: r1(qP / nP), pct, verdict, depuis };
 }
 
+/* La gamme de Pâtisserie, plus large ici qu'au catalogue de démo (26/11/2026, vidéo 11-01-categorie) : la fenêtre d'une
+ * catégorie montre ses 12 premiers produits au chiffre, puis « ▾ les N autres produits » ; aucune catégorie de lib/ventes.js
+ * n'en a plus de 9. Cinq références de plus, pièces par semaine de S35 à S47 (la dernière : la semaine en cours) : une
+ * stable, une qui monte, une tarte de saison arrêtée depuis S41, une nouveauté depuis S45, une trop peu vendue. Fictif. */
+const SUPPL = [
+  { pid: 951, nom: 'Religieuse au café', cat: 'Pâtisseries individuelles', prix: 3.70, taux: 0.62, q: [43, 44, 42, 45, 44, 46, 43, 45, 47, 44, 46, 45, 21] },
+  { pid: 952, nom: 'Chou à la crème', cat: 'Pâtisseries individuelles', prix: 2.40, taux: 0.64, q: [36, 38, 37, 39, 40, 41, 44, 46, 48, 49, 51, 52, 25] },
+  { pid: 953, nom: 'Tarte aux prunes (part)', cat: 'Tartes', prix: 3.30, taux: 0.64, q: [42, 40, 41, 38, 36, 30, 9, 0, 0, 0, 0, 0, 0] },
+  { pid: 954, nom: 'Bûchette aux marrons', cat: 'Pâtisseries individuelles', prix: 4.50, taux: 0.60, q: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 31, 16] },
+  { pid: 955, nom: 'Opéra (part)', cat: 'Pâtisseries individuelles', prix: 4.40, taux: 0.60, q: [1, 2, 1, 0, 2, 1, 2, 1, 2, 2, 1, 2, 1] },
+].map(s => Object.assign({ groupe: 'Pâtisserie', vie: 'S' }, s));
+
 function developpement() {
   const T = tranches(), n = T.length, lib = T.map(t => t[2]), parT = T.map(([du, au]) => V.periode(du, au));
   const G = {}, tot = { v: Array(n).fill(0), q: Array(n).fill(0) }, produits = [];
-  V.P.forEach(p => {
-    const v = parT.map(x => r2((x[p.pid] || {}).v || 0)), q = parT.map(x => r1((x[p.pid] || {}).q || 0));
+  const series = p => p.pid > 900
+    ? { q: p.q.map(x => r1(x)), v: p.q.map(x => r2(x * p.prix * V.REMISE)) }
+    : { v: parT.map(x => r2((x[p.pid] || {}).v || 0)), q: parT.map(x => r1((x[p.pid] || {}).q || 0)) };
+  V.P.concat(SUPPL).forEach(p => {
+    const { v, q } = series(p);
     if (!v.some(x => x > 0)) { return; }
     const g = G[p.groupe] || (G[p.groupe] = { nom: p.groupe, n: 0, v: Array(n).fill(0), q: Array(n).fill(0) });
     g.n++;
