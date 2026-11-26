@@ -913,7 +913,9 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
 - **Journal** : 07/11/2026 — v1.0 des deux documents encodées et publiées, NL « à relire » ; réservés au responsable ;
   v1.1 (précision) : captures du P&L, du résultat et du téléphone refaites avec le seuil matière de Budget › Paramètres.
   Article v1.2 : partie 27 (Primes), le franchisé reste dans le tableau, en gris, hors primes ; capture `dash-primes` recadrée
-  sur sa ligne.
+  sur sa ligne. SOP v1.2 : étape 5.5 « Les charges face au modèle » (Budget › Paramètres › Répartition des charges, le
+  Compte de résultat du CRM fait foi ; capture `dash-charges`, prise au cockpit — plan `cockpit` + `defile` de
+  `captures_dashboard.js`), « Préparer la visite du consultant » passe en 5.6.
 - **Réservés au franchisé et au responsable** (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste
   (mot de passe) : celui du franchisé ou du responsable magasin ; pour le moment 1111 ; un petit cadenas, couleur or ») :
   colonne `for_sop.acces` (`tous` | `responsable`, posée par `ensureSop()`, réglable par `PATCH /formation/sop/fiche/{id}
@@ -924,6 +926,32 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   est le réglage `foPinResponsable` ; tant qu'il n'est pas posé, **1111, provisoire, à changer en fin de développement**
   (`FO_PIN_RESPONSABLE_PROVISOIRE`). Le portail (fiche, éditeur, PDF) n'est pas concerné. ART-PIL-01 et SOP-PIL-01 sont
   réservés (`"acces": "responsable"` dans leur fichier ; `encoder_sop.py` pose l'accès).
+- **10/11/2026 — v1.3 des deux documents** (commits du dashboard du 07/11 après `85d41cdb` au 09/11, `3fbd5c7d`) :
+  article (35 parties) — « Les onglets » (dix onglets, la revue du soir), « Ouvrir le dashboard » (seuls la revue du
+  soir et le relevé terrain enregistrent), Heure par heure (jusqu'à 20 h), Contrôles en photo (par checklist, carrousel,
+  obligatoire / facultative), Commandes et canaux (pro en paiement différé, remise déduite), téléphone (Tâches) ; sections
+  nouvelles « Tâches — les checklists du jour » (5 parties) et « Concurrence et Temps morts » (2) ; quiz de 7 questions.
+  SOP (30 étapes) — 1.3, 3.3, **3.4 « La revue du soir » (nouvelle, encodée sur accord du client)**, 4.4, 4.6 ; soir 10 min ;
+  quiz de 5 questions ; classement : la checklist 5.2.01 gardée (posée au serveur par la nomenclature). Captures nouvelles :
+  dash-onglet-taches, -organisation, -checklists-jour, -retours, -revue, -concurrence, -temps-morts ; refaites : dash-entete,
+  -frise, -heures, -controles, -mobile. NL à relire.
+- **10/11/2026 — ART-CHK-01 « Les checklists du magasin : la structure »** (client : « un article dans le manuel opératoire
+  avec l'explication des structures des checklists ») : source `formation/data/formation/checklists/` (9 parties, 3 questions,
+  photos du Document du cockpit — `formation/tools/formation/captures_checklists.js` — et du dashboard), créé en v1.0 « à valider »,
+  accès à tous, classé D5.1, FO-01, pré-ouverture, postes P1 à P12 (à confirmer).
+- **22/11/2026 — ART-PIL-01 v1.9, SOP-PIL-01 v1.6** (dashboard jusqu'à `77fd5176` du 21/11) : la source reprise dans
+  `formation/` depuis le serveur (v1.8 / v1.5 du matin, absentes du dépôt) ; captures refaites sur le dashboard au rail ;
+  parties 1, 2 (le rail et la barre du haut), 4, 7, 29 à 31 (l'onglet Trimestre rejoint l'Année, « Les 12 mois ») ;
+  SOP 6.1 et 6.2. La v1.5 de l'article (74 parties, écrasée le 16/11 par la v1.6) est gardée dans
+  `formation/data/formation/dashboard/archives/`. NL à relire.
+- **24/11/2026 — ART-PIL-01 v1.10, SOP-PIL-01 v1.7** (dashboard jusqu'à `8165154f` du 23/11) : les Frais deviennent un
+  onglet de la Trésorerie ; le rail du 23/11 (Mon équipe, Se former, la roue des Paramètres et Mon coffre-fort en bas, le
+  carré des vidéos) ; les vignettes sur l'Opérationnel seulement. Parties 1, 2, 4, 28 ; SOP 5.7 (le chemin de l'onglet
+  Frais). Captures dash-entete, dash-valeur, dash-frais. NL à relire.
+- **26/11/2026 — ART-PIL-01 v1.11, SOP-PIL-01 v1.8** (dashboard jusqu'à `555a9c3d` du 25/11) : les Primes quittent
+  Vendre et deviennent le troisième onglet de Mon équipe (Responsabilités, Planning, Primes) ; Commandes entre dans La
+  journée, Clients dans Vendre. Parties 2 et 35 ; SOP 5.4 (le chemin des Primes, même geste). Captures dash-entete,
+  dash-frise, dash-primes. NL à relire. Pas de partie pour Commandes, Clients ni la fiche d'une personne : à décider.
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
@@ -1552,3 +1580,23 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
 - 0.0.67 « Le dashboard : les vidéos d'instruction » — à valider, v1.0 (7 parties, 3 photos). Classement refusé par le
   serveur (422 : « codes inconnus du référentiel v25 », compétence `C-ID.FB`) : la fiche est encodée sans classement ;
   pas publiée.
+
+## L'autocontrôle qualité par produit, dans l'app Cuisine — maquettes (24/11/2026)
+
+Sam, sur la fiche produit de l'app Cuisine en tablette : « rajouter un bouton autocontrôle qualité (1. cuisson,
+2. structure, 3. organoleptique) avec des photos (oui / non) et des corrections, des boutons à variables (mou, très mou,
+dur, grosseur de la croûte, retombé après cuisson) ; rapide, intuitif et complet ».
+
+- **Maquettes** : `formation/docs/maquettes/autocontrole-qualite/` (dix captures et une planche, `LISEZMOI.md`). La
+  fiche est la vraie page de l'app (`ThaiZu/TFB-Kitchen`), relevée en local ; l'autocontrôle y est greffé et se clique.
+- **La grille** (`grilles.json`) : une par catégorie, surchargée par produit ; photo obligatoire / facultative / non
+  par étape ; chaque réponse hors cible porte sa cause probable, ce qu'on fait du lot maintenant et le réglage de la
+  prochaine fournée. Critères et corrections d'exemple, à valider par la production.
+- **4e étape « Présentation »** (même jour, Sam : « est-ce que le produit est semblable à la photo de référence ou au
+  planogramme ») : deux critères communs à tous les produits, la photo de la fiche à côté de celle du produit, et la
+  case du produit sur le module du planogramme standard du cockpit (`GET /planogramme`), que l'app Cuisine ne lit pas
+  encore.
+- **Construit dans le cockpit consultant** (même jour, Sam : « construire dans cockpit consultant, avec un lien test
+  tablette ») : `consultant/src/autocontrole.php`, la tablette `/consulant_bo/autocontrole/?shop=` et le siège
+  `/consulant_bo/autocontrole/grilles.html` (voir `consultant/CLAUDE.md`). Le bouton de la fiche de l'app Cuisine reste
+  à poser dans son dépôt : un lien vers la tablette avec `&produit=`.

@@ -104,6 +104,61 @@ final class HaccpMonthRepository extends WorkshopRepository
     }
 
     /**
+     * [410] Tablet hali, schładzanie (n_hala_chill, migration 248) du $from au $to inclus : produit, groupe, sortie du four,
+     * température et heure de la mesure, limites copiées au départ. Le service décide ce qui est hors limites. null si absente.
+     */
+    public function halaChills(string $from, string $to): ?array
+    {
+        if (!$this->hasTable('n_hala_chill')) return null;
+        $names = $this->hasTable('n_prod_item') && $this->hasTable('final_product');
+        return $this->all("SELECT c.id, c.work_date, c.id_group, c.id_item, c.out_at, c.temp_c, c.measured_at, c.target_c, c.max_minutes,
+                " . ($names ? 'COALESCE(fp.name, CONCAT(\'#\', c.id_item))' : "CONCAT('#', c.id_item)") . " AS name, g.name_pl AS group_name
+            FROM n_hala_chill c LEFT JOIN n_prod_group g ON g.id = c.id_group
+            " . ($names ? 'LEFT JOIN n_prod_item i ON i.id = c.id_item LEFT JOIN final_product fp ON fp.id = i.id_final_product' : '') . "
+            WHERE c.work_date BETWEEN ? AND ? ORDER BY c.out_at, c.id", [$from, $to]);
+    }
+
+    /**
+     * [409] Tablet hali, sprzątanie : jours de production d'un groupe (validation du jour, partie, « Zatwierdź dzień ») du $from
+     * au $to inclus où des strefy actives (créées avant ce jour) ne sont pas sprzątnięte ; groupe sans étape « Sprzątanie »
+     * ignoré. null si les tables manquent.
+     */
+    public function halaCleaningGaps(string $from, string $to): ?array
+    {
+        if (!$this->hasTable('n_hala_clean_zone') || !$this->hasTable('n_hala_clean_record')) return null;
+        $days = [];
+        $params = [];
+        foreach (['n_prod_day_close' => '', 'n_prod_output' => ' AND cancelled_at IS NULL', 'n_hala_day' => ''] as $t => $extra) {
+            if (!$this->hasTable($t)) continue;
+            $days[] = "SELECT work_date, id_group FROM {$t} WHERE work_date BETWEEN ? AND ?{$extra}";
+            array_push($params, $from, $to);
+        }
+        if (!$days) return [];
+        $settings = $this->hasTable('n_hala_group') ? 'LEFT JOIN n_hala_group s ON s.id_group = d.id_group WHERE COALESCE(s.step_clean, 1) = 1' : 'WHERE 1 = 1';
+        return $this->all("SELECT d.work_date, d.id_group, g.name_pl AS group_name,
+                (SELECT COUNT(*) FROM n_hala_clean_zone z WHERE z.id_group = d.id_group AND z.active = 1 AND DATE(z.created_at) <= d.work_date) AS zones,
+                (SELECT COUNT(*) FROM n_hala_clean_record r WHERE r.work_date = d.work_date AND r.id_group = d.id_group) AS done,
+                (SELECT GROUP_CONCAT(z.name_pl ORDER BY z.sort_order SEPARATOR ', ') FROM n_hala_clean_zone z WHERE z.id_group = d.id_group AND z.active = 1
+                    AND DATE(z.created_at) <= d.work_date AND NOT EXISTS (SELECT 1 FROM n_hala_clean_record r WHERE r.work_date = d.work_date AND r.id_zone = z.id)) AS missing
+            FROM (" . implode(' UNION ', $days) . ") d LEFT JOIN n_prod_group g ON g.id = d.id_group {$settings}
+            HAVING zones > 0 AND missing IS NOT NULL ORDER BY d.work_date, d.id_group", $params);
+    }
+
+    /**
+     * [432] Obchód chłodni : miejsca zapisane « Czysto i porządek ? Nie » (avec photo) du $from au $to inclus — personne,
+     * heure, note, photo. null si la table manque (migration 255 absente).
+     */
+    public function coldDirty(string $from, string $to): ?array
+    {
+        if (!$this->hasTable('n_cold_visit_place')) return null;
+        return $this->all("SELECT vp.id, vp.id_visit, vp.id_place, vp.place_name, vp.saved_at, vp.id_photo, vp.note,
+                TRIM(CONCAT(COALESCE(pe.name, ''), ' ', COALESCE(pe.surname, ''))) AS employee_name
+            FROM n_cold_visit_place vp LEFT JOIN n_prod_employee e ON e.id = vp.id_employee LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
+            WHERE vp.clean = 'no' AND vp.saved_at >= ? AND vp.saved_at < DATE_ADD(?, INTERVAL 1 DAY)
+            ORDER BY vp.saved_at, vp.id", [$from, $to]);
+    }
+
+    /**
      * Tendance : par mois (YYYY-MM) du $from (1er du mois) au $to exclu — événements HACCP défavorables ou ruptures de la
      * chaîne du froid, exécutions avec écart, incidents de température. Source absente → clé absente.
      * @return array<string, array<string, int>> source → mois → nombre
@@ -120,6 +175,10 @@ final class HaccpMonthRepository extends WorkshopRepository
         }
         if ($this->hasTable('n_sop_run')) {
             $by('sop_run', "SELECT DATE_FORMAT(finished_at, '%Y-%m') AS m, COUNT(*) AS n FROM n_sop_run WHERE result = 'deviation' AND finished_at >= ? AND finished_at < ? GROUP BY m");
+        }
+        if ($this->hasTable('n_hala_chill')) {
+            $by('hala_chill', "SELECT DATE_FORMAT(work_date, '%Y-%m') AS m, COUNT(*) AS n FROM n_hala_chill WHERE work_date >= ? AND work_date < ?
+                AND ((temp_c IS NOT NULL AND temp_c > target_c) OR TIMESTAMPDIFF(MINUTE, out_at, COALESCE(measured_at, NOW())) > max_minutes) GROUP BY m");
         }
         if ($this->hasTable('n_delivery_incident')) {
             $by('temp', "SELECT DATE_FORMAT(recorded_at, '%Y-%m') AS m, COUNT(*) AS n FROM n_delivery_incident WHERE kind = 'temperature' AND recorded_at >= ? AND recorded_at < ? GROUP BY m");

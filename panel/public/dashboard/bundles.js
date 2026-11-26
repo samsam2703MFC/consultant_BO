@@ -42,7 +42,13 @@
       .then(b => { const u = URL.createObjectURL(b); if (w) { w.location.href = u; } else { window.open(u, '_blank'); } })
       .catch(e => { if (w) { w.close(); } flash(false, 'La fiche ne s’ouvre pas : ' + e.message); });
   }
-  function flash(ok, texte) { st.flash = { ok, texte }; rendre(); }
+  // Le message se dessine au-dessus de l'assistant : s'il est hors de vue (« Renvoyer à l'équipe » est bas dans l'étape 5),
+  // on le ramène à l'écran (25/11/2026).
+  function flash(ok, texte) {
+    st.flash = { ok, texte }; rendre();
+    const f = st.el && st.el.querySelector('.bd-flash'), r = f && f.getBoundingClientRect();
+    if (r && (r.top < 0 || r.bottom > window.innerHeight)) { f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  }
 
   /* --- les chiffres ---------------------------------------------------------------------------------------------- */
   const prod = id => (st.d.produits || []).find(p => p.id === id) || null;

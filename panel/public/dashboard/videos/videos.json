@@ -1,5 +1,5 @@
 {
-  "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). sources : les fichiers dont l'écran est filmé ; tourne_sur / tourne_le : le commit et le jour du tournage (écrits par tourner.js). node panel/tools/videos/a_refaire.js dit quelles vidéos refaire. Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
+  "_lisezmoi": "Les vidéos d'instruction du dashboard magasin (tutos.js). vues : les valeurs de ?vue= où la bulle se montre (ops = Opérationnel, * = partout). genre : nouveau (nouvelle fonction annoncée), tuto (mode d'emploi), formation (module à suivre en session). sources : les fichiers dont l'écran est filmé ; tourne_sur / tourne_le : le commit et le jour du tournage (écrits par tourner.js). niveau : page (par défaut), onglet ou fonction ; parent : la vidéo sous laquelle elle se range (la page pour un onglet, l'onglet pour une fonction) ; debut / fin : le passage du MP4 de l'onglet, en secondes (un fichier par onglet, ses fonctions en chapitres). node panel/tools/videos/a_refaire.js dit quelles vidéos refaire. Les vidéos se tournent avec panel/tools/videos/ (données fictives).",
   "videos": [
     {
       "id": "decouvrir",
@@ -35,7 +35,7 @@
       ],
       "fichier": "02-mon-equipe.mp4",
       "affiche": "02-mon-equipe.jpg",
-      "duree": "2 min 20",
+      "duree": "2 min 21",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/equipe.js",
@@ -43,8 +43,728 @@
         "panel/src/equipe.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "b693753fb10c16e827bda3fce500af04364d2e5d",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "equipe-responsabilites",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Les responsabilités",
+      "resume": "Qui tient quel poste et quels produits en dépendent : les chiffres, le tableau employés × secteurs et la fiche de la personne choisie.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-01-responsabilites.mp4",
+      "debut": 0,
+      "fin": 59.04,
+      "affiche": "equipe-responsabilites.jpg",
+      "duree": "59 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-affectations",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-responsabilites",
+      "titre": "Modifier les affectations",
+      "resume": "Cocher ou décocher les postes d’une personne, lire l’effet sur ses secteurs et ses produits, puis enregistrer au panel.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-01-responsabilites.mp4",
+      "debut": 59.04,
+      "fin": 89.3,
+      "affiche": "equipe-affectations.jpg",
+      "duree": "30 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-lettre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-responsabilites",
+      "titre": "Donner sa lettre de roulement",
+      "resume": "Avec l’option Matrice A B C D : la lettre de chacun dans sa fiche, et ce qu’elle donne cette semaine et la suivante.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-01-responsabilites.mp4",
+      "debut": 89.3,
+      "fin": 125.57,
+      "affiche": "equipe-lettre.jpg",
+      "duree": "36 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-semaine",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Le planning de la semaine",
+      "resume": "Une case par personne et par jour, la jauge du budget d’heures face à la cible de 17 %, la ligne « Par jour » et les linéaires avec leurs trous.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-02-semaine.mp4",
+      "debut": 0,
+      "fin": 65.62,
+      "affiche": "equipe-semaine.jpg",
+      "duree": "1 min 06",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-ajouter-service",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-semaine",
+      "titre": "Ajouter un service",
+      "resume": "Une personne, un jour, ses heures tirées sur la ligne : l’effet se lit avant d’ajouter. Par le bouton, ou d’un clic sur une case vide.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-02-semaine.mp4",
+      "debut": 65.62,
+      "fin": 114.83,
+      "affiche": "equipe-ajouter-service.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-jour",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Le planning du jour",
+      "resume": "Le planogramme du jour par section, le budget du jour, la présence face aux tickets habituels, les temps morts, les linéaires et les constats.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-03-jour.mp4",
+      "debut": 0,
+      "fin": 59.95,
+      "affiche": "equipe-jour.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-tracer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-jour",
+      "titre": "Tracer un service à la souris",
+      "resume": "Au jour, sur la ligne d’une personne au repos : tirer de l’heure de début à l’heure de fin, puis ajouter le service.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-03-jour.mp4",
+      "debut": 59.95,
+      "fin": 92.19,
+      "affiche": "equipe-tracer.jpg",
+      "duree": "32 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-deplacer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-jour",
+      "titre": "Déplacer ou étirer un service",
+      "resume": "Au jour : glisser une barre la déplace, tirer un de ses bords change une heure, au quart d’heure ; puis enregistrer.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-03-jour.mp4",
+      "debut": 92.19,
+      "fin": 122.77,
+      "affiche": "equipe-deplacer.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-mois",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Le planning du mois",
+      "resume": "Les heures de chacun jour par jour, et un point de couleur par jour et par semaine face au budget.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-04-mois.mp4",
+      "debut": 0,
+      "fin": 59.43,
+      "affiche": "equipe-mois.jpg",
+      "duree": "59 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-fenetre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "La fenêtre d’un service",
+      "resume": "Les sections et les personnes du jour, la ligne des heures à tirer, qui est là ce jour, l’effet (comptoir, budget du jour et de la semaine, ses heures) et ceux du même shift.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-05-fenetre.mp4",
+      "debut": 0,
+      "fin": 47.02,
+      "affiche": "equipe-fenetre.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-adapter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-fenetre",
+      "titre": "Adapter les heures d’un service",
+      "resume": "Tirer un bord de la ligne du service, lire l’effet sur le comptoir et le budget, puis enregistrer au panel.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-05-fenetre.mp4",
+      "debut": 47.02,
+      "fin": 80.97,
+      "affiche": "equipe-adapter.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-ajouter-shift",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-fenetre",
+      "titre": "Ajouter une personne sur le même shift",
+      "resume": "Dans « Sur ce shift », choisir quelqu’un de libre : le coût et le budget du jour s’affichent, puis l’ajouter aux mêmes heures.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-05-fenetre.mp4",
+      "debut": 80.97,
+      "fin": 116.6,
+      "affiche": "equipe-ajouter-shift.jpg",
+      "duree": "36 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-retirer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-fenetre",
+      "titre": "Retirer du shift ou de l’horaire",
+      "resume": "Retirer une personne d’un shift (son service de ce jour), ou de l’horaire de toute la semaine (absente, en congé), après confirmation.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-05-fenetre.mp4",
+      "debut": 116.6,
+      "fin": 167.01,
+      "affiche": "equipe-retirer.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-parcourir",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-fenetre",
+      "titre": "Parcourir le jour personne par personne",
+      "resume": "Section par section, personne par personne : adapter chacun, puis « Enregistrer et suivant ».",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-05-fenetre.mp4",
+      "debut": 167.01,
+      "fin": 211.61,
+      "affiche": "equipe-parcourir.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-creneau",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-fenetre",
+      "titre": "Choisir un créneau de la matrice",
+      "resume": "Avec l’option Matrice A B C D : les cartes « Matin » et « Après-midi » en haut de la fenêtre, chacune avec son effet ; un clic, puis enregistrer.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-05-fenetre.mp4",
+      "debut": 211.61,
+      "fin": 262.92,
+      "affiche": "equipe-creneau.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-options",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Les options de Mon équipe",
+      "resume": "Les quatre modules en option, éteints par défaut, chacun avec ce qu’il fait et son interrupteur.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-06-options.mp4",
+      "debut": 0,
+      "fin": 41.98,
+      "affiche": "equipe-options.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-option",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-options",
+      "titre": "Allumer ou éteindre une option",
+      "resume": "« Options », l’interrupteur d’un module : le bouton dit combien sont allumées, et le module apparaît. Le même geste l’éteint.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-06-options.mp4",
+      "debut": 41.98,
+      "fin": 84.09,
+      "affiche": "equipe-option.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-assistant-base",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "L’assistant : partir de quoi ?",
+      "resume": "Le choix de la base : reprendre la semaine passée (l’aperçu jour par jour, avec ses %), partir de la matrice, ou d’une semaine vide.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-07-assistant-base.mp4",
+      "debut": 0,
+      "fin": 52.6,
+      "affiche": "equipe-assistant-base.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-assistant-qui",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "L’assistant : qui adapter ?",
+      "resume": "Chaque personne de la base marquée « Comme proposé », « Absent·e » ou « À revoir ».",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-08-assistant-qui.mp4",
+      "debut": 0,
+      "fin": 46.1,
+      "affiche": "equipe-assistant-qui.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-assistant-chiffre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "L’assistant : le chiffre",
+      "resume": "Le CA planifié, le budget à la cible, les heures de trop et les propositions chiffrées à cocher : le total se recalcule.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-09-assistant-chiffre.mp4",
+      "debut": 0,
+      "fin": 45.58,
+      "affiche": "equipe-assistant-chiffre.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-assistant-temps-morts",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "L’assistant : les temps morts",
+      "resume": "Les checklists sans heure fixe posées dans les creux habituels du comptoir, chacune à décocher.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-10-assistant-temps-morts.mp4",
+      "debut": 0,
+      "fin": 43.81,
+      "affiche": "equipe-assistant-temps-morts.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-taches",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-assistant-temps-morts",
+      "titre": "Poser les tâches dans les temps morts",
+      "resume": "Décocher les tâches à ne pas poser, puis créer la semaine : les tâches restent posées dans les creux, la ligne « Tâches des creux » du jour les montre.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-10-assistant-temps-morts.mp4",
+      "debut": 43.81,
+      "fin": 86.96,
+      "affiche": "equipe-taches.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-assistant-verifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "L’assistant : vérifier et créer",
+      "resume": "Le dernier contrôle (budget, heures, durées, comptoir et secteurs jour par jour) avant « Créer » au panel.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-11-assistant-verifier.mp4",
+      "debut": 0,
+      "fin": 43.51,
+      "affiche": "equipe-assistant-verifier.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-assistant",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-assistant-verifier",
+      "titre": "Préparer la semaine avec l’assistant",
+      "resume": "Une semaine vide : lancer l’assistant, choisir la base, marquer les absents et ceux à revoir, garder les propositions, créer au panel.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-11-assistant-verifier.mp4",
+      "debut": 43.51,
+      "fin": 86.78,
+      "affiche": "equipe-assistant.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-recopie",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Recopier la semaine précédente",
+      "resume": "La semaine d’avant reportée de sept jours : les services proposés à cocher, et ceux écartés avec leur motif (déjà au planning, chevauche…).",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-12-recopier.mp4",
+      "debut": 0,
+      "fin": 41.98,
+      "affiche": "equipe-recopie.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-recopier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-recopie",
+      "titre": "Recopier la semaine précédente",
+      "resume": "Lire l’aperçu, cocher ou décocher les services, puis les recopier au panel : la semaine se remplit, à ajuster ensuite jour par jour.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-12-recopier.mp4",
+      "debut": 41.98,
+      "fin": 80.97,
+      "affiche": "equipe-recopier.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-shift-maker",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Le shift maker",
+      "resume": "La semaine tirée de la matrice et de la lettre de chacun : les propositions à cocher, les écartés, les personnes sans lettre.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-13-shift-maker.mp4",
+      "debut": 0,
+      "fin": 41.5,
+      "affiche": "equipe-shift-maker.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-shift-maker-creer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-shift-maker",
+      "titre": "Générer la semaine avec le shift maker",
+      "resume": "Lire l’aperçu tiré de la matrice, garder les services cochés, puis les créer au panel.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-13-shift-maker.mp4",
+      "debut": 41.5,
+      "fin": 72.86,
+      "affiche": "equipe-shift-maker-creer.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-matrice",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "La matrice A B C D",
+      "resume": "Les quatre roulements sur deux semaines (matin, après-midi, repos), les deux créneaux, la semaine de référence et la couverture matin · après-midi par jour.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-14-matrice.mp4",
+      "debut": 0,
+      "fin": 45.37,
+      "affiche": "equipe-matrice.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "equipe-matrice-regler",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "equipe-matrice",
+      "titre": "Régler la matrice A B C D",
+      "resume": "Changer une case d’un clic (matin, après-midi, repos), les heures des créneaux et la semaine de référence, puis enregistrer la matrice.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-14-matrice.mp4",
+      "debut": 45.37,
+      "fin": 87.06,
+      "affiche": "equipe-matrice-regler.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php"
+      ],
+      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
+      "tourne_le": "2026-11-25"
     },
     {
       "id": "formation-horaires",
@@ -57,7 +777,7 @@
       ],
       "fichier": "03-formation-planning.mp4",
       "affiche": "03-formation-planning.jpg",
-      "duree": "5 min 17",
+      "duree": "5 min 19",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/equipe.js",
@@ -65,8 +785,8 @@
         "panel/src/equipe.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "8b8c478728e8858f059c18bc00c4f843e3bb893d",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "8b8cc5c341ca8ee89e15dda26b5aad60da805e5d",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "taches",
@@ -195,6 +915,562 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "treso-plan",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Le plan, semaine par semaine",
+      "resume": "La routine du dimanche, la décision sur quatre semaines, les repères, le cash de chaque fin de semaine, le plan, le pilotage et les dettes hors plan.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 0,
+      "fin": 72.9,
+      "affiche": "treso-plan.jpg",
+      "duree": "1 min 13",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-solde-dimanche",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Saisir le solde réel du dimanche",
+      "resume": "Chaque dimanche soir, le solde lu dans la banque : l’écart avec le prévu s’affiche, la semaine suivante repart de ce chiffre.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 72.9,
+      "fin": 101.3,
+      "affiche": "treso-solde-dimanche.jpg",
+      "duree": "28 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-prevision-ventes",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Taper sa prévision de ventes",
+      "resume": "Une case ≈ part du budget validé : on tape sa prévision par-dessus. Vidée, la case revient au budget.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 101.3,
+      "fin": 134.01,
+      "affiche": "treso-prevision-ventes.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-montant-semaine",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Remplacer un montant pour une seule semaine",
+      "resume": "Double-clic sur une case calculée : le vrai montant de cette semaine-là. Vidée, la case revient au calcul.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 134.01,
+      "fin": 164.47,
+      "affiche": "treso-montant-semaine.jpg",
+      "duree": "30 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-ponctuel",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Saisir un paiement ponctuel",
+      "resume": "Ce qui n’est pas récurrent — réparation, prime, régularisation — se tape dans la semaine où l’argent sort.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 164.47,
+      "fin": 189.86,
+      "affiche": "treso-ponctuel.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-pilotage",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Régler le cash de départ et le coussin",
+      "resume": "Le cash réel de départ, lu dans la banque, et le coussin minimum : le graphique et les semaines sous le coussin suivent.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 189.86,
+      "fin": 230.68,
+      "affiche": "treso-pilotage.jpg",
+      "duree": "41 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-dettes-hors-plan",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Gérer les dettes hors plan",
+      "resume": "Ce qu’on doit sans que ce soit dans le plan : ajouter une dette, la corriger, la supprimer.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 230.68,
+      "fin": 280.4,
+      "affiche": "treso-dettes-hors-plan.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-reessayer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Réessayer une saisie non enregistrée",
+      "resume": "Une saisie qui n’a pas pu partir le dit : « Réessayer ». Le plan changé sur un autre écran : « Reprendre le plan enregistré ».",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 280.4,
+      "fin": 331.1,
+      "affiche": "treso-reessayer.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-plan-neuf",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-plan",
+      "titre": "Démarrer un plan neuf",
+      "resume": "Un magasin sans plan : il est proposé d’après le budget. On tape le cash réel de départ, puis ses paiements réels.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-01-plan.mp4",
+      "debut": 331.1,
+      "fin": 376.54,
+      "affiche": "treso-plan-neuf.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-fournisseurs",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Les fournisseurs",
+      "resume": "Un fournisseur par ligne : son estimation, les montants réels tapés, le total des achats en % des ventes et le plafond.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 0,
+      "fin": 59.69,
+      "affiche": "treso-fournisseurs.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-facture-fournisseur",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-fournisseurs",
+      "titre": "Saisir le montant réel d’une facture",
+      "resume": "La facture connue remplace l’estimation de sa semaine (0 si rien n’est payé) : la ligne Marchandises et l’écart suivent.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 59.69,
+      "fin": 101.96,
+      "affiche": "treso-facture-fournisseur.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-estimation-fournisseur",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-fournisseurs",
+      "titre": "Régler l’estimation d’un fournisseur",
+      "resume": "Un % des ventes prévues, ou un montant fixe chaque semaine : ce qui compte tant que le montant réel n’est pas tapé.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 101.96,
+      "fin": 130.26,
+      "affiche": "treso-estimation-fournisseur.jpg",
+      "duree": "28 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-fournisseur-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-fournisseurs",
+      "titre": "Ajouter, renommer ou supprimer un fournisseur",
+      "resume": "« + Ajouter un fournisseur » (15 au plus), son nom et son estimation ; le nom se change dans sa case ; × supprime la ligne.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 130.26,
+      "fin": 175.25,
+      "affiche": "treso-fournisseur-ajouter.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-plafond-achats",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-fournisseurs",
+      "titre": "Régler le plafond d’achats",
+      "resume": "Le % des ventes à ne pas dépasser en achats : les semaines au-dessus se colorent, ici et dans les repères du plan.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-02-fournisseurs.mp4",
+      "debut": 175.25,
+      "fin": 211.05,
+      "affiche": "treso-plafond-achats.jpg",
+      "duree": "36 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-paiements",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Les paiements récurrents",
+      "resume": "Les paiements qui reviennent : la catégorie décide la ligne du plan, puis la fréquence, la semaine du mois, les dates et le total sur la période.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-03-paiements.mp4",
+      "debut": 0,
+      "fin": 50.23,
+      "affiche": "treso-paiements.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-paiement-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-paiements",
+      "titre": "Ajouter un paiement récurrent",
+      "resume": "« + Ajouter un paiement » : libellé, catégorie, montant, fréquence, semaine du mois, premier et dernier paiement, remarque.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-03-paiements.mp4",
+      "debut": 50.23,
+      "fin": 94.69,
+      "affiche": "treso-paiement-ajouter.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-paiement-modifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "treso-paiements",
+      "titre": "Modifier ou supprimer un paiement récurrent",
+      "resume": "Changer le montant, la fréquence, la semaine ou les dates d’une ligne ; × la supprime. Le plan suit tout seul.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-03-paiements.mp4",
+      "debut": 94.69,
+      "fin": 140.62,
+      "affiche": "treso-paiement-modifier.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-budget",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Budget & étude",
+      "resume": "En lecture seule : l’étude de marché, le budget mois par mois, le réalisé, l’atteinte, l’année passée, l’atterrissage, les charges en euros, le réel du P&L et la carte de l’étude.",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-04-budget.mp4",
+      "debut": 0,
+      "fin": 81.24,
+      "affiche": "treso-budget.jpg",
+      "duree": "1 min 21",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js",
+        "panel/src/tresorerie.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-du-mois",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Les frais du mois",
+      "resume": "Les frais du magasin saisis au panel, mois par mois : « TVA comprise ? » et le taux de chaque poste, les quatre tuiles, ce que ça change dans le P&L court, et « Ajouter un frais ».",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 0,
+      "fin": 55.98,
+      "affiche": "frais-du-mois.jpg",
+      "duree": "56 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-tva-comprise",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "frais-du-mois",
+      "titre": "Indiquer si un poste contient la TVA",
+      "resume": "Oui ou Non sur la ligne : le hors TVA et les tuiles se recalculent ; le choix se garde pour le poste, d’un mois à l’autre.",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 55.98,
+      "fin": 88.61,
+      "affiche": "frais-tva-comprise.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-taux-tva",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "frais-du-mois",
+      "titre": "Choisir le taux de TVA d’un poste",
+      "resume": "0, 6, 12 ou 21 % sur la ligne : le hors TVA suit. Un clic sur un taux suffit à dire que la TVA est comprise.",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 88.61,
+      "fin": 112.41,
+      "affiche": "frais-taux-tva.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "frais-du-mois",
+      "titre": "Ajouter un frais au panel",
+      "resume": "Libellé, type, montant par mois ou total à répartir, les mois, la TVA : le frais est créé au panel, une ligne par mois.",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 112.41,
+      "fin": 161.55,
+      "affiche": "frais-ajouter.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "frais-annuler-ajout",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "frais-du-mois",
+      "titre": "Annuler un ajout",
+      "resume": "« Annuler », puis confirmer : les lignes que l’ajout a créées au panel sont supprimées.",
+      "vues": [
+        "frais"
+      ],
+      "fichier": "09-05-frais.mp4",
+      "debut": 161.55,
+      "fin": 190.31,
+      "affiche": "frais-annuler-ajout.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/frais.php",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "treso-mode-emploi",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "tresorerie",
+      "titre": "Le mode d’emploi",
+      "resume": "La routine du dimanche en quatre étapes, ce qui est repris tout seul, le sens de chaque couleur et les points « À savoir ».",
+      "vues": [
+        "tresorerie"
+      ],
+      "fichier": "09-06-mode-emploi.mp4",
+      "debut": 0,
+      "fin": 56.6,
+      "affiche": "treso-mode-emploi.jpg",
+      "duree": "57 s",
+      "sources": [
+        "panel/public/dashboard/tresorerie.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "analyse",
       "genre": "tuto",
       "titre": "Analyse : lire ses ventes",
@@ -261,6 +1537,199 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "promos-constat",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Le constat",
+      "resume": "L’étape 1 du Coach Vente : votre marge de base, chaque produit en marge et en ventes, ce qui fait le volume et ce qui rapporte.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-01-constat.mp4",
+      "debut": 0,
+      "fin": 84.77,
+      "affiche": "promos-constat.jpg",
+      "duree": "1 min 25",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-couples",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Les couples",
+      "resume": "L’étape 2 du Coach Vente : chaque couple séparé puis en bundle, la marge du ticket, le gain par mois, le moment ; choisir le couple à lancer.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-02-couples.mp4",
+      "debut": 0,
+      "fin": 69.99,
+      "affiche": "promos-couples.jpg",
+      "duree": "1 min 10",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-prix",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Le prix",
+      "resume": "L’étape 3 du Coach Vente : la marge du bundle selon son prix, la remise conseillée de 8 à 12 %, les quatre tuiles et le garde-fou.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-03-prix.mp4",
+      "debut": 0,
+      "fin": 63.5,
+      "affiche": "promos-prix.jpg",
+      "duree": "1 min 04",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-fiche",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "La fiche",
+      "resume": "L’étape 4 du Coach Vente : la fiche du bundle, déjà encodée ; vous vérifiez le nom, où et quand, puis vous validez.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-04-fiche.mp4",
+      "debut": 0,
+      "fin": 75.02,
+      "affiche": "promos-fiche.jpg",
+      "duree": "1 min 15",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-lancer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "promos-fiche",
+      "titre": "Valider et lancer le bundle",
+      "resume": "« Valider et lancer » : la promotion est créée au panel, en caisse le lundi qui suit, et l’équipe reçoit sa fiche.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-04-fiche.mp4",
+      "debut": 75.02,
+      "fin": 112,
+      "affiche": "promos-lancer.jpg",
+      "duree": "37 s",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-lancement",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Le lancement",
+      "resume": "L’étape 5 du Coach Vente : le bundle lancé, où en est la promotion, à qui la fiche est partie, et le suivi des bundles lancés.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-05-lancement.mp4",
+      "debut": 0.01,
+      "fin": 53.35,
+      "affiche": "promos-lancement.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-renvoyer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "promos-lancement",
+      "titre": "Renvoyer la fiche à l’équipe",
+      "resume": "« Renvoyer à l’équipe » : la fiche du bundle repart par e-mail, depuis la boîte du magasin.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-05-lancement.mp4",
+      "debut": 53.35,
+      "fin": 83.05,
+      "affiche": "promos-renvoyer.jpg",
+      "duree": "30 s",
+      "sources": [
+        "panel/public/dashboard/bundles.js",
+        "panel/public/dashboard/bundles.css",
+        "panel/src/bundles.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "promos-coefficient",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "promotions",
+      "titre": "Le coefficient de marge",
+      "resume": "Où les promotions sont utilisées, puis la fenêtre du coefficient de marge : le lot le plus serré, avec et sans la promotion, produit par produit.",
+      "vues": [
+        "promos"
+      ],
+      "fichier": "12-06-coefficient.mp4",
+      "debut": 0.01,
+      "fin": 89.6,
+      "affiche": "promos-coefficient.jpg",
+      "duree": "1 min 30",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "marketing/src/promos_magasin.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "offres",
       "genre": "tuto",
       "titre": "Les offres de prix",
@@ -282,6 +1751,647 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "offres-en-cours",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Les offres en cours",
+      "resume": "Les offres envoyées ou à envoyer : les chiffres du haut, la recherche, une offre et sa marge.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 0,
+      "fin": 34.47,
+      "affiche": "offres-en-cours.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-modifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Modifier une offre",
+      "resume": "Changer une quantité ou un prix, puis enregistrer : l’offre change dans TF Buddy.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 34.47,
+      "fin": 63.27,
+      "affiche": "offres-modifier.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-envoyer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Envoyer une offre par e-mail",
+      "resume": "« Envoyer par e-mail » ouvre la Boîte mail sur l’e-mail au client, l’offre jointe en PDF.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 63.27,
+      "fin": 98.08,
+      "affiche": "offres-envoyer.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-convertir",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Convertir une offre en commande",
+      "resume": "Le client dit oui : l’heure du retrait, qui prépare, et la commande se crée dans TF Buddy.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 98.08,
+      "fin": 125.23,
+      "affiche": "offres-convertir.jpg",
+      "duree": "27 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-archiver",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Archiver une offre",
+      "resume": "Une offre restée sans suite quitte la liste et se range dans « Archivées » ; elle peut revenir.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 125.23,
+      "fin": 138.65,
+      "affiche": "offres-archiver.jpg",
+      "duree": "13 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-supprimer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-en-cours",
+      "titre": "Supprimer une offre",
+      "resume": "Pour une offre faite en double : elle disparaît de TF Buddy. Sinon, archivez-la plutôt.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-01-en-cours.mp4",
+      "debut": 138.65,
+      "fin": 163.11,
+      "affiche": "offres-supprimer.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-converties",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Les offres converties",
+      "resume": "Les offres devenues commandes dans TF Buddy : les chiffres, la recherche, une offre convertie et ce qui ne se fait plus.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-02-converties.mp4",
+      "debut": 0,
+      "fin": 64.12,
+      "affiche": "offres-converties.jpg",
+      "duree": "1 min 04",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-archivees",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Les offres archivées",
+      "resume": "Les offres mises de côté : elles quittent « En cours » sans disparaître de TF Buddy, et peuvent revenir.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-03-archivees.mp4",
+      "debut": 0,
+      "fin": 54.68,
+      "affiche": "offres-archivees.jpg",
+      "duree": "55 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-remettre-en-cours",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-archivees",
+      "titre": "Remettre une offre en cours",
+      "resume": "Le client revient : l’offre archivée repasse « en cours » dans TF Buddy, prête à être envoyée ou convertie.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-03-archivees.mp4",
+      "debut": 54.68,
+      "fin": 89.9,
+      "affiche": "offres-remettre-en-cours.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-toutes",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Toutes les offres",
+      "resume": "Les huit offres du magasin, tous états confondus : chacune avec son badge d’état, la recherche sur tout, « relire ».",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-04-toutes.mp4",
+      "debut": 0,
+      "fin": 55.72,
+      "affiche": "offres-toutes.jpg",
+      "duree": "56 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-formulaire",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Le formulaire de l’offre",
+      "resume": "Nouvelle offre ou offre modifiée : le formulaire prend les deux tiers de l’écran, la liste se resserre, la marge se calcule pendant qu’on écrit.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-05-formulaire.mp4",
+      "debut": 0,
+      "fin": 69.58,
+      "affiche": "offres-formulaire.jpg",
+      "duree": "1 min 10",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-creer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-formulaire",
+      "titre": "Créer une offre",
+      "resume": "Le nom, le client, le jour, les produits du catalogue : « Créer l’offre dans TF Buddy », elle y prend son numéro.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-05-formulaire.mp4",
+      "debut": 69.58,
+      "fin": 119.36,
+      "affiche": "offres-creer.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-livraison",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-formulaire",
+      "titre": "Prévoir une livraison",
+      "resume": "De « Retrait en magasin » à « Livraison » : l’adresse, le code postal, la ville et les frais. Le total TTC les ajoute, la marge les laisse de côté.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-05-formulaire.mp4",
+      "debut": 119.36,
+      "fin": 166.14,
+      "affiche": "offres-livraison.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "panel/src/offres_client.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-campagnes",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Newsletter : les campagnes",
+      "resume": "Les campagnes du magasin à ses clients : le mode test, les contacts opt-in, les bases, les filtres et le tableau des envois.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-06-campagnes.mp4",
+      "debut": 0,
+      "fin": 59.83,
+      "affiche": "offres-nl-campagnes.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-envoyer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-campagnes",
+      "titre": "Envoyer maintenant une campagne programmée",
+      "resume": "« envoyer maintenant » avance l’envoi d’une campagne programmée à tout de suite ; en mode test, rien ne part.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-06-campagnes.mp4",
+      "debut": 59.83,
+      "fin": 91.18,
+      "affiche": "offres-nl-envoyer.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-retirer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-campagnes",
+      "titre": "Retirer une campagne programmée",
+      "resume": "« retirer × » sous une campagne du magasin pas encore envoyée : elle quitte le tableau. Une campagne envoyée reste dans l’historique.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-06-campagnes.mp4",
+      "debut": 91.18,
+      "fin": 120.47,
+      "affiche": "offres-nl-retirer.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-retrospective",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Newsletter : la rétrospective",
+      "resume": "Les résultats d’une campagne envoyée — envois, ouvertures, clics, vouchers — et son parcours comparé à la campagne précédente.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-07-retrospective.mp4",
+      "debut": 0,
+      "fin": 53.68,
+      "affiche": "offres-nl-retrospective.jpg",
+      "duree": "54 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-test-ab",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-retrospective",
+      "titre": "Dupliquer une campagne pour un test A/B",
+      "resume": "La même campagne avec un autre objet : l’assistant s’ouvre à l’étape Texte, même segment, même modèle, l’objet suivi de « (B) » ; « Programmer l’envoi » l’ajoute au tableau.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-07-retrospective.mp4",
+      "debut": 53.68,
+      "fin": 103.81,
+      "affiche": "offres-nl-test-ab.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-templates",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Newsletter : les templates",
+      "resume": "Les modèles prêts de la newsletter : un visuel, un texte court, un seul bouton, le même pied de page ; « Utiliser » part d’un modèle.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-08-templates.mp4",
+      "debut": 0,
+      "fin": 59.12,
+      "affiche": "offres-nl-templates.jpg",
+      "duree": "59 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-expediteur",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Newsletter : l’expéditeur",
+      "resume": "Le nom et l’adresse d’où partent les campagnes du magasin, l’état du domaine, l’envoi autorisé, et les droits de la marque et du franchisé.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-09-expediteur.mp4",
+      "debut": 0,
+      "fin": 46.23,
+      "affiche": "offres-nl-expediteur.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-changer-expediteur",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-expediteur",
+      "titre": "Changer l’adresse d’expéditeur",
+      "resume": "Le nom ou l’adresse d’expéditeur du magasin, sur sa ligne : on le change, on sort du champ, c’est enregistré.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-09-expediteur.mp4",
+      "debut": 46.23,
+      "fin": 80.5,
+      "affiche": "offres-nl-changer-expediteur.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-segment",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Nouvelle campagne · 1 Segment",
+      "resume": "À qui on écrit : la base, le segment, le nombre de destinataires opt-in, les langues d’envoi.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-10-segment.mp4",
+      "debut": 0,
+      "fin": 70.91,
+      "affiche": "offres-nl-segment.jpg",
+      "duree": "1 min 11",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-template",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Nouvelle campagne · 2 Template",
+      "resume": "Le type de mail : cinq modèles prêts ou une page blanche ; l’aperçu mobile, à droite, suit chaque choix.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-11-template.mp4",
+      "debut": 0,
+      "fin": 67.46,
+      "affiche": "offres-nl-template.jpg",
+      "duree": "1 min 07",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-texte",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Nouvelle campagne · 3 Texte",
+      "resume": "Le canal (e-mail, SMS ou les deux), une version par langue, l’objet, le texte et ses insertions, le lien du bouton, le SMS.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-12-texte.mp4",
+      "debut": 0,
+      "fin": 86.18,
+      "affiche": "offres-nl-texte.jpg",
+      "duree": "1 min 26",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-envoi",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "offres",
+      "titre": "Nouvelle campagne · 4 Envoi",
+      "resume": "Quand part le mail : la date et l’heure (envoi unique pour un magasin), l’expéditeur, le contrôle anti-spam, les vouchers et le récapitulatif.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-13-envoi.mp4",
+      "debut": 0,
+      "fin": 64.48,
+      "affiche": "offres-nl-envoi.jpg",
+      "duree": "1 min 04",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-envoyer-test",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-envoi",
+      "titre": "Envoyer un test",
+      "resume": "« Envoyer un test à 3 adresses » : le mail part aux adresses de test de la marque, même en mode test ; le contrôle anti-spam se coche.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-13-envoi.mp4",
+      "debut": 64.48,
+      "fin": 97.57,
+      "affiche": "offres-nl-envoyer-test.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "offres-nl-programmer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "offres-nl-envoi",
+      "titre": "Programmer une campagne",
+      "resume": "La date et l’heure, les vouchers, l’anti-spam : « Programmer l’envoi », et la campagne rejoint le tableau. En mode test, rien ne part.",
+      "vues": [
+        "offres"
+      ],
+      "fichier": "13-13-envoi.mp4",
+      "debut": 97.57,
+      "fin": 141.36,
+      "affiche": "offres-nl-programmer.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/offres.js",
+        "marketing/public/assets/js/newsletter.js",
+        "panel/src/offres_newsletter.php"
+      ],
+      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "primes",
       "genre": "tuto",
       "titre": "Les primes de l’équipe",
@@ -291,15 +2401,16 @@
       ],
       "fichier": "14-primes.mp4",
       "affiche": "14-primes.jpg",
-      "duree": "2 min 11",
+      "duree": "2 min",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
+        "panel/public/dashboard/equipe.css",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "1e40cb22ca3b07b8628beeb88ba0863339628ba6",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "aa3729dd2e71e4f35ab62acac048a20093921ac2",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "concurrence",
@@ -404,6 +2515,834 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "catalogue-catalogues",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "Le catalogue : reçu, le mien, ou nouveau",
+      "resume": "La première étape : le catalogue préparé par la marque, mes catalogues et ceux de la marque, leur état et la suite à donner.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-01-catalogues.mp4",
+      "debut": 0,
+      "fin": 53.05,
+      "affiche": "catalogue-catalogues.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-prendre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-catalogues",
+      "titre": "Prendre le catalogue de la marque tel quel",
+      "resume": "« Le prendre tel quel › » : le catalogue de la marque, à mes prix, passe à la Validation ; ses étapes 2 et 3 restent sous cadenas.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-01-catalogues.mp4",
+      "debut": 53.05,
+      "fin": 77.41,
+      "affiche": "catalogue-prendre.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-adapter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-catalogues",
+      "titre": "Adapter le catalogue de la marque à ma boutique",
+      "resume": "« L’adapter à ma boutique », puis confirmer : une copie à moi, que la marque ne modifie plus, reprise à l’étape 2.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-01-catalogues.mp4",
+      "debut": 77.41,
+      "fin": 108.5,
+      "affiche": "catalogue-adapter.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-supprimer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-catalogues",
+      "titre": "Supprimer un de mes catalogues",
+      "resume": "« Supprimer » sur la ligne d’un de mes catalogues, puis confirmer : il disparaît aussi du Marketing.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-01-catalogues.mp4",
+      "debut": 108.5,
+      "fin": 130.42,
+      "affiche": "catalogue-supprimer.jpg",
+      "duree": "22 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-depart",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "Le point de départ d’un nouveau catalogue",
+      "resume": "Un nouveau catalogue : son titre, son nombre de pages, une ou plusieurs gammes, ou tous mes produits.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-02-depart.mp4",
+      "debut": 0,
+      "fin": 47.13,
+      "affiche": "catalogue-depart.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-creer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-depart",
+      "titre": "Créer le catalogue",
+      "resume": "Une ou plusieurs gammes (ou tous mes produits), le titre, le nombre de pages, puis « Créer et choisir mes produits › ».",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-02-depart.mp4",
+      "debut": 47.13,
+      "fin": 78.33,
+      "affiche": "catalogue-creer.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-produits",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "Mes produits, à mes prix",
+      "resume": "Les produits de mon webshop par catégorie et à mes prix, les promotions lues dans TFBuddy et la disponibilité.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 0,
+      "fin": 49.61,
+      "affiche": "catalogue-produits.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-produit",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-produits",
+      "titre": "Retirer ou remettre un produit",
+      "resume": "L’interrupteur du produit à l’étape 2, ou le petit interrupteur du tableau à l’étape 3 : les pages se redessinent aussitôt.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 49.61,
+      "fin": 93.32,
+      "affiche": "catalogue-produit.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-promotion",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-produits",
+      "titre": "Cocher ou décocher une promotion",
+      "resume": "Dans « Promotions et bundles », lus dans TFBuddy : un interrupteur par offre. Cochée, sa vignette prend une case de la page de sa catégorie.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 93.32,
+      "fin": 131.68,
+      "affiche": "catalogue-promotion.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-promo-image",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-produits",
+      "titre": "Mettre une image de la médiathèque sur une promotion",
+      "resume": "« Image » sur l’offre, chercher et choisir une image de la médiathèque : elle remplace les photos des produits dans la vignette ; « Changer » ou « Retirer ».",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 131.68,
+      "fin": 177.78,
+      "affiche": "catalogue-promo-image.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-disponibilite",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-produits",
+      "titre": "Afficher ou masquer la disponibilité",
+      "resume": "L’interrupteur « Afficher la disponibilité » : la période et le délai de commande, lus dans TFBuddy, en pied de chaque page.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-03-produits.mp4",
+      "debut": 177.78,
+      "fin": 218.06,
+      "affiche": "catalogue-disponibilite.jpg",
+      "duree": "40 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-categorie",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "La présentation, une catégorie à la fois",
+      "resume": "Une catégorie à la fois : sa mise en page, sa pleine page, son gabarit, l’aperçu de ses pages et le tableau de ses produits.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-04-categorie.mp4",
+      "debut": 0,
+      "fin": 56.38,
+      "affiche": "catalogue-categorie.jpg",
+      "duree": "56 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-mise-en-page",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-categorie",
+      "titre": "Choisir la mise en page d’une catégorie",
+      "resume": "1 vedette + 4, 2 par largeur, 1 par largeur ou 2 grandes : les pages de la catégorie se dessinent, et le catalogue prend 2 pages de plus s’il le faut.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-04-categorie.mp4",
+      "debut": 56.38,
+      "fin": 82.49,
+      "affiche": "catalogue-mise-en-page.jpg",
+      "duree": "26 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-pleine-page",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-categorie",
+      "titre": "Mettre un produit seul en pleine page",
+      "resume": "« Un produit seul sur une page » : Oui, puis le produit ; sa promotion s’imprime dessous.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-04-categorie.mp4",
+      "debut": 82.49,
+      "fin": 109.38,
+      "affiche": "catalogue-pleine-page.jpg",
+      "duree": "27 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-gabarit",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-categorie",
+      "titre": "Changer le gabarit et le titre manuscrit",
+      "resume": "Gabarit A · B · C pour toutes les pages de la catégorie, et « Catégorie manuscrite » Oui ou Non ; « Validation › » enregistre.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-04-categorie.mp4",
+      "debut": 109.38,
+      "fin": 148.45,
+      "affiche": "catalogue-gabarit.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-finale",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "La mise en page finale",
+      "resume": "Tout le catalogue dans l’ordre de l’impression, par blocs de catégorie, avec le nombre de pages, le format et les langues.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-05-finale.mp4",
+      "debut": 0,
+      "fin": 49.87,
+      "affiche": "catalogue-finale.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-finale-ordre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-finale",
+      "titre": "Changer l’ordre des catégories",
+      "resume": "Glisser une catégorie par sa poignée ⠿ : ses pages la suivent ; « ‹ › » sans souris. Les pages de la marque ne bougent pas.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-05-finale.mp4",
+      "debut": 49.87,
+      "fin": 78.53,
+      "affiche": "catalogue-finale-ordre.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-finale-pages",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-finale",
+      "titre": "Changer le nombre de pages",
+      "resume": "De 8 à 16 pages, toujours par 2 : les pages libres de la fin partent, ou des pages vides s’ajoutent.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-05-finale.mp4",
+      "debut": 78.53,
+      "fin": 109.93,
+      "affiche": "catalogue-finale-pages.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-format-langues",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-finale",
+      "titre": "Choisir le format et les langues",
+      "resume": "A5 ou A4 ; FR ou FR + NL. « Validation › » les enregistre avec les pages ; le catalogue se compose aussi en néerlandais.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-05-finale.mp4",
+      "debut": 109.93,
+      "fin": 141.13,
+      "affiche": "catalogue-format-langues.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-reglages",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "Les réglages page par page",
+      "resume": "Chaque page réglée à la main : catégorie, gamme, mise en page, gabarit, place libre, ordre, et la répartition automatique.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 0,
+      "fin": 44.46,
+      "affiche": "catalogue-reglages.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-reglages-pages",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Changer le nombre de pages, page par page",
+      "resume": "« − 2 pages » ou « ＋ 2 pages », enregistré tout de suite. Une page à retirer porte des produits : le Marketing refuse et propose de répartir.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 44.46,
+      "fin": 83.51,
+      "affiche": "catalogue-reglages-pages.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-regler-page",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Régler une page à la main",
+      "resume": "Pour une page : sa mise en page (7 choix, dont la présentation d’une gamme et son texte FR / NL), sa catégorie, sa gamme, son gabarit, le produit de la pleine page.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 83.51,
+      "fin": 115.6,
+      "affiche": "catalogue-regler-page.jpg",
+      "duree": "32 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-place-libre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Remplir la place libre d’une page",
+      "resume": "« Place libre » : Rien, Photo (choisie dans la médiathèque, avec recherche) ou Illustration, quand il reste une rangée libre.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 115.6,
+      "fin": 156.61,
+      "affiche": "catalogue-place-libre.jpg",
+      "duree": "41 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-reglages-ordre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Changer l’ordre des pages",
+      "resume": "Page par page : la poignée ⠿ glisse une page au-dessus ou au-dessous d’une autre ; « ↑ » et « ↓ » la montent ou la descendent.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 156.61,
+      "fin": 190.69,
+      "affiche": "catalogue-reglages-ordre.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-repartir",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-reglages",
+      "titre": "Répartir automatiquement",
+      "resume": "« ↺ Répartir automatiquement » : le Marketing refait la répartition, une page par catégorie, enregistrée tout de suite.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-06-reglages.mp4",
+      "debut": 190.69,
+      "fin": 210.49,
+      "affiche": "catalogue-repartir.jpg",
+      "duree": "20 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-validation",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "La validation : ce qui s’imprimera",
+      "resume": "Les points calculés par le Marketing, à voir un par un, à côté des pages composées et de leurs marques.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-07-validation.mp4",
+      "debut": 0,
+      "fin": 51.65,
+      "affiche": "catalogue-validation.jpg",
+      "duree": "52 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-verifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-validation",
+      "titre": "Vérifier les points avant d’imprimer",
+      "resume": "Pour chaque point : « ✓ C’est juste », « ✓ Dates vues », « Ouvrir la page N › » ou « Imprimer ainsi » ; la jauge des points vus avance.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-07-validation.mp4",
+      "debut": 51.65,
+      "fin": 87.41,
+      "affiche": "catalogue-verifier.jpg",
+      "duree": "36 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-retirer-promo",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-validation",
+      "titre": "Retirer une promotion qui finit avant le catalogue",
+      "resume": "« La retirer » sur le point : la promotion ne s’imprime plus et les points se recalculent.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-07-validation.mp4",
+      "debut": 87.41,
+      "fin": 108.71,
+      "affiche": "catalogue-retirer-promo.jpg",
+      "duree": "21 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-valider",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-validation",
+      "titre": "Valider mon catalogue",
+      "resume": "« Valider mon catalogue › » : il est prêt à imprimer et passe à l’export ; les points restés ouverts sont rappelés au PDF.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-07-validation.mp4",
+      "debut": 108.71,
+      "fin": 132.34,
+      "affiche": "catalogue-valider.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-export",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "catalogue",
+      "titre": "L’export PDF et la diffusion",
+      "resume": "Feuilleter, choisir l’impression, télécharger le PDF, marquer imprimé, puis diffuser : QR, PDF léger, affiche.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 0,
+      "fin": 63.25,
+      "affiche": "catalogue-export.jpg",
+      "duree": "1 min 03",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-exporter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Exporter le PDF imprimeur ou le livret",
+      "resume": "« Chez un imprimeur » ou « Sur mon imprimante » (livret A5), la langue, puis « Télécharger… » : le PDF s’ouvre dans un nouvel onglet, lien valable 48 h.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 63.25,
+      "fin": 97.11,
+      "affiche": "catalogue-exporter.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-marquer-imprime",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Marquer le catalogue imprimé",
+      "resume": "La quantité imprimée, puis « Marquer imprimé · N ex. » : pour savoir combien il en reste à distribuer.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 97.11,
+      "fin": 118.96,
+      "affiche": "catalogue-marquer-imprime.jpg",
+      "duree": "22 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-qr",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Diffuser le QR du catalogue en ligne",
+      "resume": "Le QR ouvre le catalogue en ligne, toujours la dernière version : « Télécharger le QR (PNG) », « Copier le lien », « Partager… ».",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 118.96,
+      "fin": 146.64,
+      "affiche": "catalogue-qr.jpg",
+      "duree": "28 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-nouveau-lien",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Faire un nouveau lien",
+      "resume": "« Nouveau lien », puis confirmer : un autre lien et un autre QR ; l’ancien ne mène plus au catalogue.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 146.64,
+      "fin": 168.17,
+      "affiche": "catalogue-nouveau-lien.jpg",
+      "duree": "22 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-pdf-leger",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Télécharger le PDF léger à partager",
+      "resume": "« Télécharger le PDF léger » : sans traits de coupe, pour WhatsApp, un e-mail ou Facebook.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 168.17,
+      "fin": 187,
+      "affiche": "catalogue-pdf-leger.jpg",
+      "duree": "19 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "catalogue-affiche",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "catalogue-export",
+      "titre": "Télécharger l’affiche en magasin",
+      "resume": "Un titre si on veut, A4 ou A3, puis « Télécharger l’affiche (PDF) » : en vitrine, le client scanne et feuillette.",
+      "vues": [
+        "catalogue"
+      ],
+      "fichier": "19-08-export.mp4",
+      "debut": 187,
+      "fin": 220.82,
+      "affiche": "catalogue-affiche.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/catalogue.js",
+        "panel/public/dashboard/catalogue.css"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
       "id": "boite-mail",
       "genre": "tuto",
       "titre": "La boîte mail du magasin",
@@ -422,6 +3361,752 @@
       ],
       "tourne_sur": "0cb9607019b96852c3d0fc8118bfca91b59987da",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "boite-porte",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "La porte de la boîte",
+      "resume": "La boîte du magasin s’ouvre avec son mot de passe, une fois par appareil et pour 30 jours ; « fermer sur cet appareil » la referme.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-01-porte.mp4",
+      "debut": 0,
+      "fin": 47.32,
+      "affiche": "boite-porte.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-relier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-porte",
+      "titre": "Relier la boîte du magasin",
+      "resume": "La première fois : l’adresse e-mail du magasin et le mot de passe de sa boîte chez OVH. Le mot de passe est essayé, puis gardé côté serveur.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-01-porte.mp4",
+      "debut": 47.32,
+      "fin": 80.8,
+      "affiche": "boite-relier.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-classique",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Le mode Classique",
+      "resume": "La boîte comme un webmail : la barre, la liste et ses filtres, la recherche, puis l’e-mail ouvert à droite avec ses gestes.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-02-classique.mp4",
+      "debut": 0,
+      "fin": 82.78,
+      "affiche": "boite-classique.jpg",
+      "duree": "1 min 23",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-gestes",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-classique",
+      "titre": "Archiver, mettre à la corbeille, suivre, marquer non lu",
+      "resume": "Les icônes à droite de Répondre et Transférer, sur l’e-mail ouvert : chacune agit tout de suite dans la boîte.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-02-classique.mp4",
+      "debut": 82.78,
+      "fin": 147.95,
+      "affiche": "boite-gestes.jpg",
+      "duree": "1 min 05",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-creer-offre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-classique",
+      "titre": "Créer une offre depuis un e-mail",
+      "resume": "« Créer une offre » ouvre Vendre › Offres, pré-remplie avec le client, le jour et les produits repérés dans l’e-mail ; on vérifie, on crée, et la réponse part avec l’offre en PDF.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-02-classique.mp4",
+      "debut": 147.95,
+      "fin": 198.76,
+      "affiche": "boite-creer-offre.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-dossiers",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Les dossiers",
+      "resume": "La rangée de boutons sous la barre : la Réception et ses non-lus, les Brouillons, les Envoyés, les Archives, les Indésirables, la Corbeille, puis les dossiers du magasin.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-03-dossiers.mp4",
+      "debut": 0,
+      "fin": 73.51,
+      "affiche": "boite-dossiers.jpg",
+      "duree": "1 min 14",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-ecrire",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Écrire, répondre, transférer",
+      "resume": "Le volet de droite devient le formulaire : À, + Cc, Objet, un modèle, une offre en PDF, des pièces jointes, puis Envoyer.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 0,
+      "fin": 42.85,
+      "affiche": "boite-ecrire.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-repondre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Répondre à un e-mail",
+      "resume": "« Répondre » remplit À et Objet et cite l’e-mail d’origine ; un modèle s’insère au-dessus, rempli tout seul ; puis Envoyer.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 42.85,
+      "fin": 75.57,
+      "affiche": "boite-repondre.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-nouvel-email",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Écrire un nouvel e-mail",
+      "resume": "« Écrire » ouvre un e-mail vierge : À, + Cc, Objet, le texte, puis Envoyer, depuis l’adresse du magasin.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 75.57,
+      "fin": 108.61,
+      "affiche": "boite-nouvel-email.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-transferer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Transférer un e-mail",
+      "resume": "« Transférer » : on donne le destinataire, un mot si besoin, et l’e-mail d’origine part en pièce jointe, avec ses propres pièces jointes.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 108.61,
+      "fin": 143.67,
+      "affiche": "boite-transferer.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-joindre-fichier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Joindre un fichier ou un document du coffre-fort",
+      "resume": "« Importer » joint un fichier de l’ordinateur ; « Coffre-fort » : chercher, puis cocher jusqu’à cinq documents, envoyés tels qu’ils sont rangés.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 143.67,
+      "fin": 195.92,
+      "affiche": "boite-joindre-fichier.jpg",
+      "duree": "52 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-joindre-catalogue",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Joindre un catalogue",
+      "resume": "« Catalogues » : un catalogue prêt, le mien ou celui de la marque, part en lien vers sa version en ligne, ajouté au texte à l’envoi.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 195.92,
+      "fin": 245.94,
+      "affiche": "boite-joindre-catalogue.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-joindre-offre",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ecrire",
+      "titre": "Joindre une offre en PDF",
+      "resume": "Dans la réponse, « Joindre une offre (PDF de TF Buddy)… » ; le modèle « Envoi de l’offre » reprend son numéro, son total et son jour.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-04-ecrire.mp4",
+      "debut": 245.94,
+      "fin": 283.72,
+      "affiche": "boite-joindre-offre.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-selection",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "La sélection",
+      "resume": "Cocher des e-mails : le volet de droite devient la sélection, avec ses gestes en tuiles, « Déplacer vers » et « Nouveau dossier ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-05-selection.mp4",
+      "debut": 0,
+      "fin": 53.48,
+      "affiche": "boite-selection.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-selection-agir",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-selection",
+      "titre": "Sélectionner des e-mails et agir en une fois",
+      "resume": "Cocher les e-mails (ou « Tout sélectionner »), puis une tuile : Archiver, Corbeille, Lu, Non lu ou Suivre.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-05-selection.mp4",
+      "debut": 53.48,
+      "fin": 81.41,
+      "affiche": "boite-selection-agir.jpg",
+      "duree": "28 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-deplacer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-selection",
+      "titre": "Déplacer vers un dossier ou un nouveau dossier",
+      "resume": "« Déplacer vers » un dossier de la boîte ; ou « Nouveau dossier » : taper son nom, puis « Créer et déplacer ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-05-selection.mp4",
+      "debut": 81.41,
+      "fin": 123.6,
+      "affiche": "boite-deplacer.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-effacer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-selection",
+      "titre": "Effacer pour de bon, ou remettre en Réception",
+      "resume": "Dans la Corbeille ou les Indésirables : cocher, puis « Effacer pour de bon » (après confirmation), ou « Remettre en Réception ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-05-selection.mp4",
+      "debut": 123.6,
+      "fin": 165.33,
+      "affiche": "boite-effacer.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-ranger-ia",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Ranger avec l’IA",
+      "resume": "L’IA propose un dossier pour chaque e-mail coché, groupé par dossier d’arrivée ; chaque proposition se corrige, et rien ne bouge avant « Ranger ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-06-ranger-ia.mp4",
+      "debut": 0,
+      "fin": 53.09,
+      "affiche": "boite-ranger-ia.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-ranger",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-ranger-ia",
+      "titre": "Ranger avec l’IA",
+      "resume": "Cocher (50 e-mails au plus), « Proposer un rangement », corriger avec « Changer » ou en décochant, puis « Ranger N e-mails ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-06-ranger-ia.mp4",
+      "debut": 53.09,
+      "fin": 99.56,
+      "affiche": "boite-ranger.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-modeles",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Les modèles",
+      "resume": "Les modèles du magasin et ceux du réseau, puis le formulaire « Nouveau modèle » et ses variables ({prenom}, {magasin}, {offre}…).",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-07-modeles.mp4",
+      "debut": 0,
+      "fin": 46.38,
+      "affiche": "boite-modeles.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-modele-creer",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-modeles",
+      "titre": "Créer ou dupliquer un modèle",
+      "resume": "« Dupliquer » un modèle du réseau (ou écrire le sien), l’adapter avec ses variables, puis « Enregistrer le modèle ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-07-modeles.mp4",
+      "debut": 46.38,
+      "fin": 80.12,
+      "affiche": "boite-modele-creer.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-modele-modifier",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-modeles",
+      "titre": "Modifier ou supprimer un modèle du magasin",
+      "resume": "« Modifier » ouvre le modèle du magasin dans le formulaire ; « Enregistrer le modèle ». « Supprimer » le retire.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-07-modeles.mp4",
+      "debut": 80.12,
+      "fin": 118.23,
+      "affiche": "boite-modele-modifier.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-automatiques",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Les messages automatiques",
+      "resume": "L’accusé de réception, la relance d’une offre sans réponse, le rappel la veille de la commande : éteints tant qu’on ne les allume pas, et ce qui est parti.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-08-automatiques.mp4",
+      "debut": 0,
+      "fin": 49.99,
+      "affiche": "boite-automatiques.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-automatique",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-automatiques",
+      "titre": "Allumer un message automatique et régler son texte",
+      "resume": "Basculer l’interrupteur pour l’allumer ; « Le message » pour régler le délai, l’objet et le texte, puis « Enregistrer ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-08-automatiques.mp4",
+      "debut": 49.99,
+      "fin": 99.16,
+      "affiche": "boite-automatique.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_mail.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-briefing",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Le Briefing",
+      "resume": "Les non-lus en cartes, déjà lus par l’IA : catégorie, urgence, confiance, résumé et réponse rédigée ; la file du matin et « Mains dans la farine ».",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-09-briefing.mp4",
+      "debut": 0,
+      "fin": 62.71,
+      "affiche": "boite-briefing.jpg",
+      "duree": "1 min 03",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-briefing-valider",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-briefing",
+      "titre": "Valider une réponse du Briefing",
+      "resume": "Relire la carte, corriger la réponse et remplir les « [à compléter] », puis « Valider » (ou →) : la réponse part.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-09-briefing.mp4",
+      "debut": 62.71,
+      "fin": 106.05,
+      "affiche": "boite-briefing-valider.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-pilote",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Le Pilote",
+      "resume": "Le pilote automatique : trois crans, le temps gagné, ce qu’il a fait, ce qu’il a laissé au magasin, et ses garde-fous fixes.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-10-pilote.mp4",
+      "debut": 0,
+      "fin": 44.23,
+      "affiche": "boite-pilote.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-pilote-regler",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-pilote",
+      "titre": "Régler le pilote",
+      "resume": "Choisir le cran : Éteint, Brouillons ou Simples. « Simples » demande une confirmation ; « Éteint » annule les envois prévus.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-10-pilote.mp4",
+      "debut": 44.23,
+      "fin": 69.57,
+      "affiche": "boite-pilote-regler.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-pilote-traiter",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-pilote",
+      "titre": "Traiter ce que le pilote a laissé",
+      "resume": "Dans « Ce qui vous attend » : « Ouvrir l’e-mail » pour y répondre, ou « C’est traité » quand c’est fait.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-10-pilote.mp4",
+      "debut": 69.57,
+      "fin": 95.37,
+      "affiche": "boite-pilote-traiter.jpg",
+      "duree": "26 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-pilote-annuler",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-pilote",
+      "titre": "Annuler un envoi du pilote",
+      "resume": "En « Simples », une réponse part 10 minutes après la lecture : « Annuler l’envoi » l’arrête jusque-là.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-10-pilote.mp4",
+      "debut": 95.37,
+      "fin": 120.08,
+      "affiche": "boite-pilote-annuler.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-25"
+    },
+    {
+      "id": "boite-radar",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "onglet",
+      "parent": "boite-mail",
+      "titre": "Le Radar",
+      "resume": "Les demandes lues dans les e-mails des trois dernières semaines : trois alertes, la frise des trois semaines à venir, les demandes repérées et l’humeur.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-11-radar.mp4",
+      "debut": 0,
+      "fin": 49.07,
+      "affiche": "boite-radar.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
+    },
+    {
+      "id": "boite-radar-lire",
+      "genre": "tuto",
+      "depuis": "2026-11-24",
+      "niveau": "fonction",
+      "parent": "boite-radar",
+      "titre": "Mettre les e-mails sur le radar",
+      "resume": "« Lire et mettre sur le radar » : l’IA lit, une seule fois, les e-mails des trois dernières semaines qu’elle n’a pas encore lus.",
+      "vues": [
+        "boite"
+      ],
+      "fichier": "20-11-radar.mp4",
+      "debut": 49.07,
+      "fin": 76.55,
+      "affiche": "boite-radar-lire.jpg",
+      "duree": "27 s",
+      "sources": [
+        "panel/public/dashboard/boite.js",
+        "panel/src/boite_ia.php"
+      ],
+      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
+      "tourne_le": "2026-11-24"
     },
     {
       "id": "assistant-ia",

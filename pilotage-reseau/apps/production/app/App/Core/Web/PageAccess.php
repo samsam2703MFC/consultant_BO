@@ -83,6 +83,9 @@ final class PageAccess
         'invoices' => ['Proformy i faktury', 'Sprzedaż', ['/proforma-documents', '/invoice-documents'], false],
         'reminders' => ['Przypomnienia płatności (proformy 1–5, dopłaty różnic)', 'Sprzedaż', ['/communication/payment-reminders', '/communication/compose/reminder'], false],
         'payments_day' => ['Płatności dnia (wpłaty proform, potwierdzenia przelewów z e-maila, przypomnienia, różnice dostaw)', 'Sprzedaż', ['/finances/payments-day', '/finances/payment-proofs'], false],
+        // [440] Różnice kursowe (Finanse) : prawo osobne (page, appels ajax, wyciągi, zestawienie PDF / CSV), donné au poste
+        // Finanse (ADMINISTRACJA) par la migration 257 ; le préfixe le plus long l'emporte sur « /finances » (margins).
+        'fx_differences' => ['Różnice kursowe (wpłaty klientów w walucie, kursy NBP, wyciągi ING, zestawienie miesiąca PDF / CSV dla księgowości)', 'Sprzedaż', ['/finances/fx-differences', '/ajax/finances/fx-differences'], false],
         'client_volume' => ['Klienci : wolumen i marża (N / N-1, marża, należności)', 'Sprzedaż', ['/finances/clients'], false],
         'returns' => ['Zwroty', 'Sprzedaż', ['/client-complaints'], false],
         'communication' => ['Komunikacja (dystrybucja dokumentów i e-maile automatyczne, wzory dokumentów i e-maili, wiadomości)', 'Sprzedaż', ['/communication'], false],
@@ -91,6 +94,9 @@ final class PageAccess
         'sop' => ['Procedury SOP (tworzenie, zatwierdzanie, wykonania)', 'Produkcja', ['/sop', '/ajax/sop'], false],
         // [405] Asystent « Serwisy i przeglądy maszyn » (Kierownik produkcji, co miesiąc i w każdej chwili) : droit propre (page
         // /maintenance et appels ajax : rejestry urządzeń, przeglądów, zgłoszeń), donné au Kierownik produkcji par la migration 245.
+        // [409] Tablet hali : kroki dnia grup (« Mój dzień ») i strefy sprzątania — Jakość et Kierownik produkcji (migration 249) ; le
+        // préfixe le plus long l'emporte sur « /production ».
+        'hala' => ['Tablet hali : kroki dnia grup i strefy sprzątania (Jakość, Kierownik produkcji)', 'Tablety', ['/production/hala', '/ajax/production/hala'], false],
         'maintenance' => ['Serwisy i przeglądy maszyn (asystent : rejestr urządzeń, przeglądy i pomiary z terminem, zgłoszenia awarii i serwisów, awarie z tabletów)', 'Produkcja', ['/maintenance', '/ajax/maintenance'], false],
         // [403] Asystent « Stany magazynowe na koniec miesiąca » (Kierownik produkcji, co miesiąc) : droit propre (page /stock/month-end —
         // le préfixe le plus long l'emporte sur « /stock » — appels ajax, PDF et CSV), donné au Kierownik produkcji par la migration 243.

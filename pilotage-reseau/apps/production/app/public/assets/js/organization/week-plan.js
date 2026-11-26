@@ -2,6 +2,7 @@
 // częstotliwość (dzień / tydzień / miesiąc / kwartał + termin), minuty, automatycznie (cron : kiedy, o której, co robi,
 // potem), przypomnienia (osoba w dniu terminu, przełożony po N dniach), inne strony zadania (« Też w tym zadaniu », [228]),
 // kreatory do przypięcia, obciążenie dni.
+// [422] Karta stanowiska : « Jak » (kroki zadania ręcznego, PL / FR) i « Problem ? » — pokazane na karcie stanowiska.
 // Tabela pogrupowana według częstotliwości ; klik w wiersz = panel edycji po prawej. Zapis całego planu naraz :
 // PUT /ajax/organization/week-plan/{id} (PositionTaskService::saveWeekPlan).
 (() => {
@@ -237,6 +238,19 @@
                 <div class="wp-inline"><label class="wp-chk"><input type="checkbox" data-f="escalate_on" ${r.escalate_days ? 'checked' : ''}> spóźnione o</label>
                     <input class="kw-in wp-min" type="number" min="1" max="30" data-f="escalate_days" value="${r.escalate_days || 2}" ${r.escalate_days ? '' : 'disabled'} aria-label="Dni spóźnienia"><span>dni → przełożony (${esc(P.superior)})</span></div>
             </div>
+            <div class="wp-box">
+                <b><i class="bi bi-file-earmark-person"></i> Karta stanowiska : jak to zrobić</b>
+                ${w ? `<div class="wp-sub">Kroki « Jak » pisze asystent « ${esc(w.label)} » — te same na każdej karcie.</div>`
+                    : `<div class="wp-f"><label for="wpHowPl">Jak — kroki (PL), jeden krok na linię, krótkie zdania</label>
+                        <textarea id="wpHowPl" class="kw-in" rows="4" maxlength="2000" data-f="how_pl" placeholder="Otwórz stronę z linku.&#10;Sprawdź…&#10;Kliknij « Zapisz ».">${esc(r.how_pl || '')}</textarea></div>
+                       <div class="wp-f"><label for="wpHowFr">Jak — étapes (FR), puste = jak PL</label>
+                        <textarea id="wpHowFr" class="kw-in" rows="3" maxlength="2000" data-f="how_fr">${esc(r.how_fr || '')}</textarea></div>`}
+                <div class="wp-f"><label for="wpProbPl">Problem ? — kogo wołać, co zrobić (PL)</label>
+                    <input id="wpProbPl" class="kw-in" maxlength="300" data-f="problem_pl" value="${esc(r.problem_pl || '')}" placeholder="${w ? 'puste = tekst asystenta' : 'puste = zapytaj przełożonego'}"></div>
+                <div class="wp-f"><label for="wpProbFr">Problème ? (FR)</label>
+                    <input id="wpProbFr" class="kw-in" maxlength="300" data-f="problem_fr" value="${esc(r.problem_fr || '')}"></div>
+                <div class="wp-sub">Na karcie stanowiska (ekran i PDF) : Kiedy, Gdzie, Jak, Gotowe, gdy, Problem ?${w ? '' : ' Puste kroki : karta pokazuje stronę zadania i prośbę o opis.'}</div>
+            </div>
             <div class="wp-f"><label for="wpBackup"><i class="bi bi-person-check"></i> Zastępstwo, gdy na stanowisku nikogo nie ma</label>
                 <select id="wpBackup" class="kw-in" data-f="backup_position_id"><option value="">— brak —</option>
                 ${(P.backup_positions || []).map(p => `<option value="${p.id}" ${p.id === r.backup_position_id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
@@ -311,7 +325,8 @@
     function newRow(extra = {}) {
         const r = {key: 'n' + (++seq), id: null, title_pl: '', category_id: null, period: 'week', days: [1], mode: 'week', minutes: null, link_path: null, auto_code: null,
             form_code: null, due_time: null, month_day: null, cron_on: false, cron_freq: null, cron_days: null, cron_time: null, cron_action: null, cron_then: 'wait',
-            remind_time: '09:00', escalate_days: 2, extra_links: [], real: null, real_state: '', shared: false, custom: false, ...extra};
+            remind_time: '09:00', escalate_days: 2, extra_links: [], real: null, real_state: '', shared: false, custom: false,
+            how_pl: '', how_fr: '', problem_pl: '', problem_fr: '', ...extra};
         rows.push(r);
         return r;
     }
@@ -427,6 +442,7 @@
         else if (f === 'link_custom') r.link_path = e.target.value.trim() || null;
         else if (f === 'escalate_days') r.escalate_days = e.target.value === '' ? null : Number(e.target.value);
         else if (f === 'block_tolerance') r.block_tolerance = Math.max(0, Math.min(120, Number(e.target.value) || 0));
+        else if (['how_pl', 'how_fr', 'problem_pl', 'problem_fr'].includes(f)) r[f] = e.target.value;
         else if (f === 'wizard_steps') r.wizard_steps = e.target.value.split('\n').map(l => l.split('|').map(x => x.trim())).filter(p => p[0]).map(p => ({title: p[0], hint: p[1] || '', link: p[2] || null}));
         else if (e.target.dataset.ruleN) { if (e.target.dataset.ruleN === 'month') r.month_day = readRule('month'); else r.cron_days = readRule('cron'); }
         else return;
@@ -510,7 +526,8 @@
                 minutes: r.minutes, link_path: r.link_path, extra_links: r.extra_links || [], auto_code: r.auto_code, due_time: r.due_time, month_day: r.period === 'week' ? null : r.month_day,
                 cron_on: !!r.cron_on, cron_freq: r.cron_freq, cron_days: r.cron_days, cron_time: r.cron_time, cron_action: r.cron_action, cron_then: r.cron_then || 'wait',
                 remind_time: r.remind_time, escalate_days: r.escalate_days, backup_position_id: r.backup_position_id ?? null,
-                mandatory: !!r.mandatory, block_mode: r.block_mode || 'due', block_time: r.block_time || null, block_tolerance: r.block_tolerance || 0, wizard_steps: r.wizard_steps || []})),
+                mandatory: !!r.mandatory, block_mode: r.block_mode || 'due', block_time: r.block_time || null, block_tolerance: r.block_tolerance || 0, wizard_steps: r.wizard_steps || [],
+                how_pl: r.how_pl || '', how_fr: r.how_fr || '', problem_pl: r.problem_pl || '', problem_fr: r.problem_fr || ''})),
             removed: rows.filter(r => removed.has(r.key) && r.id).map(r => r.id),
         });
         button.disabled = false;

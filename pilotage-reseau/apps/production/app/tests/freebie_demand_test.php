@@ -52,12 +52,13 @@ $physical = [
     'App/Repositories/Workshop/PlanningRepository.php' => 2,   // plan de la semaine, feuille d'équipe (+ fenêtre clients)
     'App/Repositories/Workshop/ItemRepository.php' => 2,       // Stan magazynu (zamówione)
     'App/Repositories/Workshop/OutputRepository.php' => 1,     // production vs commandes
-    'App/Repositories/Logistics/StockPalletRepository.php' => 1, // stan ogólny
+    'App/Repositories/Logistics/StockPalletRepository.php' => 2, // stan ogólny + [430] fenêtre « Zamówione »
     'App/Repositories/Dashboard/TodayRepository.php' => 2,     // manquants du jour, produits sous le minimum
 ];
 foreach ($physical as $file => $n) {
     $src = (string) file_get_contents($root . '/' . $file);
-    $check(substr_count($src, 'OpenOrders::demandSql(') === $n && !str_contains($src, 'is_freebie'), "{$file} : {$n} × demandSql, no freebie filter");
+    // [429] Lire is_freebie pour l'afficher (part de GRATIS des retards) reste permis ; l'exclure ne l'est pas.
+    $check(substr_count($src, 'OpenOrders::demandSql(') === $n && !preg_match('/is_freebie\s*,\s*0\)\s*=\s*0|is_freebie\s*=\s*0|OpenOrders::quantitySql\(/i', $src), "{$file} : {$n} × demandSql, no freebie filter");
 }
 $check(!str_contains((string) file_get_contents($root . '/App/Repositories/Logistics/LogisticsPlanRepository.php'), 'is_freebie'), 'LogisticsPlanRepository : freebies loaded (pallets / trucks of 13 weeks)');
 $check(!str_contains((string) file_get_contents($root . '/App/Repositories/Production/ProductionListRepository.php'), 'is_freebie'), 'old Lista produkcyjna : selected orders, freebies included');

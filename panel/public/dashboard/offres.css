@@ -67,6 +67,9 @@
 .of-form { padding: 14px 16px 16px; }
 .of-ch2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; margin-bottom: 14px; }
 .of-ch2 .large { grid-column: 1 / -1; }
+/* « Convertir en commande » se remplit dans la colonne d'un tiers : un champ par ligne (25/11/2026 : « Retrait ou départ
+   de la livraison » et « Préparée par » se chevauchaient sur deux colonnes). */
+.of-panneau .of-ch2 { grid-template-columns: minmax(0, 1fr); }
 .of-ch2 label, .of-lab { display: grid; gap: 4px; font-size: 12px; color: var(--ink); }
 .of-lab small { color: var(--muted); font-size: 11px; }
 .of-in { width: 100%; box-sizing: border-box; min-height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 13px; color: var(--ink); }

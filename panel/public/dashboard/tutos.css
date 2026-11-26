@@ -64,6 +64,19 @@
 .tu-item img { width: 88px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); flex: none; }
 .tu-item b { display: block; font-weight: 400; }
 .tu-item small { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); }
+.tu-item.on { border-color: var(--accent); }
+/* La page onglet par onglet (24/11/2026) : la vidéo de l'onglet, puis ses fonctions en lignes courtes. */
+.tu-arbre { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 8px; align-items: start; }
+.tu-ong { display: flex; flex-direction: column; gap: 4px; }
+.tu-ong > .tu-item { width: 100%; }
+.tu-fns { display: flex; flex-direction: column; border-left: 1px solid var(--line); margin-left: 8px; padding-left: 8px; }
+.tu-fn { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 5px 6px; text-align: left; background: none; border: 0;
+  border-radius: 4px; cursor: pointer; font: 400 12.5px/1.35 'Gotham', system-ui, sans-serif; color: var(--ink); }
+.tu-fn:hover { background: var(--paper); }
+.tu-fn.on { color: var(--accent); }
+.tu-fn small { flex: none; font-size: 11.5px; color: var(--muted); }
+.tu-fn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tu-retour .tu-item { max-width: 360px; }
 
 @media (max-width: 700px) {
   .tu-voile { padding: 10px; }

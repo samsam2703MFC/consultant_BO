@@ -1,0 +1,6 @@
+[
+ {"nom":"do-trimestre-frise","vue":"trimestre","date":"2026-11-13","cibles":[".db-frise.quatre"],"attendre":".db-frise.quatre .fr-c","cadre":"haut","mobile":false,"pause":9000},
+ {"nom":"do-trimestre-tuiles","vue":"trimestre","date":"2026-11-13","cibles":["div.db-tuiles"],"attendre":"div.db-tuiles","cadre":"haut","mobile":false,"pause":9000},
+ {"nom":"do-trimestre-mois","vue":"trimestre","date":"2026-11-13","cibles":[".db-card:has(.db-mo)"],"attendre":".db-mo","cadre":"centre","mobile":false,"pause":9000},
+ {"nom":"do-trimestre-annotations","vue":"trimestre","date":"2026-11-13","cibles":[".db-card:has(.db-nv)"],"attendre":".db-nv","cadre":"centre","mobile":false,"pause":9000}
+]

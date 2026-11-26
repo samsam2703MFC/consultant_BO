@@ -32,7 +32,7 @@
 .tr-titre{font-family:var(--font-display);font-size:18px;line-height:1.3}
 .tr-h3{font-family:var(--font-display);font-size:17px}
 .tr-note{font-size:12.5px;line-height:1.6;color:var(--color-text-muted)}
-.tr-note.bas{color:var(--color-collection-icon)}
+.tr-note.bas{color:var(--tr-orange-txt)}
 
 /* La routine du dimanche et la décision */
 .tr-dim{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
@@ -40,7 +40,7 @@
 .tr-dim label>span,.tr-cmp>span{font-size:12.5px;color:var(--color-text-muted)}
 .tr-cmp{display:flex;flex-direction:column;gap:2px;min-width:140px}
 .tr-cmp b{font-size:19px;font-weight:500}
-.tr-cmp b.bas{color:var(--color-collection-icon)}
+.tr-cmp b.bas{color:var(--tr-orange-txt)}
 .tr-in-gros{font-family:var(--font-ui);font-size:22px;font-weight:500;text-align:right;padding:9px 13px;border-radius:var(--radius-md);border:none;background:var(--color-secondary);color:var(--color-on-abricot);width:100%;box-sizing:border-box;outline:none}
 .tr-in-gros:focus,.tr-in:focus,.tr-in-p:focus,.tr-sel:focus{box-shadow:0 0 0 2px var(--color-primary)}
 .tr-in-gros::placeholder,.tr-in-p::placeholder{color:var(--color-on-abricot);opacity:.55;font-weight:400}
@@ -48,7 +48,7 @@
 .tr-q{border-radius:var(--radius-md);padding:9px 11px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;gap:3px}
 .tr-q span{font-size:11px;opacity:.85}
 .tr-q b{font-size:14.5px;font-weight:600;white-space:nowrap}
-.tr-q.bas{background:var(--color-collection-fill);color:var(--color-collection-icon)}
+.tr-q.bas{background:var(--tr-orange-fond);color:var(--tr-orange-txt)}
 .tr-q.neg{background:var(--color-primary);color:var(--color-surface)}
 
 /* Les repères chiffrés */
@@ -58,7 +58,7 @@
 .tr-kpi b{font-size:22px;font-weight:500;line-height:1.3}
 .tr-kpi small{font-size:11.5px;color:var(--color-text-muted)}
 .tr-kpi b.neg,.neg-t{color:var(--color-primary)}
-.tr-kpi b.bas,.bas-t{color:var(--color-collection-border)}
+.tr-kpi b.bas,.bas-t{color:var(--tr-orange)}
 .ok-t{color:var(--green)}
 
 /* Le graphique du cash */
@@ -67,8 +67,8 @@
 .tr-leg span{display:flex;align-items:center;gap:6px}
 .tr-leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
 .tr-graph{position:relative;height:170px;display:flex;gap:2px}
-.tr-ligne-c{position:absolute;left:0;right:0;border-top:1px dashed var(--color-collection-border);pointer-events:none}
-.tr-ligne-cl{position:absolute;right:0;transform:translateY(-100%);font-size:11px;color:var(--color-collection-icon);background:var(--color-surface);padding:0 0 2px 6px;pointer-events:none}
+.tr-ligne-c{position:absolute;left:0;right:0;border-top:1px dashed var(--tr-orange);pointer-events:none}
+.tr-ligne-cl{position:absolute;right:0;transform:translateY(-100%);font-size:11px;color:var(--tr-orange-txt);background:var(--color-surface);padding:0 0 2px 6px;pointer-events:none}
 .tr-ligne-z{position:absolute;left:0;right:0;border-top:.5px solid var(--color-text);pointer-events:none}
 .tr-barre{flex:1;position:relative;cursor:pointer;background:none;border:none;padding:0;min-width:0}
 .tr-barre i{position:absolute;left:0;right:0;border-radius:1px}
@@ -107,13 +107,17 @@
 .tr-chd.cur b{color:var(--color-primary)}
 .tr-chd small{font-size:10.5px;color:var(--color-text-muted)}
 .tr-cette{font-size:9px;font-weight:500;background:var(--color-primary);color:var(--color-surface);border-radius:var(--radius-pill);padding:2px 6px;line-height:1.2}
-.tr-tot{width:112px;flex:none;padding:5px 20px 5px 8px;text-align:right;display:flex;align-items:center;justify-content:flex-end;white-space:nowrap;box-sizing:border-box}
+.tr-tot{width:112px;flex:none;padding:5px 20px 5px 8px;text-align:right;display:flex;align-items:center;justify-content:flex-end;white-space:nowrap;box-sizing:border-box;position:sticky;right:0;z-index:1;background:var(--color-surface);border-left:.5px solid var(--color-border-tertiary)}
 .tr-tot-hd{font-weight:500;align-items:flex-end;padding-bottom:8px}
 .tr-v{width:100%;text-align:right;padding:5px 6px;border-radius:var(--radius-sm);white-space:nowrap;box-sizing:border-box}
 .tr-v.mu,.tr-v.ref{color:var(--color-text-muted)}
 .tr-v.g6,.g6{font-weight:600}
 .tr-v.neg{background:var(--color-primary);color:var(--color-surface)}
-.tr-v.bas{background:var(--color-collection-fill);color:var(--color-collection-icon)}
+/* « Sous le coussin » : l'orange que le texte annonce (celui du budget d'heures de Mon équipe, equipe.css), partout
+   dans le module — cases, graphique, chiffre clé, ligne du coussin —, distinct de l'or pâle des chiffres réels : les
+   deux étaient --prize-soft (25/11/2026). */
+:root{--tr-orange:#D97A1E;--tr-orange-fond:#F6D3B0;--tr-orange-txt:#7A3E0B}
+.tr-v.bas{background:var(--tr-orange-fond);color:var(--tr-orange-txt)}
 .tr-v.reel{font-weight:600;background:var(--color-background-secondary)}
 .tr-v.dbl{cursor:cell}
 .tr-v.dbl:hover{background:var(--color-background-secondary)}
@@ -168,6 +172,13 @@
 .tr-pay-l{display:grid;grid-template-columns:minmax(190px,1.6fr) 160px 96px 140px 58px 136px 136px 96px minmax(160px,1.4fr) 28px;gap:8px;padding:5px 20px;border-top:.5px solid var(--color-border-tertiary);align-items:center}
 .tr-pay-hd{border-top:none;border-bottom:.5px solid var(--color-border-secondary);font-size:11px;text-transform:uppercase;letter-spacing:var(--tracking-nav);color:var(--color-text-muted);align-items:end;padding-top:0;padding-bottom:10px}
 .tr-pay-l .d{text-align:right}
+/* Paiements (1220 px) : le libellé et le × restent à l'écran quand on défile de côté (25/11/2026). */
+.tr-pay-l>:first-child{position:sticky;left:0;z-index:1;background:var(--color-surface)}
+.tr-pay-l>:last-child{position:sticky;right:0;z-index:1;background:var(--color-surface)}
+/* Les bandeaux d'erreur (saisie pas enregistrée, plan modifié ailleurs) restent en haut de l'écran pendant qu'on tape
+   plus bas dans le plan (25/11/2026 : ils s'affichaient hors de vue). */
+[data-tretat],.tr-collant{position:sticky;top:0;z-index:5}
+[data-tretat] .db-err,.db-err.tr-collant{background:#F6EDEE}
 .tr-pay-l b.d{font-weight:500}
 .tr-pay .tr-pied{margin-top:4px}
 
@@ -178,6 +189,9 @@
 .tr-tab thead th.cur{color:var(--color-primary);font-weight:500}
 .tr-tab tbody th{text-align:left;font-weight:400;position:sticky;left:0;background:var(--color-surface);padding-left:20px;min-width:170px}
 .tr-tab td:last-child,.tr-tab th:last-child{padding-right:20px;font-weight:500}
+/* Les tableaux plus larges que leur carte à 1440 px (25/11/2026) : la colonne Total reste à droite, à l'écran. */
+.tr-tab-b td:last-child,.tr-tab-b th:last-child{position:sticky;right:0;background:var(--color-surface);border-left:.5px solid var(--color-border-tertiary)}
+.tr-tab-b td.sec:last-child{background:var(--color-background-secondary)}
 .tr-tab td.mu{color:var(--color-text-muted)}
 .tr-tab td.pl{color:var(--color-primary)}
 
@@ -197,7 +211,7 @@
 .tr-ex.est{background:transparent;border-style:dashed;color:var(--color-text-muted);font-style:italic}
 .tr-ex.reel{background:var(--color-background-secondary);border-color:transparent;font-weight:600}
 .tr-ex.nu{border-color:transparent;background:transparent}
-.tr-ex.bas{background:var(--color-collection-fill);color:var(--color-collection-icon);border-color:transparent;font-weight:500}
+.tr-ex.bas{background:var(--tr-orange-fond);color:var(--tr-orange-txt);border-color:transparent;font-weight:500}
 .tr-ex.neg{background:var(--color-primary);color:var(--color-surface);border-color:transparent;font-weight:500}
 .tr-savoir{display:flex;flex-direction:column;gap:6px;background:var(--color-background-secondary);border-radius:var(--radius-md);padding:14px 18px;font-size:13.5px;line-height:1.6;margin-top:10px}
 

@@ -7,7 +7,9 @@ declare(strict_types=1);
  *   php panel/bin/tests_videos.php
  * Chaque vidéo : un identifiant unique, un genre connu, des pages (`vues`) que le dashboard sait ouvrir, un MP4 et
  * une affiche présents, une date. La page charge la bulle ; sa feuille suit le design system (aucune pilule, deux
- * graisses).
+ * graisses). Trois niveaux (24/11/2026) : une page du rail, ses onglets, leurs fonctions — un onglet se range sous une
+ * page, une fonction sous un onglet ; un fichier partagé est découpé en passages (`debut`, `fin`) qui ne se chevauchent
+ * pas.
  */
 
 $dash = dirname(__DIR__) . '/public/dashboard';
@@ -53,6 +55,40 @@ foreach ($videos as $i => $x) {
     $v("$id : une date", preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) === 1 && checkdate((int) substr($d, 5, 2), (int) substr($d, 8, 2), (int) substr($d, 0, 4)), $d);
 }
 
+// Les trois niveaux : page › onglet › fonction.
+$parId = [];
+foreach ($videos as $x) { $parId[(string) ($x['id'] ?? '')] = $x; }
+$niv = static fn (array $x): string => (string) ($x['niveau'] ?? 'page');
+$parFichier = [];
+foreach ($videos as $x) {
+    $id = (string) ($x['id'] ?? '');
+    $n = $niv($x);
+    $v("$id : niveau connu", in_array($n, ['page', 'onglet', 'fonction'], true), $n);
+    if ($n === 'page') {
+        $v("$id : une page n'a pas de parent ni de passage", !isset($x['parent']) && !isset($x['debut']) && !isset($x['fin']));
+    } else {
+        $p = $parId[(string) ($x['parent'] ?? '')] ?? null;
+        $attendu = $n === 'onglet' ? 'page' : 'onglet';
+        $v("$id : rangé sous une vidéo de niveau $attendu", $p !== null && $niv($p) === $attendu, (string) ($x['parent'] ?? ''));
+        $d = $x['debut'] ?? null; $f = $x['fin'] ?? null;
+        $v("$id : un passage (debut < fin)", is_numeric($d) && is_numeric($f) && $d >= 0 && $f > $d + 1, json_encode([$d, $f]));
+        if ($n === 'fonction' && $p !== null) {
+            $v("$id : dans le fichier de son onglet", ($x['fichier'] ?? '') === ($p['fichier'] ?? ''));
+        }
+    }
+    $parFichier[(string) ($x['fichier'] ?? '')][] = $x;
+}
+foreach ($parFichier as $f => $L) {
+    if (count($L) < 2) { continue; }
+    usort($L, static fn ($a, $b) => ($a['debut'] ?? 0) <=> ($b['debut'] ?? 0));
+    $ok2 = true;
+    for ($i = 0; $i < count($L); $i++) {
+        if ($niv($L[$i]) === 'page') { $ok2 = false; break; }
+        if ($i > 0 && ($L[$i]['debut'] ?? 0) < ($L[$i - 1]['fin'] ?? 0) - 0.01) { $ok2 = false; break; }
+    }
+    $v("$f : des passages qui ne se chevauchent pas", $ok2);
+}
+
 // Pas de vidéo orpheline dans le dossier.
 $fichiers = array_merge(...array_map(static fn ($x) => array_filter([$x['fichier'] ?? '', $x['affiche'] ?? '']), $videos));
 $orphelins = array_values(array_diff(array_map('basename', glob("$dash/videos/*.{mp4,jpg}", GLOB_BRACE) ?: []), $fichiers));
@@ -67,6 +103,8 @@ $v('tutos.js rend le carré et son annonce (plus de bulle en bas à droite)', st
 $cat = (string) @file_get_contents(dirname(__DIR__, 2) . '/formation/public/formation/catalogue/catalogue.js');
 $v('la vidéothèque du catalogue de formation lit le même registre (#/videos)', str_contains($cat, "r.ecran === 'videos'") && str_contains($cat, 'dashboard/videos/') && str_contains($cat, 'carteVideotheque()'));
 $v('le lecteur du dashboard mène à la vidéothèque', str_contains($tu, '../formation/catalogue/#/videos'));
+$v('le lecteur joue un passage (#t=debut,fin) et montre la page onglet par onglet', str_contains($tu, "'#t='") && str_contains($tu, 'function arbre(') && str_contains($tu, 'estPage'));
+$v('la vidéothèque montre une page onglet par onglet (#/videos/<page>)', str_contains($cat, 'function rendrePageVideos(') && str_contains($cat, "'#t='"));
 $css = (string) file_get_contents("$dash/tutos.css");
 $v('tutos.css : aucune pilule', !preg_match('/border-radius:\s*(999|9999)px/', $css));
 $v('tutos.css : ni 500 ni 600', !preg_match('/font-weight:\s*[56]00|font:\s*[56]00/', $css));

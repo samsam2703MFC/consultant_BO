@@ -10,7 +10,15 @@
  *
  * Les écritures (créer, enregistrer produits et pages, valider, marquer imprimé, lien, points vus) changent l'état en
  * mémoire : le document (les pages composées) et les points de la validation sont recalculés à chaque lecture.
- * Les images : les dessins au trait du dépôt (tablette, saisons), servis par /film/catalogue/… (fausse API). */
+ * Les images : les dessins au trait du dépôt (tablette, saisons), servis par /film/catalogue/… (fausse API).
+ *
+ * Complété le 24/11/2026 pour les vidéos par onglet (19-01 … 19-08), comme le dit le contrat (shared/docs/contrat-api.md,
+ * « Mon catalogue ») : l'image de la médiathèque d'une promotion (`offers[].mediaId`) et la place libre d'une page
+ * (`filler`, `fillerMediaId`) se voient dans les pages composées ; changer `pageCount` sans `pages` retire les pages
+ * vides de la fin, ou refuse (422 CATALOGUE_PAGES_NOT_EMPTY) si l'une d'elles porte des produits ; deux pages vides en
+ * fin de catalogue font un point de la validation avec le geste « Passer à N pages » (`moins-de-pages`) ; « Nouveau
+ * lien » donne un autre lien (l'ancien est révoqué). Les images de la médiathèque sont des tuiles (un dessin sur fond
+ * coloré), pour se lire comme des photos. */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -158,10 +166,24 @@ const pieceProduit = p => {
   return Object.assign({ name: p.name, priceCents: p.priceCents, oldPriceCents: p.oldPriceCents, imageUrl: REL + 'photo/' + p.id + '.svg', weightGrams: p.weightGrams, allergens: p.allergens.slice() },
     o ? { promo: { label: o.badge, period: o.period } } : {});
 };
-const pieceOffre = o => ({ kind: 'offer', type: o.type, badge: o.badge, name: o.name, products: o.items.map(([id, q]) => ({ name: prod(id).name, quantity: q, imageUrl: REL + 'photo/' + id + '.svg' })),
-  moreProducts: o.moreProducts, deal: o.deal, priceCents: o.priceCents, oldPriceCents: o.oldPriceCents, period: o.period, imageUrl: null });
+/** Une promotion dans la page ; l'image choisie dans la médiathèque (`mediaId`) remplace les photos de ses produits. */
+const pieceOffre = (o, c) => {
+  const x = ((c && c.offers) || []).find(y => y.type + '-' + y.id === o.id), m = x && x.mediaId != null ? MEDIAS.find(y => y.id === +x.mediaId) : null;
+  return { kind: 'offer', type: o.type, badge: o.badge, name: o.name, products: o.items.map(([id, q]) => ({ name: prod(id).name, quantity: q, imageUrl: REL + 'photo/' + id + '.svg' })),
+    moreProducts: o.moreProducts, deal: o.deal, priceCents: o.priceCents, oldPriceCents: o.oldPriceCents, period: o.period, imageUrl: m ? m.url : null };
+};
+/** Une rangée entière libre : la place libre peut prendre une photo ou l'illustration (la règle du Marketing). */
+const remplissable = (l, n) => l === 'grille' ? n <= 4 : l === 'vedette' ? n <= 3 : l === 'liste' ? n <= 9 : l === 'mosaique' ? n <= 2 : l === 'pleine' ? n === 0 : false;
+/** La place libre d'une page : la photo de la médiathèque, ou l'illustration de sa catégorie (sinon de la gamme). */
+function placeLibre(p, cat, n) {
+  if (!p.filler || !remplissable(p.layout, n)) { return null; }
+  if (p.filler === 'photo') { const m = MEDIAS.find(y => y.id === +p.fillerMediaId); return m ? { kind: 'photo', imageUrl: m.url, drawing: null, drawingUrl: null } : null; }
+  const g = GAMMES.find(x => x.id === +p.gamme);
+  return { kind: 'illustration', imageUrl: null, drawing: cat ? cat.dessin : g ? g.dessin : 'noel', drawingUrl: dessinAbs(cat ? cat.dessin : g ? g.dessin : 'noel') };
+}
 const offreOn = (c, o) => { const x = (c.offers || []).find(y => y.type + '-' + y.id === o.id); if (x) { return !!x.on; } const on = new Set(c.products.filter(p => p.on !== false).map(p => +p.id)); return o.productIds.some(id => on.has(id)); };
 const DISPO = { 21: 'Du 1er au 24 décembre · à commander 48 h à l’avance', 22: 'Du 1er au 31 décembre', 23: 'Du 20 novembre au 31 décembre', 24: 'Du 1er au 31 décembre · à commander 48 h à l’avance' };
+const DISPO_NL = { 21: 'Van 1 tot 24 december · 48 u op voorhand bestellen', 22: 'Van 1 tot 31 december', 23: 'Van 20 november tot 31 december', 24: 'Van 1 tot 31 december · 48 u op voorhand bestellen' };
 /** Ce que chaque page porte (la règle de `fill`, comme `remplir` dans catalogue.js) : les ids de produits par page. */
 function remplir(c) {
   const on = new Set(c.products.filter(p => p.on !== false).map(p => +p.id));
@@ -200,11 +222,12 @@ function documentDe(c, lang) {
       if (placees.has(o.id)) { return; }
       const pleine = p.layout === 'pleine' && ids[i].some(id => o.productIds.includes(id));
       const derniere = p.category != null && +p.category === o.categoryId && pr.length < LAYOUTS[p.layout] && !c.pages.some((q, j) => j > i && !estPres(q.layout) && +q.category === o.categoryId);
-      if (pleine || (derniere && p.layout !== 'pleine')) { pr.push(pieceOffre(o)); placees.add(o.id); }
+      if (pleine || (derniere && p.layout !== 'pleine')) { pr.push(pieceOffre(o, c)); placees.add(o.id); }
     });
-    return { kind: 'products', layout: p.layout, template: p.template || 'A', header: p.header || 'titre', script: !!p.script, title: cat ? cat.name : (nl ? 'Onze selectie' : 'Notre sélection'),
-      gammeTitle: null, products: pr, filler: null, drawingUrl: cat ? dessinAbs(cat.dessin) : null, familyDrawingUrl: cat ? dessinAbs(cat.dessin) : null, gammeImageUrl: null,
-      availabilityFooter: c.showAvailability !== false && cat && DISPO[cat.id] ? DISPO[cat.id] : null, locked: false };
+    return { kind: 'products', layout: p.layout, template: p.template || 'A', header: p.header || 'titre', script: !!p.script, title: cat ? (nl ? cat.nameNl : cat.name) : (nl ? 'Onze selectie' : 'Notre sélection'),
+      gammeTitle: null, products: pr, room: Math.max(0, LAYOUTS[p.layout] - pr.length), fillable: remplissable(p.layout, pr.length), filler: placeLibre(p, cat, pr.length),
+      drawingUrl: cat ? dessinAbs(cat.dessin) : null, familyDrawingUrl: cat ? dessinAbs(cat.dessin) : null, gammeImageUrl: null,
+      availabilityFooter: c.showAvailability !== false && cat && DISPO[cat.id] ? (nl ? DISPO_NL : DISPO)[cat.id] : null, locked: false };
   });
   const al = []; c.pages.forEach((p, i) => ids[i].forEach(id => prod(id).allergens.forEach(a => { if (!al.includes(a)) { al.push(a); } })));
   const gamme = GAMMES.find(g => g.id === +((c.source && c.source.refs && c.source.refs[0]) || (c.source && c.source.ref)));
@@ -245,6 +268,15 @@ function verifications(c, marque) {
   if (creuse >= 0) {
     items.push({ code: 'page-' + (creuse + 3), level: 'question', title: 'Page ' + (creuse + 3) + ' : ' + ids[creuse].length + ' produits sur ' + LAYOUTS[c.pages[creuse].layout] + ' places', text: 'Le bas de la page reste blanc. Une photo de la médiathèque ou l’illustration de la gamme peut prendre la place libre.', actions: marque ? ['ouvrir-page', 'regle-par-la-marque'] : ['ouvrir-page', 'modifier', 'imprimer-ainsi'], page: creuse + 3, seen: vu('page-' + (creuse + 3)) });
   }
+  // Les pages vides de la fin (ni produit, ni présentation, ni place libre) : deux au moins, « Passer à N pages » les retire.
+  let vides = 0;
+  for (let i = c.pages.length - 1; i >= 0 && !estPres(c.pages[i].layout) && !ids[i].length && !c.pages[i].filler; i--) { vides++; }
+  if (vides >= 2 && c.pageCount > 8) {
+    const de = c.pages.length - vides + 3;
+    items.push({ code: 'pages-vides', level: 'question', title: (vides === 2 ? 'Pages ' + de + ' et ' + (de + 1) : 'Pages ' + de + ' à ' + (de + vides - 1)) + ' : vides',
+      text: 'Aucun produit sur ' + (vides === 2 ? 'ces deux pages' : 'ces ' + vides + ' pages') + ' : elles s’imprimeraient blanches. À ' + (c.pageCount - 2) + ' pages, les deux dernières partent.',
+      actions: marque ? ['ouvrir-page', 'regle-par-la-marque'] : ['moins-de-pages', 'ouvrir-page', 'imprimer-ainsi'], page: de, seen: vu('pages-vides') });
+  }
   items.forEach(it => { if (it.level !== 'ok') { it.seen = vu(it.code); } });
   return { items, total: items.length, seen: items.filter(it => it.seen).length,
     pages: items.filter(it => it.page && it.level !== 'ok' && !it.seen).map(it => ({ no: it.page, mark: it.level === 'question' ? 'question' : 'attention' })) };
@@ -277,7 +309,11 @@ function modifier(c, corps) {
       });
     }
   }
-  if (corps.pageCount !== undefined) { c.pageCount = +corps.pageCount; }
+  if (corps.pageCount !== undefined) {
+    c.pageCount = +corps.pageCount;
+    // Sans `pages` : les pages vides de la fin partent (pagesARetirer a déjà dit qu'elles le sont).
+    if (!corps.pages && c.pages.length > c.pageCount - 4) { c.pages = c.pages.slice(0, c.pageCount - 4); }
+  }
   if (corps.pages) {
     if (!corps.pages.length) { repartir(c); } else { c.pages = corps.pages.map(p => page(p.layout, p.category == null ? null : +p.category, Object.assign({}, p))); }
   }
@@ -285,14 +321,44 @@ function modifier(c, corps) {
   c.updatedAt = '2026-11-19T15:40:00+01:00';
   return c;
 }
+/** Le refus d'un PUT avant d'écrire quoi que ce soit (la règle du Marketing) : `pageCount` pair de 8 à 16 ; réduit sans
+ * `pages`, les pages qui partent (celles de la fin) doivent être vides — sinon 422 CATALOGUE_PAGES_NOT_EMPTY. */
+function refusPut(c, corps) {
+  if (corps.pageCount === undefined) { return null; }
+  const n = +corps.pageCount;
+  const refus = (code, message, details) => ({ __status: 422, json: { success: false, error: { code, message, details: details || [] } } });
+  if (!(n >= 8 && n <= 16 && n % 2 === 0)) { return refus('VALIDATION_FAILED', 'Le nombre de pages est invalide.', [{ field: 'pageCount', message: 'Un nombre pair de 8 à 16.' }]); }
+  if (corps.pages || n >= c.pageCount) { return null; }
+  const ids = remplir(c), pleines = [];
+  for (let i = n - 4; i < c.pages.length; i++) { if (estPres(c.pages[i].layout) || ids[i].length || c.pages[i].filler) { pleines.push(i + 3); } }
+  if (!pleines.length) { return null; }
+  return refus('CATALOGUE_PAGES_NOT_EMPTY', 'À ' + n + ' pages, ' + (pleines.length > 1 ? 'les pages ' + pleines.join(' et ') + ' portent' : 'la page ' + pleines[0] + ' porte') + ' des produits : rien n’a été retiré.');
+}
 const ok = (data, meta) => ({ success: true, data, meta: meta || {} });
 const nonTrouve = () => ({ __status: 404, json: { success: false, error: { code: 'RESOURCE_NOT_FOUND', message: 'Catalogue introuvable.', details: [] } } });
-const lien = c => liens[c.id] || (liens[c.id] = { url: 'https://catalogue.exemple.be/c/' + c.id + 'k7q2', token: 'k7q2' + c.id, createdAt: '2026-11-19T15:40:00+01:00' });
+/** Le lien permanent ; « Nouveau lien » en fait un autre (l'ancien jeton est révoqué). */
+const JETONS = ['k7q2', 'm4x9', 'p2w6', 't8r3', 'b5n1', 'h3c7'];
+const tours = {};
+function creerLien(c) {
+  const n = tours[c.id] = (tours[c.id] || 0) + 1, t = JETONS[(n - 1) % JETONS.length] + (n > JETONS.length ? n : '');
+  return { url: 'https://catalogue.exemple.be/c/' + c.id + t, token: t + c.id, createdAt: '2026-11-19T15:40:00+01:00' };
+}
+const lien = c => liens[c.id] || (liens[c.id] = creerLien(c));
 // Les catalogues déjà diffusés ont leur lien.
 [5101, 9002].forEach(id => lien({ id }));
 
-const MEDIAS = [['noel', 'Sapin de Noël (dessin)'], ['nicolas', 'Saint-Nicolas (dessin)'], ['hiver', 'Flocon (dessin)'], ['buche', 'Gâteau sous cloche (dessin)'], ['cookies', 'Biscuits (dessin)'], ['tresse', 'Brioche tressée (dessin)'], ['chocolat', 'Chocolat chaud (dessin)'], ['galette', 'Couronne (dessin)']]
-  .map(([d, name], i) => ({ id: 801 + i, name, url: ABS + 'dessin/' + d + '.png', thumbnailUrl: ABS + 'dessin/' + d + '.png' }));
+// La médiathèque du réseau et de ma boutique : des tuiles (un dessin du dépôt sur un fond de saison), /film/catalogue/media/<id>.svg.
+const MEDIAS = [['noel', 'Sapin de Noël', '#8D1D2C'], ['nicolas', 'Saint-Nicolas', '#B0792A'], ['hiver', 'Flocon', '#2F5D8A'], ['buche', 'Gâteau sous cloche', '#7A4E8C'],
+  ['cookies', 'Biscuits de fête', '#A0522D'], ['tresse', 'Brioche tressée', '#B0792A'], ['chocolat', 'Chocolat chaud', '#5C3A2E'], ['galette', 'Couronne', '#3f7a52']]
+  .map(([d, name, fond], i) => ({ id: 801 + i, name, dessin: d, fond, url: ABS + 'media/' + (801 + i) + '.svg', thumbnailUrl: ABS + 'media/' + (801 + i) + '.svg' }));
+/** Une tuile de la médiathèque : le fond de couleur, un halo crème, le dessin en blanc (filtre SVG). */
+function tuileSvg(m) {
+  if (!b64[m.dessin]) { const b = png(m.dessin); b64[m.dessin] = b ? b.toString('base64') : ''; }
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300"><defs><filter id="b"><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0"/></filter>'
+    + '<radialGradient id="g" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>'
+    + '<rect width="400" height="300" fill="' + m.fond + '"/><rect width="400" height="300" fill="url(#g)"/>'
+    + '<image href="data:image/png;base64,' + b64[m.dessin] + '" x="90" y="20" width="220" height="260" filter="url(#b)"/></svg>';
+}
 
 module.exports = function (m, p, q, corps) {
   if (p.startsWith(BASE)) {
@@ -301,6 +367,8 @@ module.exports = function (m, p, q, corps) {
     if (d) { const b = png(d[1]); return b ? { __body: b, type: 'image/png' } : undefined; }
     const f = /^\/film\/catalogue\/photo\/(\d+)\.svg$/.exec(p);
     if (f && prod(f[1])) { return { __body: photoSvg(prod(f[1])), type: 'image/svg+xml' }; }
+    const t = /^\/film\/catalogue\/media\/(\d+)\.svg$/.exec(p), m = t && MEDIAS.find(x => x.id === +t[1]);
+    if (m) { return { __body: tuileSvg(m), type: 'image/svg+xml' }; }
     // La page d'impression du Marketing (lien signé) : l'onglet qu'ouvre « Télécharger le PDF » (pas filmé).
     if (p.startsWith(BASE + 'imprimer/')) { return { __body: '<!doctype html><meta charset="utf-8"><title>Catalogue</title><p style="font:15px system-ui;padding:24px">Catalogue prêt à imprimer.</p>', type: 'text/html' }; }
     return undefined;
@@ -312,7 +380,7 @@ module.exports = function (m, p, q, corps) {
     return ok({ products: PRODUITS.map(fiche), categories: CATEGORIES.map(c => ({ id: c.id, name: c.name, nameNl: c.nameNl })), gammes: GAMMES.map(g => ({ id: g.id, name: g.name, from: g.from, to: g.to })),
       offers: OFFRES.map(offreListe), offersError: null, pageCounts: [8, 10, 12, 14, 16] });
   }
-  if (s === '/medias' && m === 'GET') { const t = (q.get('q') || '').toLowerCase(); return ok(MEDIAS.filter(x => !t || x.name.toLowerCase().includes(t))); }
+  if (s === '/medias' && m === 'GET') { const t = (q.get('q') || '').toLowerCase(); return ok(MEDIAS.filter(x => !t || x.name.toLowerCase().includes(t)).map(x => ({ id: x.id, name: x.name, url: x.url, thumbnailUrl: x.thumbnailUrl }))); }
   if (s === '' && m === 'GET') { return ok(MOI.map(copie), { total: MOI.length }); }
   if (s === '' && m === 'POST') { return ok(copie(creer(c0))); }
   if (s === '/marque' && m === 'GET') { return ok(MARQUE.map(copie), { total: MARQUE.length }); }
@@ -321,13 +389,13 @@ module.exports = function (m, p, q, corps) {
   const marque = !!r[1], c = trouver(r[2], marque), suite = r[3] || '';
   if (!c) { return nonTrouve(); }
   if (suite === '' && m === 'GET') { return ok(copie(c)); }
-  if (suite === '' && m === 'PUT' && !marque) { return ok(copie(modifier(c, c0))); }
+  if (suite === '' && m === 'PUT' && !marque) { return refusPut(c, c0) || ok(copie(modifier(c, c0))); }
   if (suite === '' && m === 'DELETE' && !marque) { MOI.splice(MOI.indexOf(c), 1); return ok(null); }
   if (suite === '/document' && m === 'GET') { return ok(documentDe(c, q.get('lang') || 'fr')); }
   if (suite === '/verifications' && m === 'GET') { return ok(verifications(c, marque)); }
   if (suite === '/verifications' && m === 'PUT') { const code = (r[4] || '').slice(1); vus[c.id + '|' + code] = c0.seen === true; return ok({ code, seen: c0.seen === true }); }
   if (suite === '/lien' && m === 'GET') { return ok(liens[c.id] ? [liens[c.id]] : []); }
-  if (suite === '/lien' && m === 'POST') { delete liens[c.id]; return ok(lien(c)); }
+  if (suite === '/lien' && m === 'POST') { liens[c.id] = creerLien(c); return ok(liens[c.id]); }
   if (suite === '/impression' && m === 'POST') { return ok({ url: 'http://127.0.0.1:' + PORT + '/api/cockpit' + BASE + 'imprimer/' + c.id + '?lang=' + (c0.lang || 'fr') + '&sig=film', expiresAt: '2026-11-21T15:40:00+01:00' }); }
   if (suite === '/imprime' && m === 'POST') {
     const n = +c0.quantity || 0;

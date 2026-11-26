@@ -8,6 +8,8 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/logistics/week', ['controller' => $c, 'method' => 'week']);
     // [296] Stany i palety : magazyn → palety w budowie → gotowe → wysłane, skład palety, śledzenie partii.
     $r->addRoute('GET', '/logistics/stock', ['controller' => App\Controllers\Web\Logistics\StockPalletController::class, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/logistics/stock/orders/{id:\d+}', ['controller' => App\Controllers\Web\Logistics\StockPalletController::class, 'method' => 'productOrders']);
+    $r->addRoute('POST', '/ajax/logistics/stock/orders/close', ['controller' => App\Controllers\Web\Logistics\StockPalletController::class, 'method' => 'closeLateOrders']);
     $r->addRoute('DELETE', '/ajax/logistics/stock/pallets/{id:\d+}', ['controller' => App\Controllers\Web\Logistics\StockPalletController::class, 'method' => 'deletePallet']);
     // [303] Asystent « Transport dla zamówień » (makieta 56) : zadanie obowiązkowe Logistyki, gdy zamówienia dziś / jutro nie mają transportu.
     $r->addRoute('GET', '/logistics/transport-wizard', ['controller' => App\Controllers\Web\Logistics\TransportWizardController::class, 'method' => 'index']);

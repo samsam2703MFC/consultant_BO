@@ -106,6 +106,8 @@ final class PageTabs
             ['/workshop/execution', 'Tablety, PIN, czas pracy', 'bi-tablet'],
             ['/workshop/production-days', 'Zatwierdzenia produkcji', 'bi-check2-square'],
             ['/workshop/group-orders', 'Zamówienia między grupami', 'bi-arrow-left-right'],
+            // [409] Tablet hali : kroki dnia grup i strefy sprzątania (droit « hala »).
+            ['/production/hala', 'Tablet hali : kroki i strefy', 'bi-list-check'],
             ['/tablet/office', 'Otwórz tablet biurowy', 'bi-box-arrow-up-right', false, 'blank'],
             ['/tablet/production', 'Otwórz tablet grupy', 'bi-box-arrow-up-right', false, 'blank'],
             ['/tablet/driver', 'Otwórz tablet kierowcy', 'bi-box-arrow-up-right', false, 'blank'],
@@ -173,9 +175,11 @@ final class PageTabs
             ['/client-complaints/picking-list', 'Listy kompletacyjne', 'bi-list-check'],
             ['/client-complaints/shipping-documents', 'Dokumenty zwrotów', 'bi-file-earmark-text'],
         ]],
-        // Faktury i płatności : płatności dnia (wpłaty, potwierdzenia), proformy, faktury, przypomnienia płatności.
+        // Faktury i płatności : płatności dnia (wpłaty, potwierdzenia), różnice kursowe, proformy, faktury, przypomnienia płatności.
         'invoicing' => ['label' => 'Faktury i płatności', 'section' => 'Sprzedaż', 'icon' => 'bi-cash-stack', 'tabs' => [
             ['/finances/payments-day', 'Płatności dnia', 'bi-cash-stack'],
+            // [440] Różnice kursowe : wpłaty klientów w walucie, kurs faktury / kurs wpłaty, zestawienie miesiąca.
+            ['/finances/fx-differences', 'Różnice kursowe', 'bi-currency-exchange'],
             ['/proforma-documents', 'Proformy', 'bi-file-earmark'],
             ['/invoice-documents', 'Faktury', 'bi-file-earmark-text'],
             ['/communication/payment-reminders', 'Przypomnienia płatności', 'bi-bell'],

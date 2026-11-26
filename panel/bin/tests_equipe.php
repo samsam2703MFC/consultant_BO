@@ -92,6 +92,7 @@ require __DIR__ . '/../../shared/src/resultat.php';
 require __DIR__ . '/../src/temps_morts.php';
 require __DIR__ . '/../../shared/src/checklists_codes.php';
 require __DIR__ . '/../src/equipe.php';
+require __DIR__ . '/../src/equipe_fiche.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -438,6 +439,14 @@ $REGLAGES['equipeDureesService'] = ['min' => 8, 'max' => 4];
 verifie('un réglage incohérent est ignoré', eqpDurees()['source'] === 'départ');
 unset($REGLAGES['equipeDureesService']);
 
+echo "Les ETP et le CA par ETP\n";
+verifie('168 h par mois, cible 13 000 €, critique 10 000 € par défaut', eqpEtp() === ['heuresMois' => 168.0, 'caCible' => 13000.0, 'caCritique' => 10000.0], json_encode(eqpEtp()));
+$REGLAGES['heuresEtpMois'] = 164;
+verifie('le réglage heuresEtpMois', eqpEtp()['heuresMois'] === 164.0);
+$REGLAGES['heuresEtpMois'] = 0;
+verifie('un réglage nul est ignoré', eqpEtp()['heuresMois'] === 168.0);
+unset($REGLAGES['heuresEtpMois']);
+
 echo "Le CA du jour pour les % (comptoir + B2B)\n";
 $auj = date('Y-m-d'); $hier = date('Y-m-d', strtotime('-1 day')); $demain = date('Y-m-d', strtotime('+1 day'));
 verifie('un jour passé : la caisse', eqpCaDuJour(1, $hier, $auj, 2247.5, 1510.68) === [2247.5, 'reel']);
@@ -554,6 +563,73 @@ $r = wr_equipe_semaine_retirer();
 verifie('un refus de droits arrête au premier service', count(PanelApi::$ecrits) === 1 && isset($r['error']), json_encode($r));
 PanelApi::$reponses['/shops/1/schedule?date=' . $jeuR] = null; PanelApi::$ecrits = []; PanelApi::$code = 204;
 verifie('un jour muet : rien n’est retiré à l’aveugle', isset(wr_equipe_semaine_retirer()['error']) && PanelApi::$ecrits === []);
+
+echo "La fiche d'une personne\n";
+ErpApi::$actif = false; ErpApi::$reponses = [];
+$fiche = ['id' => 10, 'id_shop' => 1, 'name' => 'Anna', 'surname' => 'Lambert', 'display_name' => 'Anna L.', 'lang_code' => 'fr', 'money_per_hour' => 18.5,
+    'employment_type' => 'employment_contract', 'franchise_role' => 'employee', 'phone_e164' => '+32470123456', 'pin_set' => true, 'login_ready' => true,
+    'password' => 'secret', 'competencies' => [['name' => 'Encaissement']], 'positions' => [['name' => 'Vendeuse', 'level' => ['name' => 'Niveau 2']]]];
+PanelApi::$reponses = ['/shops/1/employees?include=positions' => $employes, '/employees/10?include=competencies,positions' => $fiche];
+$f = ep_equipe_personne(1, 10);
+verifie('la fiche : relue dans l’équipe du magasin, avec son détail', ($f['personne']['id'] ?? 0) === 10 && $f['detailLu'] === true && $f['personne']['taux'] === 18.5 && $f['personne']['contrat'] === 'employment_contract', json_encode($f));
+verifie('ni secret ni téléphone en clair : deux chiffres seulement', !str_contains(json_encode($f), 'secret') && !str_contains(json_encode($f), '470123456') && $f['personne']['telephone'] === '+32 ·· ·· 56', json_encode($f['personne']['telephone']));
+verifie('compétences et poste avec son niveau', $f['personne']['competences'] === ['Encaissement'] && $f['personne']['positions'] === [['nom' => 'Vendeuse', 'niveau' => 'Niveau 2']], json_encode($f['personne']));
+verifie('une personne d’un autre magasin : 404', isset(ep_equipe_personne(1, 12)['error']));
+unset(PanelApi::$reponses['/employees/10?include=competencies,positions']);
+verifie('sans le détail : la fiche de la liste', ep_equipe_personne(1, 10)['detailLu'] === false);
+$act = eqfFiche($employes[0]);
+verifie('le corps : seulement les champs changés, aux noms du panel', eqfCorpsPatch(['taux' => '19,0' === '19,0' ? 19 : 0, 'prenom' => ' Anna ', 'contrat' => 'b2b'], $act + ['contrat' => 'employment_contract'], [])[0] === ['money_per_hour' => 19.0, 'employment_type' => 'b2b'], json_encode(eqfCorpsPatch(['taux' => 19, 'prenom' => ' Anna ', 'contrat' => 'b2b'], $act, [])));
+verifie('un taux hors bornes, un contrat inconnu, un prénom vide : refusés', eqfCorpsPatch(['taux' => 0], $act, [])[1] !== null && eqfCorpsPatch(['contrat' => 'cdi'], $act, [])[1] !== null && eqfCorpsPatch(['prenom' => '  '], $act, [])[1] !== null);
+verifie('un champ inconnu (le PIN) : refusé', eqfCorpsPatch(['pin' => '1234'], $act, [])[1] !== null);
+verifie('changé au panel entre-temps : conflit', eqfCorpsPatch(['taux' => 20], $act, ['taux' => 17])[1] === 'conflit');
+verifie('le même taux, écrit autrement : pas de conflit', eqfCorpsPatch(['taux' => 20], $act, ['taux' => '18.50'])[1] === null);
+PanelApi::$reponses = ['/shops/1/employees?include=positions' => $employes]; PanelApi::$ecrits = []; PanelApi::$code = 204;
+$CORPS = ['shop' => 1, 'id' => 10, 'champs' => ['taux' => 19.25, 'affiche' => 'Anna'], 'avant' => ['taux' => 18.5]];
+$r = wr_equipe_personne();
+verifie('PATCH /employees/10 : le taux et le nom affiché, rien d’autre', ($r['ok'] ?? false) && PanelApi::$ecrits === [['PATCH', '/employees/10', ['money_per_hour' => 19.25, 'display_name' => 'Anna']]], json_encode([$r, PanelApi::$ecrits]));
+PanelApi::$ecrits = []; $CORPS = ['shop' => 1, 'id' => 12, 'champs' => ['taux' => 20]];
+verifie('une personne d’un autre magasin : rien n’est écrit', isset(wr_equipe_personne()['error']) && PanelApi::$ecrits === []);
+$CORPS = ['shop' => 1, 'id' => 11, 'champs' => ['taux' => 20]];
+verifie('une personne désactivée : rien n’est écrit', isset(wr_equipe_personne()['error']) && PanelApi::$ecrits === []);
+PanelApi::$code = 403; ErpApi::$actif = true; ErpApi::$ecrits = []; ErpApi::$code = 204; $CORPS = ['shop' => 1, 'id' => 10, 'champs' => ['taux' => 19.25]];
+verifie('refusé au compte du cockpit : le compte admin l’écrit', (wr_equipe_personne()['ok'] ?? false) && ErpApi::$ecrits === [['PATCH', '/employees/10', ['money_per_hour' => 19.25]]], json_encode(ErpApi::$ecrits));
+ErpApi::$actif = false; PanelApi::$code = 204;
+
+echo "Les évaluations\n";
+$hier = date('Y-m-d', strtotime('-1 day')); $auj = date('Y-m-d');
+PanelApi::$reponses = ['/shops/1/employees?include=positions' => $employes, '/shops/1/employees' => $employes,
+    '/employees/10/evaluations' => [['id' => 5, 'id_schedule' => 701, 'id_employee' => 10, 'evaluated_date' => $hier, 'start_hour' => '06:00:00', 'end_hour' => '12:00:00', 'rating' => 4, 'note' => 'Bien', 'evaluated_by' => 13]]];
+for ($i = 0; $i < EQF_A_NOTER_JOURS; $i++) { PanelApi::$reponses['/shops/1/schedule?date=' . date('Y-m-d', strtotime('-' . $i . ' days'))] = []; }
+PanelApi::$reponses['/shops/1/schedule?date=' . $hier] = [['id_schedule' => 701, 'id_employee' => 10, 'work_date' => $hier, 'start_hour' => '06:00:00', 'end_hour' => '12:00:00', 'id_shop' => 1],
+    ['id_schedule' => 702, 'id_employee' => 10, 'work_date' => $hier, 'start_hour' => '13:00:00', 'end_hour' => '17:00:00', 'id_shop' => 1],
+    ['id_schedule' => 703, 'id_employee' => 13, 'work_date' => $hier, 'start_hour' => '07:00:00', 'end_hour' => '11:00:00', 'id_shop' => 1]];
+PanelApi::$reponses['/shops/1/schedule?date=' . $auj] = [['id_schedule' => 704, 'id_employee' => 10, 'work_date' => $auj, 'start_hour' => '23:00:00', 'end_hour' => '23:59:00', 'id_shop' => 1]];
+$E = ep_equipe_personne_evaluations(1, 10);
+verifie('ses notes, avec qui a noté', count($E['evaluations']) === 1 && $E['evaluations'][0]['note'] === 4 && $E['evaluations'][0]['par'] === 'Caissière' && $E['moyenne'] === 4.0, json_encode($E['evaluations']));
+verifie('à noter : son service non noté, fini ; ni celui d’un autre, ni un service pas fini', array_column($E['aNoter'], 'service') === [702], json_encode($E['aNoter']));
+PanelApi::$ecrits = []; $CORPS = ['shop' => 1, 'id' => 10, 'service' => 702, 'date' => $hier, 'note' => 5, 'mot' => 'Top'];
+$r = wr_equipe_personne_evaluation();
+verifie('POST /schedule/702/evaluation {rating, note}', ($r['ok'] ?? false) && PanelApi::$ecrits === [['POST', '/schedule/702/evaluation', ['rating' => 5, 'note' => 'Top']]], json_encode([$r, PanelApi::$ecrits]));
+PanelApi::$ecrits = []; $CORPS = ['shop' => 1, 'id' => 10, 'service' => 703, 'date' => $hier, 'note' => 5];
+verifie('le service d’une autre personne : refusé, rien n’est écrit', isset(wr_equipe_personne_evaluation()['error']) && PanelApi::$ecrits === []);
+$CORPS = ['shop' => 1, 'id' => 10, 'service' => 704, 'date' => $auj, 'note' => 5];
+verifie('un service pas encore fini : refusé', isset(wr_equipe_personne_evaluation()['error']) && PanelApi::$ecrits === []);
+$CORPS = ['shop' => 1, 'id' => 10, 'service' => 702, 'date' => $hier, 'note' => 6];
+verifie('une note hors de 1 à 5 : refusée', isset(wr_equipe_personne_evaluation()['error']) && PanelApi::$ecrits === []);
+
+echo "Les ventes des 12 dernières semaines\n";
+$sem = eqfSemaines('2026-11-24');
+verifie('12 semaines complètes, du lundi 31 août au lundi 16 novembre', count($sem) === 12 && $sem[0] === '2026-08-31' && $sem[11] === '2026-11-16', json_encode($sem));
+$V = []; $Lg = [];
+foreach ($sem as $du) { for ($k = 0; $k < 7; $k++) { $j = date('Y-m-d', strtotime($du . ' +' . $k . ' days'));
+    $V[$j] = [10 => ['t' => 20, 'ca' => 300.0], 13 => ['t' => 10, 'ca' => 120.0]] + ($j === '2026-08-31' ? [14 => ['t' => 2, 'ca' => 100.0]] : []); $Lg[$j] = [10 => ['l' => 50, 't' => 20], 13 => ['l' => 20, 't' => 10]]; } }
+$V['2026-11-22'] = null; $Lg['2026-11-22'] = null;
+$A = eqfVentesAgreger(10, $sem, $V, $Lg);
+verifie('ses totaux : vendu, tickets, panier, pièces par ticket', $A['total']['ca'] === 83 * 300.0 && $A['total']['tickets'] === 83 * 20 && $A['total']['panier'] === 15.0 && $A['total']['pieces'] === 2.5, json_encode($A['total']));
+verifie('l’équipe : panier et pièces de tout le magasin', $A['equipe']['panier'] === round((83 * 420 + 100) / (83 * 30 + 2), 2) && $A['equipe']['pieces'] === round(70 / 30, 2), json_encode($A['equipe']));
+verifie('le rang au panier : 30 tickets au moins pour compter', $A['rang'] === ['position' => 1, 'sur' => 2], json_encode($A['rang']));
+verifie('un jour pas lu : compté dans la couverture, pas inventé', $A['couverture'] === ['jours' => 84, 'ventes' => 83, 'lignes' => 83] && $A['semaines'][11]['jours'] === 6, json_encode($A['couverture']));
+verifie('une semaine sans ticket : panier nul, pas zéro', eqfVentesAgreger(99, $sem, $V, $Lg)['semaines'][0]['panier'] === null);
 
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);

@@ -117,6 +117,11 @@ final class ParamRules
         // [406] Teczka do audytu : jours de grâce après le rythme d'un assistant de contrôle, jours avant le contrôle d'un document
         'audit_folder.grace_days' => [0, 60, true],
         'audit_folder.alert_days' => [0, 90, true],
+        // [409–411] Tablet hali : schładzanie (°C au cœur, délai), retard des groupes (vue Zmiana), rafraîchissement des wezwania
+        'hala.chill_target_c' => [-10, 30, false],
+        'hala.chill_max_minutes' => [10, 720, true],
+        'hala.delay_tolerance_pct' => [0, 100, true],
+        'hala.help_poll_s' => [5, 120, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],
@@ -133,6 +138,11 @@ final class ParamRules
         'kiosk.waste_photo_required' => [0, 1, true],
         'kiosk.waste_photo_max' => [1, 8, true],
         'trace.label_days' => [0, 7, true],
+        // [415] Tablet jakości : sztuki ważone przy kontroli partii, tolerancja średniej wagi sztuki (± %)
+        'qc_round.pieces' => [1, 10, true],
+        'qc_round.weight_tolerance_pct' => [0, 50, false],
+        // [432] Obchód chłodni : « Co kupić » otwiera się po pełnym obchodzie z ostatnich N godzin
+        'cold_visit.valid_hours' => [1, 168, true],
         'kiosk.office_qr_ttl_s' => [30, 600, true],
         'supply.invoice_price_alert_pct' => [1, 100, false],
         'kiosk.ordered_days' => [1, 28, true],
