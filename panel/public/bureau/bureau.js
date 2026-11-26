@@ -7,7 +7,7 @@
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const el = document.getElementById('bq');
   const jeton = (new URLSearchParams(location.search).get('j') || '').toLowerCase();
-  const magasin = (new URLSearchParams(location.search).get('m') || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const magasin = (new URLSearchParams(location.search).get('m') || '').replace(/\D/g, '');
   const api = '../api/cockpit/bureau-questionnaire/' + (jeton ? encodeURIComponent(jeton) : 'm/' + magasin);
   const CADEAU = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>';
   const JOURS = [[1, 'Lun'], [2, 'Mar'], [3, 'Mer'], [4, 'Jeu'], [5, 'Ven']];
@@ -67,7 +67,7 @@
     window.scrollTo(0, 0);
   }
 
-  if (!/^[a-f0-9]{32}$/.test(jeton) && !/^[a-z0-9-]{2,60}$/.test(magasin)) { el.innerHTML = '<p class="bq-attente">Ce lien n’est pas complet : demandez le lien du questionnaire à votre magasin.</p>'; return; }
+  if (!/^[a-f0-9]{32}$/.test(jeton) && !/^[1-9]\d{0,5}$/.test(magasin)) { el.innerHTML = '<p class="bq-attente">Ce lien n’est pas complet : demandez le lien du questionnaire à votre magasin.</p>'; return; }
   fetch(api, { headers: { Accept: 'application/json' } }).then(r => r.json().catch(() => ({})).then(j => { if (!r.ok) { throw new Error(j.error || 'questionnaire introuvable'); } return j; }))
     .then(q => { Q = q; document.title = (q.titre || 'Du frais au bureau') + ' — ' + q.magasin; formulaire(); })
     .catch(e => { el.innerHTML = `<p class="bq-attente">${esc(e.message.charAt(0).toUpperCase() + e.message.slice(1))}.</p>`; });

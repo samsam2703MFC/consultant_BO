@@ -259,8 +259,8 @@ try {
 
     // Le questionnaire « bureau » d'un magasin (26/11/2026) : PUBLIC, la personne n'a pas de session — le jeton du
     // questionnaire dans l'adresse est la clé (panel/src/bureaux_dev.php : limite par IP, champ piège) ; le lien court
-    // /m/{magasin} (« corbais ») ouvre le même, avec en plus un plafond de réponses par jour et par magasin.
-    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/m/([a-z0-9-]{2,60})$#', $path, $m)) {
+    // /m/{shop} (« 2 », Corbais) ouvre le même, avec en plus un plafond de réponses par jour et par magasin.
+    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/m/(\d{1,6})$#', $path, $m)) {
         echo json_encode(bdvPublicMagasin($method, $m[1]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
