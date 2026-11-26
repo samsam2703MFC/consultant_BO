@@ -334,3 +334,4 @@
 2026-11-26T08:19:23Z Questionnaire bureau : le lien court par le numéro du magasin (…/bureau/?m=2)
 2026-11-26T09:06:38Z Production : Różnice kursowe — lecture des relevés ING du compte EUR (totaux contrôlés)
 2026-11-26T09:45:55Z Vidéos d'instruction : lot 3 (Semaine, Mois, Année, Analyse, Produits, Primes, Concurrence, Fidélité, Commandes, Clients, Mon équipe › Primes et fiche) et vidéos retournées ; défauts relevés au tournage corrigés (fin du mois, Analyse, Concurrence, Clients, fiche d'une personne, coffre)
+2026-11-26T13:52:08Z Vidéos d'instruction : le chapitre « Connecter le compte TF Buddy » retiré de Clients › Bureaux
