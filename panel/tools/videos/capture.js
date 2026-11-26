@@ -1,4 +1,4 @@
-/* node capture.js <vue|''> [sortie.png] [--plein] [--clic "texte"]... [--w 1440 --h 900]
+/* node capture.js <vue|''> [sortie.png] [--plein] [--clic "texte"]... [--w 1440 --h 900] [--dsf 2]
  * Ouvre /dashboard/?shop=4&vue=<vue> avec la fausse API, attend, capture, liste les chemins non servis et les erreurs JS. */
 const { chromium } = require('playwright');
 const { DEMO, nouveauContexte } = require('./mock');
@@ -11,7 +11,7 @@ const { DEMO, nouveauContexte } = require('./mock');
   const opt = k => { const i = a.indexOf(k); return i >= 0 ? a[i + 1] : null; };
   const clics = []; a.forEach((x, i) => { if (x === '--clic') clics.push(a[i + 1]); });
   const b = await chromium.launch({ args: ['--no-proxy-server'] });
-  const { ctx, nonServis } = await nouveauContexte(b, { viewport: { width: +(opt('--w') || 1440), height: +(opt('--h') || 900) } });
+  const { ctx, nonServis } = await nouveauContexte(b, { viewport: { width: +(opt('--w') || 1440), height: +(opt('--h') || 900) }, dsf: +(opt('--dsf') || 1) });
   const p = await ctx.newPage();
   p.on('pageerror', e => console.log('ERREUR JS', e.message));
   p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) console.log('CONSOLE', m.text()); });

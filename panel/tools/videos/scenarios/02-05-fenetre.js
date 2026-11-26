@@ -93,7 +93,7 @@ module.exports = async function () {
   await f.fonction({ id: 'equipe-retirer', titre: 'Retirer du shift ou de l’horaire',
     resume: 'Retirer une personne d’un shift (son service de ce jour), ou de l’horaire de toute la semaine (absente, en congé), après confirmation.',
     points: ['Ouvrir le service', '« Retirer Prénom du shift » : ce jour-là', '« Retirer de l’horaire de la semaine » : absent·e', 'Confirmer'] });
-  const ven = `.eqp-tab tr.tot td:nth-child(${await E.colonne(f, '2026-11-20')})`;
+  const ven = `.eqp-sem tr.eqp-pal th:nth-child(${await E.colonne(f, '2026-11-20')})`;
   await f.montrer(ven, 'Vendredi');
   await f.dire('Vendredi est <b>rouge</b> : trop d’heures pour le CA du jour.', 3200);
   await f.cacher(150); await f.taire(150);

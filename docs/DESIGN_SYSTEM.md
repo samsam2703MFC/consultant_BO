@@ -112,7 +112,7 @@ libellés (sauf faute ou anglais), mêmes comportements.
   --prize: #B0792A;      /* or : attention, interrupteur allumé, prime */
   --prize-soft: #F6E7CE; /* fond d'avertissement */
   --prize-ink: #7A5207;  /* texte d'avertissement */
-  --stop: #A32014;       /* arrêt : uniquement une valeur devenue négative (marge…) */
+  --stop: #A32014;       /* arrêt : une valeur devenue négative (marge…), le palier « rouge » d'un budget */
   --stop-soft: #F7E0DC;  /* fond de l'arrêt */
 
   color-scheme: light;
@@ -516,6 +516,34 @@ français (« 06/11/2026 » ou « 6 nov. 2026 »).
 SVG **linéaires** 16 × 16, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`,
 `stroke-width="1.7"`, `stroke-linecap="round"`, `stroke-linejoin="round"`, `aria-hidden="true"` ; la couleur
 suit le texte. Pas d'icône pleine, pas d'icône de couleur, pas d'emoji. Catalogue des tracés : §8.4.
+
+### 7.13 Résumé d'une vue, « À corriger », paliers (décision du 26/11/2026)
+
+Décidé par Sam le 26/11/2026 (« adapte ce style à tout le dashboard ») à partir de la maquette de Mon équipe
+(`panel/docs/maquettes/equipe-gestion/semaine-avant-apres/`). Référence en code : `panel/public/dashboard/equipe.js`
+(`resume`, `aCorriger`) et `equipe.css` (`.eqp-rs…`).
+
+- **Le résumé** remplace une rangée de tuiles qui se répètent : en haut de la vue, une carte en deux lignes. Ligne 1 :
+  la valeur clé (24 px, 700 : le seul gras), son état en mots derrière un point de 8 px ; ce qu'elle mesure et d'où
+  vient le chiffre (13 px, puis 12 px `--muted`) ; la jauge et une ligne de contexte ; ce qu'il faut faire pour revenir
+  à la cible, séparé par un filet vertical. Ligne 2, sous un filet : « À corriger ».
+- **« À corriger »** : ce qui demande un geste **aujourd'hui ou plus tard** (un jour passé ne se corrige plus : pour un
+  jour passé, le titre devient « Ce jour-là »). Un `.btn .btn--sm` par jour, semaine ou élément ; dedans, un signe
+  (point d'état, carré hachuré d'un trou) **toujours suivi de mots**. Chaque bouton mène à un geste qui existe déjà
+  (ouvrir le jour, la semaine, faire défiler jusqu'à la ligne et l'encadrer de `--accent` un instant ; défilement doux
+  seulement sans `prefers-reduced-motion: reduce`). Rien à faire : une phrase en `--green` (« Rien à corriger ce jour. »).
+- **Paliers** (un budget, un seuil) : dans la cible `--green` (ruban et zone de jauge à 22–38 % d'opacité),
+  au-dessus de la cible `--prize`, au-dessus du seuil rouge `--stop`, au-dessus du seuil noir `--ink`. Toujours avec un
+  mot (« dans la cible », « au-dessus de 20 % ») : vert et or ne se distinguent pas assez pour un daltonien
+  (ΔE 6,9, mesuré). Les anciens `#D97A1E` et `#C0281F` sont retirés.
+- **Le statut dans la colonne, la tête collée** : l'état d'un jour se lit dans sa colonne, en tête du tableau ; la tête
+  d'un long tableau reste en haut (`thead { position: sticky; top: 0 }`, fond `--table-head`, filet
+  `box-shadow: 0 1px 0 var(--line)` — une bordure ne suit pas une tête collée ; ce n'est pas une ombre). Un ancêtre en
+  `overflow` autre que visible annule `sticky` : au-dessus de 1366 px le conteneur passe en `overflow: visible` ; en
+  dessous, il défile de côté sans tête collée. Une grille très large (le mois) défile dans sa propre fenêtre
+  (`max-height`), sa tête collée en haut de celle-ci.
+- **Petits textes sur fond teinté** : sur `--table-head` ou `--paper`, `--muted` ne fait que 4,45:1 (sous 4,5:1) ; un
+  texte de 12 px ou moins y prend `--muted-2` (6,7:1).
 
 ---
 

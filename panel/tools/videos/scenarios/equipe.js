@@ -33,14 +33,14 @@ async function lireLaSemaine(f, { long } = {}) {
   await f.montrer('.eqp-pbar .seg', 'Jour · Semaine · Mois');
   await f.dire('Le planning s’ouvre sur la <b>semaine</b>. Jour, Semaine, Mois : trois façons de le lire.', 4200);
   await f.cacher();
-  await f.montrer('.eqp-kpis', 'La semaine en chiffres');
-  await f.dire('En tête : les personnes au planning, les heures, et la part du <b>personnel dans le chiffre d’affaires</b>.', 4600);
+  await f.montrer('.eqp-rs-l1', 'La semaine en chiffres');
+  await f.dire('En tête : la part du <b>personnel dans le chiffre d’affaires</b>, la jauge, et les heures planifiées.', 4600);
   await f.cacher();
   await f.montrer('.eqp-table tbody tr:nth-child(2)', 'Une ligne par personne');
   await f.dire('Une ligne par personne, une case par jour : chaque case est un <b>service</b>, avec son secteur.', 4200);
   await f.cacher();
-  await f.montrer('.eqp-table tr.tot', 'Par jour');
-  await f.dire('Sous le tableau, <b>chaque jour</b> : le nombre de personnes, les heures, et le pourcentage — vert, orange ou rouge.', 5000);
+  await f.montrer('.eqp-sem tr.eqp-pal', 'Budget du jour');
+  await f.dire('Sous le nom de <b>chaque jour</b> : son pourcentage, un ruban vert, or ou rouge avec son mot, les personnes et les heures.', 5000);
   await f.cacher();
   await f.montrerTout('.eqp-table tr.eqp-lin', 'Les linéaires');
   await f.dire('Les <b>linéaires</b> montrent qui tient chaque secteur et le comptoir. Un trou y est signalé en jaune.', 4800);
@@ -49,9 +49,9 @@ async function lireLaSemaine(f, { long } = {}) {
 }
 
 async function leBudget(f, { long } = {}) {
-  await f.montrer('.eqp-bj', 'Le budget d’heures');
+  await f.montrer('.eqp-rs-l1', 'Le budget d’heures');
   await f.dire('Le <b>budget d’heures</b> : le coût du personnel face au chiffre d’affaires de la semaine.', 4400);
-  await f.dire('<b>17 %</b>, c’est la cible du réseau. Orange au-dessus, <b>rouge</b> au-dessus de 20 %, noir au-dessus de 22 %.', 5200);
+  await f.dire('<b>17 %</b>, c’est la cible du réseau. Or au-dessus, <b>rouge</b> au-dessus de 20 %, noir au-dessus de 22 %.', 5200);
   if (long) { await f.dire('À droite, ce qu’il faut faire pour revenir à 17 % : les <b>heures à retirer</b>, ou le coût moyen à viser.', 5000); }
   await f.cacher();
 }
@@ -78,8 +78,8 @@ async function corrigerLeTrou(f) {
 }
 
 async function retirerDuShift(f) {
-  await f.defilerVers(f.p.locator('.eqp-table tr.tot'), 260);
-  await f.montrer(`.eqp-table tr.tot td:nth-child(${await colonne(f, C.vendredi)})`, 'Vendredi');
+  await f.defilerVers(f.p.locator('.eqp-sem tr.eqp-pal'), 260);
+  await f.montrer(`.eqp-sem tr.eqp-pal th:nth-child(${await colonne(f, C.vendredi)})`, 'Vendredi');
   await f.dire('Vendredi est <b>rouge</b> : trop d’heures pour le chiffre prévu.', 3400);
   await f.cacher(150);
   if (!C.retrait.emp) { C.retrait.emp = await serviceDuJour(f, C.vendredi, { finit: '19:15', secteur: 'comptoir' }); }
@@ -89,8 +89,8 @@ async function retirerDuShift(f) {
   await f.dire('Dans la fenêtre du service, <b>Retirer du shift</b> enlève cette personne de ce service.', 3800);
   await f.cacher(150);
   await f.cliquerConfirme('[data-eqp-suppr]', 'Retirer cette personne du shift ?', 'Son service de ce jour est supprimé du planning.', { apres: 1600 });
-  await f.defilerVers(f.p.locator('.eqp-table tr.tot'), 260);
-  await f.montrer(`.eqp-table tr.tot td:nth-child(${await colonne(f, C.vendredi)})`, 'Vendredi');
+  await f.defilerVers(f.p.locator('.eqp-sem tr.eqp-pal'), 260);
+  await f.montrer(`.eqp-sem tr.eqp-pal th:nth-child(${await colonne(f, C.vendredi)})`, 'Vendredi');
   await f.dire('Vendredi repasse sous la barre : le pourcentage et sa couleur se recalculent aussitôt.', 4000);
   await f.cacher();
 }

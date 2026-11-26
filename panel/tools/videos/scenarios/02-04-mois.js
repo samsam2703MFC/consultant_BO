@@ -21,8 +21,8 @@ module.exports = async function () {
   await f.dire('Le bouton « <b>Mois</b> » montre tout le mois.', 2800);
   await f.cacher(150);
   await f.cliquer('[data-eqp-vue=mois]', { apres: 1600 });
-  await f.montrer('.eqp-kpis', 'Le mois en chiffres');
-  await f.dire('En tête : les heures du mois, la part du personnel, et les jours <b>au-dessus de la cible</b>.', 4400);
+  await f.montrer('.eqp-rs', 'Le mois en chiffres');
+  await f.dire('En tête : la part du personnel du mois, et « <b>À corriger</b> » : les semaines à venir qui ont un jour au-dessus de la cible ou une section vide.', 5200);
   await f.montrer('.eqp-moi tbody tr:nth-child(2)', 'Une ligne par personne');
   await f.dire('Une ligne par personne : les heures de chaque service, <b>beige</b> le matin, <b>rose</b> l’après-midi.', 4800);
   await f.montrer('.eqp-moi tr.tot:not(.eqp-msem)', 'Par jour');
@@ -41,7 +41,7 @@ module.exports = async function () {
   await f.cacher(150); await f.taire(150);
   await f.cliquer('.eqp-moi [data-eqp-jour="2026-11-20"]', { apres: 1600 });
   await f.defiler(-3000);
-  await f.montrer('.eqp-kpis', 'Vendredi 20');
+  await f.montrer('.eqp-rs', 'Vendredi 20');
   await f.dire('Le jour, ses heures et son budget : on y corrige le planning.', 3400);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('[data-eqp-vue=mois]', { apres: 1500 });
