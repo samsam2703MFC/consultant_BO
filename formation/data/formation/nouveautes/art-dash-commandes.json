@@ -1,0 +1,505 @@
+{
+  "aConfirmer": [
+    "La lecture des livraisons de TF Buddy (9fd4d141 : tournées, horaires, heure limite du panel, route GET /dashboard/commandes/tfb) n’est pas montrée à l’écran dans le code en ligne : les tournées de la page sont celles du dashboard (tables panel_tournee*). L’article ne décrit que ce qui se voit. Les tournées de TF Buddy remplaceront-elles celles du dashboard ?",
+    "Halle (26/11/2026) n’a ni tournée ni commande « Bureau » : les captures montrent la vue Tournées vide, la fiche d’une commande sans choix de tournée et le formulaire « Nouvelle tournée » vide (valeurs proposées 11:15 → 12:30, du lundi au vendredi). Aucune capture d’une tournée remplie ni d’une commande « à placer ».",
+    "Le compte TF Buddy du magasin : le bouton de connexion est dans Vendre › Clients, pas dans Commandes ; ce que la connexion change à la page Commandes (les livraisons du panel) ne se voit pas encore. Partie 6 à garder ici ou à renvoyer à l’article Clients ?",
+    "L’heure limite « 16:00 » (commander jusqu’à la veille 16 h) est une valeur du code (PCO_COUPURE), la même pour tous les magasins.",
+    "Voisin de 0.0.09 « Click & Collect et livraison : préparer et remettre une commande » (le geste de préparer et remettre) : cet article décrit l’écran de suivi et les tournées, sans toucher à 0.0.09. Un renvoi entre les deux ?",
+    "Les commandes de la page se changent à la main seulement pour la tournée ; le statut (prête, remise) se tient au panel ou en caisse.",
+    "Classement : sous-catégorie D3.5 (Click & Collect / Webshop / Livraison) ; formations FO-46 et FO-05 ; compétences C-CC.Préparation, C-CC.Remise, C-VENTE.B2B, C-PILOTAGE.KPI. Durée (« 20 min ») estimée."
+  ],
+  "id": "art-dash-commandes",
+  "code": "",
+  "type": "Article",
+  "dossier": "05",
+  "version": "1.0",
+  "statut": "a_valider",
+  "langue_origine": "FR",
+  "poste": "vente",
+  "moment": null,
+  "acces": "responsable",
+  "duree": "20 min de lecture, avec Commandes ouvert sur son magasin",
+  "titre": {
+    "fr": "Le dashboard : la page Commandes",
+    "nl": "Het dashboard: de pagina Commandes"
+  },
+  "objectif": {
+    "fr": "Suivre toutes les commandes du magasin (webshop, comptoir, bureau) au jour, à la semaine et au mois, savoir lesquelles sont à préparer, à livrer ou à retirer, et organiser les livraisons aux bureaux en tournées.",
+    "nl": "Alle bestellingen van de winkel (webshop, toonbank, kantoor) per dag, week en maand opvolgen, weten welke klaargemaakt, geleverd of afgehaald moeten worden, en de leveringen aan kantoren in rondes organiseren."
+  },
+  "pour": {
+    "fr": "Franchisé, locataire gérant, manager et adjoint manager (P7 à P12), et chef de section vente (P4). À lire après « Comprendre le dashboard magasin » (0.0.15), avec la page Commandes ouverte.",
+    "nl": "Franchisenemer, gerant-huurder, manager en adjunct-manager (P7 tot P12), en sectiehoofd verkoop (P4). Te lezen na « Comprendre le dashboard magasin » (0.0.15), met de pagina Commandes open."
+  },
+  "classement": {
+    "souscat": "D3.5",
+    "phases": [
+      "ouverture",
+      "operationnel"
+    ],
+    "postes": [
+      "P4",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12"
+    ],
+    "competences": [
+      "C-CC.Préparation",
+      "C-CC.Remise",
+      "C-VENTE.B2B",
+      "C-PILOTAGE.KPI"
+    ],
+    "formations": [
+      "FO-46",
+      "FO-05"
+    ],
+    "checklists": []
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Avant de commencer",
+        "nl": "Voor je begint"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Où se trouve la page Commandes",
+            "nl": "Waar de pagina Commandes staat"
+          },
+          "texte": {
+            "fr": "Au dashboard, dans le rail : « La journée » › « Commandes », sous « Opérationnel ».\nLe chiffre à côté de « Commandes » : les commandes à préparer aujourd’hui.\nPour le franchisé et le responsable : voir toutes les commandes du magasin, leur canal, leur paiement, et organiser les livraisons aux bureaux.\nLes commandes sont lues au panel TF Buddy ; elles ne sont pas gardées au dashboard.\nLa journée se relit toute seule toutes les deux minutes, tant que la page reste ouverte sur aujourd’hui.",
+            "nl": "In het dashboard, in de rail: « La journée » › « Commandes », onder « Opérationnel ».\nHet cijfer naast « Commandes »: de bestellingen die vandaag klaargemaakt moeten worden.\nVoor de franchisenemer en de verantwoordelijke: alle bestellingen van de winkel zien, hun kanaal, hun betaling, en de leveringen aan kantoren organiseren.\nDe bestellingen worden gelezen in het panel van TF Buddy; ze worden niet bewaard in het dashboard.\nDe dag wordt elke twee minuten vanzelf opnieuw gelezen, zolang de pagina op vandaag openstaat."
+          },
+          "critique": false,
+          "photo": "art-dash-commandes-liste.jpg",
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "La barre du haut",
+            "nl": "De bovenste balk"
+          },
+          "texte": {
+            "fr": "Les flèches : le jour (la semaine, le mois) d’avant ou d’après ; « Aujourd’hui » revient au jour même.\n« Jour », « Semaine », « Mois » : la période regardée.\n« Gérer les tournées » : la liste des tournées du magasin.\nL’interrupteur abricot « Liste » / « Tournées » : deux façons de voir les mêmes commandes ; le chiffre de chacun compte les commandes ou les tournées.\nLe dashboard se souvient, sur l’appareil, de la vue et de la période choisies.",
+            "nl": "De pijlen: de vorige of volgende dag (week, maand); « Aujourd’hui » gaat terug naar vandaag.\n« Jour », « Semaine », « Mois »: de bekeken periode.\n« Gérer les tournées »: de lijst van de rondes van de winkel.\nDe abrikooskleurige schakelaar « Liste » / « Tournées »: twee manieren om dezelfde bestellingen te zien; het cijfer telt de bestellingen of de rondes.\nHet dashboard onthoudt op het toestel de gekozen weergave en periode."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Un jour sans commande, un panel qui ne répond pas",
+            "nl": "Een dag zonder bestelling, een panel dat niet antwoordt"
+          },
+          "texte": {
+            "fr": "Aucune commande au panel ce jour-là : la liste le dit, « Aucune commande au panel pour ce jour. » Ce n’est pas une panne.\nLe panel ne rend pas les commandes : un bandeau « Les commandes du panel ne se lisent pas … Les tournées restent visibles. »\nDans ce cas : « ↻ Relire » plus tard ; si cela dure, une demande au bureau.",
+            "nl": "Geen bestelling in het panel die dag: de lijst zegt « Aucune commande au panel pour ce jour. » Dat is geen storing.\nHet panel geeft de bestellingen niet: een balk « Les commandes du panel ne se lisent pas … Les tournées restent visibles. »\nIn dat geval: later « ↻ Relire »; als het blijft duren, een vraag aan het kantoor."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "La journée en liste",
+        "nl": "De dag als lijst"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Les trois canaux",
+            "nl": "De drie kanalen"
+          },
+          "texte": {
+            "fr": "« Webshop » (bleu) : commandée sur le webshop.\n« Comptoir » (bordeaux) : prise au magasin, au téléphone ou par mail.\n« Bureau » (vert) : la commande d’un bureau (une offre ou un département de bureau).\nUne commande annulée au panel ne compte pas.",
+            "nl": "« Webshop » (blauw): besteld via de webshop.\n« Comptoir » (bordeaux): opgenomen in de winkel, aan de telefoon of per mail.\n« Bureau » (groen): de bestelling van een kantoor (een aanbod of een afdeling van een kantoor).\nEen in het panel geannuleerde bestelling telt niet mee."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Le bandeau",
+            "nl": "De balk met cijfers"
+          },
+          "texte": {
+            "fr": "« Commandes du jour » : le nombre et le montant.\nUne case par canal, avec son montant.\n« À préparer » : ce qui reste à préparer, « … à livrer · … à retirer ». Un jour passé, la case devient « Livrées ».\nLa barre sous les cases : la part de chaque canal dans le montant des commandes.",
+            "nl": "« Commandes du jour »: het aantal en het bedrag.\nEén vak per kanaal, met zijn bedrag.\n« À préparer »: wat nog klaargemaakt moet worden, « … à livrer · … à retirer ». Voor een voorbije dag wordt het vak « Livrées ».\nDe balk onder de vakken: het aandeel van elk kanaal in het bedrag van de bestellingen."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Le tableau des commandes",
+            "nl": "De tabel van de bestellingen"
+          },
+          "texte": {
+            "fr": "Une ligne par commande, dans l’ordre de l’heure : « Heure », « Canal » (et le n°), « Client ou bureau », « Livraison », « Montant », « Statut ».\nLe filet « Maintenant · hh:mm » sépare ce qui est passé de ce qui vient.\nLe client : le nom de la société pour un client pro ; le prénom et l’initiale du nom pour un particulier.\nSous le montant, le paiement : « Encaissée », « Payée en ligne », « Sur facture » (avec le délai en jours), « Paiement en attente », « À encaisser ».\n« Livraison » : « Retrait au magasin », ou la tournée et l’arrêt (« · arrêt 2 »).",
+            "nl": "Eén regel per bestelling, in volgorde van het uur: « Heure », « Canal » (en het nr.), « Client ou bureau », « Livraison », « Montant », « Statut ».\nDe lijn « Maintenant · uu:mm » scheidt wat voorbij is van wat nog komt.\nDe klant: de naam van het bedrijf voor een zakelijke klant; de voornaam en de initiaal van de naam voor een particulier.\nOnder het bedrag, de betaling: « Encaissée », « Payée en ligne », « Sur facture » (met de termijn in dagen), « Paiement en attente », « À encaisser ».\n« Livraison »: « Retrait au magasin », of de ronde en de stop (« · arrêt 2 »)."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Les statuts",
+            "nl": "De statussen"
+          },
+          "texte": {
+            "fr": "« À préparer » : rien n’est encore fait.\n« En préparation », puis « Prête ».\n« Remise » (au magasin) ou « Livrée » (en tournée), avec l’heure quand le panel l’a notée.\n« Pas retirée » : le client n’est pas venu.\n« Pas encore remise » : l’heure est passée et la commande n’est pas notée remise.\nUne commande encaissée en caisse dont l’heure est passée compte comme remise.",
+            "nl": "« À préparer »: er is nog niets gebeurd.\n« En préparation », dan « Prête ».\n« Remise » (in de winkel) of « Livrée » (in een ronde), met het uur als het panel het genoteerd heeft.\n« Pas retirée »: de klant is niet gekomen.\n« Pas encore remise »: het uur is voorbij en de bestelling staat niet als afgegeven.\nEen bestelling die aan de kassa afgerekend is en waarvan het uur voorbij is, telt als afgegeven."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Filtrer et chercher",
+            "nl": "Filteren en zoeken"
+          },
+          "texte": {
+            "fr": "« Toutes » ou un canal : « Webshop », « Comptoir », « Bureau ».\n« Tout », « À livrer », « À retirer ».\nLa recherche : « Chercher un client, un bureau, un n° ».\nSous le tableau : le nombre de commandes affichées et leur montant.",
+            "nl": "« Toutes » of één kanaal: « Webshop », « Comptoir », « Bureau ».\n« Tout », « À livrer », « À retirer ».\nZoeken: « Chercher un client, un bureau, un n° ».\nOnder de tabel: het aantal getoonde bestellingen en hun bedrag."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Une commande : la fiche et sa livraison",
+        "nl": "Eén bestelling: de fiche en haar levering"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Ouvrir une commande",
+            "nl": "Een bestelling openen"
+          },
+          "texte": {
+            "fr": "Un clic sur une ligne ouvre « Commande n° … · heure ».\nOn y lit : « Client » (avec « client pro » s’il l’est), « Canal », « Montant » et paiement, « Statut », « Note », « Livraison ».\n« Changer la livraison » : « Automatique : la tournée de son bureau », une tournée du jour, ou « Retrait au magasin (pas de tournée) ».\n« Enregistrer » garde le choix ; « Annuler » ou Échap ferme sans rien changer.\nAucune tournée ne roule ce jour : la fiche le dit et renvoie à « Gérer les tournées ».",
+            "nl": "Een klik op een regel opent « Commande n° … · uur ».\nJe leest er: « Client » (met « client pro » als dat zo is), « Canal », « Montant » en betaling, « Statut », « Note », « Livraison ».\n« Changer la livraison »: « Automatique : la tournée de son bureau », een ronde van de dag, of « Retrait au magasin (pas de tournée) ».\n« Enregistrer » bewaart de keuze; « Annuler » of Escape sluit zonder iets te wijzigen.\nEr rijdt vandaag geen ronde: de fiche zegt het en verwijst naar « Gérer les tournées »."
+          },
+          "critique": false,
+          "photo": "art-dash-commandes-fiche.jpg",
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Les commandes à placer",
+            "nl": "De bestellingen die geplaatst moeten worden"
+          },
+          "texte": {
+            "fr": "« Livraison sans tournée » : le panel dit que la commande se livre, mais aucune tournée ne la prend.\n« Hors de ses tournées » : un bureau commande à une heure qu’aucune de ses tournées ne couvre.\nLe bouton « Placer » ouvre la fiche : choisir une tournée, ou garder la commande au magasin.\nEn semaine et en mois, un jour qui en a montre « … à placer ».",
+            "nl": "« Livraison sans tournée »: het panel zegt dat de bestelling geleverd wordt, maar geen enkele ronde neemt ze mee.\n« Hors de ses tournées »: een kantoor bestelt op een uur dat geen enkele van zijn rondes dekt.\nDe knop « Placer » opent de fiche: een ronde kiezen, of de bestelling in de winkel houden.\nIn week en maand toont een dag met zulke bestellingen « … à placer »."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Ce que change le choix",
+            "nl": "Wat de keuze verandert"
+          },
+          "texte": {
+            "fr": "Le choix range la commande dans une tournée du dashboard, ou au magasin.\nIl ne change rien à la commande au panel : ni son contenu, ni son statut, ni son paiement.",
+            "nl": "De keuze plaatst de bestelling in een ronde van het dashboard, of in de winkel.\nZe verandert niets aan de bestelling in het panel: niet de inhoud, niet de status, niet de betaling."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Les tournées et les bureaux",
+        "nl": "De rondes en de kantoren"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Ce qu’est une tournée",
+            "nl": "Wat een ronde is"
+          },
+          "texte": {
+            "fr": "Une tournée regroupe les bureaux livrés ensemble : un départ, un retour, un livreur, un véhicule, les jours où elle roule et ses bureaux dans l’ordre de passage.\nLe panel n’a pas de tournées : elles se tiennent au dashboard, magasin par magasin.\nUne commande d’un bureau va d’elle-même dans la tournée de ce bureau qui roule ce jour-là, si son heure est entre une heure avant le départ et une demi-heure après le retour.\nPlusieurs tournées possibles : celle dont le départ est le plus proche de l’heure de la commande.",
+            "nl": "Een ronde groepeert de kantoren die samen beleverd worden: een vertrek, een terugkeer, een chauffeur, een voertuig, de dagen waarop ze rijdt en haar kantoren in de volgorde van doorgang.\nHet panel heeft geen rondes: ze worden in het dashboard bijgehouden, winkel per winkel.\nEen bestelling van een kantoor gaat vanzelf in de ronde van dat kantoor die die dag rijdt, als haar uur tussen één uur vóór het vertrek en een half uur na de terugkeer ligt.\nMeerdere rondes mogelijk: die waarvan het vertrek het dichtst bij het uur van de bestelling ligt."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Créer ou modifier une tournée",
+            "nl": "Een ronde aanmaken of wijzigen"
+          },
+          "texte": {
+            "fr": "« Gérer les tournées » › « Nouvelle tournée » (ou « Créer une tournée » quand il n’y en a pas encore).\nRemplir : « Nom », « Départ », « Retour », « Livreur », « Véhicule », « Jours » (L M M J V S D).\n« Ajouter un bureau » : « Chercher un client pro : société, ville, code postal », puis un clic sur le résultat.\nPour chaque bureau, une consigne (« étage, accueil, badge… ») ; les flèches changent l’ordre de passage.\n« Enregistrer ». « Modifier » rouvre une tournée ; « Retirer la tournée » la supprime, après confirmation.",
+            "nl": "« Gérer les tournées » › « Nouvelle tournée » (of « Créer une tournée » als er nog geen is).\nInvullen: « Nom », « Départ », « Retour », « Livreur », « Véhicule », « Jours » (L M M J V S D).\n« Ajouter un bureau »: « Chercher un client pro : société, ville, code postal », dan een klik op het resultaat.\nPer kantoor een instructie (« étage, accueil, badge… »); de pijlen veranderen de volgorde van doorgang.\n« Enregistrer ». « Modifier » opent een ronde opnieuw; « Retirer la tournée » verwijdert ze, na bevestiging."
+          },
+          "critique": false,
+          "photo": "art-dash-commandes-nouvelle.jpg",
+          "video": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Retirer une tournée",
+            "nl": "Een ronde verwijderen"
+          },
+          "texte": {
+            "fr": "La tournée et ses bureaux disparaissent ; les commandes de ces bureaux ne sont plus rangées dans une tournée.\nLes commandes elles-mêmes ne changent pas au panel.",
+            "nl": "De ronde en haar kantoren verdwijnen; de bestellingen van die kantoren worden niet meer in een ronde geplaatst.\nDe bestellingen zelf veranderen niet in het panel."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "La vue Tournées",
+            "nl": "De weergave Tournées"
+          },
+          "texte": {
+            "fr": "« La journée » : une frise heure par heure ; une ligne par véhicule, une pour « Retrait au magasin », un point par commande (couleur du canal), le trait de l’heure qu’il est.\nPuis une colonne par tournée : ses arrêts dans l’ordre, leur consigne, leur statut ; les bureaux sans commande (« Pas de commande ce jour ») ; « Modifier ».\nL’état d’une tournée : « Départ dans … », « En route », « Terminée », « Pas de commande ».\nLa dernière colonne : « Retrait au magasin », les commandes à retirer, « … à venir ».",
+            "nl": "« La journée »: een tijdlijn per uur; één lijn per voertuig, één voor « Retrait au magasin », één punt per bestelling (kleur van het kanaal), de streep van het huidige uur.\nDan één kolom per ronde: haar stops in volgorde, hun instructie, hun status; de kantoren zonder bestelling (« Pas de commande ce jour »); « Modifier ».\nDe toestand van een ronde: « Départ dans … », « En route », « Terminée », « Pas de commande ».\nDe laatste kolom: « Retrait au magasin », de af te halen bestellingen, « … à venir »."
+          },
+          "critique": false,
+          "photo": "art-dash-commandes-tournees.jpg",
+          "video": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Demain : les bureaux qui n’ont pas commandé",
+            "nl": "Morgen: de kantoren die nog niet besteld hebben"
+          },
+          "texte": {
+            "fr": "Dans la Liste du jour, à droite : « Tournées du jour » (chaque tournée, ses arrêts, « … prêtes sur … », « Voir la tournée »).\nDessous, « Demain » : « Commandes jusqu’à 16:00 · encore … », puis « … bureaux sur … ont commandé ».\n« Pas encore commandé : » la liste des bureaux des tournées de demain qui n’ont pas commandé.\nAprès 16:00 : « Commandes fermées depuis 16:00 ».",
+            "nl": "In de Liste van de dag, rechts: « Tournées du jour » (elke ronde, haar stops, « … prêtes sur … », « Voir la tournée »).\nDaaronder « Demain »: « Commandes jusqu’à 16:00 · encore … », dan « … bureaux sur … ont commandé ».\n« Pas encore commandé : » de lijst van de kantoren van de rondes van morgen die nog niet besteld hebben.\nNa 16:00: « Commandes fermées depuis 16:00 »."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "La semaine et le mois",
+        "nl": "De week en de maand"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "La semaine en liste",
+            "nl": "De week als lijst"
+          },
+          "texte": {
+            "fr": "« Semaine » : du lundi au dimanche, un jour par ligne.\nLes colonnes : « Commandes », « Webshop », « Comptoir », « Bureau », « Livraisons », « Au magasin », « Canaux » (une petite barre partagée par canal).\nLe bandeau compare à la semaine d’avant, en pour cent, avec une flèche ▲ ou ▼.\nUn clic sur un jour ouvre ses commandes (vue Jour).",
+            "nl": "« Semaine »: van maandag tot zondag, één dag per regel.\nDe kolommen: « Commandes », « Webshop », « Comptoir », « Bureau », « Livraisons », « Au magasin », « Canaux » (een kleine balk verdeeld per kanaal).\nDe bovenste balk vergelijkt met de vorige week, in procent, met een pijl ▲ of ▼.\nEen klik op een dag opent zijn bestellingen (weergave Jour)."
+          },
+          "critique": false,
+          "photo": "art-dash-commandes-semaine.jpg",
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Le mois en calendrier",
+            "nl": "De maand als kalender"
+          },
+          "texte": {
+            "fr": "« Mois » : un calendrier, une case par jour (nombre de commandes, montant), et une colonne « Semaine » (S + le numéro).\nLa barre d’un jour : son montant face au plus gros jour du mois, partagée par canal.\nLe bandeau compare au mois d’avant.\nUn clic sur un jour ouvre ses commandes.",
+            "nl": "« Mois »: een kalender, één vak per dag (aantal bestellingen, bedrag), en een kolom « Semaine » (S + het nummer).\nDe balk van een dag: zijn bedrag tegenover de grootste dag van de maand, verdeeld per kanaal.\nDe bovenste balk vergelijkt met de vorige maand.\nEen klik op een dag opent zijn bestellingen."
+          },
+          "critique": false,
+          "photo": "art-dash-commandes-mois.jpg",
+          "video": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Les tournées sur la semaine et le mois",
+            "nl": "De rondes over de week en de maand"
+          },
+          "texte": {
+            "fr": "Avec « Tournées » : « Les tournées », arrêts et montant jour par jour (semaine) ou semaine par semaine (mois), le total et le « Panier moyen ».\nPuis « Les bureaux à livrer » : « … sur … ont commandé », une case par jour ou par semaine.\nLa légende des cases : commandes ; « sa tournée roule, pas de commande » ; « pas de tournée ».\nLa colonne « Dernière » : la dernière commande du bureau, ou « Pas de commande cette semaine » (« ce mois »).",
+            "nl": "Met « Tournées »: « Les tournées », stops en bedrag dag per dag (week) of week per week (maand), het totaal en het « Panier moyen ».\nDan « Les bureaux à livrer »: « … sur … ont commandé », één vak per dag of per week.\nDe legende van de vakken: bestellingen; « sa tournée roule, pas de commande »; « pas de tournée ».\nDe kolom « Dernière »: de laatste bestelling van het kantoor, of « Pas de commande cette semaine » (« ce mois »)."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Le compte TF Buddy du magasin",
+        "nl": "De TF Buddy-account van de winkel"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Quand il sert",
+            "nl": "Wanneer hij dient"
+          },
+          "texte": {
+            "fr": "Certaines données du panel ne répondent qu’à un employé du magasin connecté au panel.\nLe compte TF Buddy du magasin se connecte dans « Vendre » › « Clients » : « connecter TF Buddy ».\nConnecté sur l’appareil, il sert aussi à Commandes.\nLa connexion : le téléphone, le PIN, puis le code reçu par SMS ; la session dure 12 heures sur cet appareil.\nLe cockpit ne garde ni le PIN ni la session.",
+            "nl": "Sommige gegevens van het panel antwoorden alleen aan een medewerker van de winkel die in het panel ingelogd is.\nDe TF Buddy-account van de winkel wordt verbonden in « Vendre » › « Clients »: « connecter TF Buddy ».\nEenmaal verbonden op het toestel, dient hij ook voor Commandes.\nDe verbinding: de telefoon, de pincode, dan de code ontvangen per sms; de sessie duurt 12 uur op dat toestel.\nDe cockpit bewaart noch de pincode noch de sessie."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Le code SMS et la limite",
+            "nl": "De sms-code en de limiet"
+          },
+          "texte": {
+            "fr": "Un nouveau code ne se demande qu’après 60 s : « nouveau code possible dans … s », puis « renvoyer le code ».\nUn code envoyé il y a moins de 5 minutes se reprend en rouvrant la fenêtre, sans nouveau SMS.\nTF Buddy limite les essais de connexion ; le message d’erreur reprend celui de TF Buddy.\nLe PIN est personnel : il ne se note nulle part.",
+            "nl": "Een nieuwe code kan pas na 60 s gevraagd worden: « nouveau code possible dans … s », dan « renvoyer le code ».\nEen code die minder dan 5 minuten geleden verstuurd is, wordt hernomen door het venster opnieuw te openen, zonder nieuwe sms.\nTF Buddy beperkt de verbindingspogingen; de foutmelding herneemt die van TF Buddy.\nDe pincode is persoonlijk: hij wordt nergens genoteerd."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Les commandes viennent du panel TF Buddy : la page les montre, elle ne les modifie pas. Le statut (prête, remise) et le paiement se tiennent au panel ou en caisse.",
+      "nl": "De bestellingen komen uit het panel van TF Buddy: de pagina toont ze, ze wijzigt ze niet. De status (klaar, afgegeven) en de betaling worden in het panel of aan de kassa bijgehouden."
+    },
+    {
+      "fr": "Une commande « Livraison sans tournée » ou « Hors de ses tournées » doit être placée (« Placer ») : sinon personne ne la livre.",
+      "nl": "Een bestelling « Livraison sans tournée » of « Hors de ses tournées » moet geplaatst worden (« Placer »): anders levert niemand ze."
+    },
+    {
+      "fr": "Les bureaux commandent jusqu’à la veille 16:00 : la carte « Demain » dit lesquels n’ont pas encore commandé.",
+      "nl": "De kantoren bestellen tot de dag voordien 16:00: de kaart « Demain » zegt welke nog niet besteld hebben."
+    },
+    {
+      "fr": "Les tournées n’existent qu’au dashboard : les créer et les tenir à jour (bureaux, ordre de passage, jours) est le travail du magasin.",
+      "nl": "De rondes bestaan alleen in het dashboard: ze aanmaken en bijhouden (kantoren, volgorde, dagen) is het werk van de winkel."
+    },
+    {
+      "fr": "« Aucune commande au panel pour ce jour. » n’est pas une panne ; « Les commandes du panel ne se lisent pas » en est une.",
+      "nl": "« Aucune commande au panel pour ce jour. » is geen storing; « Les commandes du panel ne se lisent pas » wel."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Une commande prise au téléphone pour un particulier : quel canal la page lui donne-t-elle ?",
+        "nl": "Een telefonisch opgenomen bestelling voor een particulier: welk kanaal geeft de pagina haar?"
+      },
+      "choix": {
+        "fr": [
+          "Webshop",
+          "Comptoir",
+          "Bureau"
+        ],
+        "nl": [
+          "Webshop",
+          "Comptoir",
+          "Bureau"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Un bureau commande à 15:00 ; sa seule tournée part à 11:15 et rentre à 12:30. Que montre la page ?",
+        "nl": "Een kantoor bestelt om 15:00; zijn enige ronde vertrekt om 11:15 en komt terug om 12:30. Wat toont de pagina?"
+      },
+      "choix": {
+        "fr": [
+          "« Hors de ses tournées », à placer",
+          "La commande dans la tournée, arrêt suivant",
+          "Rien : la commande est ignorée"
+        ],
+        "nl": [
+          "« Hors de ses tournées », te plaatsen",
+          "De bestelling in de ronde, volgende stop",
+          "Niets: de bestelling wordt genegeerd"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Jusqu’à quelle heure un bureau peut-il commander pour le lendemain, d’après la carte « Demain » ?",
+        "nl": "Tot welk uur kan een kantoor bestellen voor de volgende dag, volgens de kaart « Demain »?"
+      },
+      "choix": {
+        "fr": [
+          "12:00",
+          "18:00",
+          "16:00"
+        ],
+        "nl": [
+          "12:00",
+          "18:00",
+          "16:00"
+        ]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {
+        "fr": "On retire une tournée. Que deviennent ses commandes au panel ?",
+        "nl": "Je verwijdert een ronde. Wat gebeurt er met haar bestellingen in het panel?"
+      },
+      "choix": {
+        "fr": [
+          "Elles sont annulées",
+          "Rien ne change au panel ; elles ne sont plus rangées dans une tournée",
+          "Elles passent en « Pas retirée »"
+        ],
+        "nl": [
+          "Ze worden geannuleerd",
+          "Er verandert niets in het panel; ze worden niet meer in een ronde geplaatst",
+          "Ze gaan naar « Pas retirée »"
+        ]
+      },
+      "bonne": 1
+    }
+  ]
+}
