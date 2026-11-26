@@ -1,5 +1,8 @@
 /* Dashboard magasin › Vendre › Analyse (analyse.js, 15/11/2026) : l'entrée, le produit et la famille, question par
-   question. Tout est rangé sous .an-racine : le module n'habille rien d'autre. */
+   question. Tout est rangé sous .an-racine : le module n'habille rien d'autre.
+   26/11/2026 (DESIGN_SYSTEM.md §7.13) : le résumé en tête de chaque page (.an-res), « À corriger » ou « Ce qu'il faut
+   retenir » dessous ; le gras réservé à la valeur clé (§4.3 : ni 500 ni 600) ; les couleurs d'état sur les jetons
+   (--stop, --prize, --green), avec leurs mots ; l'écart à la période d'avant vert au-dessus, or en dessous. */
 .an-racine { display: block; padding: 4px 0 24px; }
 .an-racine .ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -10,7 +13,7 @@
 .an-racine .an-seg--p { margin: 0; }
 .an-racine .an-seg--p button { padding: 6px 12px; font-size: 12.5px; }
 .an-racine .an-nav { display: inline-flex; align-items: center; gap: 8px; }
-.an-racine .an-nav b { min-width: 150px; font-weight: 500; font-size: 14px; color: var(--ink); text-align: center; }
+.an-racine .an-nav b { min-width: 150px; font-weight: 400; font-size: 14px; color: var(--ink); text-align: center; }
 .an-racine .an-btn--p { padding: 4px 10px; font-size: 15px; line-height: 1; }
 .an-racine .an-btn--p:disabled { opacity: 0.35; cursor: default; }
 .an-racine .an-date { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-2); }
@@ -19,7 +22,7 @@
 .an-racine .an-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer; }
 .an-racine .an-btn:hover { border-color: var(--accent); color: var(--accent); }
 .an-racine .an-titre { display: grid; gap: 1px; min-width: 0; }
-.an-racine .an-titre b { font-weight: 500; font-size: 20px; color: var(--ink); line-height: 1.2; }
+.an-racine .an-titre b { font-weight: 400; font-size: 20px; color: var(--ink); line-height: 1.2; }
 .an-racine .an-titre span { font-size: 12px; color: var(--muted-2); }
 .an-racine .an-lien-t { padding: 0; border: 0; background: none; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .an-racine .an-rech { display: flex; align-items: center; gap: 8px; width: 340px; max-width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); }
@@ -27,14 +30,6 @@
 .an-racine .an-per { margin-left: auto; font-size: 11.5px; color: var(--muted); }
 
 /* les briques */
-.an-racine .an-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); margin-bottom: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
-.an-racine .an-kpi { display: grid; gap: 2px; align-content: start; padding: 12px 16px; border-left: 1px solid var(--row-line); min-width: 0; }
-.an-racine .an-kpi:first-child { border-left: 0; }
-.an-racine .an-kpi .k { font-size: 11px; color: var(--muted-2); }
-.an-racine .an-kpi .v { font-size: 22px; color: var(--ink); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
-.an-racine .an-kpi .s { font-size: 11px; color: var(--muted); }
-.an-racine .an-kpi.fort .v { color: var(--green); }
-.an-racine .an-kpi.alerte .v { color: #9A5E0C; }
 .an-racine .an-carte { margin-bottom: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; min-width: 0; }
 .an-racine .an-carte h3 { margin: 0 0 10px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .an-racine .an-carte h3 small { margin-left: 6px; letter-spacing: 0; text-transform: none; font-size: 11.5px; color: var(--muted-2); }
@@ -43,7 +38,7 @@
 .an-racine .an-g2--top { column-gap: 14px; }
 .an-racine .an-jours { margin-bottom: 4px; }
 .an-racine .an-src { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
-.an-racine .an-err { margin: 6px 0 0; font-size: 12px; color: #A61E1E; }
+.an-racine .an-err { margin: 6px 0 0; font-size: 12px; color: var(--danger); }
 .an-racine .an-att { display: grid; gap: 8px; padding: 6px 0; }
 .an-racine .an-leg { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 6px; font-size: 11.5px; color: var(--muted-2); }
 .an-racine .an-leg i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; }
@@ -51,7 +46,7 @@
 .an-racine .an-gl { stroke: var(--row-line); stroke-width: 1; }
 .an-racine .an-ax { font-size: 10.5px; fill: var(--muted); font-family: var(--font-ui); }
 .an-racine .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.an-racine .mz.ok { color: var(--green); } .an-racine .mz.att { color: #9A5E0C; } .an-racine .mz.ko { color: #A61E1E; } .an-racine .mz.mu { color: var(--muted); }
+.an-racine .mz.ok { color: var(--green); } .an-racine .mz.att { color: var(--prize-ink); } .an-racine .mz.ko { color: var(--stop); } .an-racine .mz.mu { color: var(--muted); }
 
 /* les familles (A) : des lignes cliquables */
 .an-racine .an-fam { display: grid; grid-template-columns: 170px minmax(0, 1fr) 62px 56px 76px; gap: 10px; align-items: center; width: 100%; padding: 6px 4px; border: 0; border-top: 1px solid var(--row-line); background: none; font: inherit; font-size: 12.5px; color: var(--ink); text-align: left; cursor: pointer; }
@@ -60,8 +55,8 @@
 .an-racine .an-fam .nm { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .an-racine .an-fam .nm i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
 .an-racine .an-fam .nm small { margin-left: auto; color: var(--muted); font-size: 11px; }
-.an-racine .an-fam .br { height: 12px; border-radius: 6px; background: var(--chip); overflow: hidden; }
-.an-racine .an-fam .br b { display: block; height: 100%; border-radius: 6px; opacity: 0.85; }
+.an-racine .an-fam .br { height: 12px; border-radius: 3px; background: var(--chip); overflow: hidden; }
+.an-racine .an-fam .br b { display: block; height: 100%; border-radius: 3px; opacity: 0.85; }
 
 /* les tableaux */
 .an-racine .an-t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -79,8 +74,8 @@
 .an-racine .an-t--g td { padding: 6px 8px; }
 .an-racine .an-t--g td:first-child { white-space: nowrap; }
 .an-racine .an-t--g td.n small { display: inline; margin-left: 6px; }
-.an-racine .an-t--g tr.moi td { background: rgba(141, 29, 44, 0.05); font-weight: 600; }
-.an-racine .an-t tr.tot td { border-top: 2px solid var(--line); font-weight: 600; }
+.an-racine .an-t--g tr.moi td { background: rgba(141, 29, 44, 0.05); }
+.an-racine .an-t tr.tot td { border-top: 1px solid var(--line); background: var(--total-line); }
 .an-racine .an-t--kv td { padding: 7px 4px; font-size: 13px; }
 .an-racine .an-t--j td:first-child { width: 90px; }
 .an-racine .an-defile { overflow-x: auto; }
@@ -90,32 +85,29 @@
 
 /* les flèches d'évolution, à la place des mini-graphiques */
 .an-racine .an-f { white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 12px; }
-.an-racine .an-f.up { color: var(--green); } .an-racine .an-f.flat { color: var(--muted-2); } .an-racine .an-f.warn { color: #B26A00; } .an-racine .an-f.down { color: #A61E1E; } .an-racine .an-f.mu { color: var(--muted); }
+/* L'écart à la période d'avant (§7.13) : vert au-dessus, or en dessous (le texte or : --prize-ink, lisible à 12 px). */
+.an-racine .an-f.up { color: var(--green); } .an-racine .an-f.flat { color: var(--muted-2); } .an-racine .an-f.warn, .an-racine .an-f.down { color: var(--prize-ink); } .an-racine .an-f.mu { color: var(--muted); }
 .an-racine .an-legf { display: inline-flex; gap: 6px; align-items: baseline; margin-left: 4px; color: var(--muted); }
 .an-racine .an-legf .an-f { font-size: 11px; margin-left: 6px; }
 
 /* E et F : une carte par question */
-.an-racine .an-ret { margin: 0 0 14px; padding: 14px 18px; border: 1px solid rgba(141, 29, 44, 0.25); border-left: 4px solid #8D1D2C; border-radius: 12px; background: #fff; }
-.an-racine .an-ret h4 { margin: 0 0 8px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: #8D1D2C; }
-.an-racine .an-ret ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; }
-.an-racine .an-ret li { font-size: 14px; line-height: 1.45; color: var(--ink); }
 .an-racine .an-qs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .an-racine .an-qs > .an-qq { margin: 0; }
 .an-racine .an-qq--l { grid-column: 1 / -1; }
 .an-racine .an-qh { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.an-racine .an-qn { flex: 0 0 auto; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #8D1D2C; color: #fff; font-size: 12px; font-weight: 600; }
-.an-racine .an-qh h4 { margin: 0; font-size: 18px; font-weight: 500; color: var(--ink); }
+.an-racine .an-qn { flex: 0 0 auto; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--chip); color: var(--muted-2); font-size: 12px; } /* un numéro d'étape : cercle neutre (le bordeaux ne décore pas un titre, §2) */
+.an-racine .an-qh h4 { margin: 0; font-size: 17px; font-weight: 400; color: var(--ink); }
 .an-racine .an-rep { margin: 0 0 12px; font-size: 14px; line-height: 1.5; color: var(--muted-2); }
-.an-racine .an-rep b { color: var(--ink); font-weight: 600; }
+.an-racine .an-rep b, .an-racine .an-res b, .an-racine .an-lst li b { color: var(--ink); font-weight: 400; } /* pas de gras dans une phrase (§4.3) : l'encre suffit */
 .an-racine .an-rep .an-f { font-size: 13px; }
 .an-racine .an-qq h5 { margin: 12px 0 6px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.an-racine .an-bar { display: inline-block; flex: 1 1 auto; height: 10px; border-radius: 5px; background: var(--table-head); overflow: hidden; vertical-align: middle; }
-.an-racine .an-bar i { display: block; height: 100%; border-radius: 5px; }
+.an-racine .an-bar { display: inline-block; flex: 1 1 auto; height: 10px; border-radius: 3px; background: var(--table-head); overflow: hidden; vertical-align: middle; }
+.an-racine .an-bar i { display: block; height: 100%; border-radius: 3px; }
 .an-racine .an-bv { display: flex; align-items: center; gap: 8px; min-width: 90px; }
-.an-racine .an-bv b { flex: 0 0 52px; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.an-racine .an-bv b { flex: 0 0 52px; text-align: right; font-weight: 400; font-variant-numeric: tabular-nums; }
 .an-racine .an-eq { display: flex; align-items: stretch; gap: 6px; margin-bottom: 10px; }
 .an-racine .an-eq span { flex: 1 1 0; display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: var(--table-head); font-size: 11px; color: var(--muted-2); text-align: center; }
-.an-racine .an-eq span b { font-size: 18px; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+.an-racine .an-eq span b { font-size: 18px; font-weight: 400; color: var(--ink); font-variant-numeric: tabular-nums; }
 .an-racine .an-eq span.ok { background: rgba(63, 122, 82, 0.1); }
 .an-racine .an-eq span.ok b { color: var(--green); }
 .an-racine .an-eq i { align-self: center; font-style: normal; font-size: 18px; color: var(--muted); }
@@ -139,9 +131,49 @@
 .an-racine .an-seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
 
 @media (max-width: 1100px) {
-  .an-racine .an-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .an-racine .an-g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .an-racine .an-g2, .an-racine .an-qs { grid-template-columns: minmax(0, 1fr); }
   .an-racine .an-per { margin-left: 0; }
 }
 @media print { .an-racine .an-barre { display: none; } }
+
+/* ── Le résumé d'une page (26/11/2026, DESIGN_SYSTEM.md §7.13 ; la forme de .chr et .pco-res, recopiée sous le préfixe) ──
+ * Ligne 1 : la valeur clé (24 px, 700 : le seul gras), son état en mots derrière un point de 8 px ; ce qu'elle mesure ; le
+ * contexte, séparé par un filet. Ligne 2, sous un filet : « À corriger » (boutons du système) ou « Ce qu'il faut retenir ». */
+.an-racine .an-res { margin: 0 0 14px; padding: 16px 20px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.an-racine .an-res-l1 { display: grid; grid-template-columns: auto minmax(200px, 1fr) minmax(200px, 1fr) minmax(240px, 1.1fr); gap: 24px; align-items: center; }
+.an-racine .an-res-l1--court { grid-template-columns: auto minmax(0, 1fr); }
+.an-racine .an-res-v { display: flex; flex-direction: column; gap: 4px; }
+.an-racine .an-res-kv { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.an-racine .an-res-et { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted-2); white-space: nowrap; }
+.an-racine .an-res-q { font-size: 13px; line-height: 1.35; color: var(--ink); }
+.an-racine .an-res-q > span { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.an-racine .an-res-q .an-f { font-size: 12px; }
+.an-racine .an-res-c { display: grid; gap: 8px; font-size: 13px; line-height: 1.35; color: var(--ink); font-variant-numeric: tabular-nums; }
+.an-racine .an-res-c p { margin: 0; }
+.an-racine .an-res-c p > span { display: block; margin-top: 1px; font-size: 12px; color: var(--muted); }
+.an-racine .an-res-c p > span .an-pt { margin-right: 6px; vertical-align: 0; }
+.an-racine .an-res-sep { padding-left: 18px; border-left: 1px solid var(--line); }
+.an-racine .an-pt { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.an-racine .an-pt--stop { background: var(--stop); } .an-racine .an-pt--prize { background: var(--prize); } .an-racine .an-pt--green { background: var(--green); }
+.an-racine .an-res-l2 { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.an-racine .an-res-t { flex: none; font-size: 12.5px; line-height: 30px; color: var(--muted-2); }
+.an-racine .an-res-l { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; flex: 1 1 0; }
+.an-racine .an-res-b { gap: 8px; }
+.an-racine .an-res-b:hover:not(:disabled) { border-color: var(--accent); }
+.an-racine .an-res-reste { font-size: 12px; color: var(--muted); }
+.an-racine .an-res-ok { margin: 0; font-size: 12.5px; color: var(--green); }
+.an-racine .an-res-ret .an-res-t { line-height: 1.5; }
+.an-racine .an-res-ret ul { flex: 1 1 0; display: grid; gap: 4px; margin: 0; padding-left: 18px; }
+.an-racine .an-res-ret li { font-size: 13px; line-height: 1.5; color: var(--ink); }
+@media (max-width: 1365px) {
+  .an-racine .an-res-l1 { grid-template-columns: auto minmax(200px, 1fr) minmax(200px, 1fr); }
+  .an-racine .an-res-l1 > .an-res-c:last-child { grid-column: 1 / -1; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); grid-template-columns: 1fr 1fr; }
+  .an-racine .an-res-l1--court { grid-template-columns: auto minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .an-racine .an-res-l1 { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .an-racine .an-res-sep { padding-left: 0; border-left: 0; }
+  .an-racine .an-res-l2 { flex-direction: column; gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .an-racine .an-res-b { transition: none; } }

@@ -112,17 +112,33 @@
   const lieu = o => o.retrait ? 'retrait en magasin' : 'livraison' + (o.livraison && (o.livraison.cp || o.livraison.ville) ? ' · ' + [o.livraison.cp, o.livraison.ville].filter(Boolean).join(' ') : '');
   const etat = o => `<span class="of-etat ${o.etat}">${ETATS[o.etat] || o.etat}</span>`;
 
+  /**
+   * Le résumé (26/11/2026, DESIGN_SYSTEM.md §7.13, la forme de .chr et .pco-res recopiée sous le préfixe) : il remplace les
+   * quatre tuiles. Ligne 1 : le montant des offres en cours (la valeur clé, 700 : le seul gras), ce qu'il mesure ; les
+   * converties et le taux de conversion. Ligne 2 : « À corriger », ce qui demande un geste à partir d'aujourd'hui, avec ce que
+   * l'écran sait déjà : une offre en cours dont l'événement est passé (à convertir ou à archiver), le prochain événement d'une
+   * offre encore en cours (l'ancienne tuile « Prochain événement »), une offre en cours sans client ou sans produit (TF Buddy
+   * n'en rend pas le PDF). Chaque bouton ouvre l'offre — le geste du clic sur sa ligne — et l'encadre un instant.
+   */
   function kpis() {
     const L = st.liste || [];
     const som = e => L.filter(o => o.etat === e).reduce((t, o) => t + (o.total || 0), 0);
     const nb = e => L.filter(o => o.etat === e).length;
     const faites = nb('conv') + nb('cours') + nb('arch');
-    const prochain = L.filter(o => o.etat === 'cours' && /^\d{4}-\d{2}-\d{2}$/.test(o.jour) && o.jour >= auj()).sort((a, b) => a.jour.localeCompare(b.jour))[0];
-    return `<div class="of-kpis">
-      <div><span class="k">En cours</span><span class="v">${nb('cours')} · ${eur(som('cours'))}</span><span class="s">offres envoyées ou à envoyer</span></div>
-      <div><span class="k">Converties en commande</span><span class="v">${nb('conv')} · ${eur(som('conv'))}</span><span class="s">dans la liste de TF Buddy</span></div>
-      <div><span class="k">Taux de conversion</span><span class="v">${faites ? Math.round(100 * nb('conv') / faites) + ' %' : '—'}</span><span class="s">${nb('conv')} sur ${faites} offre${faites > 1 ? 's' : ''}</span></div>
-      <div><span class="k">Prochain événement</span><span class="v">${prochain ? dCourt(prochain.jour) : '—'}</span><span class="s">${prochain ? 'offre n° ' + prochain.id + ' · ' + esc(prochain.nom) : 'aucune offre en cours datée'}</span></div></div>`;
+    const datee = o => o.etat === 'cours' && /^\d{4}-\d{2}-\d{2}$/.test(o.jour);
+    const prochain = L.filter(o => datee(o) && o.jour >= auj()).sort((a, b) => a.jour.localeCompare(b.jour))[0];
+    const A = [], b = (o, sig, txt, titre) => A.push(`<button type="button" class="btn btn--sm of-res-b" data-ofac="${o.id}" title="${esc(titre)}"><i class="of-pt of-pt--${sig}" aria-hidden="true"></i><span class="of-res-j">n° ${o.id}</span>${txt}</button>`);
+    L.filter(o => datee(o) && o.jour < auj()).sort((x, y) => x.jour.localeCompare(y.jour))
+      .forEach(o => b(o, 'stop', `événement passé le ${dCourt(o.jour)} : à convertir ou à archiver`, 'Ouvrir l’offre : « Convertir en commande » ou « Archiver »'));
+    if (prochain) { b(prochain, 'prize', `${esc(prochain.nom)} : événement le ${dCourt(prochain.jour)}, à convertir en commande`, 'Le prochain événement d’une offre en cours : ouvrir l’offre'); }
+    L.filter(o => o.etat === 'cours' && (!o.client || !(o.lignes || []).length))
+      .forEach(o => b(o, 'prize', !o.client ? 'pas de client : pas de PDF' : 'pas de produit : pas de PDF', 'Ouvrir l’offre : « Modifier »'));
+    const l2 = A.length ? `<div class="of-res-l2" role="region" aria-label="À corriger"><span class="of-res-t">À corriger</span><span class="of-res-l">${A.join('')}</span></div>`
+      : `<div class="of-res-l2"><p class="of-res-ok">${nb('cours') ? 'Rien à corriger : aucune offre en cours n’attend un geste.' : 'Rien à corriger : aucune offre en cours.'}</p></div>`;
+    return `<section class="of-res" aria-label="Résumé des offres"><div class="of-res-l1">
+        <div class="of-res-v"><span class="of-res-kv">${eur(som('cours'))}</span></div>
+        <div class="of-res-q">${nb('cours')} offre${nb('cours') > 1 ? 's' : ''} en cours<span>envoyées ou à envoyer, dans TF Buddy</span></div>
+        <div class="of-res-c of-res-sep">${nb('conv')} converti${nb('conv') > 1 ? 'es' : 'e'} en commande · ${eur(som('conv'))}<span>taux de conversion ${faites ? Math.round(100 * nb('conv') / faites) + ' %' : '—'} : ${nb('conv')} sur ${faites} offre${faites > 1 ? 's' : ''}</span></div></div>${l2}</section>`;
   }
 
   function liste() {
@@ -130,7 +146,7 @@
     const lignes = v.map(o => `<tr data-ofsel="${o.id}"${o.id === st.sel ? ' class="on"' : ''}><td class="n">${o.id}</td>
         <td>${esc(o.nom || 'Offre sans nom')}<small>${o.client ? esc(o.client.nom) + (o.client.b2b ? ' · B2B' : '') : 'sans client'}${o.cree ? ' · créée le ' + dCourt(o.cree) : ''}</small></td>
         <td class="c-ev">${o.jour ? dCourt(o.jour) : '—'}<small>${esc(lieu(o))}</small></td><td class="n">${eur(o.total)}</td><td>${etat(o)}</td></tr>`).join('');
-    return `<div class="of-g"><div class="of-outils"><label class="of-q">${ico(I.chercher)}<input id="of-q" type="search" placeholder="Chercher une offre, un client, un produit…" value="${esc(st.q)}"></label></div>
+    return `<div class="of-g" id="of-liste"><div class="of-outils"><label class="of-q">${ico(I.chercher)}<input id="of-q" type="search" placeholder="Chercher une offre, un client, un produit…" value="${esc(st.q)}"></label></div>
       <table class="of-t"><thead><tr><th>N°</th><th>Offre · client</th><th class="c-ev">Événement</th><th class="n">Total TTC</th><th>État</th></tr></thead><tbody>
       ${lignes || `<tr><td colspan="5" class="of-vide">${st.q ? 'Aucune offre ne répond à cette recherche.' : 'Aucune offre ' + ({ cours: 'en cours', conv: 'convertie', arch: 'archivée', tout: '' }[st.onglet]) + '.'}</td></tr>`}
       </tbody></table><div class="of-pied">${(st.liste || []).length} offre${(st.liste || []).length > 1 ? 's' : ''} dans TF Buddy${st.lu ? ' · lues à ' + st.lu : ''} · <button type="button" class="of-lien" data-ofrelire="1">relire</button></div></div>`;
@@ -140,8 +156,10 @@
    * Ligne par ligne : ce que le client paie HT (le total de la ligne, remise déduite, sans la TVA) moins le coût de
    * recette de la pièce × la quantité — le coût du jour que le panel calcule pour ce magasin, sinon celui du réseau,
    * le même que Produits › Recette & marge et l'assistant des promotions. Les frais de livraison n'y entrent pas. Les
-   * couleurs sont celles de « Recette & marge » : rouge sous × 1,67 (marge brute < 40 %), orange sous × 2,5 (< 60 %),
-   * vert au-delà ; l'objectif du réseau est une matière à 32 % du prix HT. */
+   * couleurs suivent l'échelle de la marge brute du design system (26/11/2026, DESIGN_SYSTEM.md §7.13) : sous 40 % --stop
+   * « faible », 40–60 % --prize « à surveiller », 60 % et plus --green « bonne » — les mêmes bornes que les anciens × 1,67
+   * et × 2,5 de « Recette & marge », lues sur le pourcentage qu'on lit ; l'objectif du réseau est une matière à 32 % du
+   * prix HT (st.seuils.food). */
   const produitDe = id => (st.produits || []).find(p => p.id === id) || null;
   const pc1 = v => v == null || isNaN(v) ? '—' : String(Math.round(v * 10) / 10).replace('.', ',') + ' %';
   function margeLigne(idProduit, qte, totalTtc, totalHt, tvaLigne) {
@@ -158,22 +176,23 @@
     return { ht, cout, marge, pct: ht > 0 ? 100 * marge / ht : null, food: ht > 0 ? 100 * cout / ht : null, coef: cout > 0 ? ht / cout : null,
       n: ms.length, nOk: ok.length, nReseau: ok.filter(m => m.reseau).length };
   }
-  const zoneMarge = coef => coef == null ? 'mu' : coef < st.seuils.ko ? 'ko' : coef < st.seuils.att ? 'att' : 'ok';
-  const ZONES_MARGE = { ok: 'marge brute de 60 % ou plus', att: 'marge brute entre 40 et 60 %', ko: 'marge brute sous 40 %', mu: 'pas de coût de recette' };
+  const zoneMarge = pct => pct == null || isNaN(pct) ? 'mu' : pct < 40 ? 'ko' : pct < 60 ? 'att' : 'ok';
+  const ZONES_MARGE = { ok: 'marge brute bonne : 60 % ou plus', att: 'marge brute à surveiller : 40 à 60 %', ko: 'marge brute faible : sous 40 %', mu: 'pas de coût de recette' };
+  const LEGENDE_MARGE = 'marge brute : <span class="of-mz ko">sous 40 % faible</span> · <span class="of-mz att">40 à 60 % à surveiller</span> · <span class="of-mz ok">60 % et plus bonne</span>';
   /** Le bloc « Marge de l'offre » : prix HT, coût matière, marge brute, et l'écart à l'objectif du réseau. */
   function margeBloc(M, lignesHtml) {
     if (!st.produits) {
       return `<div class="of-marge of-marge--mu"><span class="of-eyebrow">Marge de l’offre</span><p class="of-mu">${st.prodErr && st.prodErr !== '…' ? 'Les coûts de recette ne se lisent pas : ' + esc(st.prodErr) : 'Lecture des coûts de recette du magasin…'}</p></div>`;
     }
     if (!M.n) { return ''; }
-    const z = zoneMarge(M.coef), food = st.seuils.food;
+    const z = zoneMarge(M.pct), food = st.seuils.food;
     const objectif = M.nOk && M.food != null && M.food > food + 0.05 ? M.cout * 100 / food : null;
     const notes = [];
     if (M.nOk < M.n) { notes.push(`${M.n - M.nOk} ligne${M.n - M.nOk > 1 ? 's' : ''} sans coût de recette au panel : hors du calcul`); }
     if (M.nReseau) { notes.push(`${M.nReseau} coût${M.nReseau > 1 ? 's' : ''} du réseau (le panel n’a pas encore calculé celui du magasin)`); }
     notes.push('livraison hors marge');
     return `<div class="of-marge of-marge--${z}">
-      <div class="of-marge-h"><span class="of-eyebrow">Marge de l’offre</span>${M.nOk ? `<span class="of-marge-z">${ZONES_MARGE[z]}</span>` : ''}</div>
+      <div class="of-marge-h"><span class="of-eyebrow">Marge de l’offre</span>${M.nOk ? `<span class="of-marge-z"><i class="of-pt of-pt--${{ ok: 'green', att: 'prize', ko: 'stop' }[z]}" aria-hidden="true"></i>${ZONES_MARGE[z]}</span>` : ''}</div>
       ${M.nOk ? `<div class="of-marge-k">
         <div><span class="k">Prix HT</span><span class="v">${eur(M.ht)}</span><span class="s">payé par le client, remises déduites</span></div>
         <div><span class="k">Coût matière</span><span class="v">${eur(M.cout)}</span><span class="s">${pc1(M.food)} du prix HT</span></div>
@@ -181,7 +200,7 @@
         <p class="of-marge-o">${objectif != null ? `Objectif du réseau, matière à ${pc1(food)} : il faudrait ${eur(objectif)} HT, soit ${eur(objectif - M.ht)} de plus.` : `Dans l’objectif du réseau : matière à ${pc1(food)} du prix HT au plus.`}</p>`
         : '<p class="of-mu">Aucun produit de l’offre n’a de coût de recette au panel : la marge ne se calcule pas.</p>'}
       ${lignesHtml || ''}
-      <p class="of-marge-n">${notes.join(' · ')}.</p></div>`;
+      <p class="of-marge-n">${notes.join(' · ')}.${lignesHtml ? '<br>' + LEGENDE_MARGE : ''}</p></div>`;
   }
   /** La marge d'une offre de TF Buddy, ligne par ligne (le détail, à droite de la liste). */
   function margeDetail(o) {
@@ -191,7 +210,7 @@
     const M = margeOffre(L);
     const t = L.length ? `<table class="of-marge-t"><thead><tr><th>Produit</th><th class="n">HT</th><th class="n">Coût</th><th class="n">Marge</th></tr></thead><tbody>
       ${L.map(m => `<tr><td>${esc(m.nom)}${m.reseau ? ' <small>coût réseau</small>' : ''}</td><td class="n">${eur(m.ht)}</td><td class="n">${m.cout != null ? eur(m.cout) : '<span class="of-mu">—</span>'}</td>
-        <td class="n">${m.marge != null ? `<span class="of-mz ${zoneMarge(m.cout > 0 ? m.ht / m.cout : null)}">${pc1(m.pct)}</span>` : '<span class="of-mu">sans coût</span>'}</td></tr>`).join('')}</tbody></table>` : '';
+        <td class="n">${m.marge != null ? `<span class="of-mz ${zoneMarge(m.pct)}">${pc1(m.pct)}</span>` : '<span class="of-mu">sans coût</span>'}</td></tr>`).join('')}</tbody></table>` : '';
     return margeBloc(M, t);
   }
 
@@ -226,7 +245,7 @@
     const conv = o.etat === 'conv', pdfOk = !!o.client && (o.lignes || []).length > 0;
     const pdf = l => `${url('/exploitation/offres-client/pdf', { id: o.id, lang: l })}`;
     const dis = st.occupe ? ' disabled' : '';
-    return `<div class="of-d">
+    return `<div class="of-d" id="of-detail">
       <div class="of-d-h"><div><span class="of-eyebrow">Offre n° ${o.id} · ${etat(o)}</span><h2>${esc(o.nom || 'Offre sans nom')}</h2>
         <p>${o.client ? esc(o.client.nom) + (o.client.b2b ? ' · B2B' : '') : 'sans client'}${o.cree ? ' · créée le ' + dFr(o.cree) + (hCourt(o.cree) ? ' à ' + hCourt(o.cree) : '') : ''}${o.client && o.client.email ? ' · ' + esc(o.client.email) : ''}${o.client && o.client.tel ? ' · ' + esc(o.client.tel) : ''}</p></div></div>
       <div class="of-gestes">
@@ -288,7 +307,7 @@
       <td class="n"><input class="of-in of-in--n" data-ofl="${i}" data-ofc="qte" value="${esc(nq(l.qte))}" inputmode="decimal"></td>
       <td class="n"><input class="of-in of-in--n" data-ofl="${i}" data-ofc="pu" value="${esc(l.pu == null ? '' : String(l.pu).replace('.', ','))}" inputmode="decimal"></td>
       <td class="n">${t && t.rm > 0 ? eur(t.rm) : '—'}</td><td class="n">${t ? eur(t.total) : '—'}</td>
-      <td class="n">${m.marge != null ? `${eur(m.marge)}<small class="of-mz ${zoneMarge(m.ht / m.cout)}">${pc1(m.pct)}</small>` : `<span class="of-mu">${l.idProduit && st.produits ? 'sans coût' : '—'}</span>`}</td>
+      <td class="n">${m.marge != null ? `${eur(m.marge)}<small class="of-mz ${zoneMarge(m.pct)}">${pc1(m.pct)}</small>` : `<span class="of-mu">${l.idProduit && st.produits ? 'sans coût' : '—'}</span>`}</td>
       <td><button type="button" class="of-x" data-oflx="${i}" title="Retirer la ligne" aria-label="Retirer la ligne">×</button></td></tr>`; }).join('');
     const totP = f.lignes.reduce((s, l) => s + ((totalLigne(l) || {}).total || 0), 0);
     const frais = f.retrait ? 0 : (lireNombre(f.livraison.frais) || 0);
@@ -371,6 +390,12 @@
     const el = st.el;
     const on = (sel, ev, fn) => el.querySelectorAll(sel).forEach(n => n.addEventListener(ev, fn));
     on('[data-ofong]', 'click', e => { st.onglet = e.currentTarget.dataset.ofong; if (st.onglet === 'news') { st.msg = null; return rendre(); } const v = visibles(); if (!v.some(o => o.id === st.sel)) { st.sel = v.length ? v[0].id : null; } if (st.mode !== 'edit') { st.mode = null; } rendre(); });
+    on('[data-ofac]', 'click', e => {
+      if (st.mode === 'edit') { return; }
+      const id = +e.currentTarget.dataset.ofac;
+      if (!visibles().some(o => o.id === id)) { st.onglet = 'cours'; st.q = ''; }
+      st.sel = id; st.mode = null; st.msg = null; rendre(); montrer('#of-detail');
+    });
     on('[data-ofsel]', 'click', e => { if (st.mode === 'edit') { return; } st.sel = +e.currentTarget.dataset.ofsel; st.mode = null; st.msg = null; rendre(); });
     on('[data-ofrelire]', 'click', () => charger(true));
     on('[data-ofrepondre]', 'click', () => { const r = st.msg && st.msg.repondre; if (r && st.aller) { st.msg = null; st.aller('boite', { repondre: r }); } });
@@ -439,6 +464,17 @@
     }
   }
 
+  /** Le bloc où mène un point de « À corriger » : à l'écran (défilement doux seulement sans prefers-reduced-motion: reduce),
+   *  encadré de --accent un instant (§7.13). */
+  function montrer(sel) {
+    const el = st.el && st.el.querySelector(sel);
+    if (!el) { return; }
+    const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.style.scrollMarginTop = '16px';
+    el.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+    el.classList.remove('of-vu'); void el.offsetWidth; el.classList.add('of-vu');
+    setTimeout(() => el.classList.remove('of-vu'), 1800);
+  }
   /** L'aperçu A4 se réduit à la largeur de sa colonne (1/3 quand on consulte). */
   function echelle() {
     const c = st.el && st.el.querySelector('.of-apercu-c');
