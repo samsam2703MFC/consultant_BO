@@ -13,16 +13,31 @@ declare(strict_types=1);
  *      proposition : prix = la moyenne des magasins qui la chiffrent (prix local ou fournisseur, pas une référence),
  *      sinon le prix de marché de data/prix_reference_be.json ; perte = celle du fichier, sinon une perte courante par
  *      famille de matière (VRF_PERTES), sinon l'actuelle.
- * POST /verification/recettes/references {lignes: [{mid, prix (€ par kg, l ou pièce), perte (%)}], rid?, apercu?}
+ * Demande du 26/11/2026 au soir : « tous les magasins doivent avoir le même food cost » et « les pertes sur toute la
+ * carte ». D'où l'alignement : un magasin dont le prix propre s'écarte de la référence la reprend (prix du magasin,
+ * POST /materials/{id}/manual-price, geste `prix` des corrections, au registre) ; et la perte de chaque matière posée
+ * sur ses lignes, dans toutes les recettes et sous-recettes (le coût d'une recette ne lit que la perte de la ligne :
+ * mesuré au panel le 26/11/2026 sur la Salade Tagliata).
+ *
+ * POST /verification/recettes/references {lignes: [{mid, prix (€ par kg, l ou pièce), perte (%), aligner?}], rid?, apercu?, sansEffet?}
  *      — PATCH /materials/{id} {reference_unit_price_net, waste_amount_perc}, dans la forme du contrat (vmxChangements),
  *      relu et noté au registre des corrections (« Annuler » remet l'avant). Puis le food cost des recettes touchées,
  *      relu au panel avant et après dans chaque magasin (vrcEffet), et si la perte de la matière entre bien dans le
- *      coût de la recette (sinon elle se pose sur les lignes : geste `recette`, changement `perte`).
+ *      coût de la recette (sinon elle se pose sur les lignes : geste `recette`, changement `perte`). `aligner` : les
+ *      magasins dont le prix propre diffère prennent le prix de référence. `sansEffet` : sans relire les coûts (les lots
+ *      de toute la carte).
+ * POST /verification/recettes/pertes-lignes {depuis, lot, apercu?} — une tranche des recettes de la carte (GET /recipes) :
+ *      dans chaque recette et sous-recette, la ligne d'une matière qui porte une perte au panel prend cette perte.
+ *      Rend la suite (`suivant`) : l'écran enchaîne les tranches jusqu'au bout.
  */
 
 const VRF_FICHIER = __DIR__ . '/data/prix_reference_be.json';
 /** Les recettes relues pour l'effet : la recette demandée et d'autres qui portent les matières écrites. */
 const VRF_EFFET_RECETTES = 10;
+/** L'écart (en relatif) au-delà duquel le prix propre d'un magasin s'aligne sur la référence. */
+const VRF_ECART_ALIGNER = 0.001;
+/** Les recettes d'une tranche de « pertes sur les lignes ». */
+const VRF_LOT_PERTES = 15;
 
 /**
  * Les pertes courantes en cuisine, par famille de matière fraîche (proposition, à valider) : [motif, perte %, raison].
@@ -112,6 +127,18 @@ function vrfProposition(array $l, array $f): array
         'changePrix' => $changePrix, 'changePerte' => $changePerte, 'change' => $changePrix || $changePerte];
 }
 
+/** Les magasins dont le prix propre (local ou fournisseur) s'écarte d'un prix (par unité de base) : [sid, …]. */
+function vrfAAligner(array $prix, ?float $ref): array
+{
+    if ($ref === null || $ref <= 0) { return []; }
+    $out = [];
+    foreach ($prix as $sid => $p) {
+        if (!is_array($p) || !is_numeric($p['prix'] ?? null) || in_array(strtoupper((string) ($p['src'] ?? '')), ['REFERENCE', 'MISSING'], true)) { continue; }
+        if (abs((float) $p['prix'] - $ref) > VRF_ECART_ALIGNER * $ref) { $out[] = (int) $sid; }
+    }
+    return $out;
+}
+
 /* ---------------------------------------------------------------------------------------------
  * Lectures
  * ------------------------------------------------------------------------------------------- */
@@ -179,7 +206,7 @@ function ep_verification_references(): array
     $mags = vfMagasins();
     $M = mfMatieresApi(array_keys($mags), !empty($_GET['rafraichir']));
     $f = vrfFichier();
-    $lignes = []; $cpt = ['matieres' => 0, 'aChanger' => 0, 'marche' => 0, 'sansPrix' => 0, 'pertes' => 0];
+    $lignes = []; $cpt = ['matieres' => 0, 'aChanger' => 0, 'marche' => 0, 'sansPrix' => 0, 'pertes' => 0, 'aAligner' => 0];
     foreach ($mat as $mid => $m) {
         $ident = []; $prix = []; $mags_ = [];
         foreach ($mags as $sid => $nomM) {
@@ -197,12 +224,14 @@ function ep_verification_references(): array
         if ($p['origine'] === 'marche') { $cpt['marche']++; }
         if ($p['prix'] === null) { $cpt['sansPrix']++; }
         if ($p['changePerte']) { $cpt['pertes']++; }
+        $aligner = vrfAAligner($prix, $p['prix']);
+        if ($aligner !== []) { $cpt['aAligner']++; }
         $lignes[] = ['mid' => $mid, 'nom' => $l['nom'], 'cat' => (string) ($ident['cat'] ?? ''), 'source' => (string) ($ident['source'] ?? ''), 'type' => $l['type'],
             'unite' => $u, 'par' => $U['label'], 'facteur' => $U['facteur'], 'q' => $m['q'], 'sous' => $m['sous'], 'nRecettes' => count($m['recettes']),
             'recettes' => array_slice(array_values($m['recettes']), 0, 4), 'magasins' => $mags_,
-            'reference' => $l['reference'], 'perte' => $l['perte'], 'propose' => $p];
+            'reference' => $l['reference'], 'perte' => $l['perte'], 'propose' => $p, 'aligner' => $aligner];
     }
-    usort($lignes, static fn ($a, $b) => [$b['propose']['change'], $b['nRecettes'], $a['nom']] <=> [$a['propose']['change'], $a['nRecettes'], $b['nom']]);
+    usort($lignes, static fn ($a, $b) => [$b['propose']['change'] || $b['aligner'] !== [], $b['nRecettes'], $a['nom']] <=> [$a['propose']['change'] || $a['aligner'] !== [], $a['nRecettes'], $b['nom']]);
     return ['ok' => true, 'rid' => $rid, 'nom' => $rid > 0 ? (string) (reset($mat)['recettes'][$rid] ?? '') : '', 'lignes' => $lignes, 'compteurs' => $cpt,
         'magasins' => array_map(static fn ($id, $n) => ['id' => (int) $id, 'nom' => $n], array_keys($mags), array_values($mags)), 'maj' => (string) ($f['maj'] ?? ''),
         'source' => 'prix des magasins : /shops/{id}/materials (prix local ou fournisseur) · référence et perte : la matière, pour tout le réseau · prix de marché et pertes : consultant/src/data/prix_reference_be.json'];
@@ -244,8 +273,10 @@ function wr_verification_references(): array
     if (!PanelApi::configured()) { return ['ok' => false, 'error' => 'Le compte du panel n’est pas configuré (Paramètres).']; }
     @set_time_limit(300);
     $b = body();
-    $apercu = !empty($b['apercu']); $rid = (int) ($b['rid'] ?? 0);
+    $apercu = !empty($b['apercu']); $rid = (int) ($b['rid'] ?? 0); $sansEffet = !empty($b['sansEffet']);
     $al = vmxAllergenesRef();
+    $sidsTous = array_map('intval', array_keys(vfMagasins()));
+    $M = null;   // les prix des magasins, lus une fois (frais) s'il faut aligner
     $plans = []; $erreurs = [];
     foreach (array_slice(array_values(array_filter((array) ($b['lignes'] ?? []), 'is_array')), 0, 400) as $x) {
         $mid = (int) ($x['mid'] ?? 0);
@@ -265,10 +296,20 @@ function wr_verification_references(): array
         }
         $m = vmxChangements($o, $champs, $al);
         foreach ($m['erreurs'] as $e) { $erreurs[] = $nom . ' : ' . $e; }
-        if ($m['corps'] === []) { continue; }
+        // L'alignement : les magasins dont le prix propre s'écarte du prix de référence (envoyé, sinon celui du panel).
+        $aligner = [];
+        $refBase = isset($champs['reference_unit_price_net']) ? (float) $champs['reference_unit_price_net'] : (is_numeric($o['reference_unit_price_net'] ?? null) ? (float) $o['reference_unit_price_net'] : null);
+        if (!empty($x['aligner']) && $refBase !== null && $refBase > 0) {
+            $M ??= mfMatieresApi($sidsTous, true);
+            $px = [];
+            foreach ($sidsTous as $s) { $y = $M[$s][(string) $mid] ?? null; if (is_array($y)) { $px[$s] = ['prix' => $y['prix'] ?? null, 'src' => $y['src'] ?? '']; } }
+            foreach (vrfAAligner($px, $refBase) as $s) { $aligner[$s] = $px[$s]['prix']; }
+        }
+        if ($m['corps'] === [] && $aligner === []) { continue; }
         $lisible = array_map(static fn ($t) => str_replace(['Prix général (référence du panel)', 'Perte (%)'], ['Prix de référence', 'Perte'], $t), $m['lisible']);
         if (isset($champs['reference_unit_price_net'])) { $lisible[] = vfEur((float) $x['prix'], 2) . ' / ' . $U['label']; }
-        $plans[] = ['mid' => $mid, 'nom' => $nom, 'corps' => $m['corps'], 'inverse' => $m['inverse'], 'resume' => $nom . ' : ' . implode(' · ', $lisible), 'perte' => $champs['waste_amount_perc'] ?? null];
+        $plans[] = ['mid' => $mid, 'nom' => $nom, 'corps' => $m['corps'], 'inverse' => $m['inverse'], 'resume' => $nom . ' : ' . implode(' · ', $lisible), 'perte' => $champs['waste_amount_perc'] ?? null,
+            'aligner' => $aligner, 'refBase' => $refBase, 'facteur' => $U['facteur'], 'par' => $U['label']];
     }
     if ($plans === []) { return ['ok' => false, 'error' => $erreurs !== [] ? implode(' ', $erreurs) : 'Rien à changer : le panel porte déjà ces prix et ces pertes.']; }
     // Les recettes relues pour l'effet : la recette demandée d'abord, puis d'autres qui portent ces matières.
@@ -276,17 +317,38 @@ function wr_verification_references(): array
     foreach ($plans as $p) { foreach (array_keys(vrcRecettesDeMatiere($p['mid'])) as $r) { if (count($rids) >= VRF_EFFET_RECETTES) { break 2; } if (!in_array($r, $rids, true)) { $rids[] = $r; } } }
     $sids = array_map('intval', array_keys(vfMagasins()));
     if ($rid <= 0) { $sids = array_slice($sids, 0, VRC_EFFET_MAGASINS); }
+    if ($sansEffet) { $rids = []; }
+    $nAl = array_sum(array_map(static fn ($p) => count($p['aligner']), $plans));
     if ($apercu) {
-        return ['apercu' => true, 'resume' => count($plans) . ' matière(s) au panel, pour tout le réseau ; puis le food cost de ' . count($rids) . ' recette(s) relu dans ' . count($sids) . ' magasin(s), avant et après',
-            'ecritures' => array_map(static fn ($p) => ['methode' => 'PATCH', 'route' => vrcChemin('matiere', $p['mid']), 'corps' => $p['corps'], 'annulable' => true, 'resume' => $p['resume']], $plans),
-            'erreurs' => $erreurs];
+        $ec = [];
+        foreach ($plans as $p) {
+            if ($p['corps'] !== []) { $ec[] = ['methode' => 'PATCH', 'route' => vrcChemin('matiere', $p['mid']), 'corps' => $p['corps'], 'annulable' => true, 'resume' => $p['resume']]; }
+            foreach ($p['aligner'] as $s => $avantPx) {
+                $ec[] = vrcPrixPlan($s, $p['mid'], $p['refBase']) + ['annulable' => true, 'resume' => vrcPrixResume($p['nom'], $s, $p['refBase'], (float) $avantPx) . ' (aligné sur la référence)'];
+            }
+        }
+        return ['apercu' => true, 'resume' => count(array_filter($plans, static fn ($p) => $p['corps'] !== [])) . ' matière(s) au panel, pour tout le réseau'
+            . ($nAl > 0 ? ' ; ' . $nAl . ' prix de magasin aligné(s) sur la référence (même food cost partout)' : '')
+            . ($rids !== [] ? ' ; puis le food cost de ' . count($rids) . ' recette(s) relu dans ' . count($sids) . ' magasin(s), avant et après' : ''),
+            'ecritures' => $ec, 'erreurs' => $erreurs];
     }
-    $avant = vrfCouts($sids, $rids);
+    $avant = $rids !== [] ? vrfCouts($sids, $rids) : [];
     $faites = [];
     foreach ($plans as $p) {
-        $r = vrcEcrireObjet(['geste' => 'matiere', 'cle' => 'ref:' . $p['mid'], 'pid' => null, 'nom' => $p['nom'], 'shop' => null, 'objet' => 'matiere', 'id' => $p['mid'], 'objetId' => $p['mid'],
-            'corps' => $p['corps'], 'inverse' => $p['inverse'], 'resume' => $p['resume']]);
-        $faites[] = vrcLigneRegistre($r);
+        $okMat = true;
+        if ($p['corps'] !== []) {
+            $r = vrcEcrireObjet(['geste' => 'matiere', 'cle' => 'ref:' . $p['mid'], 'pid' => null, 'nom' => $p['nom'], 'shop' => null, 'objet' => 'matiere', 'id' => $p['mid'], 'objetId' => $p['mid'],
+                'corps' => $p['corps'], 'inverse' => $p['inverse'], 'resume' => $p['resume']]);
+            $faites[] = vrcLigneRegistre($r);
+            $okMat = $r['resultat'] === 'ok';
+        }
+        // Le même prix dans tous les magasins : chaque prix propre qui s'écarte reprend la référence (au registre, « Annuler »).
+        if ($okMat) {
+            foreach ($p['aligner'] as $s => $avantPx) {
+                $faites[] = vrcLigneRegistre(vrcEcrirePrix(['geste' => 'prix', 'cle' => 'aligner:' . $p['mid'], 'pid' => null, 'nom' => $p['nom'], 'shop' => $s, 'coutAvant' => null, 'coutApres' => null],
+                    $s, $p['mid'], (float) $p['refBase'], $p['nom'], (float) $avantPx));
+            }
+        }
     }
     $okN = count(array_filter($faites, static fn ($f) => $f['resultat'] === 'ok'));
     $effet = [];
@@ -294,9 +356,9 @@ function wr_verification_references(): array
         vrcOublier('vmpTable'); vrcOublier('vfAnalyse');
         foreach ($sids as $s) { vrcOublier('matieresApi:' . $s); }
         foreach ($rids as $r) { vrcOublier('vfRec:' . $r); }
-        $apres = vrfCouts($sids, $rids);
+        $apres = $rids !== [] ? vrfCouts($sids, $rids) : [];
         // Les recettes relues rentrent au cache tout de suite : la liste, la recherche et « toute la carte » les gardent.
-        if ($sids !== []) { vfLireRecettes(array_fill_keys($rids, $sids[0]), count($rids)); }
+        if ($sids !== [] && $rids !== []) { vfLireRecettes(array_fill_keys($rids, $sids[0]), count($rids)); }
         foreach ($sids as $s) {
             $e = vrcEffet($avant[$s] ?? [], $apres[$s] ?? []);
             if ($e !== []) { $effet[] = ['sid' => $s, 'magasin' => vfMagasins()[$s] ?? ('magasin ' . $s), 'resume' => vrcEffetResume($e), 'lignes' => $e]; }
@@ -305,7 +367,7 @@ function wr_verification_references(): array
     // La perte de la matière entre-t-elle dans le coût de la recette ? Sinon, elle se pose sur les lignes de la recette.
     $pertes = null;
     $avecPerte = array_values(array_filter($plans, static fn ($p) => $p['perte'] !== null && $p['perte'] > 0));
-    if ($okN > 0 && $rid > 0 && $avecPerte !== [] && $sids !== []) {
+    if ($okN > 0 && $rid > 0 && !$sansEffet && $avecPerte !== [] && $sids !== []) {
         $lues = vrfPertesLues($sids[0], $rid, array_map(static fn ($p) => $p['mid'], $avecPerte));
         $non = array_values(array_filter($avecPerte, static fn ($p) => isset($lues[$p['mid']]) && !$lues[$p['mid']]));
         $pertes = ['lues' => $lues, 'aPoser' => array_map(static fn ($p) => ['mid' => $p['mid'], 'nom' => $p['nom'], 'p' => $p['perte']], $non),
@@ -313,4 +375,86 @@ function wr_verification_references(): array
                 : 'La perte de ' . count($non) . ' matière(s) n’entre pas dans le coût de la recette : le panel lit la perte de la ligne. « Poser les pertes sur les lignes » la met dans la recette.'];
     }
     return ['ok' => $okN === count($faites), 'ecritures' => $faites, 'effet' => $effet, 'pertes' => $pertes, 'erreurs' => $erreurs];
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Les pertes sur les lignes, toute la carte
+ * ------------------------------------------------------------------------------------------- */
+
+/** Les recettes de la carte (GET /recipes : celles rattachées à un produit), gardées dix minutes ; sinon celles déjà lues. */
+function vrfRecettesCarte(): array
+{
+    $c = vfCache('vrfCarte', 600);
+    if ($c !== null) { return array_map('intval', $c['v']); }
+    $ids = [];
+    foreach (analyseListe(PanelApi::get('/recipes')) as $r) { if (is_array($r) && (int) ($r['id'] ?? 0) > 0) { $ids[(int) $r['id']] = true; } }
+    if ($ids === []) {
+        try { foreach (Db::rows("SELECT `key` FROM ceo_app_setting WHERE `key` LIKE 'vfRec:%' LIMIT 1500") as $row) { $ids[(int) substr((string) $row['key'], 6)] = true; } }
+        catch (Throwable $e) { /* rien à parcourir */ }
+    }
+    $ids = array_keys($ids); sort($ids);
+    if ($ids !== []) { vfGarder('vrfCarte', $ids); }
+    return $ids;
+}
+
+/**
+ * Les changements de perte d'un objet (recette ou sous-recette) : chaque ligne de matière prend la perte que la matière
+ * porte au panel ($pertes : [mid => perte]), quand elle en porte une. Fonction pure.
+ */
+function vrfChangementsPerte(array $o, array $pertes): array
+{
+    $ch = [];
+    foreach ((array) ($o['materials'] ?? []) as $e) {
+        if (!is_array($e)) { continue; }
+        $cle = vrcIdLigne($e, 'materials');
+        $mid = $cle === '' ? 0 : (int) substr($cle, 1);
+        $w = $pertes[$mid] ?? null;
+        if ($w === null || $w <= 0) { continue; }
+        $wl = $e['waste_amount_perc'] ?? ($e['pivot']['waste_amount_perc'] ?? 0);
+        if (abs((float) $wl - (float) $w) > 1e-9) { $ch[] = ['type' => 'perte', 'cle' => $cle, 'p' => (float) $w]; }
+    }
+    return $ch;
+}
+
+/** POST /verification/recettes/pertes-lignes {depuis, lot, apercu?} — une tranche de la carte ; `suivant` pour la suite. */
+function wr_verification_pertes_lignes(): array
+{
+    if (!PanelApi::configured()) { return ['ok' => false, 'error' => 'Le compte du panel n’est pas configuré (Paramètres).']; }
+    @set_time_limit(300);
+    $b = body();
+    $apercu = !empty($b['apercu']);
+    $depuis = max(0, (int) ($b['depuis'] ?? 0)); $lot = min(40, max(1, (int) ($b['lot'] ?? VRF_LOT_PERTES)));
+    $rids = vrfRecettesCarte();
+    if ($rids === []) { return ['ok' => false, 'error' => 'La liste des recettes du panel n’a pas pu être lue (' . (PanelApi::$lastError ?? 'pas de réponse') . ').']; }
+    $tranche = array_slice($rids, $depuis, $lot);
+    // Les pertes des matières, telles que le panel les porte (une matière vaut pour tout le réseau : un magasin suffit).
+    $sid0 = (int) (array_key_first(vfMagasins()) ?? 0);
+    $pertes = [];
+    foreach ((mfMatieresApi([$sid0], $depuis === 0)[$sid0] ?? []) as $mid => $m) { if (is_array($m) && is_numeric($m['perte'] ?? null)) { $pertes[(int) $mid] = (float) $m['perte']; } }
+    $ecritures = []; $erreurs = []; $vus = [];
+    foreach ($tranche as $rid) {
+        foreach (vrcArbre($rid) as $k => $o) {
+            if (isset($vus[$k])) { continue; }
+            $vus[$k] = true;
+            [$objet, $id] = explode(':', (string) $k);
+            $ch = vrfChangementsPerte($o, $pertes);
+            if ($ch === []) { continue; }
+            $m = vrcModifier($o, $ch);
+            if ($m['corps'] === []) { continue; }
+            $c = vrcCorpsContrat($objet, $o, $m['corps']); $inv = vrcCorpsContrat($objet, $o, $m['inverse']);
+            $nom = vfTxt($o, ['name']) ?: ($objet . ' ' . $id);
+            if ($c['erreurs'] !== [] || $c['lignes'] === null) { $erreurs[] = $nom . ' : ' . implode(' ', $c['erreurs']); continue; }
+            $resume = ($objet === 'sousRecette' ? 'Sous-recette « ' . $nom . ' » : ' : $nom . ' : ') . implode(' · ', $m['lisible']);
+            if ($apercu) { $ecritures[] = ['methode' => 'PATCH', 'route' => vrcChemin($objet, (int) $id), 'corps' => $c['lignes'], 'annulable' => true, 'resume' => $resume]; continue; }
+            $r = vrcEcrireObjet(['geste' => 'recette', 'cle' => 'perte:' . $k, 'pid' => null, 'nom' => $nom, 'shop' => null, 'objet' => $objet, 'id' => (int) $id, 'objetId' => (int) $id,
+                'corps' => $c['lignes'], 'inverse' => $inv['lignes'], 'resume' => $resume]);
+            $ecritures[] = vrcLigneRegistre($r);
+            if ($objet === 'recette') { vrcOublier('vfRec:' . (int) $id); }
+        }
+    }
+    $fin = $depuis + count($tranche);
+    if (!$apercu && $fin >= count($rids)) { vrcOublier('vfAnalyse'); vrcOublier('vmpTable'); }
+    $okN = count(array_filter($ecritures, static fn ($e) => ($e['resultat'] ?? 'ok') === 'ok'));
+    return ['ok' => true, 'apercu' => $apercu, 'total' => count($rids), 'depuis' => $depuis, 'fin' => $fin, 'suivant' => $fin < count($rids) ? $fin : null,
+        'ecritures' => $ecritures, 'nOk' => $apercu ? 0 : $okN, 'nRefus' => $apercu ? 0 : count($ecritures) - $okN, 'erreurs' => $erreurs, 'matieresAvecPerte' => count(array_filter($pertes, static fn ($w) => $w > 0))];
 }

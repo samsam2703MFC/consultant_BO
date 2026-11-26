@@ -17,12 +17,24 @@ function charger(app, cible, frais){
   readOne(ROUTE + 'references' + qs + (frais ? (qs ? '&' : '?') + 'rafraichir=1' : '')).then(d => app.setState({ vfRef: { chargement: false, cible, d: d || { error: 'injoignable' } } }));
 }
 
+/** Envoie des lots de lignes l'un après l'autre (toute la carte) ; seul le dernier relit les food costs. */
+function envoyerParLots(app, base, lignes, taille, progres){
+  const lots = []; for (let i = 0; i < lignes.length; i += taille) { lots.push(lignes.slice(i, i + taille)); }
+  const tout = { ok: true, ecritures: [], effet: [], pertes: null, erreurs: [] };
+  return lots.reduce((pr, lot, i) => pr.then(() => envoyer(app, Object.assign({}, base, { lignes: lot, sansEffet: i < lots.length - 1 })).then(r => {
+    r = r || { ok: false, error: 'injoignable' };
+    tout.ok = tout.ok && !!r.ok; tout.ecritures = tout.ecritures.concat(r.ecritures || []); tout.erreurs = tout.erreurs.concat(r.erreurs || [], r.error && !(r.ecritures || []).length ? [r.error] : []);
+    if (r.effet && r.effet.length) { tout.effet = r.effet; } if (r.pertes) { tout.pertes = r.pertes; }
+    progres(i + 1, lots.length);
+  })), Promise.resolve()).then(() => tout);
+}
+
 const envoyer = (app, corps) => write(app.source || 'api', 'POST', ROUTE + 'references', Object.assign(app.state.vfRefAdmin ? { compte: 'admin' } : {}, corps));
 
 export function valsRefs(app){
   const S = app.state, R = S.vfRef;
   // Ouverte par son adresse (« ?vue=refs&recette=tagliata ») : la recette se lit tout de suite.
-  if (S.vfRefAuto && !R) { const t = S.vfRefAuto; app.setState({ vfRefAuto: null }); setTimeout(() => charger(app, /^\d+$/.test(t) ? { rid: Number(t) } : { q: t }), 0); }
+  if (S.vfRefAuto && !R) { const t = S.vfRefAuto; app.setState({ vfRefAuto: null }); setTimeout(() => charger(app, t === 'tout' ? { tout: true } : (/^\d+$/.test(t) ? { rid: Number(t) } : { q: t })), 0); }
   const d = R && R.d && R.d.ok ? R.d : null;
   const v = {
     q: S.vfRefQ || '', poserQ: e => app.setState({ vfRefQ: e.target.value }),
@@ -35,6 +47,7 @@ export function valsRefs(app){
   };
   if (!d) { return v; }
   const E = S.vfRefEd || {};
+  const aligner = S.vfRefAligner !== false;   // le même food cost dans tous les magasins (26/11/2026) : par défaut
   const maj = (mid, patch) => app.setState({ vfRefEd: Object.assign({}, app.state.vfRefEd, { [mid]: Object.assign({}, (app.state.vfRefEd || {})[mid], patch) }), vfRefPrev: null });
   v.titre = d.rid ? 'Recette n° ' + d.rid + (d.nom ? ' — ' + d.nom : '') : 'Toute la carte (les recettes déjà lues)';
   v.mags = (d.magasins || []).map(m => String(m.nom).replace(/^.* - /, ''));
@@ -43,7 +56,8 @@ export function valsRefs(app){
     const prixDef = P.prix != null ? Number((P.prix * l.facteur).toFixed(4)) : null;
     const prixTxt = e.prix != null ? e.prix : (prixDef != null ? String(prixDef).replace('.', ',') : '');
     const perteTxt = e.perte != null ? e.perte : (P.perte != null ? String(P.perte) : '');
-    const coche = e.coche != null ? e.coche : !!P.change;
+    const al = aligner ? (l.aligner || []) : [];
+    const coche = e.coche != null ? e.coche : (!!P.change || al.length > 0);
     const px = num(prixTxt), pt = num(perteTxt);
     const ref = l.reference != null ? l.reference * l.facteur : null;
     return {
@@ -52,7 +66,8 @@ export function valsRefs(app){
         + l.nRecettes + ' recette' + (l.nRecettes > 1 ? 's' : '') + (!d.rid && l.recettes && l.recettes.length ? ' — ' + l.recettes.slice(0, 2).join(', ') + (l.nRecettes > 2 ? '…' : '') : ''),
       magasins: (l.magasins || []).map(m => !m.lu ? { txt: '?', ton: '' }
         : (m.prix == null || m.src === 'MISSING' ? { txt: 'sans prix', ton: 'ko' }
-          : { txt: fE(m.prix * l.facteur, 2), ton: m.src === 'REFERENCE' ? 'att' : 'ok', sous: m.src === 'REFERENCE' ? 'référence' : '' })),
+          : { txt: fE(m.prix * l.facteur, 2), ton: al.indexOf(m.sid) >= 0 ? 'att' : (m.src === 'REFERENCE' ? 'att' : 'ok'),
+            sous: al.indexOf(m.sid) >= 0 ? 'à aligner' : (m.src === 'REFERENCE' ? 'référence' : '') })),
       reference: ref == null ? '—' : fE(ref, 2), perteAvant: l.perte == null ? '—' : nf(l.perte, 0) + ' %',
       origine: P.origine === 'reseau' ? 'réseau' : (P.origine === 'marche' ? 'marché, estimé' : 'à saisir'),
       origineTon: P.origine === 'reseau' ? 'ok' : (P.origine === 'marche' ? 'att' : 'ko'), sourcePrix: P.source || '',
@@ -60,7 +75,7 @@ export function valsRefs(app){
       poserPrix: ev => maj(l.mid, { prix: ev.target.value, coche: true }), poserPerte: ev => maj(l.mid, { perte: ev.target.value, coche: true }),
       coche, cocher: () => maj(l.mid, { coche: !coche }), idPrix: 'vr-ref-px-' + l.mid, idPerte: 'vr-ref-pt-' + l.mid,
       invalide: (prixTxt !== '' && !(px > 0)) || (perteTxt !== '' && !(pt >= 0 && pt < 100)),
-      envoi: { mid: l.mid, prix: px > 0 ? px : null, perte: pt >= 0 && pt < 100 ? pt : null },
+      envoi: Object.assign({ mid: l.mid, prix: px > 0 ? px : null, perte: pt >= 0 && pt < 100 ? pt : null }, aligner ? { aligner: true } : {}),
     };
   });
   const C = d.compteurs || {};
@@ -68,7 +83,9 @@ export function valsRefs(app){
     ['À changer', C.aChanger, 'la proposition diffère du panel', C.aChanger ? 'att' : 'ok'],
     ['Prix de marché', C.marche, 'aucun magasin ne la chiffre : prix estimé', C.marche ? 'att' : 'ok'],
     ['Sans prix', C.sansPrix, 'ni magasin, ni prix de marché : à saisir', C.sansPrix ? 'ko' : 'ok'],
-    ['Pertes à poser', C.pertes, 'perte proposée différente de celle du panel', C.pertes ? 'att' : 'ok']];
+    ['Pertes à poser', C.pertes, 'perte proposée différente de celle du panel', C.pertes ? 'att' : 'ok'],
+    ['Prix à aligner', C.aAligner, 'un magasin paie autrement que la référence', C.aAligner ? 'att' : 'ok']];
+  v.aligner = { on: aligner, basculer: () => app.setState({ vfRefAligner: !aligner, vfRefEd: {}, vfRefPrev: null }) };
   const choisies = v.lignes.filter(l => l.coche && !l.invalide && (l.envoi.prix != null || l.envoi.perte != null));
   const prev = S.vfRefPrev, res = S.vfRefRes;
   v.admin = { on: !!S.vfRefAdmin, basculer: () => app.setState({ vfRefAdmin: !app.state.vfRefAdmin, vfRefPrev: null }) };
@@ -80,9 +97,10 @@ export function valsRefs(app){
     } : null,
     apercu: prev && prev.d ? (prev.d.apercu ? { resume: prev.d.resume, ecritures: (prev.d.ecritures || []).map(e => ({ route: e.methode + ' ' + e.route, resume: e.resume, corps: JSON.stringify(e.corps) })), erreurs: prev.d.erreurs || [] }
       : { erreur: prev.d.error || 'refusé' }) : null,
+    progres: S.vfRefProg || null,
     appliquer: prev && prev.d && prev.d.apercu ? () => {
-      app.setState({ vfRefRes: { enCours: true } });
-      envoyer(app, { rid: d.rid || 0, lignes: choisies.map(l => l.envoi) }).then(r => {
+      app.setState({ vfRefRes: { enCours: true }, vfRefProg: null });
+      envoyerParLots(app, { rid: d.rid || 0 }, choisies.map(l => l.envoi), 20, (i, n) => app.setState({ vfRefProg: n > 1 ? 'lot ' + i + ' sur ' + n : null })).then(r => {
         app.setState({ vfRefRes: { d: r || { error: 'injoignable' } }, vfRefPrev: null, vfRefEd: {}, vrRecentes: ((r && r.ecritures) || []).concat(app.state.vrRecentes || []).slice(0, 20), vrReg: null, vmData: null });
         charger(app, R.cible, true);
       });
@@ -109,6 +127,31 @@ export function valsRefs(app){
       fermer: () => app.setState({ vfRefRes: null, vfRefLig: null }),
     };
   }
+  // Les pertes sur les lignes, toute la carte (26/11/2026) : le coût d'une recette ne lit que la perte de la ligne.
+  const PL = S.vfPl || {};
+  const tranche = (depuis, apercu) => write(app.source || 'api', 'POST', ROUTE + 'pertes-lignes', Object.assign(app.state.vfRefAdmin ? { compte: 'admin' } : {}, { depuis, lot: 15, apercu }));
+  v.pertesLignes = {
+    enCours: !!PL.enCours, etat: PL.etat || '', ko: !!PL.ko,
+    apercu: PL.apercu ? { lignes: PL.apercu.map(e => e.resume + ' — ' + e.route) } : null,
+    verifier: PL.enCours ? null : () => {
+      app.setState({ vfPl: { enCours: true, etat: 'Lecture des 15 premières recettes…' } });
+      tranche(0, true).then(r => app.setState({ vfPl: r && r.ok ? { apercu: r.ecritures || [], etat: (r.ecritures || []).length + ' recette(s) ou sous-recette(s) à changer dans les 15 premières (sur ' + r.total + ' recettes) ; ' + r.matieresAvecPerte + ' matière(s) portent une perte au panel.', pret: true }
+        : { etat: (r && r.error) || 'refusé', ko: true } }));
+    },
+    appliquer: PL.pret && !PL.enCours ? () => {
+      let nOk = 0, nRefus = 0, erreurs = [];
+      const suite = depuis => tranche(depuis, false).then(r => {
+        if (!r || !r.ok) { app.setState({ vfPl: { etat: 'Arrêt à la recette ' + depuis + ' : ' + ((r && r.error) || 'pas de réponse') + ' — ' + nOk + ' écriture(s) faite(s).', ko: true } }); return; }
+        nOk += r.nOk; nRefus += r.nRefus; erreurs = erreurs.concat(r.erreurs || [], (r.ecritures || []).filter(e => e.resultat !== 'ok').map(e => e.resume + ' : ' + (e.message || e.resultatNom)));
+        const etat = 'Recettes ' + r.fin + ' sur ' + r.total + ' · ' + nOk + ' recette(s) ou sous-recette(s) corrigée(s)' + (nRefus ? ' · ' + nRefus + ' refusée(s)' : '');
+        if (r.suivant != null) { app.setState({ vfPl: { enCours: true, etat } }); return suite(r.suivant); }
+        app.setState({ vfPl: { etat: '✓ Terminé : ' + etat + '.', ko: nRefus > 0, erreurs: erreurs.slice(0, 30) }, vrReg: null });
+      });
+      app.setState({ vfPl: { enCours: true, etat: 'Écriture…' } });
+      suite(0);
+    } : null,
+    erreurs: PL.erreurs || [],
+  };
   v.source = d.source || '';
   v.maj = d.maj || '';
   return v;

@@ -887,6 +887,38 @@ $_GET = [];
 $T = ep_verification_references();
 verifie('références : toute la carte, la Tagliata comprise', ($T['ok'] ?? false) && count($T['lignes']) > 10 && in_array(756, array_column($T['lignes'], 'mid'), true));
 
+// Le même food cost dans tous les magasins (26/11/2026 au soir) : Gosselies paie ses tomates plus cher, il s'aligne.
+verifie('aligner : seuls les prix propres qui s’écartent', vrfAAligner([4 => ['prix' => 0.0042, 'src' => 'LOCAL'], 3 => ['prix' => 0.005, 'src' => 'LOCAL'], 2 => ['prix' => 0.009, 'src' => 'REFERENCE']], 0.0042) === [3]);
+Panel::$prix[3][282] = 0.005;
+$_GET = ['rid' => '216'];
+$R2 = ep_verification_references();
+$l282 = array_values(array_filter($R2['lignes'], static fn ($l) => $l['mid'] === 282))[0] ?? [];
+verifie('aligner : la moyenne réseau compte Gosselies (4,47 €/kg), et les trois magasins s’y alignent', abs(($l282['propose']['prix'] ?? 0) * 1000 - 4.4667) < 1e-3 && ($l282['aligner'] ?? null) === [4, 3, 2] && ($R2['compteurs']['aAligner'] ?? 0) === 1, json_encode($l282['aligner'] ?? null));
+$BODY = ['rid' => 216, 'apercu' => true, 'lignes' => [['mid' => 282, 'prix' => 4.2, 'perte' => 3, 'aligner' => true]]];
+$ap = wr_verification_references();
+verifie('aligner : l’aperçu montre le prix du magasin (route du prix), rien sur la matière déjà à jour', ($ap['apercu'] ?? false) && count($ap['ecritures']) === 1 && $ap['ecritures'][0]['route'] === '/materials/282/manual-price'
+    && str_contains($ap['resume'], '1 prix de magasin aligné'), json_encode($ap));
+$BODY = ['rid' => 216, 'lignes' => [['mid' => 282, 'prix' => 4.2, 'perte' => 3, 'aligner' => true]], 'sansEffet' => true];
+$r = wr_verification_references();
+verifie('aligner : Gosselies reprend 4,20 €/kg, relu, au registre, et le food cost est le même partout', $r['ok'] && abs(Panel::$prix[3][282] - 0.0042) < 1e-12 && $r['ecritures'][0]['annulable'] && $r['effet'] === []
+    && abs(Panel::get('/shops/3/recipes/216/cost')['cost_net'] - Panel::get('/shops/4/recipes/216/cost')['cost_net']) < 1e-9, json_encode($r));
+$BODY = ['id' => $r['ecritures'][0]['id']];
+verifie('aligner : « Annuler » rend son prix à Gosselies', wr_verification_annuler()['ok'] && abs(Panel::$prix[3][282] - 0.005) < 1e-12);
+Panel::$prix[3][282] = 0.0042;
+
+// Les pertes sur les lignes, toute la carte, par tranches.
+verifie('pertes sur les lignes : la perte de la matière, seulement si elle en porte une', vrfChangementsPerte(['materials' => [['id' => 282, 'quantity' => 60, 'waste_amount_perc' => '0.0000'], ['id' => 9, 'quantity' => 1], ['id' => 761, 'quantity' => 100, 'waste_amount_perc' => '5.0000']]], [282 => 3.0, 9 => 0.0, 761 => 5.0])
+    === [['type' => 'perte', 'cle' => 'm282', 'p' => 3.0]]);
+$BODY = ['depuis' => 0, 'lot' => 4, 'apercu' => true];
+$pl = wr_verification_pertes_lignes();
+verifie('pertes sur les lignes : l’aperçu d’une tranche n’écrit rien et dit la suite', $pl['ok'] && $pl['apercu'] && $pl['total'] === count(Panel::$recettes) && $pl['suivant'] === 4, json_encode(array_diff_key($pl, ['ecritures' => 1])));
+$n0 = count(Panel::$ecrits); $depuis = 0; $tours = 0; $nOk = 0;
+do { $BODY = ['depuis' => $depuis, 'lot' => 4]; $pl = wr_verification_pertes_lignes(); $nOk += $pl['nOk']; $depuis = $pl['suivant']; $tours++; } while ($depuis !== null && $tours < 20);
+$w = array_column(Panel::$recettes[216]['materials'], 'waste_amount_perc', 'id');
+verifie('pertes sur les lignes : toute la carte en tranches, la Tagliata prend tomates 3 % et steak 5 %', $tours === (int) ceil(count(Panel::$recettes) / 4) && $nOk >= 1 && (float) $w[282] === 3.0 && (float) $w[761] === 5.0 && (float) ($w[756] ?? 0) === 0.0, json_encode($w));
+$BODY = ['depuis' => 0, 'lot' => 40];
+verifie('pertes sur les lignes : une seconde passe n’écrit plus rien', wr_verification_pertes_lignes()['ecritures'] === []);
+
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);
 $_GET = ['pid' => '104'];

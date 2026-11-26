@@ -341,3 +341,4 @@
 2026-11-26T18:14:10Z Autocontrôle qualité : l'onglet Qualité de la fiche produit (admin), le contrôle qualité dans les fiches techniques (ce qu'on regarde, bon, à surveiller, pas bon), le formulaire pour l'équipe, le manager, le franchisé et le consultant (3 produits dans la visite, dans le rapport)
 2026-11-26T20:02:03Z Vérification › Recettes : écritures au panel conformes au swagger du 26/11 (recettes, sous-recettes, portions, rendement), food cost relu après un prix, et Matières premières › Références et pertes (prix réseau en référence, prix de marché, pertes), par lot
 2026-11-26T20:20:34Z Matières premières › Références et pertes : lien direct (#/verification/recettes?vue=refs&recette=tagliata)
+2026-11-26T20:37:50Z Références et pertes : même food cost dans tous les magasins (alignement des prix sur la référence), pertes sur les lignes de toute la carte, envoi par lots
