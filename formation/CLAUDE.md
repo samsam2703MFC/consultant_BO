@@ -13,4 +13,9 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
 - **Vidéothèque** (23/11/2026) : le catalogue des manuels (`public/formation/catalogue/`, `#/videos`) liste les vidéos
   d'instruction du dashboard magasin, lues dans leur registre `panel/public/dashboard/videos/videos.json` (fichier public,
   à l'adresse du cockpit) : rien à faire ici quand une vidéo s'ajoute (`panel/src/LISEZMOI.md`).
+- **Examens théoriques** (26/11/2026, `src/examens.php`, tables `for_exam_*`, écran `#/rfexamens` — `examens.js`) : la
+  banque de questions des candidats franchisés (dix thèmes, sources suivies par empreinte), relue chaque mois
+  (`bin/examens_cron.sh`, cron 06:20, une fois par mois) ; le CRM la lit (`GET /formation/examens/banque`, jeton de
+  service) et fait passer l'examen dans l'application du candidat. Rien n'entre dans un examen sans validation ici.
+  Contrat : `shared/docs/contrat-api.md` § Formation · Examens théoriques.
 - **Tests** : `php formation/bin/tests_formation.php`, `php formation/bin/tests_manuel_chiffres.php`.

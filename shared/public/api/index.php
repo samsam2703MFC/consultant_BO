@@ -163,6 +163,7 @@ require __DIR__ . '/../../../formation/src/fiches_techniques.php';
 require __DIR__ . '/../../../formation/src/formation_postes.php';
 // La formation continue (22/11/2026) : un type de formation, ses dossiers par boutique, la validation du consultant.
 require __DIR__ . '/../../../formation/src/formation_continue.php';
+require __DIR__ . '/../../../formation/src/examens.php';   // les examens théoriques des candidats franchisés (26/11/2026)
 // La recherche de la formation (22/11/2026) : l'index de tout le catalogue pour la méga-barre de « Formations et suivi ».
 require __DIR__ . '/../../../formation/src/formation_recherche.php';
 require __DIR__ . '/../../../consultant/src/benchmark.php';
@@ -257,7 +258,12 @@ try {
     }
 
     // Le questionnaire « bureau » d'un magasin (26/11/2026) : PUBLIC, la personne n'a pas de session — le jeton du
-    // questionnaire dans l'adresse est la clé (panel/src/bureaux_dev.php : limite par IP, champ piège).
+    // questionnaire dans l'adresse est la clé (panel/src/bureaux_dev.php : limite par IP, champ piège) ; le lien court
+    // /m/{shop} (« 2 », Corbais) ouvre le même, avec en plus un plafond de réponses par jour et par magasin.
+    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/m/(\d{1,6})$#', $path, $m)) {
+        echo json_encode(bdvPublicMagasin($method, $m[1]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
     if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/([a-f0-9]{32})$#', $path, $m)) {
         echo json_encode(bdvPublic($method, $m[1]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
@@ -456,6 +462,11 @@ function route(string $method, string $path): mixed
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
+    // --- Formation › Examens théoriques des candidats franchisés (26/11/2026, src/examens.php) ; /banque est lue par le Recrutement.
+    if ($path === '/formation/examens' || str_starts_with($path, '/formation/examens/')) {
+        $f = exRoute($method, $path);
         if ($f !== null) { return $f; }
     }
     // --- Formation › La formation continue (22/11/2026, src/formation_continue.php) : le siège, le consultant, le magasin.

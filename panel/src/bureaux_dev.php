@@ -19,6 +19,8 @@ declare(strict_types=1);
  *
  *   GET  /bureau-questionnaire/{jeton}                  PUBLIC : le questionnaire (magasin, titre, message, bon)
  *   POST /bureau-questionnaire/{jeton}                  PUBLIC : une réponse → {ok, bon: {code, texte} | null}
+ *   GET|POST /bureau-questionnaire/m/{shop}             PUBLIC : le même, par le numéro du magasin (« ?m=2 », Corbais) — le
+ *                                                       lien court, à écrire à l'avance ; il se ferme avec le questionnaire
  *   GET  /dashboard/bureaux-dev?shop=                   les demandes, le réglage du questionnaire, les promotions à bon
  *   POST /dashboard/bureaux-dev {shop, donnees}         une demande saisie au dashboard (même chemin que le questionnaire)
  *   POST /dashboard/bureaux-dev/questionnaire {shop, actif, promo, titre, message, regenerer}
@@ -31,6 +33,8 @@ declare(strict_types=1);
  */
 
 const BDV_MAX_HEURE = 5;
+/** Au plus tant de réponses par jour et par magasin au questionnaire (le lien court se devine : il faut un plafond). */
+const BDV_MAX_JOUR = 40;
 const BDV_GARDE_JOURS = 90;
 const BDV_STATUTS = ['a_valider', 'cree', 'refuse'];
 
@@ -245,11 +249,30 @@ function bdvPublic(string $method, string $jeton): array
     $ip = hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? '') . '|' . $jeton);
     $n = (int) (Db::row('SELECT COUNT(*) n FROM panel_bureau_dev WHERE ip_hash = ? AND cree_le > DATE_SUB(NOW(), INTERVAL 1 HOUR)', [$ip])['n'] ?? 0);
     if ($n >= BDV_MAX_HEURE) { http_response_code(429); return ['error' => 'Trop de réponses depuis cet appareil : réessayez dans une heure.']; }
+    $j = (int) (Db::row('SELECT COUNT(*) n FROM panel_bureau_dev WHERE shop_id = ? AND source = "questionnaire" AND cree_le > DATE_SUB(NOW(), INTERVAL 1 DAY)', [$shop])['n'] ?? 0);
+    if ($j >= BDV_MAX_JOUR) { http_response_code(429); return ['error' => 'Le questionnaire a reçu beaucoup de réponses aujourd’hui : réessayez demain, ou appelez le magasin.']; }
     [$d, $e] = bdvNettoyer($in, true);
     if ($e) { http_response_code(422); return ['error' => 'Il manque ' . implode(', ', $e) . '.', 'manque' => $e]; }
     bdvPurger();
     $l = bdvCreer($shop, $d, 'questionnaire', $ip, $promo);
     return ['ok' => true, 'magasin' => $nom, 'bon' => $l['bon']];
+}
+
+/** Le magasin d'un lien court (« ?m=2 ») : son numéro, s'il est un magasin ouvert du réseau. $magasins : [id => nom]. */
+function bdvMagasinDuLien(string $id, ?array $magasins = null): ?string
+{
+    if (!preg_match('/^[1-9]\d{0,5}$/', $id)) { return null; }
+    $magasins ??= function_exists('accesMagasins') ? accesMagasins() : [];
+    return array_key_exists($id, $magasins) ? $id : null;
+}
+
+/** La route publique du lien court : le questionnaire du magasin, créé ouvert s'il n'existe pas encore. */
+function bdvPublicMagasin(string $method, string $id): array
+{
+    $shop = bdvMagasinDuLien($id);
+    if ($shop === null) { http_response_code(404); return ['error' => 'questionnaire introuvable']; }
+    $q = bdvQuestionnaire($shop, true);
+    return bdvPublic($method, (string) $q['jeton']);
 }
 
 /* ── Les routes du dashboard ────────────────────────────────────────────────────────────────────────────────── */
@@ -269,7 +292,7 @@ function ep_bureaux_dev(): array
     return ['shop' => $shop, 'demandes' => array_map('bdvLigne', $rows),
         'questionnaire' => ['actif' => (bool) (int) $q['actif'], 'jeton' => (string) $q['jeton'], 'promo' => $q['promo'] !== null ? (int) $q['promo'] : null,
             'titre' => (string) $q['titre'], 'message' => (string) ($q['message'] ?? '')],
-        'promos' => bdvPromosABon((int) $shop)];
+        'promos' => bdvPromosABon((int) $shop), 'lienCourt' => bdvMagasinDuLien($shop)];
 }
 
 function wr_bureaux_dev_creer(): array

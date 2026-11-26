@@ -76,5 +76,11 @@ verifie('un jeton mal formé : introuvable, sans lire la base', ($r['error'] ?? 
 $r = bdvPublic('GET', str_repeat('a', 32));
 verifie('un jeton inconnu : fermé', ($r['error'] ?? '') === 'ce questionnaire n’est plus ouvert');
 
+echo "Le lien court\n";
+$M = ['2' => 'Corbais', '3' => 'Gosselies', '5' => 'Sombreffe'];
+verifie('?m=2 → Corbais', bdvMagasinDuLien('2', $M) === '2' && bdvMagasinDuLien('5', $M) === '5');
+verifie('un numéro qui n’est pas un magasin ouvert : rien', bdvMagasinDuLien('4', $M) === null && bdvMagasinDuLien('0', $M) === null && bdvMagasinDuLien('02', $M) === null);
+verifie('pas un numéro : rien', bdvMagasinDuLien('corbais', $M) === null && bdvMagasinDuLien('', $M) === null && bdvMagasinDuLien('2 OR 1', $M) === null);
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
