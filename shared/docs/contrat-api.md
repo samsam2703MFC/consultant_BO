@@ -3442,7 +3442,7 @@ bureaux n'ont pas de repli : l'écran dit ce qui manque. Demande à TF Buddy : R
 Sam : « all should work either with admin, consultant or shop token ». Les routes du panel sous `/panel/shops/{s}/…`
 (entreprises B2B, bureaux, analyse B2B, livraisons) ne répondent qu'à un employé du magasin connecté. Le dashboard ouvre
 cette connexion, celle du panel (`panel/src/tfb_magasin.php`, écran `tfb-magasin.js`) ; la session (12 h) reste dans le
-navigateur, le cockpit ne garde ni le PIN ni les jetons et ne les journalise pas.
+navigateur, le cockpit ne garde ni le PIN ni les jetons et ne les journalise pas (le Journal note seulement la connexion réussie, « connexion au panel TF Buddy depuis le dashboard »).
 
     POST /dashboard/tfb/connexion   {shop, phone, pin}            → {etape: "sms", challenge, texte} | {etape: "ok", jetons}   (POST /panel/auth/login)
     POST /dashboard/tfb/confirmer   {shop, challenge, code}       → {ok, jetons: {acces, renouvellement, expireAcces, expireSession}}   (POST /panel/auth/confirm)
@@ -3456,6 +3456,15 @@ Buddy fait tourner le jeton de renouvellement). Le serveur l'impose à PanelApi 
 (`PanelApi::$jetonImpose`). L'ordre des comptes : pour une route `/panel/…`, le magasin, puis le consultant, puis
 l'admin ; pour les autres, le consultant, l'admin, puis le magasin. Un jeton du magasin refusé en 401 : la réponse porte
 `magasinExpire: true`, le navigateur oublie la session et propose de se reconnecter.
+
+**Les refus de connexion** (25/11/2026) : les limites sont celles de TF Buddy, le cockpit n'ajoute aucune pause. Un refus rend
+`{error, code}` (le message lisible, avec le code de TF Buddy entre parenthèses, et ce code seul) : `PANEL_AUTH_LIMIT` (429, trop
+d'essais pour ce téléphone ou depuis l'adresse du serveur du cockpit, la même pour tous les magasins), `PANEL_AUTH_RESEND_WAIT`
+(60 s entre deux SMS ; `connexion` rend alors `attente: true`), `PANEL_CODE_INVALID` (code incorrect, expiré ou déjà utilisé :
+5 minutes, 5 essais), `PANEL_INVALID_CREDENTIALS` (téléphone ou PIN incorrect, ou accès inactif), `PANEL_AUTH_INPUT` (téléphone
+au format international), `PANEL_SMS_UNAVAILABLE`, `PANEL_AUTH_UNAVAILABLE`. Le navigateur garde le code SMS en cours 5 minutes
+dans l'onglet (`sessionStorage`, `tfb-challenge:{shop}`) : rouvrir la fenêtre, ou redonner le même téléphone après
+`attente`, reprend sa saisie au lieu de renvoyer un SMS ; « renvoyer le code » attend la fin d'un compte à rebours de 60 s.
 
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 
@@ -5713,6 +5722,9 @@ le mois court), l'objectif, ce que chacune touche, ce qu'il reste ; puis les él
 d'heures — la forme du dashboard magasin. Elles comptent toujours dans le cumul de chacune. Dans l'année : un anneau par
 prime d'équipe, les mois où le magasin y est arrivé, et ce qui a été versé à l'équipe.
 Rien ne change côté API (`/ventes/primes-equipe`, `/ventes/primes-annee`).
+Depuis le 25/11/2026, l'anneau de l'année compte les mois **clos** gagnés sur les mois clos : chaque case de
+`/ventes/primes-annee` porte `foisClos` à côté de `fois` (le mois en cours n'y compte pas ; avant, l'anneau pouvait dire
+10 / 10 malgré un mois manqué, ou dépasser 100 %).
 
 **Fiches à imprimer et à envoyer** (31/10/2026, demande de Sam : « les PDF peuvent être imprimés de la page édition prime,
 avec envoi par mail à l'équipe » ; `panel/src/primes_fiches.php`, voir `panel/docs/primes/LISEZMOI.md`). Un volet de la page d'un
@@ -5876,6 +5888,7 @@ routes ci-dessous restent, le dashboard du magasin lit les profils publiés). Il
 |---|---|---|
 | GET | `/fidelite?shop=&mois=` | `{test, source, ref, magasins[], missions[], regles[], stats:{regles:{id:{txt,n,cls}}, budget:{cout, ca, pct, plafond, tickets, points, nouveaux, hypotheses}}, profils[], maintenant}` — les règles (`{id, bloc, type, params, shop, actif, ordre}`), ce que chacune a donné sur les 30 derniers jours, le budget estimé, trois clients types (médianes des habitués, réguliers, occasionnels) pour le simulateur. |
 | GET | `/fidelite/clients?shop=&mois=` | `{test, source, ref, magasins[], missions[], kpis:{actifs, actifsPrec, retour30, nouveauxPrec, montes, descendus, ca30, tickets30, panier}, rf:{lignes, colonnes, cases[5][5], segments[5][5]}, segments[], mixMoyen[6], transitions:{ordre, noms, m[5][5]}, retourSpontane:{7,14,21,30,45,60}}`. |
+| GET | `/fidelite/programme` | (25/11/2026) le programme tel que l'expliquent les documents remis aux franchisés — le Recrutement l'imprime dans l'annexe 2 du Guide pré-ouverture : `{seuilEuros, tousLes, validite, bons[], superBon:{valeur, provisoire}|null, multiplicateurCase, palier:{points, valeur}|null, saisons:[{id, nom, du, aValider, bons[], semaines:[{titre, sous, fete}]}]}` (la carte à points et le bingo, `marketing/src/fidelite_bingo.php`). Ni client, ni campagne de l'ERP, ni note interne. Lisible avec le jeton de service (`X-Service-Token`, `erpRouteIntegration`). |
 | POST | `/fidelite/regles` | `{regles:[{id?, type, params, shop, actif, supprimer?}], qui}` — publie en une transaction ; une règle invalide refuse tout l'envoi (422 type inconnu, règle unique retirée ou doublée, magasin inconnu ; 404 règle introuvable). Journalisé (`Fidélité`). |
 
 **Règles** (`mar_fid_regle`, posées une fois sur table vide : le programme de la maquette C). Blocs et types :
