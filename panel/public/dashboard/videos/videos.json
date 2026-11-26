@@ -5637,14 +5637,14 @@
       ],
       "fichier": "22-06-fenetre-professeur.mp4",
       "debut": 0,
-      "fin": 51.08,
+      "fin": 50.59,
       "affiche": "former-fenetre-professeur.jpg",
       "duree": "51 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/formation.js"
       ],
-      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_sur": "2889a8d42b6660d8de7b08879c7474c9af6faf81",
       "tourne_le": "2026-11-26"
     },
     {
