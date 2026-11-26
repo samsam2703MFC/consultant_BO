@@ -28,6 +28,8 @@ const AQ_ETAPES = ['cuisson', 'structure', 'organoleptique', 'presentation'];
 const AQ_NIVEAUX = ['ok', 'mineur', 'majeur'];
 const AQ_DECISIONS = ['vente', 'declasser', 'jeter'];
 const AQ_PHOTOS = ['obligatoire', 'facultative', 'non'];
+/** Qui contrôle (26/11/2026) : l'équipe à la tablette, le manager, le franchisé, le consultant en visite. */
+const AQ_ROLES = ['equipe' => 'Équipe', 'manager' => 'Manager', 'franchise' => 'Franchisé', 'consultant' => 'Consultant'];
 
 /** La réponse attendue d'un critère, sous la forme où la tablette l'envoie. */
 function aqCible(array $c): string
@@ -387,8 +389,20 @@ function aqTables(): void
         reclamer TINYINT NOT NULL DEFAULT 0,
         essai TINYINT NOT NULL DEFAULT 0,
         cree_le DATETIME NOT NULL,
-        KEY k_aq_shop (shop_id, produit_id, cree_le)
+        visite_id INT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT \'equipe\',
+        client_id VARCHAR(40) NULL,
+        KEY k_aq_shop (shop_id, produit_id, cree_le),
+        KEY k_aq_visite (visite_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // La visite du consultant, le rôle de qui contrôle et l'identifiant de l'appareil (26/11/2026), sur une table d'avant.
+    try { Db::rows('SELECT visite_id FROM con_aq_controle LIMIT 0'); }
+    catch (Throwable $e) {
+        Db::exec('ALTER TABLE con_aq_controle ADD COLUMN visite_id INT NULL');
+        Db::exec('ALTER TABLE con_aq_controle ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT \'equipe\'');
+        Db::exec('ALTER TABLE con_aq_controle ADD COLUMN client_id VARCHAR(40) NULL');
+        try { Db::exec('ALTER TABLE con_aq_controle ADD KEY k_aq_visite (visite_id)'); } catch (Throwable $e2) { /* index déjà là */ }
+    }
     Db::exec('CREATE TABLE IF NOT EXISTS con_aq_photo (
         id INT AUTO_INCREMENT PRIMARY KEY,
         controle_id INT NOT NULL,
@@ -506,6 +520,14 @@ function wr_aq_controle(): array
     if (!aqShopOk($shop)) { http_response_code(403); return ['error' => 'magasin non autorisé']; }
     $p = aqCatalogue()[$pid] ?? null;
     if ($p === null) { http_response_code(404); return ['error' => 'produit inconnu du catalogue']; }
+    // Le contrôle d'une visite du consultant (26/11/2026) : la visite doit être celle de ce magasin ; jamais un essai.
+    $visiteId = null;
+    if (!empty($b['visite'])) {
+        $vis = function_exists('viVisiteParId') ? viVisiteParId((string) $b['visite']) : null;
+        if ($vis === null) { http_response_code(404); return ['error' => 'visite inconnue (pas encore envoyée par la tablette ?)']; }
+        if ((string) $vis['shop_id'] !== $shop) { http_response_code(422); return ['error' => 'la visite est celle d\'un autre magasin']; }
+        $visiteId = (int) $vis['id'];
+    }
     $g = aqGrilles();
     $cat = aqCategorieDe($g, $p) ?? ['cle' => '', 'photos' => []];
     $grille = aqGrilleProduit($cat, (array) ($g['communs'] ?? []), (array) ($g['produits'][(string) $pid]['surcharges'] ?? []));
@@ -527,19 +549,26 @@ function wr_aq_controle(): array
         if (isset($im['code'])) { http_response_code($im['code']); return ['error' => $im['error']]; }
         $images[$e] = $im;
     }
+    // Rejoué depuis le même appareil (même client_id) : le contrôle déjà enregistré, pas un second.
+    $clientId = preg_match('/^[\w-]{8,40}$/', (string) ($b['client_id'] ?? '')) ? (string) $b['client_id'] : null;
+    aqTables();
+    if ($clientId !== null && ($deja = Db::row('SELECT id, bilan, decision, essai FROM con_aq_controle WHERE client_id = ?', [$clientId])) !== null) {
+        return ['ok' => true, 'id' => (int) $deja['id'], 'bilan' => json_decode((string) $deja['bilan'], true) ?: [], 'decision' => (string) $deja['decision'],
+            'essai' => (bool) $deja['essai'], 'deja' => true];
+    }
+    $role = isset(AQ_ROLES[$b['role'] ?? '']) ? (string) $b['role'] : ($visiteId !== null ? 'consultant' : 'equipe');
     $decision = in_array($b['decision'] ?? '', AQ_DECISIONS, true) ? (string) $b['decision'] : $bilan['decision'];
     $fournee = preg_match('/^\d{2}:\d{2}$/', (string) ($b['fournee'] ?? '')) ? (string) $b['fournee'] : '';
     $pieces = is_numeric($b['pieces'] ?? null) && (int) $b['pieces'] > 0 ? (int) $b['pieces'] : null;
     $auteur = trim(mb_substr((string) ($b['auteur'] ?? ''), 0, 120)) ?: 'Tablette';
-    $essai = !empty($b['essai']) ? 1 : 0;
+    $essai = !empty($b['essai']) && $visiteId === null ? 1 : 0;
     $le = date('Y-m-d H:i:s');
-    aqTables();
     Db::exec('INSERT INTO con_aq_controle (shop_id, produit_id, produit_nom, grille, fournee, pieces, auteur, reponses, bilan,
-        niveau, decision, suggestion, ecarts, prevenir, reclamer, essai, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
+        niveau, decision, suggestion, ecarts, prevenir, reclamer, essai, cree_le, visite_id, role, client_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
         $shop, $pid, $p['nom'], $grille['cle'], $fournee, $pieces, $auteur,
         json_encode($reponses, JSON_UNESCAPED_UNICODE), json_encode($bilan, JSON_UNESCAPED_UNICODE),
         $bilan['niveau'], $decision, $bilan['decision'], count($bilan['ecarts']),
-        !empty($b['prevenir']) ? 1 : 0, !empty($b['reclamer']) ? 1 : 0, $essai, $le]);
+        !empty($b['prevenir']) ? 1 : 0, !empty($b['reclamer']) ? 1 : 0, $essai, $le, $visiteId, $role, $clientId]);
     $id = (int) (Db::row('SELECT MAX(id) id FROM con_aq_controle WHERE shop_id = ? AND produit_id = ? AND cree_le = ?', [$shop, $pid, $le])['id'] ?? 0);
     foreach ($images as $e => [$bin, $mime, $ext]) {
         $f = 'aq-' . $id . '-' . $e . '-' . bin2hex(random_bytes(6)) . '.' . $ext;
@@ -548,12 +577,12 @@ function wr_aq_controle(): array
     }
     if (!$essai && function_exists('journalAdd')) {
         $mag = function_exists('accesNomMagasin') ? accesNomMagasin($shop) : $shop;
-        journalAdd($auteur, 'autocontrole', $mag, sprintf('Autocontrôle %s · %s · %s · %d écart(s)%s', $p['nom'],
+        journalAdd($auteur, 'autocontrole', $mag, sprintf('Autocontrôle%s %s · %s · %s · %d écart(s)%s', $visiteId !== null ? ' (visite)' : ($role !== 'equipe' ? ' (' . mb_strtolower(AQ_ROLES[$role]) . ')' : ''), $p['nom'],
             $fournee !== '' ? 'fournée de ' . $fournee : 'sans fournée', ['vente' => 'mis en vente', 'declasser' => 'déclassé', 'jeter' => 'jeté'][$decision],
             count($bilan['ecarts']), !empty($b['prevenir']) ? ' · responsable prévenu' : ''));
     }
     http_response_code(201);
-    return ['ok' => true, 'id' => $id, 'bilan' => $bilan, 'decision' => $decision, 'essai' => (bool) $essai];
+    return ['ok' => true, 'id' => $id, 'bilan' => $bilan, 'decision' => $decision, 'essai' => (bool) $essai, 'visite' => $visiteId, 'role' => $role];
 }
 
 /** GET /autocontrole/magasin/photos/{id} — la photo, au magasin du contrôle et au siège ; sort le fichier puis s'arrête. */
@@ -751,6 +780,99 @@ function wr_aq_produit_admin(int $pid): array
     return ['ok' => true] + ep_aq_produit_admin($pid);
 }
 
+/* ── Dans le rapport de visite (consultant/src/suivi.php) ──────────────────────────────────────────────────── */
+
+/** Les libellés du bloc, dans les quatre langues du rapport. */
+function aqRapportMots(string $l): array
+{
+    $M = [
+        'fr' => ['titre' => 'Le contrôle qualité des produits', 'ok' => 'Conforme', 'mineur' => 'À surveiller', 'majeur' => 'Non conforme',
+            'vente' => 'mis en vente', 'declasser' => 'déclassé', 'jeter' => 'jeté', 'lot' => 'Lot', 'fournee' => 'fournée de', 'aucun' => 'Aucun écart : tout est à la cible.',
+            'prochaine' => 'Pour la prochaine fournée', 'conformes' => 'conformes'],
+        'nl' => ['titre' => 'De kwaliteitscontrole van de producten', 'ok' => 'Conform', 'mineur' => 'Op te volgen', 'majeur' => 'Niet conform',
+            'vente' => 'te koop gezet', 'declasser' => 'afgeprijsd', 'jeter' => 'weggegooid', 'lot' => 'Partij', 'fournee' => 'baksel van', 'aucun' => 'Geen afwijking: alles volgens de norm.',
+            'prochaine' => 'Voor het volgende baksel', 'conformes' => 'conform'],
+        'en' => ['titre' => 'Product quality check', 'ok' => 'Compliant', 'mineur' => 'To watch', 'majeur' => 'Not compliant',
+            'vente' => 'put on sale', 'declasser' => 'marked down', 'jeter' => 'discarded', 'lot' => 'Batch', 'fournee' => 'batch of', 'aucun' => 'No deviation: everything on target.',
+            'prochaine' => 'For the next batch', 'conformes' => 'compliant'],
+        'de' => ['titre' => 'Qualitätskontrolle der Produkte', 'ok' => 'Konform', 'mineur' => 'Zu beobachten', 'majeur' => 'Nicht konform',
+            'vente' => 'in den Verkauf', 'declasser' => 'reduziert', 'jeter' => 'entsorgt', 'lot' => 'Charge', 'fournee' => 'Backgang von', 'aucun' => 'Keine Abweichung: alles im Soll.',
+            'prochaine' => 'Für den nächsten Backgang', 'conformes' => 'konform'],
+    ];
+    return $M[$l] ?? $M['fr'];
+}
+
+/** Les contrôles qualité d'une visite (ligne con_visite), avec le fichier de leur première photo ; null s'il n'y en a pas. */
+function suQualite(array $v): ?array
+{
+    try {
+        aqTables();
+        $rows = Db::rows('SELECT * FROM con_aq_controle WHERE visite_id = ? ORDER BY cree_le, id', [(int) ($v['id'] ?? 0)]);
+    } catch (Throwable $e) { return null; }
+    if (!$rows) { return null; }
+    $fich = [];
+    $ids = array_values(array_filter(array_map(static fn ($r) => (int) $r['id'], $rows)));
+    foreach (Db::rows('SELECT controle_id, fichier, mime FROM con_aq_photo WHERE controle_id IN (' . implode(',', $ids) . ') ORDER BY id') as $ph) {
+        $fich[(int) $ph['controle_id']] ??= ['fichier' => (string) $ph['fichier'], 'mime' => (string) $ph['mime']];
+    }
+    return array_map(static fn ($r) => ['ligne' => aqLigneControle($r, [], []), 'photo' => $fich[(int) $r['id']] ?? null], $rows);
+}
+
+/** Le bloc du rapport (PDF, « Voir le rapport ») : chaque produit contrôlé, son résultat, le lot, ses écarts et la photo. */
+function suQualiteHtml(?array $q, string $l, callable $e): string
+{
+    if (!$q) { return ''; }
+    $M = aqRapportMots($l);
+    $coul = ['ok' => '#3f7a52', 'mineur' => '#7A5207', 'majeur' => '#A32014'];
+    $fond = ['ok' => 'rgba(63,122,82,.12)', 'mineur' => '#F6E7CE', 'majeur' => '#F7E0DC'];
+    $h = '';
+    foreach ($q as $x) {
+        $k = $x['ligne'];
+        $img = '';
+        if ($x['photo'] !== null) {
+            try {
+                $f = aqDossier() . '/' . basename($x['photo']['fichier']);
+                if (is_file($f) && filesize($f) < 2_500_000) {
+                    $img = '<img src="data:' . $e($x['photo']['mime']) . ';base64,' . base64_encode((string) file_get_contents($f)) . '" alt="" style="width:110px;height:110px;object-fit:cover;border-radius:8px;border:1px solid #EAE3DA">';
+                }
+            } catch (Throwable $err) { /* pas de dossier privé : pas de photo */ }
+        }
+        $ec = '';
+        foreach ($k['ecarts'] as $d) {
+            $ec .= '<li style="margin:0 0 3px"><span style="color:' . ($coul[$d['niveau']] ?? '#7A5207') . '">' . $e($d['libelle']) . ' : ' . $e($d['reponse']) . '</span>'
+                . ($d['prochaine'] !== '' ? ' <span style="color:#5c5852">— ' . $e($d['prochaine']) . '</span>' : '') . '</li>';
+        }
+        $niv = $k['niveau'];
+        $h .= '<div style="display:flex;gap:12px;padding:10px 0;border-top:1px solid #EAE3DA;page-break-inside:avoid">' . $img
+            . '<div style="flex:1;font-size:12px"><div style="font-size:13px;margin:0 0 3px">' . $e($k['produit'])
+            . ' <span style="display:inline-block;padding:1px 7px;border-radius:4px;font-size:11px;background:' . $fond[$niv] . ';color:' . $coul[$niv] . '">' . $e($M[$niv]) . '</span></div>'
+            . '<div style="color:#7a736a;margin:0 0 5px">' . $e($M['lot']) . ' ' . $e($M[$k['decision']] ?? $k['decision'])
+            . ($k['fournee'] !== '' ? ' · ' . $e($M['fournee']) . ' ' . $e($k['fournee']) : '') . ' · ' . (int) ($k['n']['ok'] ?? 0) . ' ' . $e($M['conformes']) . '</div>'
+            . ($ec !== '' ? '<ul style="margin:0;padding-left:16px">' . $ec . '</ul>' : '<div style="color:#3f7a52">' . $e($M['aucun']) . '</div>') . '</div></div>';
+    }
+    return '<div style="margin:0 0 14px;padding:12px 14px;border:1px solid #EAE3DA;border-radius:10px">'
+        . '<div style="font-weight:400;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;margin:0 0 4px">' . $e($M['titre']) . ' · ' . count($q) . '</div>' . $h . '</div>';
+}
+
+/** Le bloc pour les écrans (bureau, page du franchisé) : sans les photos, qui restent derrière la session. */
+function suQualiteVue(array $v, string $l): ?array
+{
+    $q = suQualite($v);
+    if (!$q) { return null; }
+    $M = aqRapportMots($l);
+    return ['titre' => $M['titre'], 'controles' => array_map(static fn ($x) => [
+        'id' => $x['ligne']['id'], 'produit' => $x['ligne']['produit'], 'niveau' => $x['ligne']['niveau'], 'niveauTxt' => $M[$x['ligne']['niveau']] ?? '',
+        'decision' => $M[$x['ligne']['decision']] ?? $x['ligne']['decision'], 'fournee' => $x['ligne']['fournee'], 'auteur' => $x['ligne']['auteur'],
+        'ecarts' => array_map(static fn ($d) => ['libelle' => $d['libelle'], 'reponse' => $d['reponse'], 'niveau' => $d['niveau'], 'prochaine' => $d['prochaine']], $x['ligne']['ecarts']),
+        'photo' => $x['photo'] !== null], $q)];
+}
+
+/** Une visite effacée ou remise à zéro : ses contrôles restent ceux du magasin, détachés de la visite. */
+function aqDetacherVisites(string $sql, array $args): void
+{
+    try { Db::exec('UPDATE con_aq_controle SET visite_id = NULL WHERE ' . $sql, $args); } catch (Throwable $e) { /* table pas encore créée */ }
+}
+
 /* ── Les routes du siège ─────────────────────────────────────────────────────────────────────────────────── */
 
 /** GET /autocontrole/grilles — le brouillon, la version publiée, et ce qui empêche de publier. */
@@ -805,6 +927,51 @@ function wr_aq_publier(): array
     return ['ok' => true, 'publieLe' => $doc['publieLe']];
 }
 
+/** Un contrôle tel que le siège et la visite le lisent (photos : [{etape, url}] servies par l'API). */
+function aqLigneControle(array $r, array $photos, array $noms): array
+{
+    $b = json_decode((string) $r['bilan'], true) ?: [];
+    $role = (string) ($r['role'] ?? 'equipe');
+    return ['id' => (int) $r['id'], 'shop' => (string) $r['shop_id'], 'magasin' => $noms[(string) $r['shop_id']] ?? ('Magasin ' . $r['shop_id']),
+        'produitId' => (int) $r['produit_id'], 'produit' => (string) $r['produit_nom'], 'grille' => (string) $r['grille'],
+        'fournee' => (string) $r['fournee'], 'pieces' => $r['pieces'] !== null ? (int) $r['pieces'] : null, 'auteur' => (string) $r['auteur'],
+        'role' => $role, 'roleNom' => AQ_ROLES[$role] ?? $role, 'visite' => isset($r['visite_id']) && $r['visite_id'] !== null ? (int) $r['visite_id'] : null,
+        'niveau' => (string) $r['niveau'], 'decision' => (string) $r['decision'], 'suggestion' => (string) $r['suggestion'],
+        'ecarts' => (array) ($b['ecarts'] ?? []), 'actions' => (array) ($b['actions'] ?? []), 'n' => (array) ($b['n'] ?? []),
+        'prevenir' => (bool) $r['prevenir'], 'reclamer' => (bool) $r['reclamer'], 'essai' => (bool) $r['essai'],
+        'cree_le' => (string) $r['cree_le'], 'photos' => $photos];
+}
+
+/** Les photos de contrôles donnés : [controle_id => [{etape, url}]]. */
+function aqPhotosDe(array $ids): array
+{
+    $out = [];
+    $ids = array_values(array_filter(array_map('intval', $ids)));
+    if (!$ids) { return $out; }
+    foreach (Db::rows('SELECT id, controle_id, etape FROM con_aq_photo WHERE controle_id IN (' . implode(',', $ids) . ') ORDER BY id') as $ph) {
+        $out[(int) $ph['controle_id']][] = ['etape' => (string) $ph['etape'], 'url' => '/autocontrole/magasin/photos/' . (int) $ph['id']];
+    }
+    return $out;
+}
+
+/**
+ * GET /autocontrole/magasin/visite?shop=&visite= — les contrôles qualité d'une visite du consultant (l'étape « Le contrôle
+ * qualité de 3 produits » de la visite, consultant/public/assets/js/visites.js).
+ */
+function ep_aq_visite(): array
+{
+    $shop = (string) ($_GET['shop'] ?? '');
+    if (!aqShopOk($shop)) { http_response_code(403); return ['error' => 'magasin non autorisé']; }
+    $vis = function_exists('viVisiteParId') ? viVisiteParId((string) ($_GET['visite'] ?? '')) : null;
+    if ($vis === null || (string) $vis['shop_id'] !== $shop) { return ['visite' => null, 'controles' => []]; }
+    aqTables();
+    $rows = Db::rows('SELECT * FROM con_aq_controle WHERE visite_id = ? ORDER BY cree_le, id', [(int) $vis['id']]);
+    $photos = aqPhotosDe(array_column($rows, 'id'));
+    $noms = function_exists('accesMagasins') ? accesMagasins() : [];
+    return ['visite' => ['id' => (int) $vis['id'], 'le' => (string) ($vis['prevu_le'] ?? '')],
+        'controles' => array_map(static fn ($r) => aqLigneControle($r, $photos[(int) $r['id']] ?? [], $noms), $rows)];
+}
+
 /**
  * GET /autocontrole/controles?shop=&jours=30&essais=0 — les contrôles du réseau (ou d'un magasin), avec leurs photos,
  * et les défauts qui reviennent par magasin et produit.
@@ -819,25 +986,12 @@ function ep_aq_controles(): array
     if ($shop !== '') { $sql .= ' AND shop_id = ?'; $a[] = $shop; }
     if (empty($_GET['essais'])) { $sql .= ' AND essai = 0'; }
     $rows = Db::rows($sql . ' ORDER BY cree_le DESC, id DESC LIMIT 500', $a);
-    $photos = [];
-    if ($rows) {
-        $ids = array_map(static fn ($r) => (int) $r['id'], $rows);
-        foreach (Db::rows('SELECT id, controle_id, etape FROM con_aq_photo WHERE controle_id IN (' . implode(',', $ids) . ') ORDER BY id') as $ph) {
-            $photos[(int) $ph['controle_id']][] = ['etape' => (string) $ph['etape'], 'url' => '/autocontrole/magasin/photos/' . (int) $ph['id']];
-        }
-    }
+    $photos = aqPhotosDe(array_column($rows, 'id'));
     $noms = function_exists('accesMagasins') ? accesMagasins() : [];
     $out = [];
     $groupes = [];
     foreach ($rows as $r) {
-        $b = json_decode((string) $r['bilan'], true) ?: [];
-        $k = ['id' => (int) $r['id'], 'shop' => (string) $r['shop_id'], 'magasin' => $noms[(string) $r['shop_id']] ?? ('Magasin ' . $r['shop_id']),
-            'produitId' => (int) $r['produit_id'], 'produit' => (string) $r['produit_nom'], 'grille' => (string) $r['grille'],
-            'fournee' => (string) $r['fournee'], 'pieces' => $r['pieces'] !== null ? (int) $r['pieces'] : null, 'auteur' => (string) $r['auteur'],
-            'niveau' => (string) $r['niveau'], 'decision' => (string) $r['decision'], 'suggestion' => (string) $r['suggestion'],
-            'ecarts' => (array) ($b['ecarts'] ?? []), 'actions' => (array) ($b['actions'] ?? []), 'n' => (array) ($b['n'] ?? []),
-            'prevenir' => (bool) $r['prevenir'], 'reclamer' => (bool) $r['reclamer'], 'essai' => (bool) $r['essai'],
-            'cree_le' => (string) $r['cree_le'], 'photos' => $photos[(int) $r['id']] ?? []];
+        $k = aqLigneControle($r, $photos[(int) $r['id']] ?? [], $noms);
         $out[] = $k;
         if (!$k['essai']) { $groupes[$k['shop'] . '|' . $k['produitId']][] = $k; }
     }
@@ -857,6 +1011,7 @@ function aqRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/autocontrole/magasin/produits') { return ep_aq_produits(); }
     if ($method === 'GET' && $path === '/autocontrole/magasin/produit') { return ep_aq_produit(); }
     if ($method === 'POST' && $path === '/autocontrole/magasin/controles') { return wr_aq_controle(); }
+    if ($method === 'GET' && $path === '/autocontrole/magasin/visite') { return ep_aq_visite(); }
     if ($method === 'GET' && preg_match('#^/autocontrole/magasin/photos/(\d+)$#', $path, $m)) { aqPhotoSortir((int) $m[1]); }
     if ($method === 'GET' && $path === '/autocontrole/grilles') { return ep_aq_grilles(); }
     if ($method === 'PUT' && $path === '/autocontrole/grilles') { return wr_aq_grilles(); }
