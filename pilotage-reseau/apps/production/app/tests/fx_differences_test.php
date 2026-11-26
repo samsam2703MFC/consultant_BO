@@ -174,6 +174,7 @@ $repo = new FxDifferenceRepository($pdo);
 $parser = new class implements BankStatementParser {
     public array $lines = [];
     public function name(): string { return 'test'; }
+    public function header(string $text): array { return []; }
     public function parse(string $text): array { if (!str_contains((string) preg_replace('/\s+/', ' ', $text), 'WYCIAG TESTOWY')) throw new StatementFormatNotSupported('nieznany format'); return $this->lines; }
 };
 $ing = new BankStatementService($repo, $cipher, new IngStatementParser());
@@ -181,7 +182,7 @@ $stParsed = new BankStatementService($repo, $cipher, $parser);
 $fx = new FxDifferenceService($repo, $ing, $nbp);
 $makePdf = function (string $text): string { $p = new TCPDFService('P', 'mm', 'a4', true, 'UTF-8', false); $p->setPrintHeader(false); $p->setPrintFooter(false); $p->AddPage(); $p->SetFont('dejavusans', '', 10); $p->MultiCell(0, 0, $text); return $p->Output('', 'S'); };
 
-// --- Wyciągi : ING (format pas encore pris en charge), lecteur de test (lignes lues), doublon, autre fichier
+// --- Wyciągi : ING (texte non reconnu), lecteur de test (lignes lues), doublon, autre fichier
 $pdfIng = $makePdf("ING Bank Śląski\nWyciąg z rachunku EUR 16.11.2026 – 30.11.2026\nUznanie 2 400,00 EUR Bistro Test B FV/2026/11/0142");
 $u2 = $ing->upload($pdfIng, 'ING_EUR_16-30.11.pdf', ['account' => 'EUR', 'period_from' => '2026-11-16', 'period_to' => '2026-11-30'], 7, $today);
 $row = $pdo->query("SELECT * FROM n_bank_statement WHERE id = {$u2['id']}")->fetch();
@@ -344,6 +345,29 @@ $check($cKo === 200 && ($bKo['data']['values'] ?? null) === true && count($bKo['
 $check($cLog === 403, 'controller : Logistyka without the right → 403');
 $check($cLog2 === 200 && ($bLog2['data']['values'] ?? null) === false && !isset($bLog2['data']['rows']) && $cLogPdf === 403, 'controller : right given to another position → frame only, amounts and files refused (403)');
 unset($_SESSION['USER'], $_GET['month']);
+
+// --- [444] Wyciąg ING réel (mise en page du relevé du 23.11.2026, anonymisée : tests/fixtures/ing_wyciag_eur.txt) + un
+// crédit de client fictif, rendu en PDF puis lu par pdftotext comme à l'envoi.
+$lay = explode("\n", (string) file_get_contents(__DIR__ . '/fixtures/ing_wyciag_eur.txt'));
+$at = array_key_first(preg_grep('/^\s*23\.11\.2026 /u', $lay));
+$end = mb_strlen(rtrim($lay[$at]));
+$cell = function (array $cells): string { $s = ''; foreach ($cells as [$col, $txt]) $s = mb_str_pad($s, $col) . $txt; return $s; };
+array_splice($lay, $at, 0, [$cell([[4, '23.11.2026'], [15, 'BE00 0000 0000 0009'], [61, 'wplata test 777'], [89, 'PRZELEW SEPA PRZYCHODZĄCY'], [$end - 5, '77,00']]),
+    $cell([[2, '97000000777'], [15, 'SKLEP TESTOWY C SPRL'], [89, 'Data transakcji: 23.11.2026']]), $cell([[17, '1000 BRUXELLES']])]);
+$txt = str_replace(['Suma uznań (+):                   0,00', 'Liczba uznań (+): 0'], ['Suma uznań (+):                   77,00', 'Liczba uznań (+): 1'], implode("\n", $lay));
+$pdfReal = (function (string $t): string { $p = new \TCPDF('L', 'mm', 'A3', true, 'UTF-8', false); $p->setPrintHeader(false); $p->setPrintFooter(false); $p->SetAutoPageBreak(false); $p->AddPage();
+    $p->SetFont('dejavusansmono', '', 7); $y = 5; foreach (explode("\n", $t) as $l) { $p->Text(5, $y, $l); $y += 3.2; } return $p->Output('', 'S'); })($txt);
+$before = (int) $pdo->query('SELECT COUNT(*) FROM n_bank_statement')->fetchColumn();
+$wrong = $err(fn() => $ing->upload($pdfReal, 'Statement_EUR_279.pdf', ['account' => 'PLN'], 7, $today));
+$check(str_starts_with($wrong, 'custom:422:To wyciąg z rachunku EUR') && (int) $pdo->query('SELECT COUNT(*) FROM n_bank_statement')->fetchColumn() === $before,
+    '[444] EUR statement sent as « Konto PLN » → 422 (« Waluta rachunku » of the header), nothing stored');
+$uR = $ing->upload($pdfReal, 'Statement_EUR_279.pdf', ['account' => 'EUR'], 7, $today);
+$sR = $pdo->query("SELECT * FROM n_bank_statement WHERE id = {$uR['id']}")->fetch();
+$lR = $pdo->query("SELECT * FROM n_bank_statement_line WHERE id_statement = {$uR['id']}")->fetchAll();
+$check($uR['status'] === 'parsed' && $uR['lines'] === 1 && $uR['other'] === 7 && $sR['parser'] === 'ing' && $sR['period_from'] === '2026-11-22' && $sR['period_to'] === '2026-11-23'
+    && count($lR) === 1 && $lR[0]['booked_on'] === '2026-11-23' && (float) $lR[0]['amount'] === 77.0 && $lR[0]['currency'] === 'EUR' && $lR[0]['source'] === 'pdf'
+    && str_starts_with((string) $lR[0]['payer_enc'], 'p1:') && !str_contains((string) $lR[0]['title_enc'], '777'),
+    '[444] ING EUR statement read : 1 customer credit kept (7 kantor / transfer debits counted), period from the header, payer and title encrypted');
 
 $pdo->exec("DROP DATABASE {$db}");
 echo $fail ? "\n{$fail} FAIL\n" : "\nall ok\n";
