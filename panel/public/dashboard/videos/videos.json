@@ -251,16 +251,16 @@
       ],
       "fichier": "02-04-mois.mp4",
       "debut": 0,
-      "fin": 59.43,
+      "fin": 60.4,
       "affiche": "equipe-mois.jpg",
-      "duree": "59 s",
+      "duree": "1 min",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-fenetre",
@@ -274,17 +274,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 0,
-      "fin": 47.02,
+      "debut": 0.01,
+      "fin": 49.85,
       "affiche": "equipe-fenetre.jpg",
-      "duree": "47 s",
+      "duree": "50 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-adapter",
@@ -298,17 +298,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 47.02,
-      "fin": 80.97,
+      "debut": 49.85,
+      "fin": 84.86,
       "affiche": "equipe-adapter.jpg",
-      "duree": "34 s",
+      "duree": "35 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-ajouter-shift",
@@ -322,8 +322,8 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 80.97,
-      "fin": 116.6,
+      "debut": 84.86,
+      "fin": 120.43,
       "affiche": "equipe-ajouter-shift.jpg",
       "duree": "36 s",
       "sources": [
@@ -331,8 +331,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-retirer",
@@ -346,17 +346,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 116.6,
-      "fin": 167.01,
+      "debut": 120.43,
+      "fin": 171.25,
       "affiche": "equipe-retirer.jpg",
-      "duree": "50 s",
+      "duree": "51 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-parcourir",
@@ -370,8 +370,8 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 167.01,
-      "fin": 211.61,
+      "debut": 171.25,
+      "fin": 216.36,
       "affiche": "equipe-parcourir.jpg",
       "duree": "45 s",
       "sources": [
@@ -379,8 +379,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-creneau",
@@ -394,17 +394,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 211.61,
-      "fin": 262.92,
+      "debut": 216.36,
+      "fin": 268.68,
       "affiche": "equipe-creneau.jpg",
-      "duree": "51 s",
+      "duree": "52 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-options",
@@ -515,16 +515,16 @@
       ],
       "fichier": "02-09-assistant-chiffre.mp4",
       "debut": 0,
-      "fin": 45.58,
+      "fin": 47.55,
       "affiche": "equipe-assistant-chiffre.jpg",
-      "duree": "46 s",
+      "duree": "48 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-assistant-temps-morts",
@@ -539,7 +539,7 @@
       ],
       "fichier": "02-10-assistant-temps-morts.mp4",
       "debut": 0,
-      "fin": 43.81,
+      "fin": 44.1,
       "affiche": "equipe-assistant-temps-morts.jpg",
       "duree": "44 s",
       "sources": [
@@ -547,8 +547,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-taches",
@@ -562,8 +562,8 @@
         "equipe"
       ],
       "fichier": "02-10-assistant-temps-morts.mp4",
-      "debut": 43.81,
-      "fin": 86.96,
+      "debut": 44.1,
+      "fin": 87.4,
       "affiche": "equipe-taches.jpg",
       "duree": "43 s",
       "sources": [
@@ -571,8 +571,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-assistant-verifier",
@@ -587,7 +587,7 @@
       ],
       "fichier": "02-11-assistant-verifier.mp4",
       "debut": 0,
-      "fin": 43.51,
+      "fin": 44.27,
       "affiche": "equipe-assistant-verifier.jpg",
       "duree": "44 s",
       "sources": [
@@ -595,8 +595,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-assistant",
@@ -610,17 +610,17 @@
         "equipe"
       ],
       "fichier": "02-11-assistant-verifier.mp4",
-      "debut": 43.51,
-      "fin": 86.78,
+      "debut": 44.27,
+      "fin": 90.2,
       "affiche": "equipe-assistant.jpg",
-      "duree": "43 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-recopie",
@@ -927,15 +927,15 @@
       ],
       "fichier": "09-01-plan.mp4",
       "debut": 0,
-      "fin": 72.9,
+      "fin": 71.37,
       "affiche": "treso-plan.jpg",
-      "duree": "1 min 13",
+      "duree": "1 min 11",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-solde-dimanche",
@@ -949,16 +949,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 72.9,
-      "fin": 101.3,
+      "debut": 71.37,
+      "fin": 99.24,
       "affiche": "treso-solde-dimanche.jpg",
       "duree": "28 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-prevision-ventes",
@@ -972,16 +972,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 101.3,
-      "fin": 134.01,
+      "debut": 99.24,
+      "fin": 131.13,
       "affiche": "treso-prevision-ventes.jpg",
-      "duree": "33 s",
+      "duree": "32 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-montant-semaine",
@@ -995,16 +995,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 134.01,
-      "fin": 164.47,
+      "debut": 131.13,
+      "fin": 162.6,
       "affiche": "treso-montant-semaine.jpg",
-      "duree": "30 s",
+      "duree": "31 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-ponctuel",
@@ -1018,16 +1018,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 164.47,
-      "fin": 189.86,
+      "debut": 162.6,
+      "fin": 188.45,
       "affiche": "treso-ponctuel.jpg",
-      "duree": "25 s",
+      "duree": "26 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-pilotage",
@@ -1041,16 +1041,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 189.86,
-      "fin": 230.68,
+      "debut": 188.45,
+      "fin": 229.75,
       "affiche": "treso-pilotage.jpg",
       "duree": "41 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-dettes-hors-plan",
@@ -1064,16 +1064,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 230.68,
-      "fin": 280.4,
+      "debut": 229.75,
+      "fin": 279.15,
       "affiche": "treso-dettes-hors-plan.jpg",
-      "duree": "50 s",
+      "duree": "49 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-reessayer",
@@ -1087,16 +1087,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 280.4,
-      "fin": 331.1,
+      "debut": 279.15,
+      "fin": 330.12,
       "affiche": "treso-reessayer.jpg",
       "duree": "51 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-plan-neuf",
@@ -1110,16 +1110,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 331.1,
-      "fin": 376.54,
+      "debut": 330.12,
+      "fin": 376.56,
       "affiche": "treso-plan-neuf.jpg",
-      "duree": "45 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-fournisseurs",
@@ -1134,15 +1134,15 @@
       ],
       "fichier": "09-02-fournisseurs.mp4",
       "debut": 0,
-      "fin": 59.69,
+      "fin": 57.64,
       "affiche": "treso-fournisseurs.jpg",
-      "duree": "1 min",
+      "duree": "58 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-facture-fournisseur",
@@ -1156,16 +1156,16 @@
         "tresorerie"
       ],
       "fichier": "09-02-fournisseurs.mp4",
-      "debut": 59.69,
-      "fin": 101.96,
+      "debut": 57.64,
+      "fin": 97.51,
       "affiche": "treso-facture-fournisseur.jpg",
-      "duree": "42 s",
+      "duree": "40 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-estimation-fournisseur",
@@ -1179,16 +1179,16 @@
         "tresorerie"
       ],
       "fichier": "09-02-fournisseurs.mp4",
-      "debut": 101.96,
-      "fin": 130.26,
+      "debut": 97.51,
+      "fin": 124.89,
       "affiche": "treso-estimation-fournisseur.jpg",
-      "duree": "28 s",
+      "duree": "27 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-fournisseur-ajouter",
@@ -1202,16 +1202,16 @@
         "tresorerie"
       ],
       "fichier": "09-02-fournisseurs.mp4",
-      "debut": 130.26,
-      "fin": 175.25,
+      "debut": 124.89,
+      "fin": 170.73,
       "affiche": "treso-fournisseur-ajouter.jpg",
-      "duree": "45 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-plafond-achats",
@@ -1225,16 +1225,16 @@
         "tresorerie"
       ],
       "fichier": "09-02-fournisseurs.mp4",
-      "debut": 175.25,
-      "fin": 211.05,
+      "debut": 170.73,
+      "fin": 209.92,
       "affiche": "treso-plafond-achats.jpg",
-      "duree": "36 s",
+      "duree": "39 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-paiements",
@@ -1249,15 +1249,15 @@
       ],
       "fichier": "09-03-paiements.mp4",
       "debut": 0,
-      "fin": 50.23,
+      "fin": 53.11,
       "affiche": "treso-paiements.jpg",
-      "duree": "50 s",
+      "duree": "53 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-paiement-ajouter",
@@ -1271,16 +1271,16 @@
         "tresorerie"
       ],
       "fichier": "09-03-paiements.mp4",
-      "debut": 50.23,
-      "fin": 94.69,
+      "debut": 53.11,
+      "fin": 102.38,
       "affiche": "treso-paiement-ajouter.jpg",
-      "duree": "44 s",
+      "duree": "49 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-paiement-modifier",
@@ -1294,16 +1294,16 @@
         "tresorerie"
       ],
       "fichier": "09-03-paiements.mp4",
-      "debut": 94.69,
-      "fin": 140.62,
+      "debut": 102.38,
+      "fin": 151.04,
       "affiche": "treso-paiement-modifier.jpg",
-      "duree": "46 s",
+      "duree": "49 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-budget",
@@ -1318,15 +1318,15 @@
       ],
       "fichier": "09-04-budget.mp4",
       "debut": 0,
-      "fin": 81.24,
+      "fin": 82.65,
       "affiche": "treso-budget.jpg",
-      "duree": "1 min 21",
+      "duree": "1 min 23",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-du-mois",
@@ -1480,7 +1480,7 @@
       ],
       "fichier": "10-analyse.mp4",
       "affiche": "10-analyse.jpg",
-      "duree": "2 min 57",
+      "duree": "2 min 49",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/analyse.js",
@@ -1488,8 +1488,8 @@
         "panel/src/dashboard_analyse.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "produits",
@@ -1501,7 +1501,7 @@
       ],
       "fichier": "11-produits.mp4",
       "affiche": "11-produits.jpg",
-      "duree": "2 min 58",
+      "duree": "2 min 41",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
@@ -1510,8 +1510,8 @@
         "panel/src/prix_produit.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "promotions",
@@ -1739,7 +1739,7 @@
       ],
       "fichier": "13-offres.mp4",
       "affiche": "13-offres.jpg",
-      "duree": "2 min 53",
+      "duree": "2 min 36",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/offres.js",
@@ -1747,8 +1747,8 @@
         "marketing/public/assets/js/newsletter.js",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-en-cours",
@@ -2422,15 +2422,15 @@
       ],
       "fichier": "15-concurrence.mp4",
       "affiche": "15-concurrence.jpg",
-      "duree": "2 min 42",
+      "duree": "2 min 29",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "d50e8cdedf99f7305989f9bfc2282a5cb8248c12",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "marketing",
