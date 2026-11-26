@@ -751,7 +751,7 @@
     const P = st.p, E = st.e, B = st.b, A = st.a, m = st.mo;
     switch (act) {
       case 'fermer': st.mo = null; rendre(); break;
-      case 'onglet': st.onglet = v; memo('pcl-onglet:' + st.shop, v); st.mo = null; if (v === 'b2c' && !P.d) { lireParticuliers(); } else if (v === 'b2b' && !E.d) { charger(); } else if (v === 'bur' && !B.d) { lireBureaux(); lireDev(); } else if (v === 'an' && !A.d) { lireAnalyse(); } else { rendre(); } break;
+      case 'onglet': st.onglet = v; memo('pcl-onglet:' + st.shop, v); st.mo = null; if (v === 'b2c' && !P.d) { lireParticuliers(); } else if (v === 'b2b' && !E.d) { charger(); } else if (v === 'bur') { if (!B.d) { lireBureaux(); } lireDev(); }   // les bureaux en développement se lisent même si Entreprises B2B a déjà lu les bureaux (26/11/2026) else if (v === 'an' && !A.d) { lireAnalyse(); } else { rendre(); } break;
       case 'aller-offres': if (st.aller) { st.aller('offres'); } break;
       case 'tfb-connecter': if (window.DashTfb) { window.DashTfb.ouvrir(st.shop, st.api, toutRelire); } break;
       case 'tfb-deconnecter': if (window.DashTfb) { window.DashTfb.deconnecter(st.shop, st.api).then(toutRelire); } break;
