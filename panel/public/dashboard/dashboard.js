@@ -2844,7 +2844,7 @@
       const w = k === 'L' ? `stock <b>${fN(e.st || 0)}</b> · ${e.pj ? nf(e.pj, 1) + ' vendus par jour' : 'pas de vente lue'}${e.txt ? ' · <b>' + esc(e.txt) + '</b>' : ''}`
         : (e.c === 'ok' ? `sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)} · en vitrine ${fN(Math.max(0, +p.stock || 0))}` : `<b>${esc(e.txt)}</b> · sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)}`);
       const vis = k === 'L' ? `<span class="vt-jl"><i class="${e.c}" style="width:${e.pj > 0 ? Math.min(100, 100 * (e.st || 0) / (e.pj * OP_VIE_JOURS)).toFixed(0) : 0}%"></i></span>` : vitBande(D, p);
-      const mq = e.c === 'ok' ? '' : (k === 'L' ? `<b>${fN(e.n)}</b>pour ${OP_VIE_JOURS} jours de vente` : `<b>${fN(e.q)} pièce${e.q >= 2 ? 's' : ''}</b>${fE((e.q || 0) * (+p.prix || 0))} de ventes`);
+      const mq = e.c === 'ok' ? '' : (k === 'L' ? `<b>${fN(e.n)}</b>pour ${OP_VIE_JOURS} jours de vente` : `<b>${fN(e.q)} pièce${Math.round(e.q) >= 2 ? 's' : ''}</b>${fE((e.q || 0) * (+p.prix || 0))} de ventes`);
       // La micro-vignette (10/10/2026, D2) : l'heure de la rupture, rouge pâle si vide, cadre orange si ça va manquer ;
       // long life : le stock. Le reste du texte passe dans l'infobulle.
       const tl = e.c === 'ok' ? '' : (k === 'L' ? fN(e.st || 0) : (e.h != null ? e.h + 'h' : ''));
@@ -3478,8 +3478,10 @@
         // Les deux fins sont voisines depuis que l'axe s'arrête à 20 h : l'étiquette de la courbe la plus haute au-dessus
         // de son point, l'autre dessous — elles ne se chevauchent plus.
         const aDessus = lastA.v > last7.v;
-        g += `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + (aDessus ? -10 : 18)).toFixed(1)}" text-anchor="end" class="ta">${L[sep ? 2 : 1][3]} ${fmtV(lastA.v)}</text>`;
-        g += `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) + (aDessus ? 18 : -10)).toFixed(1)}" text-anchor="end" class="t7">${L[0][3]} ${fmtV(last7.v)}</text>`;
+        // Dans le cadre (26/11/2026 : près du haut de l'échelle, « jeudi dernier … » sortait par le haut).
+        const dans = v => Math.max(12, Math.min(Hh - 22, v));
+        g += `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${dans(y(lastA.v) + (aDessus ? -10 : 18)).toFixed(1)}" text-anchor="end" class="ta">${L[sep ? 2 : 1][3]} ${fmtV(lastA.v)}</text>`;
+        g += `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${dans(y(last7.v) + (aDessus ? 18 : -10)).toFixed(1)}" text-anchor="end" class="t7">${L[0][3]} ${fmtV(last7.v)}</text>`;
       }
       return g + '</svg>';
     };
@@ -8852,6 +8854,7 @@
     } else if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
     else if (!d) { corps = '<div class="fi-msg"><div class="db-sk" style="width:60%;margin:6px 0"></div><div class="db-sk" style="width:85%;height:180px;margin:10px 0"></div></div>'; }
     else if (d.indispo) { corps = `<div class="fi-msg">${esc(d.motif || 'indisponible')}</div>`; }
+    else if (d.error || !d.semaines) { corps = `<div class="fi-msg">${esc(d.error || 'Les 12 semaines ne sont pas encore lues.')}</div>`; }   // 26/11/2026 : « reading 'magasin' »
     else { corps = c12Semaines(F, d, court); }
     const sous = F.c12 === 'groupe' ? 'groupe de catégories' + (d && d.categories && d.categories.length ? ' · ' + d.categories.map(esc).join(', ') : '') : 'catégorie' + (d && d.groupe ? ' · groupe ' + esc(d.groupe) : '');
     box.innerHTML = `<div class="fi-voile" data-ffermer="1"></div><div class="fi-modale" role="dialog" aria-modal="true" aria-label="${esc(F.nom)}">
@@ -8910,7 +8913,10 @@
     // Les étiquettes de la dernière semaine close, à droite, écartées si elles se touchent.
     const k1 = Math.max(0, n - 2); let yM = y(M[k1] || 0) + 4, yR = y(R[k1] || 0) + 4;
     if (Math.abs(yM - yR) < 14) { const mid = (yM + yR) / 2, sgn = yM <= yR ? -1 : 1; yM = mid + 7 * sgn; yR = mid - 7 * sgn; }
-    const fin = `<text class="lab" x="${Wd - m.r + 10}" y="${yM.toFixed(1)}">${esc(nomShop().replace(/^.* - /, ''))} ${vU(M[k1])}</text><text class="ax" x="${Wd - m.r + 10}" y="${yR.toFixed(1)}" style="font-weight:400">réseau ${eu ? vU(R[k1] || 0) : nf(R[k1] || 0, 0)}</text><text class="ax" x="${Wd - m.r + 10}" y="${(Math.max(yM, yR) + 13).toFixed(1)}" style="font-size:10px">en ${esc(lib[k1] || '')}</text>`;
+    // Le nom du magasin raccourci pour tenir dans la marge de droite avec sa valeur (26/11/2026 : « Magasin démo 3 … »
+    // était coupé au bord) ; le nom entier au survol.
+    const nomC = nomShop().replace(/^.* - /, ''), limC = Math.max(4, 16 - String(vU(M[k1])).length), nomCourt = nomC.length > limC ? nomC.slice(0, limC - 1) + '…' : nomC;
+    const fin = `<text class="lab" x="${Wd - m.r + 10}" y="${yM.toFixed(1)}"><title>${esc(nomC)}</title>${esc(nomCourt)} ${vU(M[k1])}</text><text class="ax" x="${Wd - m.r + 10}" y="${yR.toFixed(1)}" style="font-weight:400">réseau ${eu ? vU(R[k1] || 0) : nf(R[k1] || 0, 0)}</text><text class="ax" x="${Wd - m.r + 10}" y="${(Math.max(yM, yR) + 13).toFixed(1)}" style="font-size:10px">en ${esc(lib[k1] || '')}</text>`;
     if (tend && n >= 4) {
       const yc = v => y(Math.max(0, Math.min(haut, v)));
       g += `<line x1="${cx(0).toFixed(1)}" y1="${yc(tend.b).toFixed(1)}" x2="${cx(n - 2).toFixed(1)}" y2="${yc(tend.b + tend.p * (n - 2)).toFixed(1)}" stroke="#1d1d1b" stroke-width="1.6" stroke-dasharray="6 5" opacity=".7"><title>la tendance : ${tend.p >= 0 ? '+' : '−'}${eu ? fE(Math.abs(tend.p)) : nf(Math.abs(tend.p), 1)} par semaine</title></line>`;
@@ -9135,7 +9141,7 @@
     if (S.fiche.c12) { c12Rendre(box); return; }
     const F = S.fiche, k = cleFiche(), d = S.aux[k], err = S.err[k];
     const mag = nomShop(), court = mag.replace(/^.* - /, '');
-    const chips = [F.q != null ? `<span class="fi-chip">${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} <b>${fN(F.q)} vendu${F.q >= 2 ? 's' : ''}</b>${F.v != null ? ' · ' + fE(F.v) : ''}</span>` : '',
+    const chips = [F.q != null ? `<span class="fi-chip">${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} <b>${fN(F.q)} vendu${Math.round(F.q) >= 2 ? 's' : ''}</b>${F.v != null ? ' · ' + fE(F.v) : ''}</span>` : '',
       d && d.prix ? `<span class="fi-chip">prix encaissé <b>${fPx(d.prix.magasin.p)}</b></span><span class="fi-chip">prix réseau <b>${fPx(d.prix.reseau.med)}</b></span>` : '',
       (() => { const R0 = S.aux[cleRecette()], pq = F.q > 0 && F.v != null ? F.v / F.q : (F.p > 0 ? F.p : null), m0 = R0 && R0.api && R0.total > 0 ? R0.total : (F.q > 0 && F.c > 0 ? F.c / F.q : null);
         if (pq == null || m0 == null || !(pq > 0)) { return F.taux != null ? `<span class="fi-chip">marge brute <b>${fP0(F.taux)}</b></span>` : ''; }
@@ -11704,7 +11710,7 @@
   });
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
-  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } else if (S.stk && e.key === 'Escape') { stkFermer(); } else if (S.pmC && e.key === 'Escape') { pmCoefFermer(); } else if (S.pd && e.key === 'Escape') { pdFermer(); } });
+  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } else if (S.stk && e.key === 'Escape') { stkFermer(); } else if (S.pmC && e.key === 'Escape') { pmCoefFermer(); } else if (S.pd && e.key === 'Escape') { pdFermer(); } else if (S.cmdm && e.key === 'Escape') { cmdmFermer(); } else if (S.b2b && e.key === 'Escape') { b2bFermer(); } else if (S.eqm && e.key === 'Escape') { eqmFermer(); } });   // Échap ferme aussi les feuilles de l'Opérationnel (26/11/2026)
   document.addEventListener('keydown', e => {
     if (!S.cqVoir) { return; }
     if (e.key === 'Escape') { S.cqVoir = null; rendre(); }
