@@ -2505,7 +2505,7 @@
       ],
       "fichier": "10-analyse.mp4",
       "affiche": "10-analyse.jpg",
-      "duree": "2 min 49",
+      "duree": "2 min 53",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/analyse.js",
@@ -2513,7 +2513,7 @@
         "panel/src/dashboard_analyse.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_sur": "728a0e8de9ff63a3f79ac9b7e6eb23b2d2040743",
       "tourne_le": "2026-11-26"
     },
     {
@@ -2529,7 +2529,7 @@
       ],
       "fichier": "10-01-entree.mp4",
       "debut": 0,
-      "fin": 88.27,
+      "fin": 87.87,
       "affiche": "analyse-entree.jpg",
       "duree": "1 min 28",
       "sources": [
@@ -2537,7 +2537,7 @@
         "panel/public/dashboard/analyse.css",
         "panel/src/dashboard_analyse.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "728a0e8de9ff63a3f79ac9b7e6eb23b2d2040743",
       "tourne_le": "2026-11-26"
     },
     {
