@@ -46,5 +46,10 @@ export function tplRefs(P, x){
     ${L.apercu ? `<div class="rc-apercu">${L.apercu.lignes.slice(0, 20).map(t => `<div class="vr-mu">${esc(t)}</div>`).join('')}</div>` : ''}
     ${L.erreurs.length ? `<div class="rc-ko">${L.erreurs.map(t => esc(t)).join('<br>')}</div>` : ''}</div>` : '';
   const pied = `<div class="vr-pied"><b>Le prix proposé</b> : la moyenne des magasins qui chiffrent la matière par leur propre prix (local ou fournisseur), sinon un prix de marché belge estimé (fichier daté du ${esc(P.maj)}), à remplacer par le tarif du fournisseur dès qu’il existe. <b>La perte</b> : celle validée, sinon une perte courante de la famille de matière (persil 30 %, oignons 10 %…). Tout reste modifiable avant l’écriture ; une ligne cochée part. <span class="vr-mu">${esc(P.source)}</span></div>`;
-  return fil + kpis + res + table + barre + pertesLignes + pied;
+  const T = P.toutFaire;
+  const tout = T ? `<div class="vm-barre" style="background:#f6f1e7"><div><b>Tout faire, toute la carte</b>
+      <small>En un clic : les ${T.n} matière(s) cochée(s) (prix de référence du réseau ou de marché, pertes${P.aligner.on ? ', même prix dans tous les magasins' : ''}), par lots, relues et notées au registre ; puis la perte de chaque matière posée sur ses lignes, dans toutes les recettes et sous-recettes. Chaque écriture s’annule depuis le registre.</small>
+      ${T.etat ? `<small><b>${esc(T.etat)}</b></small>` : ''}</div>
+    <button class="rc-btn ok" ${x.A(T.lancer)}${!T.lancer ? ' disabled' : ''}>${T.enCours ? 'En cours…' : (T.fini ? 'Refaire' : 'Tout faire')}</button></div>` : '';
+  return fil + kpis + tout + res + table + barre + pertesLignes + pied;
 }
