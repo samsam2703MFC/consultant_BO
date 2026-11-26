@@ -7243,7 +7243,7 @@
       return `<div class="rv-bul">Bonsoir${R.par ? ' ' + esc(R.par.split(' ')[0]) : ''} 👋<br>Aujourd’hui, ${jour}. On passe en revue ${n ? `<b>${n} checklist${n > 1 ? 's' : ''} pas finie${n > 1 ? 's' : ''}</b> et ` : ''}<b>${g} point${g > 1 ? 's' : ''} de gestion</b>. Environ ${Math.max(1, Math.round((n + g) / 5))} minute${n + g > 7 ? 's' : ''}.</div>
         ${n ? `<div class="rv-cards">${C.liste.slice(0, 6).map(c => { const m = c.total - c.faites; return `<div class="rv-mini">${rvPill(c)}<span>${esc(c.titre)}</span><b>${m} pas faite${m > 1 ? 's' : ''}</b></div>`; }).join('')}${n > 6 ? `<div class="rv-n">+ ${n - 6} autre${n - 6 > 1 ? 's' : ''}…</div>` : ''}</div>` : ''}
         <div class="rv-q">Qui fait la revue ?</div><div class="rv-rep">${qui.map(q => `<button type="button" class="rv-chip${q === R.par ? ' on' : ''}" data-rvpar="${esc(q)}">${esc(q)}</button>`).join('')}<button type="button" class="rv-chip plus" data-rvautre="1">Autre…</button></div>${autre}
-        <div class="rv-pied"><button type="button" class="rv-b p" data-rvsuivant="1">${deja ? 'Reprendre · ' + deja + ' réponse' + (deja > 1 ? 's' : '') + ' déjà données' : 'Commencer'}</button><button type="button" class="rv-b" data-rvfermer="1">Plus tard</button></div>`;
+        <div class="rv-pied"><button type="button" class="rv-b p" data-rvsuivant="1">${deja ? 'Reprendre · ' + deja + ' réponse' + (deja > 1 ? 's déjà données' : ' déjà donnée') : 'Commencer'}</button><button type="button" class="rv-b" data-rvfermer="1">Plus tard</button></div>`;
     }
     if (e.k === 'cl') {
       // Les tâches pas faites se lisent d'emblée (19/11/2026), à l'heure prévue ; au-delà de huit, « + N autres ».
@@ -11735,5 +11735,7 @@
   // La journée en cours se relit toutes les dix minutes.
   setInterval(() => { if ((S.vue === 'jour' || S.vue === 'morts' || S.vue === 'taches') && S.date === AUJ) { charger(true); } }, 600000);
   // L'onglet Opérationnel suit la journée de plus près : toutes les deux minutes.
-  setInterval(() => { if (S.vue === 'ops' && S.date === AUJ && !document.hidden) { charger(true); } }, 120000);
+  // Pas pendant qu'une fenêtre est ouverte par-dessus (26/11/2026 : le redessin remplaçait ses boutons, un clic tombé à ce
+  // moment-là se perdait — « Adapter mon prix de vente » dans la fiche) ; la page se relit à la fenêtre suivante.
+  setInterval(() => { if (S.vue === 'ops' && S.date === AUJ && !document.hidden && !S.fiche && !S.invModale && !S.stk && !S.cmdm && !S.b2b && !S.eqm && !S.rv) { charger(true); } }, 120000);
 })();
