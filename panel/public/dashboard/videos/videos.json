@@ -903,7 +903,7 @@
       ],
       "fichier": "09-tresorerie.mp4",
       "affiche": "09-tresorerie.jpg",
-      "duree": "3 min",
+      "duree": "2 min 59",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
@@ -911,8 +911,8 @@
         "panel/src/tresorerie.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-plan",
