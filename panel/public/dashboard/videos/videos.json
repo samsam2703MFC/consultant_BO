@@ -5657,7 +5657,7 @@
       ],
       "fichier": "23-coffre-fort.mp4",
       "affiche": "23-coffre-fort.jpg",
-      "duree": "2 min 42",
+      "duree": "2 min 32",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/coffre.js",
@@ -5667,8 +5667,8 @@
         "consultant/src/coffre_dates.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "327fc8f1a52667146a3d3249c214aee74987d889",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "coffre-tout",
@@ -6157,7 +6157,7 @@
       ],
       "fichier": "24-parametres.mp4",
       "affiche": "24-parametres.jpg",
-      "duree": "2 min 29",
+      "duree": "2 min 30",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/automatisations.js",
@@ -6167,8 +6167,8 @@
         "panel/src/automatisations.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "062ad4f3fd4a087e35086e1bca334243c1fc99e9",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "327fc8f1a52667146a3d3249c214aee74987d889",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "param-fenetre",
