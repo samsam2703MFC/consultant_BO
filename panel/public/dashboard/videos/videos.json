@@ -26,6 +26,583 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "barre-valeur",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La valeur du magasin",
+      "resume": "Les vignettes de la barre du haut, puis la valeur du magasin : le calcul pas à pas (chiffre d’affaires annuel, marge brute réelle, charges normatives, × 3,5) et les six derniers trimestres.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-15-valeur.mp4",
+      "debut": 0,
+      "fin": 64.58,
+      "affiche": "barre-valeur.jpg",
+      "duree": "1 min 05",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-api",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Les appels à l’API",
+      "resume": "La vignette « API » : les appels de la page à l’API du cockpit (statut, durée, fonction qui répond), puis l’index des chemins du dashboard, avec la recherche.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-16-api.mp4",
+      "debut": 0,
+      "fin": 70.88,
+      "affiche": "barre-api.jpg",
+      "duree": "1 min 11",
+      "sources": [
+        "panel/public/dashboard/api-index.js",
+        "panel/public/dashboard/api-index.css",
+        "panel/public/dashboard/api-index.json"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-bureau",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Demande au bureau",
+      "resume": "La vignette « Demande au bureau » : le formulaire que l’assistant transmet au bureau, et « Mes demandes » — Toutes, Ouvertes, Répondues — avec la réponse du bureau.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-17-bureau.mp4",
+      "debut": 0,
+      "fin": 47.49,
+      "affiche": "barre-bureau.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/helpdesk.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-bureau-demander",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-bureau",
+      "titre": "Poser une demande au bureau",
+      "resume": "Le sujet, le titre, la demande, une photo, un passage du consultant ou non, urgent ou non, puis « Envoyer au bureau » : la demande rejoint « Mes demandes ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-17-bureau.mp4",
+      "debut": 47.49,
+      "fin": 95.74,
+      "affiche": "barre-bureau-demander.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/helpdesk.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-resume",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : le résumé",
+      "resume": "La vignette « Revue du soir » et son premier écran : les tâches obligatoires pas faites, les checklists à passer en revue, « Qui fait la revue ? », puis « Commencer » ou « Plus tard ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-18-soir-resume.mp4",
+      "debut": 0,
+      "fin": 45.27,
+      "affiche": "barre-soir-resume.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-faire",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-soir-resume",
+      "titre": "Faire la revue du soir",
+      "resume": "Qui fait la revue, « Commencer », puis une réponse par écran : chaque checklist pas finie, chaque point de gestion ; ‹ revient en arrière. Chaque réponse s’enregistre tout de suite.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-18-soir-resume.mp4",
+      "debut": 45.27,
+      "fin": 95.69,
+      "affiche": "barre-soir-faire.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-reprendre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-soir-resume",
+      "titre": "Reprendre une revue plus tard",
+      "resume": "On ferme la revue en cours de route : les réponses sont gardées. À la réouverture, « Reprendre » repart avec les réponses déjà données.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-18-soir-resume.mp4",
+      "debut": 95.69,
+      "fin": 135.29,
+      "affiche": "barre-soir-reprendre.jpg",
+      "duree": "40 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-checklist",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : une checklist pas finie",
+      "resume": "Un écran par checklist pas finie : ses tâches pas faites à leur heure prévue, « Pourquoi ? » en un tap, « Autre… » pour écrire sa raison, « + commentaire ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-19-soir-checklist.mp4",
+      "debut": 0,
+      "fin": 60.75,
+      "affiche": "barre-soir-checklist.jpg",
+      "duree": "1 min 01",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-verifie",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : vérifié automatiquement",
+      "resume": "Après les checklists, les points de gestion que le serveur a déjà vérifiés en ordre — invendus déclarés, stock compté, non-conformités reprises — sans aucune question.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-20-soir-verifie.mp4",
+      "debut": 0,
+      "fin": 49.35,
+      "affiche": "barre-soir-verifie.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-point",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : un point de gestion",
+      "resume": "Un point de gestion par écran : le constat lu par le serveur, la question, la réponse en un tap, un commentaire ; puis ce que le serveur ne peut pas voir.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-21-soir-point.mp4",
+      "debut": 0,
+      "fin": 53.74,
+      "affiche": "barre-soir-point.jpg",
+      "duree": "54 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-demain",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : pour demain",
+      "resume": "Le dernier écran de la revue : un mot pour l’équipe de demain, facultatif, ‹ pour revenir sur une réponse, puis « Clôturer la journée ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-22-soir-demain.mp4",
+      "debut": 0,
+      "fin": 46.8,
+      "affiche": "barre-soir-demain.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-cloturer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-soir-demain",
+      "titre": "Clôturer la journée",
+      "resume": "Le mot pour l’équipe de demain, puis « Clôturer la journée » : la revue est figée, le bilan s’affiche et la vignette dit « faite ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-22-soir-demain.mp4",
+      "debut": 46.8,
+      "fin": 78.18,
+      "affiche": "barre-soir-cloturer.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-bilan",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : le bilan",
+      "resume": "La revue clôturée : les chiffres de la journée, une carte par zone avec chaque checklist faite ou pas et sa raison, la gestion en tuiles, le mot pour demain, et « Rouvrir la revue ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-23-soir-bilan.mp4",
+      "debut": 0,
+      "fin": 47.09,
+      "affiche": "barre-soir-bilan.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-rouvrir",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-soir-bilan",
+      "titre": "Rouvrir une revue clôturée",
+      "resume": "« Rouvrir la revue » : on corrige une réponse, puis on avance jusqu’à « Clôturer la journée » ; le bilan se refait.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-23-soir-bilan.mp4",
+      "debut": 47.09,
+      "fin": 96.76,
+      "affiche": "barre-soir-rouvrir.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-ventes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fiche produit : les ventes",
+      "resume": "Un produit d’Opérationnel ouvre sa fiche : ses ventes des 12 dernières semaines face à la moyenne du réseau, et les 6 dernières semaines face aux 6 d’avant.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-24-fiche-ventes.mp4",
+      "debut": 0,
+      "fin": 65.5,
+      "affiche": "barre-fiche-ventes.jpg",
+      "duree": "1 min 06",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-prix",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fiche produit : le prix face au réseau",
+      "resume": "Le deuxième onglet de la fiche : le nuage prix × volume, ce magasin face aux autres, le prix réseau, et ce que rapporterait le prix réseau ; sur le dernier mois, 3 ou 12 mois.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-25-fiche-prix.mp4",
+      "debut": 0,
+      "fin": 69.73,
+      "affiche": "barre-fiche-prix.jpg",
+      "duree": "1 min 10",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-recette",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fiche produit : recette & marge",
+      "resume": "Le troisième onglet de la fiche : le coefficient et sa jauge, le verdict, un autre prix à tester, la recette ligne par ligne, le prix d’une matière première, la marge brute.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-26-fiche-recette.mp4",
+      "debut": 0,
+      "fin": 70.74,
+      "affiche": "barre-fiche-recette.jpg",
+      "duree": "1 min 11",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/prix_produit.php",
+        "panel/src/matiere_fiche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-adapter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-fiche-recette",
+      "titre": "Adapter son prix de vente",
+      "resume": "Le prix testé devient le prix de vente du magasin : « Adapter mon prix de vente », l’aperçu en caisse TVA comprise, puis « Confirmer ce prix ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-26-fiche-recette.mp4",
+      "debut": 70.74,
+      "fin": 101.61,
+      "affiche": "barre-fiche-adapter.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/prix_produit.php",
+        "panel/src/matiere_fiche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-relever",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-fiche-recette",
+      "titre": "Demander au réseau de relever le prix maximum",
+      "resume": "Au-dessus du prix maximum du réseau, le prix ne s’écrit pas : « Demander au réseau de relever le maximum » envoie la demande au bureau.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-26-fiche-recette.mp4",
+      "debut": 101.61,
+      "fin": 136.24,
+      "affiche": "barre-fiche-relever.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/prix_produit.php",
+        "panel/src/matiere_fiche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-b2b",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Ventes B2B",
+      "resume": "La jauge B2B d’Opérationnel ouvre « Ventes B2B » : aujourd’hui ou le même jour la semaine dernière, les quatre chiffres du B2B, chaque ticket pro avec ses articles, et ce qu’ils ont acheté.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-27-b2b.mp4",
+      "debut": 0,
+      "fin": 51.09,
+      "affiche": "barre-b2b.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-commandes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Commandes du jour",
+      "resume": "Le ruban des canaux d’Opérationnel ouvre « Commandes du jour » : Toutes, Comptoir ou Webshop, le CA en commandes rangé par état face à la caisse, puis chaque commande avec ses articles et son ticket.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-28-commandes.mp4",
+      "debut": 0,
+      "fin": 60.48,
+      "affiche": "barre-commandes.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-invendus",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Invendus et poubelle",
+      "resume": "« les saisies ▸ » du P&L court : chaque pièce jetée telle qu’encodée en caisse — l’heure, l’opérateur, le produit, la quantité, le motif — et le total par opérateur.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-29-invendus.mp4",
+      "debut": 0,
+      "fin": 46.52,
+      "affiche": "barre-invendus.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-invendus-reclamer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-invendus",
+      "titre": "Réclamer au fournisseur depuis un invendu",
+      "resume": "Sur une saisie Qualité ou Casse : « Réclamer au fournisseur » ouvre la réclamation déjà remplie ; on vérifie la référence, la livraison, la quantité et le problème, on ajoute une photo, on envoie.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-29-invendus.mp4",
+      "debut": 46.52,
+      "fin": 85.19,
+      "affiche": "barre-invendus-reclamer.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-invendus-remarque",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-invendus",
+      "titre": "Faire une remarque à l’opérateur",
+      "resume": "Sur une saisie Qualité ou Casse : « Remarque à l’opérateur », la personne qui a produit la référence (choisie d’office), le mot, « Enregistrer la remarque ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-29-invendus.mp4",
+      "debut": 85.19,
+      "fin": 118.86,
+      "affiche": "barre-invendus-remarque.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "equipe-horaires",
       "genre": "nouveau",
       "titre": "Mon équipe : faire ses horaires",
