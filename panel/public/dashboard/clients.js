@@ -245,9 +245,23 @@
   }
 
   /* ── Bureaux ──────────────────────────────────────────────────────────────────────────────────────────────── */
+  /**
+   * Ce que dit un refus (26/11/2026, « Réponse : HTTP 404 : ORDER_NOT_FOUND · consultant (404) puis admin (404) ») : quels
+   * comptes ont été essayés, et l'état du compte du magasin — pas connecté sur cet appareil (le cas de ce message), connecté
+   * mais son jeton n'est pas arrivé au serveur, session périmée, ou connecté sans droit sur ce magasin.
+   */
+  function etatMagasin(d) {
+    const ici = tfbEtat().connecte;
+    if (d.magasinExpire) { return 'la session a expiré : reconnectez-le'; }
+    if (d.magasin) { return 'connecté, mais TF Buddy lui refuse ce magasin (est-ce bien un employé de ce magasin ?)'; }
+    if (ici) { return 'connecté sur cet appareil, mais son jeton n’est pas arrivé au serveur : rechargez la page, puis réessayez'; }
+    return 'pas connecté sur cet appareil';
+  }
   function refus(d, quoi) {
     const btn = !d.magasin || d.magasinExpire ? tfbBouton(d.magasinExpire ? 'Reconnecter le compte TF Buddy du magasin' : '') : '';
-    return `<section class="card pcl-refus">${SVG(ICO.cadenas)}<div><h3>${esc(quoi)} ne se lisent pas</h3><p>${esc(d.texte || d.motif || '')}</p>${btn ? `<p>${btn}</p>` : ''}${d.motif ? `<p class="muted">Réponse : ${esc(d.motif)}${d.comptes ? ' · ' + esc(d.comptes) : ''}</p>` : ''}</div></section>`;
+    const comptes = String(d.comptes || '').replace(/\((\d+)\)/g, (m, c) => c === '404' || c === '401' || c === '403' ? '(refusé, ' + c + ')' : m);
+    return `<section class="card pcl-refus">${SVG(ICO.cadenas)}<div><h3>${esc(quoi)} ne se lisent pas</h3><p>${esc(d.texte || d.motif || '')}</p>${btn ? `<p>${btn}</p>` : ''}
+      <p class="muted">Compte TF Buddy du magasin : ${esc(etatMagasin(d))}.${comptes ? ' Comptes essayés : ' + esc(comptes) + '.' : ''}${d.motif ? ' Réponse de TF Buddy : ' + esc(d.motif) + '.' : ''}</p></div></section>`;
   }
   const STATUTS = { active: ['Actif', 'chip chip--ok'], pending: ['En attente', 'tag-warn'], inactive: ['Inactif', 'chip chip--draft'], archived: ['Archivé', 'chip chip--draft'] };
   const statut = s => { const x = STATUTS[s] || [s || '—', 'chip chip--draft']; return `<span class="${x[1]}">${esc(x[0])}</span>`; };
