@@ -4,7 +4,8 @@
  * consultant/src/analyse_produits.php (GET /analyse/produits?mois=3 : le top du réseau). « Nous » : les prix TTC du
  * catalogue de démo (lib/demo.js), servis par /exploitation/promos-magasin/produits (mocks/13_offres.js).
  * Neuf concurrents inventés (« Boulangerie du Parc »…), aucun nom d'enseigne réelle ; codes postaux et communes fictifs.
- * Un relevé posé (POST) s'ajoute à l'état : la relecture le montre. */
+ * Un relevé posé (POST) s'ajoute à l'état : la relecture le montre. Les familles portent leur visibilité web (les
+ * contrôles de benchmarkVisibiliteSite, résultats fictifs) et leur carte « À faire » (26/11/2026, lot 3 des vidéos). */
 'use strict';
 const D = require('./lib/demo');
 const { r2 } = D;
@@ -69,12 +70,24 @@ function top() {
   return { mois: 3, bornes: [['2026-08-01', '2026-08-31'], ['2026-09-01', '2026-09-30'], ['2026-10-01', '2026-10-31']], produits };
 }
 
+/* ── la visibilité web d'une famille (benchmarkVisibiliteSite : les contrôles de la page de la gamme ; résultats fictifs) ── */
+function web(mot, taille, ok) {
+  const titre = ok.includes('titre') ? mot.charAt(0).toUpperCase() + mot.slice(1) + 's de saison — la gamme' : 'Noël et Nouvel An — la gamme';
+  const L = [['page', 'Page dédiée en ligne', ''], ['titre', '« ' + mot + ' » dans le titre de la page', titre], ['description', '« ' + mot + ' » dans la meta description', '—'],
+    ['texte', 'Produit lisible dans le HTML servi', '6 mention(s)'], ['prix', 'Prix affiché sur la page', ''], ['taille', taille, '1 mention(s)'], ['schema', 'Balisage schema.org Product / Offer', ''],
+    ['accueil', '« ' + mot + ' » visible sur l’accueil (HTML servi)', ''], ['sitemap', 'Page dans le sitemap', ''], ['robots', 'robots.txt présent', 'HTTP 200']];
+  const controles = L.map(([cle, libelle, detail]) => ({ cle, libelle, ok: ok.includes(cle), detail }));
+  return { score: Math.round(100 * ok.length / L.length), ok: ok.length, total: L.length, controles, lu_le: '2026-11-19 15:25' };
+}
+
 /* ── les deux familles saisonnières (cougnou au kilo, galette ramenée à notre Ø) ── */
 const FAMILLES = {
   cougnou: { libelle: 'Cougnou', motif: 'cougnou|cougnolle', mesure: 'poids', tailleRef: 500, tailleConfirmee: true, saison: { du: '11-15', au: '12-31' }, releve: '2026-11-12',
-    nous: [{ id: 990, nom: 'Cougnou sucre 500 g', prix: 8.90, taille: 500, reference: true }], constats: ['Relever les cougnous de La Mie Dorée et de la Boulangerie Saint-Marc avant le 1er décembre.'], web: null },
+    nous: [{ id: 990, nom: 'Cougnou sucre 500 g', prix: 8.90, taille: 500, reference: true }], constats: ['Relever les cougnous de La Mie Dorée et de la Boulangerie Saint-Marc avant le 1er décembre.'],
+    web: web('cougnou', 'Poids affiché (g) pour comparer au kilo', ['page', 'titre', 'texte', 'prix', 'sitemap', 'robots']) },
   galette: { libelle: 'Galette des rois', motif: 'galette', mesure: 'diametre', tailleRef: 22, tailleConfirmee: true, saison: { du: '12-26', au: '01-31' }, releve: '2026-01-08',
-    nous: [{ id: 991, nom: 'Galette frangipane Ø 22 cm', prix: 19.90, taille: 22, reference: true }], constats: [], web: null },
+    nous: [{ id: 991, nom: 'Galette frangipane Ø 22 cm', prix: 19.90, taille: 22, reference: true }], constats: ['Relever les galettes des concurrents de la zone dès le 26 décembre, début de la saison.'],
+    web: web('galette', 'Diamètre ou nombre de parts affiché', ['page', 'texte', 'prix', 'taille', 'sitemap', 'robots']) },
 };
 const REFERENTIEL = [
   ['Boulangerie du Parc', 'Artisan', 1.2, 'Cougnou sucre', 9.40, 'g', 500, 'cougnou', '5000'], ['Pâtisserie Les Tilleuls', 'Artisan', 0.8, 'Cougnou au chocolat', 7.20, 'g', 400, 'cougnou', '5000'],
@@ -105,7 +118,9 @@ function releve(b) {
   if (!b.nom || !(prix > 0)) { return { __status: 400, json: { ok: false, error: 'magasin, produit et prix sont requis' } }; }
   let c = b.concurrentId ? conc(+b.concurrentId) : CONC.find(x => x.nom.toLowerCase() === String((b.concurrent || {}).nom || '').toLowerCase());
   if (!c) { c = { id: 400 + CONC.length, nom: String(b.concurrent.nom), type: b.concurrent.type || 'Artisan', ville: '', cp: b.concurrent.cp || '', distance: null }; CONC.push(c); }
-  const p = D.PRODUITS.find(x => x.pid === +b.produitId);
+  // Notre produit : un produit du catalogue, ou celui d'une famille (le cougnou, la galette de référence).
+  const p = D.PRODUITS.find(x => x.pid === +b.produitId)
+    || Object.values(FAMILLES).flatMap(f => f.nous).filter(n => n.id === +b.produitId).map(n => ({ pid: n.id, nom: n.nom }))[0];
   const promo = b.promo ? parseFloat(String(b.promo).replace(',', '.')) : null;
   S.releves.push({ id: S.prochain++, observation: 700 + c.id, concurrentId: c.id, concurrent: c.nom, type: c.type, cp: c.cp, distance: c.distance, produit: String(b.nom),
     monProduit: p ? p.pid : null, monProduitNom: p ? p.nom : null, prix, promo: promo > 0 ? promo : null, unite: b.unite || 'piece', taille: b.taille ? +String(b.taille).replace(',', '.') : null,

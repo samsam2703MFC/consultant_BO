@@ -92,7 +92,7 @@
   function bornes() {
     const t = new Date(S.date + 'T12:00:00');
     if (S.vue === 'semaine') { const j = (t.getDay() + 6) % 7; const du = new Date(t); du.setDate(t.getDate() - j); const au = new Date(du); au.setDate(du.getDate() + 6); return [du.toISOString().slice(0, 10), au.toISOString().slice(0, 10)]; }
-    const du = S.date.slice(0, 8) + '01'; const fin = new Date(t.getFullYear(), t.getMonth() + 1, 0); return [du, fin.toISOString().slice(0, 10)];
+    const du = S.date.slice(0, 8) + '01'; const fin = new Date(t.getFullYear(), t.getMonth() + 1, 0, 12); return [du, fin.toISOString().slice(0, 10)];   // à midi (26/11/2026 : à minuit heure belge, toISOString donnait la veille — le mois perdait son dernier jour)
   }
   /** Le lundi et le dimanche de la date regardée, quelle que soit la vue :
    * au téléphone, le mur porte la semaine même quand on lit le jour. */
@@ -1825,7 +1825,10 @@
       <text x="${(xD + 8).toFixed(1)}" y="${((Y(dern[1]) + yA) / 2 + 4).toFixed(1)}" class="ecart ${E.cour >= E.avant ? 'ok' : 'ko'}">${E.cour >= E.avant ? '+' : '−'}${fE(Math.abs(E.cour - E.avant))}${E.enCours ? ' au ' + E.jour : ''}</text>` : '';
     const projL = proj != null && dern[0] < nM ? `<line x1="${xD.toFixed(1)}" y1="${Y(dern[1]).toFixed(1)}" x2="${X(nM).toFixed(1)}" y2="${Y(proj).toFixed(1)}" stroke="${coul}" stroke-width="2" stroke-dasharray="2 4" opacity=".75"/>
       <text x="${X(nM).toFixed(1)}" y="${(Y(proj) - 8).toFixed(1)}" text-anchor="end" class="proj" style="fill:${coul}">fin ${moisNom(hC.m)} au rythme : ${fE(proj)}</text>` : '';
-    const finP = p.length ? `<text x="${(X(p[p.length - 1][0]) - 4).toFixed(1)}" y="${(Y(p[p.length - 1][1]) + (proj != null && Y(proj) < Y(p[p.length - 1][1]) ? 17 : -8)).toFixed(1)}" text-anchor="end" class="mu">${moisNom(hP.m)} ${fE(p[p.length - 1][1])}</text>` : '';
+    // L'étiquette du mois d'avant s'écarte de celle de la projection quand elles se touchent (26/11/2026 : l'une sur l'autre en haut à droite).
+    let yP = p.length ? Y(p[p.length - 1][1]) + (proj != null && Y(proj) < Y(p[p.length - 1][1]) ? 17 : -8) : 0;
+    if (p.length && proj != null && dern[0] < nM && Math.abs(yP - (Y(proj) - 8)) < 14) { yP = Math.min(Hh - 22, Math.max(Y(proj) - 8 + 15, Y(p[p.length - 1][1]) + 17)); }
+    const finP = p.length ? `<text x="${(X(p[p.length - 1][0]) - 4).toFixed(1)}" y="${yP.toFixed(1)}" text-anchor="end" class="mu">${moisNom(hP.m)} ${fE(p[p.length - 1][1])}</text>` : '';
     const svg = `<svg class="co-cumul" viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${esc(nom + ' : cumul de ' + moisNom(hC.m) + ' face à ' + moisNom(hP.m))}">${axes}
       ${p.length ? `<polyline fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" points="${ligne(p)}"/>` : ''}
       <polyline fill="none" stroke="${coul}" stroke-width="3" stroke-linejoin="round" points="${ligne(c)}"/>${projL}
@@ -5677,7 +5680,7 @@
     const L = bmProduits().filter(p => BM_NORM(p.nom + ' ' + (p.cat || '')).includes(n)).slice(0, 12);
     box.innerHTML = L.length ? L.map(p => `<button data-bmp="${p.id}"><span>${esc(p.nom)}</span><small>${esc(p.cat || '')} · ${p.prixTtc != null ? fU(p.prixTtc) : 'sans prix'}</small></button>`).join('')
       : `<div class="mu">${bmProduits().length ? 'Aucun produit du magasin ne correspond.' : 'Catalogue du magasin en lecture…'}</div>`;
-    box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; urlMaj(); rendre(); }));
+    box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; S.bmForm = null; urlMaj(); rendre(); }));
   }
   function bmBrancher() {
     $.querySelectorAll('[data-bmcp]').forEach(b => {
@@ -5685,8 +5688,8 @@
       b.addEventListener('click', basculer);
       b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); basculer(); } });
     });
-    $.querySelectorAll('[data-bmtop]').forEach(tr => tr.addEventListener('click', () => { S.bmF = 'produit'; S.bmP = tr.dataset.bmtop; urlMaj(); rendre(); }));
-    $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; urlMaj(); rendre(); }));
+    $.querySelectorAll('[data-bmtop]').forEach(tr => tr.addEventListener('click', () => { S.bmF = 'produit'; S.bmP = tr.dataset.bmtop; S.bmForm = null; urlMaj(); rendre(); }));
+    $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; S.bmForm = null; urlMaj(); rendre(); }));   // changer de sujet ferme le relevé en cours (26/11/2026 : il restait ouvert, unité et produit d'avant)
     const q = $.querySelector('[data-bmq]');
     if (q) { q.addEventListener('input', () => { S.bmQ = q.value; bmChercher(q.value); }); q.addEventListener('focus', () => bmChercher(q.value)); q.addEventListener('blur', () => setTimeout(() => { const b = document.getElementById('bm-res'); if (b) { b.innerHTML = ''; } }, 150)); }
     $.querySelectorAll('[data-bmform]').forEach(b => b.addEventListener('click', () => {
@@ -5827,7 +5830,7 @@
     document.documentElement.classList.add('db-fiche-ouverte');
     const prods = (D.produits || []).filter(p => p.groupe === g.nom), vus = S.pd.tous ? prods : prods.slice(0, 12);
     const ligne = p => { const o = String(p.id) === String(S.pd.ouvert);
-      return `<tr class="pd-pr${o ? ' ouv' : ''}" data-pdp="${esc(p.id)}" tabindex="0" role="button" aria-expanded="${o}"><td><span class="fl">${o ? '▾' : '▸'}</span>${esc(p.nom)}</td><td>${p.prix != null ? pdPrix(p.prix) : '—'}</td><td>${nf(p.evo.qApres, 0)} pièces</td><td>${pdEvo(p.evo)}</td><td>${pdMini(D, p.q, 150, 28)}</td></tr>${o ? pdDeroule(D, p) : ''}`; };
+      return `<tr class="pd-pr${o ? ' ouv' : ''}" data-pdp="${esc(p.id)}" tabindex="0" role="button" aria-expanded="${o}"><td><span class="fl">${o ? '▾' : '▸'}</span>${esc(p.nom)}</td><td>${p.prix != null ? pdPrix(p.prix) : '—'}</td><td>${nf(p.evo.qApres, 0)} pièce${Math.round(p.evo.qApres) > 1 ? 's' : ''}</td><td>${pdEvo(p.evo)}</td><td>${pdMini(D, p.q, 150, 28)}</td></tr>${o ? pdDeroule(D, p) : ''}`; };
     box.innerHTML = `<div class="fi-voile" data-pdfermer="1"></div><div class="fi-modale pd-modale" role="dialog" aria-modal="true" aria-label="${esc(g.nom)}">
       <div class="fi-hd"><div class="t"><h2>${esc(g.nom)}</h2><div class="pd-mrep">${pdEvo(g.evo)}<span>${fE(g.evo.apres)} par semaine sur les 6 dernières semaines, contre ${fE(g.evo.avant)} avant.</span></div></div><button type="button" class="fi-x" data-pdfermer="1" aria-label="Fermer">✕</button></div>
       <div class="fi-bd">${pdBarres(D, g.v, { w: 940, h: 180 })}${pdLegende(D)}

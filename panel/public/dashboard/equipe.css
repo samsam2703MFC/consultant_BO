@@ -625,6 +625,8 @@ button.eqp-as-et:hover b{text-decoration:underline}
 .eqp-fp-ch .aide b{font-weight:700;color:var(--ink)}
 .eqp-fp-ch .val{font-size:13px;color:var(--ink)}
 .eqp-fp-effet{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--table-head);font-size:12.5px;color:var(--muted-2)}
+/* Caché tant que le taux ne change pas : sans cette règle, display:flex passait devant [hidden] (26/11/2026, un encadré vide). */
+.eqp-fp-effet[hidden]{display:none}
 .eqp-fp-effet b{font-weight:700;color:var(--ink)}
 .eqp-fp-et{letter-spacing:1px;color:var(--prize);font-size:14px;white-space:nowrap}
 .eqp-fp-et i{font-style:normal;color:var(--chip)}

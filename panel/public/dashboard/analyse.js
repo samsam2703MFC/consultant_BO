@@ -231,7 +231,7 @@
   }
   const barre = (v, max, coul = '#8D1D2C') => `<span class="an-bar"><i style="width:${(100 * Math.max(0, v || 0) / (max || 1)).toFixed(1)}%;background:${coul}"></i></span>`;
   const kpi = (k, v, s, cl) => `<div class="an-kpi${cl ? ' ' + cl : ''}"><span class="k">${k}</span><span class="v">${v}</span>${s ? `<span class="s">${s}</span>` : ''}</div>`;
-  const Q = (n, question, reponse, corps, cl) => `<section class="an-carte an-qq${cl ? ' ' + cl : ''}"><div class="an-qh"><span class="an-qn">${n}</span><h4>${question}</h4></div><p class="an-rep">${reponse}</p>${corps || ''}</section>`;
+  const Q = (n, question, reponse, corps, cl) => `<section class="an-carte an-qq${cl ? ' ' + cl : ''}"><div class="an-qh"><span class="an-qn">${n}</span><h4>${question}</h4></div><div class="an-rep">${reponse}</div>${corps || ''}</section>`;
   const attente = () => '<div class="an-att"><span class="db-sk" style="height:12px;width:70%"></span><span class="db-sk" style="height:12px;width:45%"></span></div>';
   /** L'état d'une lecture pour une carte : null si elle est là, sinon le message (attente ou erreur). */
   const manque = (cle, quoi) => cle in st.d ? null : cle in st.err ? `<p class="an-err">${esc(quoi)} : ${esc(st.err[cle])}</p>` : attente();
@@ -274,7 +274,7 @@
       ${kpi('Pièces vendues', n0(T.q), n0(P.rythme(T.q)) + ' ' + P.unite)}
       ${kpi('Marge réalisée', k1(T.marge), pc(T.margePct) + ' du CA HT · connue sur ' + n0(T.couverture) + ' % du CA', 'fort')}
       ${kpi('Panier moyen', tickets ? e2(caT / tickets) : '—', tickets ? n0(tickets) + ' tickets, ' + panierDe : svAttente || !M ? (st.err.mens ? 'tickets illisibles' : 'lecture…') : (P.D.du.slice(0, 7) === moisEnCours() && P.D.au.slice(0, 7) === moisEnCours() ? 'le mois en cours se lit à sa clôture ; la Semaine a ses tickets' : 'pas de tickets relevés'))}
-      ${kpi('Références vendues', n0(P.produits.length), nb('monte') + ' en hausse · ' + nb('baisse') + ' en baisse · ' + nb('nouveau') + ' nouvelles')}
+      ${kpi('Références vendues', n0(P.produits.length), nb('monte') + ' en hausse · ' + nb('baisse') + ' en baisse · ' + nb('nouveau') + ' nouvelle' + (nb('nouveau') > 1 ? 's' : ''))}
       ${kpi('Recettes sans coût', n0(sansCout), 'marge inconnue : à compléter au panel', sansCout ? 'alerte' : '')}</div>`;
     const maxV = Math.max(...P.groupes.map(g => g.v13), 1);
     const fam = `<section class="an-carte"><h3>Les familles <small>chiffre, marge réalisée, évolution ${esc(P.face)} · un clic ouvre la famille</small></h3>
@@ -314,7 +314,7 @@
       + (R ? '' : manque(cleR, 'Le réseau') || ''));
     // 2. Combien il me rapporte ?
     const q2 = mu == null ? Q(2, 'Combien il me rapporte ?', `Le coût de la recette n’est pas renseigné au panel${p.tauxCatalogue == null && ht == null ? ', ni le prix' : ''} : la marge ne se calcule pas. Le chiffre : <b>${k1(p.v13)} ${P.sur}</b>, ${er(rgCA)} du magasin.`)
-      : Q(2, 'Combien il me rapporte ?', `<b>${e2(mu)} par pièce</b>, soit ${pc(100 * mu / ht)} du prix hors TVA. <b>${k1(p.marge)} ${P.sur}</b> : ${er(rgM)} marge du magasin.`,
+      : Q(2, 'Combien il me rapporte ?', `<b>${e2(mu)} par pièce</b>, soit ${pc(100 * mu / ht)} du prix hors TVA. <b>${k1(p.marge)} ${P.sur}</b> : ${ere(rgM)} marge du magasin.`,
         `<div class="an-eq"><span><b>${e2(p.prix)}</b>prix TTC</span><i>−</i><span><b>${e2(p.prix - ht)}</b>TVA</span><i>=</i><span><b>${e2(ht)}</b>hors TVA</span><i>−</i><span><b>${e2(cout)}</b>recette</span><i>=</i><span class="ok"><b>${e2(mu)}</b>marge</span></div>
         <table class="an-t an-t--kv"><tbody><tr><td>Coefficient (prix HT ÷ recette)</td><td class="n">× ${n1(ht / cout)}</td></tr><tr><td>Part du chiffre · de la marge du magasin</td><td class="n">${pc(partCA)} · ${pc(partM)}</td></tr><tr><td>Rang au chiffre · à la marge</td><td class="n">${er(rgCA)} · ${er(rgM)} sur ${P.produits.length}</td></tr></tbody></table>
         ${p.taux ? '<p class="an-src">Vendu aussi à la part : la marge applique le taux de la recette au chiffre hors TVA.</p>' : ''}`);
@@ -472,7 +472,8 @@
         totH ? `<table class="an-t an-t--g an-t--j"><thead><tr><th>Heure</th><th>Chiffre, un ${esc(nomJ)} moyen</th><th class="n">Pièces</th><th class="n">Vendu à la fin de l’heure</th></tr></thead><tbody>
           ${HC.map(h => `<tr><td>${h.h} h</td><td><span class="an-bv">${barre(h.moyCa, maxH)}<b>${e0(h.moyCa)}</b></span></td><td class="n">${n0(h.moyQ)}</td><td class="n">${n0(h.cum)} %</td></tr>`).join('')}</tbody></table>
          <p class="an-src">La moyenne des ${(JN.jours || []).length} ${esc(nomJ)}s avant le ${dfr(JN.date)}.</p>` : '');
-      if (totH && a != null) { L.push(`Un ${esc(nomJ)}, la moitié de la famille est vendue avant ${a + 1} h : c’est la première fournée qui fait la journée.`); }
+      // La conclusion suit l'heure (26/11/2026 : « la première fournée » était dite même quand la moitié se vend l'après-midi).
+      if (totH && a != null) { L.push(`Un ${esc(nomJ)}, la moitié de la famille est vendue avant ${a + 1} h : ${a + 1 <= 11 ? 'c’est la première fournée qui fait la journée' : a + 1 <= 14 ? 'la matinée et le midi font la journée' : 'l’après-midi compte autant que le matin'}.`); }
     }
     // 7. Et chez les autres ?
     let q7;

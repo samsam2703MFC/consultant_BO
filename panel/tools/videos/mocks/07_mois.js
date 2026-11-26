@@ -1,6 +1,7 @@
 /* Le Mois (?vue=mois) : les six leviers du mois (/leviers/magasins, la puce « Les six leviers ») pour le magasin de
  * démo et huit voisins anonymes. Données fictives. Le reste de la page (le mois, les jours, le résultat, les douze
- * derniers mois) est servi par 15_chiffres.js ; ce module passe avant lui (ordre des noms) pour cette seule route.
+ * derniers mois) est servi par 15_chiffres.js ; ce module passe avant lui (ordre des noms) pour cette route, et passe
+ * avant 10_ops.js les lectures du détail sur une période (`du`, `au`) à 15_chiffres_periode.js (voir en bas).
  * Les ratios du magasin sont ceux de son P&L du mois (08_annee.js, pnlMois) : les mêmes qu'à l'écran. */
 const D = require('./lib/demo');
 const A = require('./08_annee');
@@ -81,7 +82,10 @@ function leviers(q) {
     recurrence: { debut: '2025-09-01', kpi: 'clients-revenus', kpiPwa: null } };
 }
 
-module.exports = function (m, p, q) {
+// Le détail sur une période (invendus, fenêtre des saisies, canaux, non-conformités ; `du` et `au`) : 10_ops.js sert ces
+// routes pour une journée et passe avant 15_chiffres_periode.js ; ce module, qui passe avant 10_ops.js, les lui renvoie.
+const periode = require('./15_chiffres_periode');
+module.exports = function (m, p, q, c) {
   if (m === 'GET' && p === '/leviers/magasins') { return leviers(q); }
-  return undefined;
+  return periode(m, p, q, c);
 };

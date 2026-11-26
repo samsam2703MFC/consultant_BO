@@ -58,21 +58,64 @@ function periode(vue, date) {
     magasins: L.sort((a, b) => b.realise - a.realise),
     reseau: { magasins: L.length, ca: r2(tot.ca), tickets: tot.tk, panier: r2(tot.ca / tot.tk), panierComptoir: r2(tot.caC / tot.tkC), netPct: r1(tot.net / L.length) } };
 }
-/** /ventes/stats sur une semaine ou un mois : les heures (total et moyenne par jour ouvert), les catégories. */
+/** /ventes/stats sur une semaine ou un mois (panel/src/stats_ventes.php) : les heures (total et moyenne par jour ouvert),
+ * matière, rémunération et marge nette de chaque heure, son top 5 produits et son top 3 catégories, les totaux, la
+ * meilleure et la pire heure, les périodes jour × matin, midi, après-midi (svPeriodes), les catégories. */
+// Ce qui se vend à chaque heure : le poids de chaque groupe du catalogue (le matin la viennoiserie et le café, le midi le
+// snacking, l'après-midi la pâtisserie et la biscuiterie).
+const GROUPES_H = h => h < 10 ? { Viennoiserie: 4, Pains: 2.2, Boissons: 2.2, Pâtisserie: 0.4, Snacking: 0.2, Biscuiterie: 0.3 }
+  : (h < 14 ? { Viennoiserie: 0.6, Pains: 1.6, Boissons: 1, Pâtisserie: 1, Snacking: 4, Biscuiterie: 0.4 }
+    : { Viennoiserie: 0.8, Pains: 1.4, Boissons: 1, Pâtisserie: 3, Snacking: 0.6, Biscuiterie: 1.4 });
+function produitsHeure(h, ca, graine) {
+  const G = GROUPES_H(h), W = D.PRODUITS.map(p => (G[p.groupe] || 0.3) * p.q * p.prix * D.bruit(graine + h + p.pid, 0.25)), tw = W.reduce((a, x) => a + x, 0);
+  const L = D.PRODUITS.map((p, i) => {
+    const v = ca * W[i] / tw, q = Math.max(0, Math.round(v / p.prix)), vv = r2(q * p.prix), taux = p.taux * D.bruit('t' + p.pid, 0.04), c = r2(vv / 1.06 * (1 - taux)), m = r2(vv - c);
+    return { id: p.pid, nom: p.nom, cat: p.cat, q, v: vv, c, m, taux: vv > 0 ? r1(100 * m / vv) : null };
+  }).filter(x => x.q > 0);
+  const top = L.slice().sort((a, b) => b.m - a.m).slice(0, 5).map(x => ({ id: x.id, nom: x.nom, q: x.q, v: x.v, c: x.c, m: x.m, taux: x.taux }));
+  const C = {};
+  L.forEach(x => { const o = C[x.cat] || (C[x.cat] = { nom: x.cat, q: 0, v: 0, c: 0, refs: 0 }); o.q += x.q; o.v += x.v; o.c += x.c; o.refs++; });
+  const vH = L.reduce((a, x) => a + x.v, 0);
+  const cats = Object.values(C).map(o => { const m = r2(o.v - o.c); return { nom: o.nom, q: o.q, v: r2(o.v), c: r2(o.c), m, taux: o.v > 0 ? r1(100 * m / o.v) : null, part: vH > 0 ? r1(100 * o.v / vH) : null, refs: o.refs }; })
+    .sort((a, b) => b.m - a.m);
+  return { top, cats: cats.slice(0, 3), categories: cats.length, references: L.length };
+}
+// La part de la matière dans les ventes de chaque heure (le snacking du midi coûte plus que le café du matin).
+const MAT_H = h => 0.33 * (h >= 11 && h <= 13 ? 1.07 : (h < 10 ? 0.95 : 1)) * D.bruit('mh' + h, 0.03);
 function statsPeriode(vue, date) {
   const [du, au] = bornesDe(vue, date), P = jours(du, au).filter(j => j.passe && !j.aujourdhui);
-  const n = Math.max(1, P.length), H = {};
-  P.forEach(j => j._J.heures.forEach(x => { const o = H[x.h] || (H[x.h] = { h: x.h, ca: 0, tickets: 0 }); o.ca += x.ca; o.tickets += x.tickets; }));
+  const n = Math.max(1, P.length), H = {}, PER = {};
   const plan = D.planningDe(date);
-  const heures = Object.values(H).sort((a, b) => a.h - b.h).map(x => {
-    const en = plan.filter(p => D.toMin(p.debut) < (x.h + 1) * 60 && D.toMin(p.fin) > x.h * 60 && !p.franchise);
-    const trav = en.reduce((a, p) => a + p.tauxH, 0) * n, mat = x.ca / 1.06 * 0.33, res = x.ca / 1.06 - mat - trav;
-    return { h: x.h, ca: r2(x.ca), tickets: x.tickets, mat: r2(mat), mb: r2(x.ca / 1.06 - mat), trav: r2(trav), res: r2(res), poste: en.length, panier: r2(x.ca / x.tickets), panierBase: null,
-      moy: { ca: r2(x.ca / n), tickets: r2(x.tickets / n), mat: r2(mat / n), trav: r2(trav / n), res: r2(res / n), mb: r2((x.ca / 1.06 - mat) / n) } };
+  const enPoste = (pl, h) => pl.filter(p => D.toMin(p.debut) < (h + 1) * 60 && D.toMin(p.fin) > h * 60 && !p.franchise);
+  const BORNES = [['matin', 'Matin', 6, 10], ['midi', 'Midi', 11, 14], ['aprem', 'Après-midi', 15, 19]];
+  const perDe = h => (BORNES.find(b => h >= b[2] && h <= b[3]) || (h < 6 ? BORNES[0] : BORNES[2]))[0];
+  P.forEach(j => {
+    const pl = D.planningDe(j.date), J = PER[j.date] = {};
+    BORNES.forEach(b => { J[b[0]] = { ca: 0, tickets: 0, mb: 0, res: 0 }; });
+    j._J.heures.forEach(x => {
+      const o = H[x.h] || (H[x.h] = { h: x.h, ca: 0, tickets: 0 }); o.ca += x.ca; o.tickets += x.tickets;
+      const mat = x.ca / 1.06 * MAT_H(x.h), trav = enPoste(pl, x.h).reduce((a, p) => a + p.tauxH, 0), k = J[perDe(x.h)];
+      k.ca += x.ca; k.tickets += x.tickets; k.mb += x.ca / 1.06 - mat; k.res += x.ca / 1.06 - mat - trav;
+    });
+    Object.values(J).forEach(k => { k.ca = r2(k.ca); k.mb = r2(k.mb); k.res = r2(k.res); });
   });
-  const tot = heures.reduce((a, x) => ({ ca: a.ca + x.ca, tickets: a.tickets + x.tickets }), { ca: 0, tickets: 0 });
-  const best = heures.slice().sort((a, b) => b.ca - a.ca)[0];
-  return { shop: SHOP, vue, date, du, au, nJoursOuverts: n, joursServis: P.map(j => j.date), totaux: { ca: r2(tot.ca), tickets: tot.tickets }, heures, categories: D.categoriesDe(du + vue, tot.ca), meilleure: best ? { h: best.h } : null, produits: { aSuivre: false }, aCompleter: null };
+  const heures = Object.values(H).sort((a, b) => a.h - b.h).map(x => {
+    const en = enPoste(plan, x.h);
+    const trav = en.reduce((a, p) => a + p.tauxH, 0) * n, mat = x.ca / 1.06 * MAT_H(x.h), mb = x.ca / 1.06 - mat, res = mb - trav;
+    return Object.assign({ h: x.h, ca: r2(x.ca), tickets: x.tickets, mat: r2(mat), mb: r2(mb), mbPct: r1(100 * mb / x.ca), trav: r2(trav), poste: en.length, res: r2(res), resPct: r1(100 * res / x.ca),
+      panier: r2(x.ca / x.tickets), panierBase: null,
+      moy: { ca: r2(x.ca / n), tickets: r1(x.tickets / n), mat: r2(mat / n), trav: r2(trav / n), res: r2(res / n), mb: r2(mb / n) }, topSur: P.length }, produitsHeure(x.h, x.ca, vue + du));
+  });
+  const tot = heures.reduce((a, x) => ({ tickets: a.tickets + x.tickets, ca: a.ca + x.ca, mat: a.mat + x.mat, trav: a.trav + x.trav, res: a.res + x.res }), { tickets: 0, ca: 0, mat: 0, trav: 0, res: 0 });
+  tot.mb = r2(tot.ca / 1.06 - tot.mat); tot.panier = tot.tickets ? r2(tot.ca / tot.tickets) : null;
+  tot.mbPct = tot.ca ? r1(100 * tot.mb / tot.ca) : null; tot.resPct = tot.ca ? r1(100 * tot.res / tot.ca) : null;
+  ['ca', 'mat', 'trav', 'res'].forEach(k => { tot[k] = r2(tot[k]); });
+  let best = null, pire = null;
+  heures.forEach(l => { if (!best || l.res > best.res) { best = l; } if (!pire || l.res < pire.res) { pire = l; } });
+  return { shop: SHOP, vue, date, du, au, nJoursOuverts: n, joursServis: P.map(j => j.date), joursOuverts: P.map(j => j.date), totaux: tot, heures, categories: D.categoriesDe(du + vue, tot.ca),
+    periodes: { bornes: BORNES.map(b => ({ cle: b[0], nom: b[1], de: b[2], a: b[3] })), jours: PER },
+    meilleure: best ? { h: best.h, res: best.res, moy: best.moy.res } : null, pire: pire ? { h: pire.h, res: pire.res, moy: pire.moy.res } : null,
+    produits: { jours: P.map(j => j.date), total: P.length, complet: true, aSuivre: false }, aCompleter: null };
 }
 /** /ventes/semaines : les 13 dernières semaines (ou mois) face au N-1. */
 const LAB_M = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -93,8 +136,9 @@ function semaines(vue, date, n) {
   } else {
     const j = (D.dow(date) + 6) % 7, lun = D.plus(date, -j);
     for (let i = n - 1; i >= 0; i--) {
-      const du = D.plus(lun, -7 * i), au = D.plus(du, 6), du1 = D.plus(du, -364), au1 = du === lun ? D.plus(AUJ, -364) : D.plus(au, -364);
-      L.push(Object.assign({ iso: isoSem(du), du, au, enCours: du === lun, joursServis: du === lun ? (D.dow(AUJ) + 6) % 7 : null }, somme(du, au), { n1: somme(du1, au1) }));
+      // La semaine en cours : celle d'aujourd'hui (une semaine passée ouverte depuis la frise est close).
+      const du = D.plus(lun, -7 * i), au = D.plus(du, 6), cours = du <= AUJ && AUJ <= au, du1 = D.plus(du, -364), au1 = cours ? D.plus(AUJ, -364) : D.plus(au, -364);
+      L.push(Object.assign({ iso: isoSem(du), du, au, enCours: cours, joursServis: cours ? (D.dow(AUJ) + 6) % 7 : null }, somme(du, au), { n1: somme(du1, au1) }));
     }
   }
   return { shop: SHOP, vue: vue === 'mois' ? 'mois' : 'semaine', semaines: L, n1Motif: null };
@@ -110,6 +154,16 @@ function perf(annees) {
   } });
   return L;
 }
+/** /pwa/tasks/heatmap/mois : chaque jour relevé de la période, ses tâches obligatoires faites et pas faites (huit par
+ * jour ; l'alarme oubliée le mardi 17, une journée plus lâche le 4). La journée en cours se compte en direct (/pwa/tasks). */
+function heatmap(du, au) {
+  const jours = [];
+  for (let d = du; d <= au && d < AUJ; d = D.plus(d, 1)) {
+    const r = D.alea('tj' + d)(), pas = d === '2026-11-17' ? 1 : (d === '2026-11-04' ? 4 : (r < 0.7 ? 0 : 1));
+    jours.push({ j: d, releve: true, faites: 8 - pas, pasFaites: pas, part: Math.round(100 * (8 - pas) / 8) });
+  }
+  return { lignes: [{ shopId: SHOP, faites: jours.reduce((a, j) => a + j.faites, 0), pasFaites: jours.reduce((a, j) => a + j.pasFaites, 0), jours }] };
+}
 module.exports = function (m, p, q) {
   if (m !== 'GET') { return undefined; }
   if (p === '/exploitation/periode') { return periode(q.get('vue') || 'mois', q.get('date') || AUJ); }
@@ -117,9 +171,9 @@ module.exports = function (m, p, q) {
   if (p === '/ventes/semaines') { return semaines(q.get('vue') || 'semaine', q.get('date') || AUJ, +(q.get('n') || 13)); }
   if (p === '/stores/perf') { return perf((q.get('annees') || '2025,2026').split(',')); }
   if (p === '/ventes/stock') { return require('./lib/stock').stock(); }
-  if (p === '/pwa/tasks/heatmap/mois') { return { lignes: [{ shopId: SHOP, faites: 86, pasFaites: 4, jours: [] }] }; }
+  if (p === '/pwa/tasks/heatmap/mois') { return heatmap(q.get('du') || AUJ, q.get('au') || AUJ); }
   if (p === '/exploitation/offres') { return { offres: [], liste: [] }; }
-  if (p === '/exploitation/canaux-mois') { return { mois: [] }; }
+  // /exploitation/canaux-mois, et le détail sur une période (invendus, canaux, non-conformités) : 15_chiffres_periode.js.
   if (p === '/exploitation/rentabilite') {
     const du = AUJ.slice(0, 8) + '01', J = [];
     let net = 0, ca = 0;

@@ -258,12 +258,17 @@ function personneFiche(id) {
     langue: o.langue || 'fr', contrat: o.contrat || (id === 208 ? 'internship' : 'employment_contract'), role: o.role || 'employee', telephone: '+32 ·· ·· ' + String(id).slice(-2),
     pin: true, appPrete: id !== 209, roles: [], competences: COMPETENCES[id] || ['Hygiène (HACCP)'], positions: [{ nom: e.fonctions[0], niveau: id === 206 ? 'Niveau 4' : 'Niveau 2' }] };
 }
-const MOTS = ['Très bonne vente des tartes, comptoir rangé.', 'Un peu lente au rush de midi.', '', 'Bon accueil, vitrine tenue jusqu’à la fermeture.', 'Ouverture en retard de 10 min.', ''];
+// Le mot suit la note (5 : un compliment, 4 : un détail à reprendre, 3 : ce qui n'allait pas) ; parfois aucun mot.
+const MOTS = {
+  5: ['Très bonne vente des tartes, comptoir rangé.', 'Bon accueil, vitrine tenue jusqu’à la fermeture.', '', 'Rush de midi bien tenu, caisse juste.'],
+  4: ['Un peu lente au rush de midi.', 'Bonne journée ; la vitrine se vidait vers 17 h.', '', 'Accueil souriant, étiquettes à revoir.'],
+  3: ['Ouverture en retard de 10 min.', 'Comptoir pas réassorti après le rush.', 'Caisse fausse de 4 € à la fermeture.'],
+};
 function evaluations(id) {
   if (!S.evals[id]) {
     S.evals[id] = [];
     for (let d = '2026-11-02'; d < plus(AUJ, -3); d = plus(d, 1)) {
-      servicesDu(d).filter(s => s.employe === id).forEach((s, k) => { const b = bruit(d + id, k); if (b > -0.55) { S.evals[id].push({ id: 5000 + S.evals[id].length, service: s.id, date: d, de: s.de, a: s.a, note: b > 0.35 ? 5 : b > -0.2 ? 4 : 3, mot: MOTS[Math.abs(Math.round(b * 10)) % MOTS.length], par: 'Fanny Leroy' }); } });
+      servicesDu(d).filter(s => s.employe === id).forEach((s, k) => { const b = bruit(d + id, k); if (b > -0.55) { S.evals[id].push({ id: 5000 + S.evals[id].length, service: s.id, date: d, de: s.de, a: s.a, note: b > 0.35 ? 5 : b > -0.2 ? 4 : 3, mot: (L => L[Math.abs(Math.round(b * 10)) % L.length])(MOTS[b > 0.35 ? 5 : b > -0.2 ? 4 : 3]), par: id === 206 ? null : 'Fanny Leroy' }); } });
     }
   }
   const L = S.evals[id].slice().sort((x, y) => (y.date + y.de).localeCompare(x.date + x.de)), notes = new Set(L.map(x => x.service)), aNoter = [];
@@ -278,7 +283,7 @@ function ventes(id) {
     const du = plus(lundi, -7 * i), base = vend ? 1650 + 45 * (12 - i) : 260, w = Math.round(base * (1 + 0.06 * bruit(du, k))), tk = Math.round(w / ((vend ? 13.7 : 11.5) + 0.09 * (12 - i) + 0.3 * bruit(du, k + 7))), pcs = Math.round(100 * ((vend ? 2.06 : 1.7) + 0.022 * (12 - i) + 0.04 * bruit(du, k + 3))) / 100;
     semaines.push({ du, ca: w, tickets: tk, panier: Math.round(100 * w / tk) / 100, pieces: pcs, jours: 7, joursLignes: 7 }); ca += w; t += tk; l += pcs * tk;
   }
-  return { personne: (EQUIPE.find(e => e.id === id) || {}).nom, semaines, total: { ca, tickets: t, panier: Math.round(100 * ca / t) / 100, pieces: Math.round(100 * l / t) / 100, part: vend ? 21.4 : 3.1 },
+  return { personne: (EQUIPE.find(e => e.id === id) || {}).nom, semaines, total: { ca, tickets: t, panier: Math.round(100 * ca / t) / 100, pieces: Math.round(100 * l / t) / 100, part: Math.round(1000 * ca / (12 * 14700)) / 10 },
     equipe: { panier: 14.05, pieces: 2.14 }, rang: vend ? { position: id === 201 ? 2 : 3, sur: 6 } : null, couverture: { jours: 84, ventes: 84, lignes: 84 }, cibles: { panier: 13, pieces: 3.6 } };
 }
 function fiche(m, p, id, c) {
@@ -288,7 +293,7 @@ function fiche(m, p, id, c) {
   if (p === '/dashboard/equipe/personne' && m === 'GET') { return { personne: P, detailLu: true, choix }; }
   if (p === '/dashboard/equipe/personne' && m === 'PATCH') { S.fiches[id] = Object.assign(S.fiches[id] || {}, c.champs || {}); const e = EQUIPE.find(x => x.id === id); if (c.champs && c.champs.taux != null) { e.taux = c.champs.taux; } return { ok: true, personne: personneFiche(id), detailLu: true, choix }; }
   if (p === '/dashboard/equipe/personne/evaluations' && m === 'GET') { return evaluations(id); }
-  if (p === '/dashboard/equipe/personne/evaluation' && m === 'POST') { evaluations(id); const s = servicesDu(c.date).find(x => x.id === c.service); S.evals[id].push({ id: 6000 + S.evals[id].length, service: c.service, date: c.date, de: s ? s.de : '', a: s ? s.a : '', note: c.note, mot: c.mot || '', par: 'vous' }); return Object.assign({ ok: true }, evaluations(id)); }
+  if (p === '/dashboard/equipe/personne/evaluation' && m === 'POST') { evaluations(id); const s = servicesDu(c.date).find(x => x.id === c.service); S.evals[id].push({ id: 6000 + S.evals[id].length, service: c.service, date: c.date, de: s ? s.de : '', a: s ? s.a : '', note: c.note, mot: c.mot || '', par: null }); return Object.assign({ ok: true }, evaluations(id)); }
   if (p === '/dashboard/equipe/personne/ventes' && m === 'GET') { return ventes(id); }
   return undefined;
 }
