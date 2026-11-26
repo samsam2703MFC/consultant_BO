@@ -2054,7 +2054,7 @@
       ],
       "fichier": "07-mois.mp4",
       "affiche": "07-mois.jpg",
-      "duree": "2 min 40",
+      "duree": "2 min 37",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
@@ -2062,8 +2062,8 @@
         "consultant/public/assets/js/cartes-magasin.js",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "fd7deec0665b3d1b3c0864ea736eeeb7f1236b3b",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "mois-leviers",
@@ -2078,16 +2078,16 @@
       ],
       "fichier": "07-01-leviers.mp4",
       "debut": 0,
-      "fin": 86.3,
+      "fin": 84.41,
       "affiche": "mois-leviers.jpg",
-      "duree": "1 min 26",
+      "duree": "1 min 24",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "consultant/public/assets/js/cartes-magasin.js",
         "marketing/src/canaux_offres.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "fd7deec0665b3d1b3c0864ea736eeeb7f1236b3b",
       "tourne_le": "2026-11-26"
     },
     {
@@ -2103,14 +2103,14 @@
       ],
       "fichier": "07-02-douze.mp4",
       "debut": 0,
-      "fin": 85.09,
+      "fin": 83.73,
       "affiche": "mois-douze-mois.jpg",
-      "duree": "1 min 25",
+      "duree": "1 min 24",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "fd7deec0665b3d1b3c0864ea736eeeb7f1236b3b",
       "tourne_le": "2026-11-26"
     },
     {
@@ -2126,14 +2126,14 @@
       ],
       "fichier": "07-03-calendrier.mp4",
       "debut": 0,
-      "fin": 66.91,
+      "fin": 65.98,
       "affiche": "mois-calendrier.jpg",
-      "duree": "1 min 07",
+      "duree": "1 min 06",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "fd7deec0665b3d1b3c0864ea736eeeb7f1236b3b",
       "tourne_le": "2026-11-26"
     },
     {
@@ -2149,15 +2149,15 @@
       ],
       "fichier": "07-04-heures.mp4",
       "debut": 0,
-      "fin": 53.08,
+      "fin": 52.25,
       "affiche": "mois-heure-par-heure.jpg",
-      "duree": "53 s",
+      "duree": "52 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "panel/src/stats_ventes.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "fd7deec0665b3d1b3c0864ea736eeeb7f1236b3b",
       "tourne_le": "2026-11-26"
     },
     {
@@ -2173,15 +2173,15 @@
       ],
       "fichier": "07-05-periodes.mp4",
       "debut": 0,
-      "fin": 45.11,
+      "fin": 43.91,
       "affiche": "mois-periodes.jpg",
-      "duree": "45 s",
+      "duree": "44 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "panel/src/stats_ventes.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "fd7deec0665b3d1b3c0864ea736eeeb7f1236b3b",
       "tourne_le": "2026-11-26"
     },
     {
@@ -2197,15 +2197,15 @@
       ],
       "fichier": "07-06-invendus.mp4",
       "debut": 0,
-      "fin": 57.33,
+      "fin": 55.23,
       "affiche": "mois-invendus.jpg",
-      "duree": "57 s",
+      "duree": "55 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "consultant/src/invendus.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "fd7deec0665b3d1b3c0864ea736eeeb7f1236b3b",
       "tourne_le": "2026-11-26"
     },
     {
