@@ -591,6 +591,15 @@
 .vi .og-seg i.ok{background:var(--green)}.vi .og-seg i.part{background:var(--prize)}.vi .og-seg i.ko{background:var(--stop)}.vi .og-seg i.na{background:var(--color-text-muted);opacity:.45}
 .vi .og-cpt{display:flex;gap:6px;flex-wrap:wrap}.vi .og-cpt span{font:400 11.5px var(--font-ui);padding:5px 9px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)}
 .vi .og-cpt span.ok{background:rgba(63,122,82,.12);color:var(--green)}.vi .og-cpt span.part{background:#FFF4E5;color:#8a5200}.vi .og-cpt span.ko{background:rgba(141,29,44,.08);color:var(--stop)}
+.vi .aq-vc{display:flex;gap:12px;align-items:flex-start;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.vi .aq-vc .ph-v{width:72px;height:72px;flex:0 0 auto;margin:0}.vi .aq-vc .ph-v.vide{display:flex;align-items:center;justify-content:center;text-align:center;font-size:10.5px;color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:8px}
+.vi .aq-vt{flex:1;min-width:0}.vi .aq-vn{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px}.vi .aq-vn b{font-weight:400;font-size:14px}
+.vi .aq-niv{font:400 11px var(--font-ui);padding:3px 8px;border-radius:6px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .aq-niv.ok{background:rgba(63,122,82,.12);color:var(--green)}.vi .aq-niv.att{background:#FFF4E5;color:#8a5200}.vi .aq-niv.ko{background:rgba(141,29,44,.08);color:var(--stop)}
+.vi .aq-ve{margin:6px 0 0;padding:0;list-style:none;font-size:12.5px;line-height:1.45}.vi .aq-ve li{margin-top:3px}.vi .aq-ve span.ko{color:var(--stop)}.vi .aq-ve span.att{color:#8a5200}.vi .aq-ve small{display:block;font-size:11.5px;color:var(--color-text-muted)}
+.vi .aq-vb{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.vi .aq-vplus{display:flex;align-items:center;gap:10px;flex:1 1 160px;min-height:56px;padding:0 14px;border:1px dashed var(--color-border-secondary);border-radius:12px;background:var(--color-surface);font:400 13px var(--font-ui);color:var(--color-text);cursor:pointer}
+.vi .aq-vplus span{font-size:20px;line-height:1;color:var(--color-primary)}
 .vi .og-rap{margin-top:14px;border-radius:12px;border:1px solid rgba(141,29,44,.35);background:#FBF3F3;padding:12px 14px}
 .vi .og-rap .t{display:flex;align-items:center;gap:8px;font:400 12px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-primary)}
 .vi .og-rap p{margin:7px 0 0;font-size:13px;line-height:1.5}.vi .og-rap p b,.vi .og-pop .regle b{font-weight:700}
@@ -747,11 +756,15 @@
   const TEMPS = [['ext', 'Extérieur'], ['int', 'Intérieur'], ['suivi', 'Suivi de projet'], ['analyse', 'Analyse'], ['dev', 'Développement'], ['fin', 'Météo et fin']];
   // Les étapes bloquantes livrées (26/10/2026) : ce qui se remplit sur place bloque ; ce qui dépend d'une lecture extérieure
   // (contrôles du jour de l'équipe, checklist du panel) ne bloque pas. Réglages › Contrôle guidé les change étape par étape.
-  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true, evaluation: true, equipe: false, outils: true };
+  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, qualite: false, checklist: false, pistes: true, constat: true, meteo: true, evaluation: true, equipe: false, outils: true };
   // Les points d'une checklist qui se regardent dehors : ils forment le module « L'extérieur ».
   const RX_EXT = /fa[cç]ade|enseigne|vitrine ext|ext[ée]rieur|terrasse|abords|parking|trottoir/i;
   // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
   const PT_OBLIGATOIRES = { ref: 'produits_obligatoires', libelle: 'Les produits obligatoires sont là', libelle_nl: 'De verplichte producten zijn aanwezig', photo: true, pct: false };
+  // Le contrôle qualité des produits pendant la visite (26/11/2026) : combien de produits différents à contrôler.
+  const AQ_N = 3;
+  const AQ_NIV = { ok: ['Conforme', 'ok'], mineur: ['À surveiller', 'att'], majeur: ['Non conforme', 'ko'] };
+  const AQ_DEC = { vente: 'mis en vente', declasser: 'déclassé', jeter: 'à jeter' };
   const TAB_IC = {
     leviers: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
     photo: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
@@ -775,6 +788,8 @@
     equipe: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.6.2 4.6 2 5.2 5"/>',
     eval: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 7.5l4.5 3-1.5 5H9.5L7.5 10z"/>',
     outils: '<rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 21h8M12 17v4"/><path d="M7 13l3-3 2 2 4-4"/>',
+    // Le contrôle qualité des produits (26/11/2026) : le produit, coché.
+    qualite: '<path d="M3 13c2.5-6.5 15.5-6.5 18 0"/><path d="M3 13h18"/><path d="M8.5 17.5l2.5 2.5 5-5"/>',
     // La visite en six temps (26/10/2026).
     t_ext: '<path d="M3 10l1.5-5h15L21 10"/><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M5 13v8h14v-8M10 21v-5h4v5"/>',
     t_int: '<path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M5 19h14"/>',
@@ -862,7 +877,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.EQ = {}; this.OG = {}; this.ogInfo = false; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
+      this.D = null; this.EQ = {}; this.OG = {}; this.AQ = {}; this.aqCadre = null; this.ogInfo = false; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
@@ -872,6 +887,7 @@
       host.addEventListener('click', e => this.clic(e));
       host.addEventListener('input', e => this.saisie(e));
       host.addEventListener('change', e => this.change(e));
+      this.ecouterQualite();
       this.ecouterSignature(host); this.ecouterGlisse(host); this.ecouterReperes(host);
       window.addEventListener('online', () => { this.enLigne = true; this.rejouer(); this.rendre(); });
       window.addEventListener('offline', () => { this.enLigne = false; this.rendre(); });
@@ -2240,6 +2256,13 @@
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
       etapes.push({ cle: 'controles', tps: 'int', ic: 'controles', court: 'Contrôles du jour', titre: 'Les contrôles en photo du jour', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
+      // Le contrôle qualité de trois produits (26/11/2026) : la tablette d'autocontrôle ouverte par-dessus la visite
+      // (src/autocontrole.php, rôle consultant), les mêmes grilles qu'au magasin ; chaque contrôle part dans le rapport.
+      this.chargerQualite(v); const aq = this.qualiteListe(v); const aqA = this.AQ[this.aqCle(v)] || {};
+      const aqN = aq ? new Set(aq.map(k => k.produitId)).size : 0; const aqKo = aq ? aq.filter(k => k.niveau === 'majeur').length : 0;
+      etapes.push({ cle: 'qualite', tps: 'int', ic: 'qualite', court: 'Qualité produits', titre: 'Le contrôle qualité de ' + AQ_N + ' produits',
+        etat: aq ? Math.min(aqN, AQ_N) + ' / ' + AQ_N : (aqA.erreur ? 'indisponible' : 'lecture…'),
+        ko: aqKo, fait: aqN >= AQ_N, html: () => this.qualiteHtml(v) });
       // 3. Le suivi de projet : le dossier du bureau (seulement s'il est arrivé), ses demandes, ce qui avait été décidé
       // aux visites précédentes — vérifié sur place —, la checklist du consultant lue dans le panel.
       const P = v.prep;
@@ -2617,7 +2640,7 @@
       [].concat(D.checklist || [], ...((D.types || []).map(t => t.checklist || []))).forEach(m => ajoute(m.id, m.nom, m.id === 'msp' ? 'analyse' : 'int'));
       ajoute('bureau', 'Demandé par le bureau', 'suivi'); ajoute('leviers', MOD_LEVIERS.nom, 'analyse');
       const lignes = [['ext', 'photos_ext', 'L’extérieur en photo'], ...mods.filter(m => m[2] === 'ext').map(m => [m[2], m[0], m[1]]),
-        ['int', 'photos_int', 'L’intérieur en photo'], ...mods.filter(m => m[2] === 'int').map(m => [m[2], m[0], m[1]]), ['int', 'equipe', 'L’équipe en poste (planning du jour)'], ['int', 'controles', 'Les contrôles en photo du jour (photos de l’équipe)'],
+        ['int', 'photos_int', 'L’intérieur en photo'], ...mods.filter(m => m[2] === 'int').map(m => [m[2], m[0], m[1]]), ['int', 'equipe', 'L’équipe en poste (planning du jour)'], ['int', 'controles', 'Les contrôles en photo du jour (photos de l’équipe)'], ['int', 'qualite', 'Le contrôle qualité de ' + AQ_N + ' produits (tablette d’autocontrôle)'],
         ['suivi', null, 'Dossier du bureau'], ...mods.filter(m => m[2] === 'suivi').map(m => [m[2], m[0], m[1]]), ['suivi', null, 'Les points décidés aux visites précédentes'], ['suivi', 'checklist', 'Checklist du consultant (panel)'],
         ['analyse', 'outils', 'Les outils de gestion (sept verdicts, le rappel lu)'], ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
         ['dev', 'pistes', 'Le CA sous le budget : pourquoi et trois pistes'], ['dev', 'constat', 'Vu sur place et recommandation'], ['dev', null, 'Points à travailler'],
@@ -2696,6 +2719,8 @@
       const el = e.target.closest('[data-a]'); if (!el || !this.host.contains(el)) { return; }
       const a = el.dataset.a; const v = el.dataset.v || ''; const parts = v.split('|');
       if (a === 'go') { const [vue, p] = v.split('/'); this.go(vue, p); return; }
+      if (a === 'aq-ouvrir') { this.aqOuvrir(this.visite(v)); return; }
+      if (a === 'aq-photo') { this.voir = { src: this.api(v), txt: 'Contrôle qualité' }; this.rendre(); return; }
       if (a === 'fermer-voir') { this.voir = null; this.rendre(); return; }
       if (a === 'voir') { const p = this.photoPar(v); if (p) { this.voir = { src: this.photoSrc(p), pid: p.client_id || String(p.id), txt: this.photoTitre(p) + (p.attente ? ' · pas encore envoyée' : '') }; this.rendre(); } return; }
       // Les repères sur une photo (05/11/2026) : l'éditeur, comme dans Contrôle des tâches.
@@ -3121,6 +3146,61 @@
         <div class="xs mu" style="margin-top:6px">${nl ? 'Op ' + a.n + ' gescoorde vragen: elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t., vrije tekst, vragen buiten de score.' : 'Sur ' + a.n + ' questions notées : chaque point conforme compte selon son poids. Ne comptent pas : N/A, texte libre, questions hors score.'}</div></div>`;
     }
     /** Le planning du jour du magasin (GET /visites/equipe/{shop}) : lu une fois par session et par jour, gardé hors ligne. */
+    /* --- Le contrôle qualité des produits (26/11/2026, src/autocontrole.php) -----------------------------------------
+     * Trois produits au choix du consultant, contrôlés sur la tablette d'autocontrôle (autocontrole/?visite=…&cadre=1)
+     * ouverte par-dessus la visite : cuisson, structure, goût, présentation, photos et décision du lot. La page écrit
+     * à la visite quand un contrôle est enregistré (aq-fait) et quand on la quitte (aq-fermer). Lu en ligne seulement. */
+    aqCle(v) { return String(v.client_id || v.id); }
+    chargerQualite(v, force) {
+      const k = this.aqCle(v); if (!force && this.AQ[k]) { return; }
+      this.AQ[k] = Object.assign({}, this.AQ[k], { chargement: true });
+      this.lire('/autocontrole/magasin/visite?shop=' + encodeURIComponent(v.shop) + '&visite=' + encodeURIComponent(k), 'aq:' + k)
+        .then(d => { this.AQ[k] = { d }; }, () => { this.AQ[k] = { erreur: true }; }).then(() => this.rendre());
+    }
+    qualiteListe(v) { const A = this.AQ[this.aqCle(v)]; return A && A.d ? A.d.controles || [] : null; }
+    qualiteHtml(v) {
+      const A = this.AQ[this.aqCle(v)] || {}; const L = this.qualiteListe(v);
+      if (v.attente) { return '<div class="card sm mu">La visite n’est pas encore arrivée au serveur : reconnectez la tablette, puis contrôlez les produits.</div>'; }
+      if (!L) { return `<div class="card sm mu">${A.erreur ? 'Contrôles qualité indisponibles — hors ligne ?' : 'Lecture des contrôles qualité…'}</div>`; }
+      const prods = [...new Set(L.map(k => k.produitId))];
+      const carte = k => {
+        const n = AQ_NIV[k.niveau] || ['—', '']; const ph = (k.photos || [])[0];
+        const ec = (k.ecarts || []).slice(0, 4).map(e => `<li><span class="${(AQ_NIV[e.niveau] || [])[1] || ''}">${esc(e.libelle)}</span> : ${esc(e.reponse)}${e.prochaine ? `<small>${esc(e.prochaine)}</small>` : ''}</li>`).join('');
+        return `<div class="aq-vc">${ph ? `<button class="ph-v" data-a="aq-photo" data-v="${esc(ph.url)}" style="background-image:url('${esc(this.api(ph.url))}')"></button>` : '<span class="ph-v vide">pas de photo</span>'}
+          <div class="aq-vt"><div class="aq-vn"><b>${esc(k.produit)}</b><span class="aq-niv ${n[1]}">${n[0]}</span></div>
+            <div class="xs mu">${esc(hm(k.cree_le) || '')}${k.fournee ? ' · fournée de ' + esc(k.fournee) : ''}${k.pieces ? ' · ' + k.pieces + ' pièces' : ''} · lot ${esc(AQ_DEC[k.decision] || k.decision)}${(k.ecarts || []).length ? '' : ' · aucun écart'}</div>
+            ${ec ? `<ul class="aq-ve">${ec}</ul>` : ''}</div></div>`;
+      };
+      const reste = Math.max(0, AQ_N - prods.length);
+      const boutons = Array.from({ length: reste }, (x, i) => `<button class="aq-vplus" data-a="aq-ouvrir" data-v="${esc(v.id)}"><span>+</span>Produit ${prods.length + i + 1}</button>`).join('');
+      return `<div class="card sm mu">Trois produits au choix, de préférence d’une fournée récente : chacun se contrôle sur la tablette d’autocontrôle (cuisson, structure, goût, présentation, photo), avec les mêmes grilles que le magasin. Ils partent dans le rapport.</div>`
+        + (L.length ? L.map(carte).join('') : '')
+        + `<div class="aq-vb">${boutons}${reste ? '' : `<button class="chip" data-a="aq-ouvrir" data-v="${esc(v.id)}">Contrôler un autre produit</button>`}</div>`;
+    }
+    aqOuvrir(v) {
+      if (!v || v.attente) { this.dire('La visite n’est pas encore envoyée : reconnectez la tablette.'); return; }
+      this.aqFermer(true);
+      const qui = v.consultantNom || this.consultantNom(this.moi) || '';
+      const src = (this.o.racine || '../') + 'autocontrole/?shop=' + encodeURIComponent(v.shop) + '&visite=' + encodeURIComponent(this.aqCle(v)) + '&role=consultant&cadre=1' + (qui ? '&qui=' + encodeURIComponent(qui) : '');
+      const d = document.createElement('div'); d.className = 'vi-aq-cadre';
+      d.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#fff';
+      d.innerHTML = '<iframe title="Contrôle qualité du produit" style="width:100%;height:100%;border:0;display:block"></iframe>';
+      d.firstChild.src = src;
+      // Sur le body, pas dans la visite : chaque rendu de la visite remplace son contenu.
+      document.body.appendChild(d); this.aqCadre = { el: d, v };
+    }
+    aqFermer(silence) {
+      const c = this.aqCadre; if (!c) { return; }
+      this.aqCadre = null; c.el.remove();
+      if (!silence) { this.chargerQualite(c.v, true); }
+    }
+    ecouterQualite() {
+      window.addEventListener('message', e => {
+        if (e.origin !== location.origin || !this.aqCadre || !e.data || e.source !== this.aqCadre.el.firstChild.contentWindow) { return; }
+        if (e.data.type === 'aq-fait') { this.chargerQualite(this.aqCadre.v, true); }
+        if (e.data.type === 'aq-fermer') { this.aqFermer(); }
+      });
+    }
     /* --- Les outils de gestion (17/11/2026, maquette docs/maquettes/audit-outils-gestion/) --------------------------
      * Sept outils, chacun avec ce que le cockpit en lit tout seul (GET /visites/outils/{shop}), le verdict du consultant,
      * sa remarque (obligatoire pour « pas suivi » et « en partie ») et ses photos. Le rappel de la marque est lu avec le

@@ -45,6 +45,9 @@ function accesMode(): string { return $GLOBALS['mode']; }
 function accesIdentite(): ?array { return $GLOBALS['identite']; }
 function accesNomMagasin(string $s): string { return ['4' => 'Halle', '5' => 'Sombreffe'][$s] ?? 'Magasin ' . $s; }
 function accesMagasins(): array { return ['4' => 'Halle', '5' => 'Sombreffe']; }
+// La visite du consultant (src/visites.php) : par son id ou son client_id.
+$GLOBALS['visites'] = ['31' => ['id' => 31, 'client_id' => 'v-abc-123', 'shop_id' => '4', 'prevu_le' => '2026-11-26'], '32' => ['id' => 32, 'client_id' => 'v-def-456', 'shop_id' => '5', 'prevu_le' => '2026-11-26']];
+function viVisiteParId(string $id): ?array { foreach ($GLOBALS['visites'] as $v) { if ((string) $v['id'] === $id || $v['client_id'] === $id) { return $v; } } return null; }
 function ep_prod_catalogue(): array
 {
     return [
@@ -57,6 +60,8 @@ function ep_prod_catalogue(): array
 }
 $prive = sys_get_temp_dir() . '/aq-banc-' . getmypid();
 putenv('COCKPIT_PRIVE=' . $prive);
+$public = sys_get_temp_dir() . '/aq-public-' . getmypid();
+putenv('COCKPIT_PUBLIC=' . $public);
 require __DIR__ . '/../src/autocontrole.php';
 
 // Une image PNG de 2 × 2, lisible par getimagesizefromstring.
@@ -207,6 +212,83 @@ $pub = wr_aq_publier();
 verifie('corrigé, il se publie : les tablettes lisent la nouvelle grille', ($pub['ok'] ?? false) && empty(aqGrilles()['aValider']) && aqGrilles()['categories'][0]['quand'] === 'À chaque fournée.');
 verifie('l\'état des grilles pour le siège', ep_aq_grilles()['publiee']['le'] !== null && ep_aq_grilles()['erreurs'] === []);
 
+echo "Standard qualité (manuel des fiches techniques)\n";
+$std = aqStandardCritere($crit['mie_toucher']);
+verifie('mie au toucher : bon = souple ; à surveiller = mou, ferme ; pas bon = très mou, dur',
+    $std['bon'] === ['Souple'] && $std['surveiller'] === ['Mou', 'Ferme'] && $std['pasBon'] === ['Très mou', 'Dur']);
+verifie('oui / non : « retombé » bon = Non, pas bon = Oui', aqStandardCritere($crit['retombe'])['bon'] === ['Non'] && aqStandardCritere($crit['retombe'])['pasBon'] === ['Oui']);
+verifie('mesure : la plage est bonne, hors tolérance à surveiller', aqStandardCritere($crit['poids'])['bon'] === ['380 à 420 g'] && aqStandardCritere($crit['poids'])['surveiller'] === ['Hors tolérance']);
+$sp = aqStandardProduit(['id' => 6700139, 'nom' => 'Cougnou Nature - 400 g.', 'categorie' => 'Cougnou']);
+verifie('le standard du Cougnou : 4 étapes, 17 critères, poids du produit', count($sp['etapes'] ?? []) === 4 && array_sum(array_map(fn ($e) => count($e['criteres']), $sp['etapes'])) === 17
+    && $sp['etapes'][1]['criteres'][5]['bon'] === ['380 à 420 g']);
+$se = aqStandardProduit(['id' => 3100001, 'nom' => 'Miel - Tilleul', 'categorie' => 'Épicerie']);
+verifie('épicerie : la seule étape Présentation', count($se['etapes'] ?? []) === 1 && $se['etapes'][0]['etape'] === 'presentation');
+
+echo "Réglage d'un produit (fiche produit du cockpit)\n";
+$a = ep_aq_produit_admin(1610004);
+verifie('pain au chocolat : grille par mots-clés, rien de forcé', ($a['grille']['cle'] ?? '') === 'viennoiserie' && $a['grille']['forcee'] === false && $a['mesures'] === []);
+$GLOBALS['corps'] = ['categorie' => 'brioche'];
+$w = wr_aq_produit_admin(1610004);
+verifie('grille forcée : brioche, effective tout de suite', ($w['grille']['cle'] ?? '') === 'brioche' && $w['grille']['forcee'] === true && $w['grille']['auto'] === 'viennoiserie'
+    && (aqCategorieDe(aqGrilles(), ['id' => 1610004, 'nom' => 'Pain au Chocolat'])['cle'] ?? '') === 'brioche');
+$GLOBALS['corps'] = ['surcharges' => ['poids' => ['cible' => 90, 'tolerance' => 5], 'odeur' => ['cible' => 1, 'tolerance' => 1]]];
+$w = wr_aq_produit_admin(1610004);
+$poids = array_values(array_filter($w['mesures'] ?? [], fn ($m) => $m['cle'] === 'poids'))[0] ?? [];
+verifie('poids propre au produit : 90 g ± 5, le critère non mesuré est ignoré', ($poids['produit'] ?? []) === ['cible' => 90, 'tolerance' => 5]
+    && !isset($GLOBALS['reglages']['autocontroleProduits']['1610004']['surcharges']['odeur']));
+$GLOBALS['corps'] = ['surcharges' => ['poids' => ['cible' => 90]]];
+verifie('une cible sans tolérance : refusée', str_contains((string) (wr_aq_produit_admin(1610004)['error'] ?? ''), 'ensemble'));
+$GLOBALS['corps'] = ['categorie' => 'inconnue'];
+verifie('une grille inconnue : refusée', (wr_aq_produit_admin(1610004)['error'] ?? '') === 'catégorie de grille inconnue');
+$GLOBALS['corps'] = ['photo' => $png];
+$w = wr_aq_produit_admin(1610004);
+verifie('photo de référence qualité : rangée dans uploads/autocontrole, lue par la tablette', str_starts_with((string) ($w['photo']['qualite'] ?? ''), 'uploads/autocontrole/ref-1610004-')
+    && is_file($public . '/' . $w['photo']['qualite']));
+$_GET = ['shop' => '4', 'produit' => '1610004'];
+verifie('la tablette montre la photo qualité et la grille forcée', (ep_aq_produit()['produit']['photo'] ?? '') === $w['photo']['qualite'] && (ep_aq_produit()['grille']['cle'] ?? '') === 'brioche');
+$GLOBALS['corps'] = ['categorie' => '', 'surcharges' => [], 'photo' => null];
+wr_aq_produit_admin(1610004);
+verifie('tout retiré : le produit n\'a plus de réglage', !isset($GLOBALS['reglages']['autocontroleProduits']['1610004']));
+verifie('le Cougnou garde le poids des grilles d\'exemple', (ep_aq_produit_admin(6700139)['mesures'][0]['produit'] ?? []) === ['cible' => 400, 'tolerance' => 20]);
+verifie('ses derniers contrôles sur 30 jours (sans les essais)', (ep_aq_produit_admin(6700139)['resultats']['n'] ?? 0) === 1);
+verifie('route : GET et PUT /autocontrole/produits/{id}', aqRoute('GET', '/autocontrole/produits/6700139') !== null);
+
+echo "Contrôle de 3 produits dans la visite du consultant\n";
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 6700139, 'visite' => 'v-abc-123', 'auteur' => 'Camille', 'reponses' => $ecarts, 'photos' => ['cuisson' => $png], 'essai' => true, 'client_id' => 'aq-visite-0001'];
+$kv = wr_aq_controle();
+verifie('rattaché à la visite (par son client_id), rôle consultant, jamais un essai', ($kv['visite'] ?? null) === 31 && ($kv['role'] ?? '') === 'consultant' && ($kv['essai'] ?? true) === false);
+$avant = (int) Db::row('SELECT COUNT(*) n FROM con_aq_controle')['n'];
+$kv2 = wr_aq_controle();
+verifie('rejoué depuis le même appareil : le même contrôle, pas un second', ($kv2['deja'] ?? false) === true && ($kv2['id'] ?? 0) === ($kv['id'] ?? -1) && (int) Db::row('SELECT COUNT(*) n FROM con_aq_controle')['n'] === $avant);
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1610004, 'visite' => '32', 'reponses' => [], 'photos' => []];
+verifie('la visite d\'un autre magasin : refusée', str_contains((string) (wr_aq_controle()['error'] ?? ''), 'autre magasin'));
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1610004, 'visite' => '99', 'reponses' => [], 'photos' => []];
+verifie('une visite inconnue : refusée', str_contains((string) (wr_aq_controle()['error'] ?? ''), 'visite inconnue'));
+$tv = []; foreach (aqGrilleProduit(aqGraine()['categories'][1], aqGraine()['communs'])['criteres'] as $c) { $tv[$c['cle']] = aqCible($c); }
+$GLOBALS['corps'] = ['shop' => '4', 'produit' => 1610004, 'role' => 'manager', 'auteur' => 'Lucie', 'reponses' => $tv, 'photos' => ['cuisson' => $png]];
+verifie('hors visite : le manager contrôle, son rôle est gardé', (wr_aq_controle()['role'] ?? '') === 'manager');
+$_GET = ['shop' => '4', 'visite' => '31'];
+$vq = ep_aq_visite();
+verifie('les contrôles de la visite, avec leurs photos', count($vq['controles']) === 1 && $vq['controles'][0]['produit'] === 'Cougnou Nature - 400 g.' && count($vq['controles'][0]['photos']) === 1
+    && $vq['controles'][0]['roleNom'] === 'Consultant');
+$_GET = ['shop' => '5', 'visite' => '31'];
+verifie('la visite lue depuis un autre magasin : rien', ep_aq_visite()['controles'] === []);
+$_GET = ['jours' => '7'];
+verifie('les résultats du réseau disent qui a contrôlé', in_array('manager', array_column(ep_aq_controles()['controles'], 'role'), true));
+$sq = suQualite(['id' => 31]);
+$html = suQualiteHtml($sq, 'nl', fn ($x) => htmlspecialchars((string) $x));
+verifie('le rapport (PDF) : le bloc en néerlandais, le produit, le lot, la photo intégrée', str_contains($html, 'De kwaliteitscontrole van de producten · 1') && str_contains($html, 'Cougnou Nature')
+    && str_contains($html, 'afgeprijsd') && str_contains($html, 'data:image/png;base64,') && str_contains($html, 'Retombé après cuisson'));
+$vu = suQualiteVue(['id' => 31], 'fr');
+verifie('l\'écran du bureau et la page du franchisé : sans photo intégrée', ($vu['controles'][0]['niveauTxt'] ?? '') === 'Non conforme' && count($vu['controles'][0]['ecarts']) === 5
+    && ($vu['controles'][0]['photo'] ?? false) === true && !str_contains((string) json_encode($vu), 'base64'));
+verifie('une visite sans contrôle : pas de bloc', suQualite(['id' => 77]) === null && suQualiteHtml(null, 'fr', 'htmlspecialchars') === '');
+aqDetacherVisites('visite_id = ?', [31]);
+verifie('visite effacée : ses contrôles restent au magasin, détachés', suQualite(['id' => 31]) === null && (int) Db::row('SELECT COUNT(*) n FROM con_aq_controle WHERE produit_id = 6700139 AND client_id = ?', ['aq-visite-0001'])['n'] === 1);
+verifie('route : GET /autocontrole/magasin/visite', aqRoute('GET', '/autocontrole/magasin/visite') !== null);
+$suivi = (string) file_get_contents(__DIR__ . '/../src/suivi.php');
+verifie('le rapport de visite appelle le bloc (gardé si le module manque)', str_contains($suivi, "if (function_exists('suQualiteHtml')) { \$h .= suQualiteHtml(suQualite(\$v), \$l, \$e); }"));
+
 echo "Accès\n";
 $acces = (string) file_get_contents(__DIR__ . '/../../shared/src/acces.php');
 verifie('le franchisé a /autocontrole/magasin, pas les grilles', str_contains($acces, "'/autocontrole/magasin'") && !str_contains($acces, "'/autocontrole/grilles'"));
@@ -217,5 +299,7 @@ verifie('route inconnue sous /autocontrole : 404 du routeur', aqRoute('GET', '/a
 // Ménage du dossier privé temporaire.
 foreach (glob($prive . '/autocontrole/*') ?: [] as $f) { @unlink($f); }
 @rmdir($prive . '/autocontrole'); @rmdir($prive);
+foreach (glob($public . '/uploads/autocontrole/*') ?: [] as $f) { @unlink($f); }
+@rmdir($public . '/uploads/autocontrole'); @rmdir($public . '/uploads'); @rmdir($public);
 echo "\n$ok ok, $ko KO\n";
 exit($ko ? 1 : 0);

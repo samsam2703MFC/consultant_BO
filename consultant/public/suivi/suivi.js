@@ -142,7 +142,11 @@
     const og = O ? `<div><h3>${esc(L.ogT)}</h3>${O.score != null ? `<p><b class="fr-evm">${esc(O.score)}</b> / 100${O.precedent && O.precedent.score != null ? `<span class="fr-mu"> · ${esc(L.ogPrec)} ${esc(fD(O.precedent.le))} : ${esc(O.precedent.score)}</span>` : ''}</p>` : ''}
       <div class="fr-ev">${O.lignes.map(x => `<b>${esc(x.nom)}</b><span class="n${x.v === 'ok' ? ' ok' : x.v === 'part' ? ' att' : x.v === 'ko' ? ' ko' : ''}">${esc(x.verdict)}</span><span class="fr-mu">${esc(x.com || '')}</span>`).join('')}</div>
       <p class="fr-og-rap"><b>(i) ${esc(L.ogRap)}</b><br>${esc(O.rappel)}</p></div>` : '';
-    return `<details class="fr-rap" data-rap="${r.id}"${nouveau ? ' data-nouveau="1"' : ''}>${sum}<div class="c">${ev}${og}${bloc(L.positif, r.positif)}${bloc(L.vu, r.diagnostic)}
+    // Le contrôle qualité des produits (26/11/2026) : titre, niveaux et décisions déjà dans la langue du franchisé (suQualiteVue).
+    const Q = r.qualite;
+    const aq = Q && Q.controles && Q.controles.length ? `<div><h3>${esc(Q.titre)}</h3>
+      <div class="fr-ev">${Q.controles.map(k => `<b>${esc(k.produit)}</b><span class="n${k.niveau === 'ok' ? ' ok' : k.niveau === 'mineur' ? ' att' : ' ko'}">${esc(k.niveauTxt)}</span><span class="fr-mu">${esc(k.decision)}${(k.ecarts || []).map(e => '<br>' + esc(e.libelle + (e.reponse ? ' : ' + e.reponse : '') + (e.prochaine ? ' — ' + e.prochaine : ''))).join('')}</span>`).join('')}</div></div>` : '';
+    return `<details class="fr-rap" data-rap="${r.id}"${nouveau ? ' data-nouveau="1"' : ''}>${sum}<div class="c">${ev}${og}${aq}${bloc(L.positif, r.positif)}${bloc(L.vu, r.diagnostic)}
       ${r.causes && r.causes.length ? `<div><h3>${esc(L.causes)}</h3><p>${r.causes.map(esc).join(' · ')}</p></div>` : ''}${bloc(L.reco, r.reco)}
       ${r.points && r.points.length ? `<div><h3>${esc(L.ptsRap)}</h3><ul>${r.points.map(p => `<li><b>${esc(p.priorite)}</b> · ${esc(p.titre)}${p.echeance ? ' — ' + esc(L.pour) + ' ' + esc(fD(p.echeance)) : ''}</li>`).join('')}</ul></div>` : ''}
       ${r.photos && r.photos.length ? `<div><h3>${esc(L.photos)}</h3>${annotees(r.photos)}<div class="fr-phs">${r.photos.filter(p => !(p.reperes || []).length).map(p => `<a href="${esc(src(p.chemin))}" target="_blank" rel="noopener"><img src="${esc(src(p.chemin))}" alt="" loading="lazy"></a>`).join('')}</div></div>` : ''}</div></details>`;
