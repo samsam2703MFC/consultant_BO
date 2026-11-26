@@ -416,8 +416,8 @@
       "nl": "Promoties en premies"
      },
      "texte": {
-      "fr": "Promotions : garder celles dont le coefficient tient, proposer au cockpit d’arrêter les autres.\nPrimes : faire le point avec chaque vendeuse sur ce qui lui reste à faire.",
-      "nl": "Promoties: die houden waarvan de coëfficiënt standhoudt, de cockpit voorstellen de andere te stoppen.\nPremies: met elke verkoopster overlopen wat haar nog te doen staat."
+      "fr": "Promotions : garder celles dont le coefficient tient, proposer au cockpit d’arrêter les autres.\nPrimes (Mon équipe › Primes) : faire le point avec chaque vendeuse sur ce qui lui reste à faire.",
+      "nl": "Promoties: die houden waarvan de coëfficiënt standhoudt, de cockpit voorstellen de andere te stoppen.\nPremies (Mijn team › Premies): met elke verkoopster overlopen wat haar nog te doen staat."
      },
      "critique": false,
      "photo": "dash-promos.jpg",
