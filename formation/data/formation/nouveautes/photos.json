@@ -3,6 +3,26 @@
   "sha": "df45f6bda5aa39d73f53c97b41571ce550110e17722b9c9e8214eda216525689",
   "u": "u/20261122-482621725732.jpg"
  },
+ "art-dash-clients-analyse.jpg": {
+  "sha": "24ec96a5979fad2a2e15b02c6d74ec02222f067e4b93a6da7405199ae3c5af71",
+  "u": "u/20261126-c697d4bfca43.jpg"
+ },
+ "art-dash-clients-bureaux.jpg": {
+  "sha": "390b3d2b5fb8b2ad7b1f78ab5dc4d654123b6fb6e56be6a25b703899630b0e81",
+  "u": "u/20261126-4f3ea429f6ad.jpg"
+ },
+ "art-dash-clients-connexion.jpg": {
+  "sha": "b1378e73ce9926c0f74fc0be79e0ba51192141dde494be8b2a583872da4b6114",
+  "u": "u/20261126-0c1fe2da9368.jpg"
+ },
+ "art-dash-clients-entreprises.jpg": {
+  "sha": "0e9efc08c8463b8710369d74029231b7e191978f7dad041eda0ca1f8bdaa715f",
+  "u": "u/20261126-b9add6c75a1a.jpg"
+ },
+ "art-dash-clients-particuliers.jpg": {
+  "sha": "2939336fc6dd456807fe742468e9cb2834ee39b3f89f7c657f91ea5d1a7de0b3",
+  "u": "u/20261126-7bbdb2166c34.jpg"
+ },
  "art-dash-coffre-contenu.jpg": {
   "sha": "b67a18801b99ab04cff28ca0f522b6955f52d607886d4834ad65251c326ec0a2",
   "u": "u/20261123-8dcfa2cc30cd.jpg"
@@ -31,9 +51,21 @@
   "sha": "5e9aefc39394894f4dd7d896d73764941c57ebef522350bf3f168f6adfcf3fa0",
   "u": "u/20261124-24b6a2cb14fe.jpg"
  },
+ "art-dash-equipe-etp.jpg": {
+  "sha": "089e486ea3f424fed7976555ada73b421881c5cdc4054ebe9ae7eb69c425f838",
+  "u": "u/20261126-1622a48487e1.jpg"
+ },
+ "art-dash-equipe-evaluations.jpg": {
+  "sha": "6829b82404f4d561b4e1e2e1133550f9a051d9ee56cafdc90391da04ec311114",
+  "u": "u/20261126-f3eaf24c2d3c.jpg"
+ },
  "art-dash-equipe-jour.jpg": {
   "sha": "8dc632fb1f536e9f9cd26c1e17439a58bb954b5cf72c8795a55413d71925866c",
   "u": "u/20261124-731eafeda88f.jpg"
+ },
+ "art-dash-equipe-onglets.jpg": {
+  "sha": "74053017eb9567d4daac35690c91a32805d307b2c171bc7e18168b1aadc3c970",
+  "u": "u/20261126-12fa0edcfcf7.jpg"
  },
  "art-dash-equipe-options.jpg": {
   "sha": "a5ae7ccb0c38b5b8cb4a45f070811527ebf335b3fb815e4342acbac1249d959e",
@@ -50,6 +82,10 @@
  "art-dash-equipe-service.jpg": {
   "sha": "936a1a4075f429e1f7782110ec0edc1c4037db3f0b96ac49c43052f5d3cd9c15",
   "u": "u/20261124-8d98563f9fc2.jpg"
+ },
+ "art-dash-equipe-ventes.jpg": {
+  "sha": "cc0375c3a4a3f9e8eaab606dd5e6fc40b5693dc68d69392b1ce399c4853feb83",
+  "u": "u/20261126-1229912c5ecb.jpg"
  },
  "art-dash-formation-accueil.jpg": {
   "sha": "473ebe605b53851c719223c5213efe93f311b5456846c8bb5875be1e801267cb",
@@ -94,6 +130,14 @@
  "art-dash-videos-lecteur.jpg": {
   "sha": "c4fed09fa9d1975b9dcc460c287373cfd8cbb10e5f08858d953faa8fc2a9dfeb",
   "u": "u/20261124-f15ac623e28f.jpg"
+ },
+ "art-dash-videos-onglets.jpg": {
+  "sha": "155b86da8ef7f6abf0332e1ad78dfa6d98667baf7ee5934032987fbf489b8a08",
+  "u": "u/20261126-51d6d49676cb.jpg"
+ },
+ "art-dash-videos-videotheque-page.jpg": {
+  "sha": "b5126c3677d7faba489320353937f3612f5a89ba7c5688b57421ba601d481914",
+  "u": "u/20261126-fd233c2d1780.jpg"
  },
  "art-dash-videos-videotheque.jpg": {
   "sha": "ffb1dd34ee98d0e095118f8a2fbd15af215a13a2515f748c93ef4a17e21caacf",
