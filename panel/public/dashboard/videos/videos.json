@@ -2553,15 +2553,15 @@
       ],
       "fichier": "10-02-produit.mp4",
       "debut": 0,
-      "fin": 89.08,
+      "fin": 86.34,
       "affiche": "analyse-produit.jpg",
-      "duree": "1 min 29",
+      "duree": "1 min 26",
       "sources": [
         "panel/public/dashboard/analyse.js",
         "panel/public/dashboard/analyse.css",
         "panel/src/dashboard_analyse.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "1e5be8fb7488ce7da710c498940fc75dc879c026",
       "tourne_le": "2026-11-26"
     },
     {
