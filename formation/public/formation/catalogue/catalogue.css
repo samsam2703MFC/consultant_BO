@@ -318,3 +318,12 @@ html, body { background: var(--paper, #faf7f2); }
   .ct-mt-nav a { flex: none; white-space: nowrap; border: 1px solid var(--line, #e6e0d8); }
   .ct-corps.ct-mt { gap: 12px; }
 }
+/* Les collections (26/11/2026) : le dashboard et les vidéos filmées ; un lien YouTube, Vimeo ou Drive se lit dans un cadre. */
+.ct-mt-nav a.ct-mt-coln { margin-top: 6px; }
+.ct-mt-nav a.ct-mt-sous { padding-left: 20px; font-size: 12.5px; }
+.ct-mt-nav .ct-mt-ns { margin-left: 20px; }
+.ct-mt-colh a { color: inherit; text-decoration: none; }
+.ct-mt-colh a:hover { color: var(--accent, #8D1D2C); }
+.ct-mt-colh { display: flex; align-items: center; gap: 8px; }
+.ct-vt-fen .ct-vt-cadre { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; background: var(--ink, #1c1a17); border-radius: 8px; }
+@media (max-width: 820px) { .ct-mt-nav a.ct-mt-sous { padding-left: 10px; } .ct-mt-nav .ct-mt-ns { display: none; } }

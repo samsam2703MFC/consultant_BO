@@ -1,0 +1,42 @@
+/* Formation › Médiathèque › Gérer les vidéos (mediatheque.js, 26/11/2026). Jetons du design system (ds.css) : Gotham 400,
+   aucune pilule, pas d'ombre, l'accent Ruby. */
+.mtg { display: grid; gap: 14px; }
+.mtg-barre { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mtg-msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; border: 1px solid var(--line); background: #fff; }
+.mtg-msg.ok { background: #E3EFE6; border-color: #cfe3d5; color: #2f6340; }
+.mtg-msg.ko { background: #F6EDEE; border-color: #ead3d6; color: var(--accent); }
+.mtg-note { font-size: 12.5px; color: var(--muted); }
+.mtg-note .ko { color: var(--accent); }
+.mtg-vide { display: grid; gap: 8px; justify-items: start; }
+.mtg-vide p { margin: 0; color: var(--muted-2); font-size: 13.5px; max-width: 640px; line-height: 1.5; }
+.mtg-h { font-size: 15px; font-weight: 400; margin: 8px 0 0; display: flex; gap: 8px; align-items: center; }
+.mtg-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.mtg-c { display: flex; flex-direction: column; gap: 5px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px; color: var(--ink); text-decoration: none; }
+.mtg-c:hover { border-color: var(--muted-2); }
+.mtg-c.brouillon { background: #FBF9F5; }
+.mtg-c.brouillon img { opacity: .6; }
+.mtg-aff { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: var(--paper, #faf7f2); border: 1px solid var(--line); }
+.mtg-aff img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mtg-aff.grande { margin: 8px 0; }
+.mtg-d, .mtg-st { position: absolute; bottom: 6px; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+.mtg-d { right: 6px; background: rgba(28, 26, 23, .82); color: #fff; }
+.mtg-st { left: 6px; background: #F6E7CE; color: #7A5207; }
+.mtg-t { font-size: 14px; }
+.mtg-s { font-size: 12px; color: var(--muted); }
+.mtg-ed { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+.mtg-form { display: grid; gap: 12px; }
+.mtg-form label { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted-2); }
+.mtg-form label small { color: var(--muted); }
+.mtg-form .input { font-size: 14px; color: var(--ink); }
+.mtg-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mtg-fic { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mtg-fic label.btn, .mtg-apercu label.btn { display: inline-flex; color: var(--ink); font-size: 13px; cursor: pointer; }
+.mtg-n { width: 120px; }
+.mtg-ck { display: flex !important; align-items: center; gap: 8px; font-size: 13px !important; color: var(--ink) !important; }
+.mtg-act { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mtg-suppr { color: var(--accent); }
+.mtg-prog { height: 6px; background: var(--chip, #EDE7DE); border-radius: 3px; overflow: hidden; }
+.mtg-prog span { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+.mtg-k { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.mtg-apercu p { margin: 8px 0 0; }
+@media (max-width: 900px) { .mtg-ed, .mtg-2 { grid-template-columns: 1fr; } }

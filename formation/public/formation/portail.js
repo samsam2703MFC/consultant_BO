@@ -636,7 +636,7 @@
   window.FormationPortail = {
     defaut: 'accueil',
     relire: () => charger(true),
-    titres: { accueil: 'Accueil', rfformations: 'Formations', rfcontinue: 'Formation continue', rfexamens: 'Examens théoriques', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', operationnel: 'Opérationnel', sopnouvelle: 'Nouvelle SOP' },
+    titres: { accueil: 'Accueil', rfformations: 'Formations', rfcontinue: 'Formation continue', rfexamens: 'Examens théoriques', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', operationnel: 'Opérationnel', sopnouvelle: 'Nouvelle SOP', mediatheque: 'Médiathèque' },
     // Deux menus (06/11/2026, client : « tout ce qui est formation reste dans Formation, tout ce qui est opérationnel, et les
     // deux menus du rail »). Une entrée = [écran, libellé, écrans où elle reste allumée, sous-adresse facultative].
     rail: [
@@ -645,6 +645,12 @@
       ['Opérationnel', [['operationnel', 'Ouverture', [], 'ouverture'], ['operationnel', 'Journée de travail', [], 'journee'], ['operationnel', 'Fermeture', [], 'fermeture'],
         ['operationnel', 'La tablette', [], 'tablette'],
         ['sopred', 'Rédaction des SOP', ['sop', 'sopnouvelle', 'rfclasseur', 'rfphase', 'rfposte', 'manuel']]], false],
+      // La médiathèque (26/11/2026, Sam : « vidéo d'utilisation du dashboard, vidéo de production… faire une section spéciale
+      // dans le rail de formation ») : gérer les vidéos filmées (mediatheque.js), puis chaque collection dans le catalogue.
+      ['Médiathèque', [['mediatheque', 'Gérer les vidéos', []], ['ext:catalogue/#/videos', 'Toute la médiathèque ↗', []],
+        ['ext:catalogue/#/videos/c/dashboard', 'Utilisation du dashboard ↗', []], ['ext:catalogue/#/videos/c/production', 'Production ↗', []],
+        ['ext:catalogue/#/videos/c/vente', 'Vente et comptoir ↗', []], ['ext:catalogue/#/videos/c/hygiene', 'Hygiène et sécurité ↗', []],
+        ['ext:catalogue/#/videos/c/ouverture', 'Ouverture et fermeture ↗', []]], false],
       // Les documents (19/11/2026, Sam) : des pages à part du module (« ext:… », formation.js les sert telles quelles).
       ['Documents', [['ext:catalogue/', 'Catalogue des manuels ↗', []], ['ext:catalogue/depliant.html', 'Dépliant des manuels ↗', []]], false],
     ],
