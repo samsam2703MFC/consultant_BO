@@ -48,7 +48,7 @@ if (!str_contains($chemin, '/api/cockpit')) {
 if (getenv('COCKPIT_DB_NAME')) { require RACINE . '/shared/src/Db.php'; }
 else { eval('final class Db { public static function exec(string $s, array $a = []): int { return 1; } public static function row(string $s, array $a = []): ?array { return null; } public static function rows(string $s, array $a = []): array { return []; } public static function pdo() { return new class { public function lastInsertId() { return "1"; } }; } }'); }
 function accesNomMagasin(string $s): string { return 'Gosselies'; }
-function accesMagasins(): array { return ['3' => 'Gosselies', '4' => 'Corbais']; }
+function accesMagasins(): array { return ['2' => 'Corbais', '3' => 'Gosselies']; }
 /* Les bons (module Promotions, marketing/src/promos_*.php) : une promotion du magasin avec un bon à codes personnels. */
 function pmMiennes(int $shop): array { return [[['panelId' => 321, 'nom' => '−20 % sur le premier lunch', 'description' => 'une fois, sur le webshop ou en caisse', 'statut' => 'en_caisse', 'bon' => ['campagne' => 900]]], null]; }
 function pmMienne(int $shop, int $id): ?array { return $id === 321 ? pmMiennes($shop)[0][0] : null; }
@@ -207,7 +207,7 @@ header('Content-Type: application/json; charset=utf-8');
 $path = preg_replace('#^.*/api/cockpit#', '', $chemin);
 parse_str($u['query'] ?? '', $_GET);
 if ($path === '/dashboard/clients/bureaux/pdf') { ep_clients_bureaux_pdf(); }   // comme shared/public/api/index.php : sort le PDF, puis exit
-if (preg_match('#^/bureau-questionnaire/m/([a-z0-9-]{2,60})$#', $path, $mq)) { echo json_encode(bdvPublicMagasin($_SERVER['REQUEST_METHOD'], $mq[1]), JSON_UNESCAPED_UNICODE); return true; }
+if (preg_match('#^/bureau-questionnaire/m/(\d{1,6})$#', $path, $mq)) { echo json_encode(bdvPublicMagasin($_SERVER['REQUEST_METHOD'], $mq[1]), JSON_UNESCAPED_UNICODE); return true; }
 if (preg_match('#^/bureau-questionnaire/([a-f0-9]{32})$#', $path, $mq)) { echo json_encode(bdvPublic($_SERVER['REQUEST_METHOD'], $mq[1]), JSON_UNESCAPED_UNICODE); return true; }
 try { $r = pclRoute($_SERVER['REQUEST_METHOD'], $path) ?? tfbmRoute($_SERVER['REQUEST_METHOD'], $path) ?? bdvRoute($_SERVER['REQUEST_METHOD'], $path); }
 catch (Throwable $e) { http_response_code(500); $r = ['error' => get_class($e) . ' : ' . $e->getMessage() . ' @' . $e->getLine()]; }

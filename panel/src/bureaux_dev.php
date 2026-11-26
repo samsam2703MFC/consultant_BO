@@ -19,8 +19,8 @@ declare(strict_types=1);
  *
  *   GET  /bureau-questionnaire/{jeton}                  PUBLIC : le questionnaire (magasin, titre, message, bon)
  *   POST /bureau-questionnaire/{jeton}                  PUBLIC : une réponse → {ok, bon: {code, texte} | null}
- *   GET|POST /bureau-questionnaire/m/{magasin}          PUBLIC : le même, par le nom du magasin (« corbais ») — le lien
- *                                                       court, à écrire à l'avance ; il se ferme avec le questionnaire
+ *   GET|POST /bureau-questionnaire/m/{shop}             PUBLIC : le même, par le numéro du magasin (« ?m=2 », Corbais) — le
+ *                                                       lien court, à écrire à l'avance ; il se ferme avec le questionnaire
  *   GET  /dashboard/bureaux-dev?shop=                   les demandes, le réglage du questionnaire, les promotions à bon
  *   POST /dashboard/bureaux-dev {shop, donnees}         une demande saisie au dashboard (même chemin que le questionnaire)
  *   POST /dashboard/bureaux-dev/questionnaire {shop, actif, promo, titre, message, regenerer}
@@ -258,47 +258,18 @@ function bdvPublic(string $method, string $jeton): array
     return ['ok' => true, 'magasin' => $nom, 'bon' => $l['bon']];
 }
 
-/** Le nom d'un magasin en adresse : « L'Atelier Corbais » → « l-atelier-corbais ». */
-function bdvSlug(string $nom): string
+/** Le magasin d'un lien court (« ?m=2 ») : son numéro, s'il est un magasin ouvert du réseau. $magasins : [id => nom]. */
+function bdvMagasinDuLien(string $id, ?array $magasins = null): ?string
 {
-    $t = strtolower((string) (function_exists('iconv') ? @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $nom) : $nom));
-    return trim((string) preg_replace('/[^a-z0-9]+/', '-', $t), '-');
-}
-
-/**
- * Le magasin d'un lien court : le nom entier (« l-atelier-corbais »), ou un de ses mots s'il n'est qu'à un seul magasin
- * (« corbais »). $magasins : [id => nom], accesMagasins() par défaut. Rien si le nom est ambigu ou inconnu.
- */
-function bdvMagasinDuSlug(string $slug, ?array $magasins = null): ?string
-{
-    $slug = bdvSlug($slug);
-    if ($slug === '') { return null; }
+    if (!preg_match('/^[1-9]\d{0,5}$/', $id)) { return null; }
     $magasins ??= function_exists('accesMagasins') ? accesMagasins() : [];
-    $parMot = [];
-    foreach ($magasins as $id => $nom) {
-        $s = bdvSlug((string) $nom);
-        if ($s === $slug) { return (string) $id; }
-        if (str_starts_with($s, $slug . '-') || str_ends_with($s, '-' . $slug) || str_contains($s, '-' . $slug . '-')) { $parMot[] = (string) $id; }
-    }
-    return count($parMot) === 1 ? $parMot[0] : null;
-}
-
-/** Le lien court d'un magasin : le mot le plus court de son nom qui n'appartient qu'à lui, sinon son nom entier. */
-function bdvSlugDuMagasin(string $shop, ?array $magasins = null): string
-{
-    $magasins ??= function_exists('accesMagasins') ? accesMagasins() : [];
-    $plein = bdvSlug((string) ($magasins[$shop] ?? ''));
-    if ($plein === '') { return ''; }
-    $mots = array_filter(explode('-', $plein), static fn ($m) => strlen($m) >= 4 && !in_array($m, ['atelier', 'by'], true));
-    usort($mots, static fn ($a, $b) => strlen($b) <=> strlen($a));
-    foreach ($mots as $m) { if (bdvMagasinDuSlug($m, $magasins) === $shop) { return $m; } }
-    return $plein;
+    return array_key_exists($id, $magasins) ? $id : null;
 }
 
 /** La route publique du lien court : le questionnaire du magasin, créé ouvert s'il n'existe pas encore. */
-function bdvPublicMagasin(string $method, string $slug): array
+function bdvPublicMagasin(string $method, string $id): array
 {
-    $shop = bdvMagasinDuSlug($slug);
+    $shop = bdvMagasinDuLien($id);
     if ($shop === null) { http_response_code(404); return ['error' => 'questionnaire introuvable']; }
     $q = bdvQuestionnaire($shop, true);
     return bdvPublic($method, (string) $q['jeton']);
@@ -321,7 +292,7 @@ function ep_bureaux_dev(): array
     return ['shop' => $shop, 'demandes' => array_map('bdvLigne', $rows),
         'questionnaire' => ['actif' => (bool) (int) $q['actif'], 'jeton' => (string) $q['jeton'], 'promo' => $q['promo'] !== null ? (int) $q['promo'] : null,
             'titre' => (string) $q['titre'], 'message' => (string) ($q['message'] ?? '')],
-        'promos' => bdvPromosABon((int) $shop), 'lienCourt' => bdvSlugDuMagasin($shop)];
+        'promos' => bdvPromosABon((int) $shop), 'lienCourt' => bdvMagasinDuLien($shop)];
 }
 
 function wr_bureaux_dev_creer(): array

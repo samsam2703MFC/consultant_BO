@@ -77,14 +77,10 @@ $r = bdvPublic('GET', str_repeat('a', 32));
 verifie('un jeton inconnu : fermé', ($r['error'] ?? '') === 'ce questionnaire n’est plus ouvert');
 
 echo "Le lien court\n";
-$M = ['3' => 'Corbais', '4' => 'Halle', '7' => "L'Atelier Mont-Saint-Guibert", '8' => 'Wavre Centre', '9' => 'Wavre Gare'];
-verifie('le nom en adresse', bdvSlug("L'Atelier Mont-Saint-Guibert") === 'l-atelier-mont-saint-guibert' && bdvSlug('Écaussinnes') === 'ecaussinnes');
-verifie('corbais → Corbais, Corbais → Corbais', bdvMagasinDuSlug('corbais', $M) === '3' && bdvMagasinDuSlug('Corbais', $M) === '3');
-verifie('un mot du nom, s’il n’est qu’à un magasin', bdvMagasinDuSlug('guibert', $M) === '7' && bdvMagasinDuSlug('wavre-gare', $M) === '9');
-verifie('ambigu ou inconnu : rien', bdvMagasinDuSlug('wavre', $M) === null && bdvMagasinDuSlug('namur', $M) === null && bdvMagasinDuSlug('-', $M) === null);
-verifie('le lien court d’un magasin', bdvSlugDuMagasin('3', $M) === 'corbais' && bdvSlugDuMagasin('7', $M) === 'guibert' && bdvSlugDuMagasin('8', $M) === 'centre' && bdvSlugDuMagasin('9', $M) === 'gare');
-verifie('chaque lien court ramène à son magasin', array_reduce(array_keys($M), static fn ($ok, $id) => $ok && bdvMagasinDuSlug(bdvSlugDuMagasin((string) $id, $M), $M) === (string) $id, true));
-verifie('un magasin inconnu : pas de lien court', bdvSlugDuMagasin('99', $M) === '');
+$M = ['2' => 'Corbais', '3' => 'Gosselies', '5' => 'Sombreffe'];
+verifie('?m=2 → Corbais', bdvMagasinDuLien('2', $M) === '2' && bdvMagasinDuLien('5', $M) === '5');
+verifie('un numéro qui n’est pas un magasin ouvert : rien', bdvMagasinDuLien('4', $M) === null && bdvMagasinDuLien('0', $M) === null && bdvMagasinDuLien('02', $M) === null);
+verifie('pas un numéro : rien', bdvMagasinDuLien('corbais', $M) === null && bdvMagasinDuLien('', $M) === null && bdvMagasinDuLien('2 OR 1', $M) === null);
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
