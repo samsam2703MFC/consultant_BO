@@ -327,3 +327,4 @@
 2026-11-26T05:53:23Z Connexion TF Buddy du magasin : la session n'est plus effacée à peine gardée
 2026-11-26T06:20:31Z Clients › Bureaux : la fiche d'un bureau dans un tiroir large, « Ajouter un site »
 2026-11-26T06:45:03Z Clients › Bureaux : l'assistant dans le tiroir large, adresses suggérées par TF Buddy, logo
+2026-11-26T06:59:41Z Clients › Bureaux : bureaux en développement, questionnaire du magasin qui crée la personne et son bon

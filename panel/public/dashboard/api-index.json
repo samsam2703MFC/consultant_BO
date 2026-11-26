@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-25T20:20:22Z",
+ "genere": "2026-11-26T06:59:26Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -40,7 +40,7 @@
    ],
    "fichiers": [
     "analyse.js:148",
-    "dashboard.js:8768"
+    "dashboard.js:8771"
    ],
    "magasin": true,
    "routes": [
@@ -61,7 +61,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8757"
+    "dashboard.js:8760"
    ],
    "magasin": true,
    "routes": [
@@ -103,7 +103,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8739"
+    "dashboard.js:8742"
    ],
    "magasin": true,
    "routes": [
@@ -146,7 +146,7 @@
    ],
    "fichiers": [
     "analyse.js:140",
-    "dashboard.js:8736"
+    "dashboard.js:8739"
    ],
    "magasin": true,
    "routes": [
@@ -167,7 +167,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:9008"
+    "dashboard.js:9011"
    ],
    "magasin": true,
    "routes": [
@@ -188,7 +188,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8745"
+    "dashboard.js:8748"
    ],
    "magasin": true,
    "routes": [
@@ -251,7 +251,7 @@
     "GET"
    ],
    "fichiers": [
-    "bundles.js:312"
+    "bundles.js:318"
    ],
    "magasin": true,
    "routes": [
@@ -272,7 +272,7 @@
     "GET"
    ],
    "fichiers": [
-    "bundles.js:307"
+    "bundles.js:313"
    ],
    "magasin": true,
    "routes": [
@@ -293,7 +293,7 @@
     "GET"
    ],
    "fichiers": [
-    "bundles.js:285"
+    "bundles.js:291"
    ],
    "magasin": true,
    "routes": [
@@ -314,7 +314,7 @@
     "GET"
    ],
    "fichiers": [
-    "bundles.js:291"
+    "bundles.js:297"
    ],
    "magasin": true,
    "routes": [
@@ -557,7 +557,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:909",
+     "source": "panel/src/clients_panel.php:910",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -655,9 +655,9 @@
    ],
    "fichiers": [
     "automatisations.js:38",
-    "boite.js:1053",
+    "boite.js:1058",
     "boite.js:106",
-    "dashboard.js:7807"
+    "dashboard.js:7810"
    ],
    "magasin": true,
    "routes": [
@@ -680,8 +680,8 @@
    ],
    "fichiers": [
     "boite.js:389",
-    "boite.js:985",
-    "boite.js:987"
+    "boite.js:990",
+    "boite.js:992"
    ],
    "magasin": true,
    "routes": [
@@ -706,8 +706,8 @@
    "fichiers": [
     "automatisations.js:42",
     "automatisations.js:51",
-    "dashboard.js:7810",
-    "dashboard.js:7880"
+    "dashboard.js:7813",
+    "dashboard.js:7883"
    ],
    "magasin": true,
    "routes": [
@@ -793,7 +793,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:943"
+    "boite.js:948"
    ],
    "magasin": true,
    "routes": [
@@ -884,7 +884,7 @@
     "boite.js:136",
     "boite.js:322",
     "boite.js:456",
-    "boite.js:955"
+    "boite.js:960"
    ],
    "magasin": true,
    "routes": [
@@ -928,8 +928,8 @@
    ],
    "fichiers": [
     "boite.js:388",
-    "boite.js:978",
-    "boite.js:984"
+    "boite.js:983",
+    "boite.js:989"
    ],
    "magasin": true,
    "routes": [
@@ -951,7 +951,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:940"
+    "boite.js:945"
    ],
    "magasin": true,
    "routes": [
@@ -1017,7 +1017,7 @@
     "POST"
    ],
    "fichiers": [
-    "boite.js:934"
+    "boite.js:939"
    ],
    "magasin": true,
    "routes": [
@@ -1028,6 +1028,91 @@
      "chemin": "/dashboard/boite…",
      "handler": "route",
      "source": "?",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/bureaux-dev",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "clients.js:834",
+    "clients.js:97"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/bureaux-dev…",
+     "handler": "bdvRoute",
+     "source": "panel/src/bureaux_dev.php:375",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/bureaux-dev/questionnaire",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "clients.js:830"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/bureaux-dev…",
+     "handler": "bdvRoute",
+     "source": "panel/src/bureaux_dev.php:375",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/bureaux-dev/refuser",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "clients.js:826"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/bureaux-dev…",
+     "handler": "bdvRoute",
+     "source": "panel/src/bureaux_dev.php:375",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/bureaux-dev/valider",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "clients.js:822"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/bureaux-dev…",
+     "handler": "bdvRoute",
+     "source": "panel/src/bureaux_dev.php:375",
      "resume": ""
     }
    ]
@@ -1081,7 +1166,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:83"
+    "clients.js:105"
    ],
    "magasin": true,
    "routes": [
@@ -1091,7 +1176,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:953",
+     "source": "panel/src/clients_panel.php:954",
      "resume": ""
     }
    ]
@@ -1102,11 +1187,14 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:392",
-    "clients.js:502",
-    "clients.js:74",
-    "clients.js:79",
-    "clients.js:98"
+    "clients.js:101",
+    "clients.js:120",
+    "clients.js:332",
+    "clients.js:343",
+    "clients.js:354",
+    "clients.js:602",
+    "clients.js:740",
+    "clients.js:91"
    ],
    "magasin": true,
    "routes": [
@@ -1116,7 +1204,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:909",
+     "source": "panel/src/clients_panel.php:910",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -1127,7 +1215,7 @@
     "POST"
    ],
    "fichiers": [
-    "clients.js:496"
+    "clients.js:734"
    ],
    "magasin": true,
    "routes": [
@@ -1137,7 +1225,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:909",
+     "source": "panel/src/clients_panel.php:910",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -1148,7 +1236,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:480"
+    "clients.js:718"
    ],
    "magasin": true,
    "routes": [
@@ -1158,7 +1246,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:953",
+     "source": "panel/src/clients_panel.php:954",
      "resume": ""
     }
    ]
@@ -1169,7 +1257,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:69"
+    "clients.js:86"
    ],
    "magasin": true,
    "routes": [
@@ -1179,7 +1267,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:953",
+     "source": "panel/src/clients_panel.php:954",
      "resume": ""
     }
    ]
@@ -1190,7 +1278,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:90"
+    "clients.js:112"
    ],
    "magasin": true,
    "routes": [
@@ -1200,7 +1288,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:953",
+     "source": "panel/src/clients_panel.php:954",
      "resume": ""
     }
    ]
@@ -1211,7 +1299,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:63"
+    "clients.js:80"
    ],
    "magasin": true,
    "routes": [
@@ -1221,7 +1309,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:953",
+     "source": "panel/src/clients_panel.php:954",
      "resume": ""
     }
    ]
@@ -1232,7 +1320,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:486"
+    "clients.js:724"
    ],
    "magasin": true,
    "routes": [
@@ -1242,7 +1330,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:953",
+     "source": "panel/src/clients_panel.php:954",
      "resume": ""
     }
    ]
@@ -1401,8 +1489,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1172",
-    "equipe.js:1208"
+    "equipe.js:1174",
+    "equipe.js:1210"
    ],
    "magasin": true,
    "routes": [
@@ -1423,7 +1511,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:280",
+    "equipe.js:282",
     "equipe.js:91"
    ],
    "magasin": true,
@@ -1445,8 +1533,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1246",
-    "equipe.js:1288"
+    "equipe.js:1248",
+    "equipe.js:1290"
    ],
    "magasin": true,
    "routes": [
@@ -1467,7 +1555,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1298"
+    "equipe.js:1300"
    ],
    "magasin": true,
    "routes": [
@@ -1488,7 +1576,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1253"
+    "equipe.js:1255"
    ],
    "magasin": true,
    "routes": [
@@ -1509,7 +1597,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1254"
+    "equipe.js:1256"
    ],
    "magasin": true,
    "routes": [
@@ -1551,7 +1639,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:297"
+    "equipe.js:299"
    ],
    "magasin": true,
    "routes": [
@@ -1572,7 +1660,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:239"
+    "equipe.js:241"
    ],
    "magasin": true,
    "routes": [
@@ -1593,7 +1681,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1215"
+    "equipe.js:1217"
    ],
    "magasin": true,
    "routes": [
@@ -1614,7 +1702,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1007"
+    "equipe.js:1009"
    ],
    "magasin": true,
    "routes": [
@@ -1635,8 +1723,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1104",
-    "equipe.js:823"
+    "equipe.js:1106",
+    "equipe.js:825"
    ],
    "magasin": true,
    "routes": [
@@ -1657,8 +1745,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1103",
-    "equipe.js:822"
+    "equipe.js:1105",
+    "equipe.js:824"
    ],
    "magasin": true,
    "routes": [
@@ -1679,7 +1767,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:657"
+    "equipe.js:659"
    ],
    "magasin": true,
    "routes": [
@@ -1700,8 +1788,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1084",
-    "equipe.js:824"
+    "equipe.js:1086",
+    "equipe.js:826"
    ],
    "magasin": true,
    "routes": [
@@ -1722,7 +1810,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:800"
+    "equipe.js:802"
    ],
    "magasin": true,
    "routes": [
@@ -1964,7 +2052,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:7371"
+    "dashboard.js:7373"
    ],
    "magasin": true,
    "routes": [
@@ -1985,7 +2073,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:7553"
+    "dashboard.js:7556"
    ],
    "magasin": true,
    "routes": [
@@ -2006,7 +2094,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:7561"
+    "dashboard.js:7564"
    ],
    "magasin": true,
    "routes": [
@@ -2027,7 +2115,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:7441"
+    "dashboard.js:7443"
    ],
    "magasin": true,
    "routes": [
@@ -2115,7 +2203,9 @@
     "dashboard.js:145",
     "dashboard.js:216",
     "dashboard.js:227",
-    "dashboard.js:2603"
+    "dashboard.js:2603",
+    "dashboard.js:7447",
+    "dashboard.js:7547"
    ],
    "magasin": true,
    "routes": [
@@ -2757,7 +2847,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:11091"
+    "dashboard.js:11097"
    ],
    "magasin": true,
    "routes": [
@@ -2778,7 +2868,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:11121",
+    "dashboard.js:11127",
     "dashboard.js:2319"
    ],
    "magasin": true,
@@ -2800,7 +2890,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10538"
+    "dashboard.js:10544"
    ],
    "magasin": true,
    "routes": [
@@ -2821,7 +2911,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10536"
+    "dashboard.js:10542"
    ],
    "magasin": true,
    "routes": [
@@ -2845,7 +2935,7 @@
    "fichiers": [
     "dashboard.js:6247",
     "dashboard.js:6325",
-    "dashboard.js:8999"
+    "dashboard.js:9002"
    ],
    "magasin": true,
    "routes": [
@@ -2875,7 +2965,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8182"
+    "dashboard.js:8185"
    ],
    "magasin": true,
    "routes": [
@@ -3281,11 +3371,11 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10289",
+    "dashboard.js:10295",
     "dashboard.js:2604",
     "dashboard.js:262",
     "dashboard.js:263",
-    "dashboard.js:6864"
+    "dashboard.js:6866"
    ],
    "magasin": true,
    "routes": [
@@ -3306,7 +3396,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10080"
+    "dashboard.js:10086"
    ],
    "magasin": true,
    "routes": [
@@ -3348,9 +3438,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10011",
-    "dashboard.js:6867",
-    "dashboard.js:9997"
+    "dashboard.js:10003",
+    "dashboard.js:10017",
+    "dashboard.js:6869"
    ],
    "magasin": true,
    "routes": [
@@ -3371,9 +3461,9 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10290",
-    "dashboard.js:10299",
-    "dashboard.js:7035"
+    "dashboard.js:10296",
+    "dashboard.js:10305",
+    "dashboard.js:7037"
    ],
    "magasin": true,
    "routes": [
@@ -3395,9 +3485,9 @@
     "PUT"
    ],
    "fichiers": [
-    "dashboard.js:7158",
-    "dashboard.js:7181",
-    "dashboard.js:7205"
+    "dashboard.js:7160",
+    "dashboard.js:7183",
+    "dashboard.js:7207"
    ],
    "magasin": true,
    "routes": [
@@ -3419,7 +3509,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:11717"
+    "dashboard.js:11723"
    ],
    "magasin": true,
    "routes": [
@@ -3485,7 +3575,7 @@
    "fichiers": [
     "tresorerie.js:247",
     "tresorerie.js:286",
-    "tresorerie.js:893"
+    "tresorerie.js:897"
    ],
    "magasin": true,
    "routes": [
@@ -3595,7 +3685,7 @@
      ],
      "chemin": "/ventes/primes-annee",
      "handler": "ep_primes_annee",
-     "source": "panel/src/primes.php:1592",
+     "source": "panel/src/primes.php:1595",
      "resume": "l'année des primes du réseau, ou d'un magasin."
     }
    ]
@@ -3616,7 +3706,7 @@
      ],
      "chemin": "/ventes/primes-equipe",
      "handler": "ep_primes_equipe",
-     "source": "panel/src/primes.php:1602",
+     "source": "panel/src/primes.php:1605",
      "resume": "l'équipe d'un magasin face à ses primes (la page franchisé du cockpit)."
     }
    ]
@@ -3657,8 +3747,8 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9720",
-    "dashboard.js:9842"
+    "dashboard.js:9726",
+    "dashboard.js:9848"
    ],
    "magasin": true,
    "routes": [

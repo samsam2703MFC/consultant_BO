@@ -182,7 +182,8 @@ require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe :
 require __DIR__ . '/../../../panel/src/equipe_fiche.php';       // Mon équipe › la fiche d'une personne : identité, contrat, taux, évaluations, ventes (24/11/2026)
 require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
 require __DIR__ . '/../../../panel/src/tfb_magasin.php';               // Le compte TF Buddy du magasin : téléphone, PIN, SMS ; le jeton reste dans le navigateur (25/11/2026)
-require __DIR__ . '/../../../panel/src/clients_panel.php';             // Vendre › Clients : le module Klienci de TF Buddy, par les comptes du cockpit (25/11/2026)
+require __DIR__ . '/../../../panel/src/clients_panel.php';
+require __DIR__ . '/../../../panel/src/bureaux_dev.php';                // Bureaux en développement : le questionnaire public du magasin, les demandes à valider (26/11/2026)             // Vendre › Clients : le module Klienci de TF Buddy, par les comptes du cockpit (25/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
 require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
@@ -255,6 +256,12 @@ try {
         nlSuivi($m[1], $m[2]);   // sort en gif, redirection ou HTML, puis exit
     }
 
+    // Le questionnaire « bureau » d'un magasin (26/11/2026) : PUBLIC, la personne n'a pas de session — le jeton du
+    // questionnaire dans l'adresse est la clé (panel/src/bureaux_dev.php : limite par IP, champ piège).
+    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/([a-f0-9]{32})$#', $path, $m)) {
+        echo json_encode(bdvPublic($method, $m[1]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
     // Le flux ICS d'un consultant : Google Agenda le relit sans session — le jeton de l'adresse est sa clé.
     if ($method === 'GET' && preg_match('#^/consultants/([\w-]+)/visites\.ics$#', $path, $m)) {
         vcIcsSortie($m[1]);      // sort en text/calendar, puis exit
@@ -428,6 +435,8 @@ function route(string $method, string $path): mixed
     if (($c = pclRoute($method, $path)) !== null) { return $c; }
     // Le compte TF Buddy du magasin (25/11/2026) : connexion au panel depuis le dashboard (panel/src/tfb_magasin.php).
     if (($c = tfbmRoute($method, $path)) !== null) { return $c; }
+    // Les bureaux en développement (26/11/2026) : demandes, questionnaire du magasin, validation (panel/src/bureaux_dev.php, tables panel_bureau_*).
+    if (($c = bdvRoute($method, $path)) !== null) { return $c; }
     // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
     if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.

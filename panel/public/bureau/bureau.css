@@ -1,0 +1,33 @@
+/* Le questionnaire « bureau » d'un magasin : une colonne, téléphone d'abord, le design system du cockpit. */
+body { margin: 0; background: #F7F4EF; }
+.bq { max-width: 620px; margin: 0 auto; padding: 22px 18px 60px; font-size: 14px; color: var(--ink); }
+.bq-logo { display: block; height: 34px; margin: 4px 0 18px; }
+.bq-kicker { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.bq h1 { margin: 4px 0 8px; font-size: 26px; font-weight: 400; line-height: 1.2; }
+.bq-intro { margin: 0 0 16px; color: var(--muted-2); line-height: 1.55; }
+.bq-bon { display: flex; gap: 12px; align-items: center; margin: 0 0 18px; padding: 12px 14px; border-radius: 12px; background: #FFF8F1; border: 1px solid #F2C9A0; color: #7A3E12; line-height: 1.45; }
+.bq-bon b { font-weight: 400; color: var(--accent); }
+.bq-bon svg { width: 22px; height: 22px; flex: none; }
+.bq-carte { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 16px 6px; margin: 0 0 14px; }
+.bq-carte h2 { margin: 0 0 10px; font-size: 11px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.bq-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.bq-champ { display: grid; gap: 5px; margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+.bq-champ em { font-style: normal; color: var(--accent); }
+.bq-champ input, .bq-champ textarea { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink); font: 15px 'Gotham', system-ui, sans-serif; }
+.bq-champ input:focus, .bq-champ textarea:focus { outline: 2px solid rgba(141, 29, 44, 0.25); border-color: var(--accent); }
+.bq-jours { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.bq-jours label { display: inline-flex; }
+.bq-jours input { position: absolute; opacity: 0; pointer-events: none; }
+.bq-jours span { min-width: 40px; padding: 9px 10px; text-align: center; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 13px; color: var(--muted-2); cursor: pointer; }
+.bq-jours input:checked + span { border: 2px solid var(--accent); padding: 8px 9px; color: var(--accent); background: rgba(141, 29, 44, 0.05); }
+.bq-accord { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 16px; font-size: 12.5px; line-height: 1.5; color: var(--muted-2); }
+.bq-accord input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.bq-piege { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.bq-envoyer { width: 100%; padding: 14px; font-size: 15px; }
+.bq-err { margin: 0 0 12px; padding: 10px 12px; border-radius: 9px; background: #FBE9E7; color: var(--danger); font-size: 13px; line-height: 1.45; }
+.bq-merci { text-align: center; padding: 30px 10px; }
+.bq-merci h1 { font-size: 24px; }
+.bq-code { display: inline-block; margin: 14px 0 6px; padding: 14px 22px; border: 2px dashed var(--accent); border-radius: 12px; font-size: 26px; letter-spacing: 0.12em; color: var(--accent); background: #fff; }
+.bq-attente { padding: 60px 0; text-align: center; color: var(--muted); }
+.bq-pied { margin-top: 22px; font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.5; }
+@media (max-width: 480px) { .bq-2 { grid-template-columns: 1fr; } .bq h1 { font-size: 23px; } }
