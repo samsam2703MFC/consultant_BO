@@ -1581,6 +1581,17 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
   serveur (422 : « codes inconnus du référentiel v25 », compétence `C-ID.FB`) : la fiche est encodée sans classement ;
   pas publiée.
 
+### Passe du 26/11/2026 (publication automatique, décision de Sam du 24/11/2026)
+
+- 0.0.61 à 0.0.65 (Boîte mail, demande au bureau, Frais, Mon coffre-fort, Formations et suivi) — publiées, v1.0.
+- 0.0.66 « Le dashboard : Mon équipe (responsabilités, planning, fiches, primes) » — publiée, v1.1 (ETP et CA par ETP,
+  fiche complète d'une personne, onglet Primes).
+- 0.0.67 « Le dashboard : les vidéos d'instruction » — publiée, v1.1 (onglet par onglet ; classement D6.3, sans
+  `C-ID.FB`).
+- 0.0.68 « Le dashboard : Vendre › Clients (particuliers, entreprises B2B, bureaux) » — publiée, v1.0 (thème 10).
+- 0.0.69 « L'autocontrôle qualité d'un produit, sur la tablette » — publiée, v1.0 (thème 8).
+- 0.0.70 « Le dashboard : la page Commandes » — publiée, v1.0 (thème 9).
+
 ## L'autocontrôle qualité par produit, dans l'app Cuisine — maquettes (24/11/2026)
 
 Sam, sur la fiche produit de l'app Cuisine en tablette : « rajouter un bouton autocontrôle qualité (1. cuisson,

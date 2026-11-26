@@ -1,4 +1,24 @@
 {
+ "art-autocontrole-bilan.jpg": {
+  "sha": "15130669bc9961bf9f8b835409656d442600594b28640347ba91f8bd15f9271e",
+  "u": "u/20261126-6e90674a38ff.jpg"
+ },
+ "art-autocontrole-correction.jpg": {
+  "sha": "9812ff7329664072880dd10e872f5057ee0a3b7999bd5bc73fb790af5c63f880",
+  "u": "u/20261126-3845be3d40ed.jpg"
+ },
+ "art-autocontrole-cuisson.jpg": {
+  "sha": "62fd5fc14953ac9a22d0926860fbc6c5b746f96566c0663cbb7bd55cf792f3fe",
+  "u": "u/20261126-c78c92008e7d.jpg"
+ },
+ "art-autocontrole-liste.jpg": {
+  "sha": "eb7774912ab37480e0ac1c555553eaa8bca76ce6b355b8f091d09c00189879c0",
+  "u": "u/20261126-2167e976ced6.jpg"
+ },
+ "art-autocontrole-presentation.jpg": {
+  "sha": "dd21a036996b8788bc010fcc604c39f027323d65db2fe5a0312af7bf76a1ba77",
+  "u": "u/20261126-4cf96f9905d2.jpg"
+ },
  "art-boite-mail-relier.jpg": {
   "sha": "df45f6bda5aa39d73f53c97b41571ce550110e17722b9c9e8214eda216525689",
   "u": "u/20261122-482621725732.jpg"
@@ -46,6 +66,30 @@
  "art-dash-coffre-lien.jpg": {
   "sha": "b1885855a17059c47ae9e26ef43374d51637de390feec47ebb28af8e2cfd4a94",
   "u": "u/20261123-0ce48ac0e482.jpg"
+ },
+ "art-dash-commandes-fiche.jpg": {
+  "sha": "c58800acedea1ece5a6a2fb3a0d3233d8889aaa73eb07740df90c1b2df3e5ecd",
+  "u": "u/20261126-65c0fb823708.jpg"
+ },
+ "art-dash-commandes-liste.jpg": {
+  "sha": "8da61e48a53680a22bd6a2cd6d3300242ab7e040984f349202002f2992b0b593",
+  "u": "u/20261126-64947c25d792.jpg"
+ },
+ "art-dash-commandes-mois.jpg": {
+  "sha": "7edabc897826cb2c2e9fd27ad40ebc44ad86b07ef39a8620a7500a9bdc4886cb",
+  "u": "u/20261126-141ba775c579.jpg"
+ },
+ "art-dash-commandes-nouvelle.jpg": {
+  "sha": "8619904d370d92753fc34d27934bd367bba57f95de0887446e5e2e71ea1613f4",
+  "u": "u/20261126-4f9475cf08c3.jpg"
+ },
+ "art-dash-commandes-semaine.jpg": {
+  "sha": "3246a927bc5c7d1673afa90933b76b7450a5f5affa967db65b6230fc1d03fd9a",
+  "u": "u/20261126-4c94f04b9c25.jpg"
+ },
+ "art-dash-commandes-tournees.jpg": {
+  "sha": "e54858b95edaaa0fe06570d0a2dd2ea34b0fa00fa1886614fcd8812c9e909d33",
+  "u": "u/20261126-f6ce958e8fde.jpg"
  },
  "art-dash-equipe-affect.jpg": {
   "sha": "5e9aefc39394894f4dd7d896d73764941c57ebef522350bf3f168f6adfcf3fa0",
