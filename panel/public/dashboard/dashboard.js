@@ -5827,7 +5827,7 @@
     document.documentElement.classList.add('db-fiche-ouverte');
     const prods = (D.produits || []).filter(p => p.groupe === g.nom), vus = S.pd.tous ? prods : prods.slice(0, 12);
     const ligne = p => { const o = String(p.id) === String(S.pd.ouvert);
-      return `<tr class="pd-pr${o ? ' ouv' : ''}" data-pdp="${esc(p.id)}" tabindex="0" role="button" aria-expanded="${o}"><td><span class="fl">${o ? '▾' : '▸'}</span>${esc(p.nom)}</td><td>${p.prix != null ? pdPrix(p.prix) : '—'}</td><td>${nf(p.evo.qApres, 0)} pièces</td><td>${pdEvo(p.evo)}</td><td>${pdMini(D, p.q, 150, 28)}</td></tr>${o ? pdDeroule(D, p) : ''}`; };
+      return `<tr class="pd-pr${o ? ' ouv' : ''}" data-pdp="${esc(p.id)}" tabindex="0" role="button" aria-expanded="${o}"><td><span class="fl">${o ? '▾' : '▸'}</span>${esc(p.nom)}</td><td>${p.prix != null ? pdPrix(p.prix) : '—'}</td><td>${nf(p.evo.qApres, 0)} pièce${Math.round(p.evo.qApres) > 1 ? 's' : ''}</td><td>${pdEvo(p.evo)}</td><td>${pdMini(D, p.q, 150, 28)}</td></tr>${o ? pdDeroule(D, p) : ''}`; };
     box.innerHTML = `<div class="fi-voile" data-pdfermer="1"></div><div class="fi-modale pd-modale" role="dialog" aria-modal="true" aria-label="${esc(g.nom)}">
       <div class="fi-hd"><div class="t"><h2>${esc(g.nom)}</h2><div class="pd-mrep">${pdEvo(g.evo)}<span>${fE(g.evo.apres)} par semaine sur les 6 dernières semaines, contre ${fE(g.evo.avant)} avant.</span></div></div><button type="button" class="fi-x" data-pdfermer="1" aria-label="Fermer">✕</button></div>
       <div class="fi-bd">${pdBarres(D, g.v, { w: 940, h: 180 })}${pdLegende(D)}

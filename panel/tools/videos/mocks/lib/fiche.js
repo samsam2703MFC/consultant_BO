@@ -13,11 +13,13 @@ function produitDe(pid) { return D.PRODUITS.find(p => String(p.pid) === String(p
 function fiche(pid, mois) {
   const p = produitDe(pid), semQ = p.q * 7 * 0.97;
   const magasin = [], reseau = [], tranches = [], jours = [];
-  for (let i = 11; i >= 0; i--) {
+  // 13 semaines, comme le serveur (consultant/src/analyse_produits.php) : 12 closes et l'en cours (26/11/2026 : avec 12,
+  // « 6 dernières face aux 6 d'avant » comparait 6 semaines à 5).
+  for (let i = 12; i >= 0; i--) {
     const lun = D.plus('2026-11-16', -7 * i);
     tranches.push('S' + (47 - i)); jours.push(i === 0 ? 4 : 7);
     const k = i === 0 ? 4 / 7 : 1;
-    magasin.push(Math.round(semQ * D.bruit('fm' + pid + i, 0.12) * (1 + (11 - i) * 0.008) * k));
+    magasin.push(Math.round(semQ * D.bruit('fm' + pid + i, 0.12) * (1 + (12 - i) * 0.008) * k));
     reseau.push(Math.round(semQ * 0.92 * D.bruit('fr' + pid + i, 0.07) * k));
   }
   const pHt = p.prix / 1.06 * 0.985, med = r2(p.prix * 1.02 / 1.06), v10k = r1(semQ * 4.3 / 6.2);
