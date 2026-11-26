@@ -244,6 +244,14 @@
 .pcl-dev-tete > div:first-child { max-width: 720px; }
 .pcl-dev-tete .btn svg { width: 14px; height: 14px; }
 .pcl-dev-titre { font-size: 16px; margin-bottom: 3px; }
+/* Le film des bureaux, dans le coin de la carte (en haut à droite, au-dessus de « Nouveau bureau en développement ») :
+   à l'Abricot, comme le carré des vidéos du rail (tutos.css). */
+.pcl-dev-acts { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.pcl-film { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 5px 11px; background: #FFF8F1; color: #7A3E12;
+  border: 1px solid #F2C9A0; border-radius: 8px; font: inherit; font-size: 13px; cursor: pointer; transition: background .15s, border-color .15s; }
+.pcl-film:hover { background: #F2C9A0; border-color: #EDBA88; }
+.pcl-film:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pcl-film svg { width: 15px; height: 15px; color: var(--accent); }
 .pcl-vert { font-weight: 400; color: var(--green); }
 .pcl-bon { display: inline-block; padding: 3px 8px; border: 1px dashed var(--accent); border-radius: 6px; color: var(--accent); font-size: 12px; letter-spacing: 0.06em; }
 .pcl-dv-statut { display: grid; gap: 6px; padding-top: 4px; }

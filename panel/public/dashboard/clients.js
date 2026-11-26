@@ -27,6 +27,7 @@
     plus: 'M12 5v14M5 12h14', x: 'M18 6L6 18M6 6l12 12', alerte: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
     camion: 'M1 5h13v11H1zM14 9h4l4 4v3h-8M5.5 18.5a1.8 1.8 0 1 0 0-.01M17.5 18.5a1.8 1.8 0 1 0 0-.01', g: 'M15 18l-6-6 6-6', d: 'M9 18l6-6-6-6',
     cadenas: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4', doc: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
+    film: 'M5.5 5h13a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5v-9A2.5 2.5 0 0 1 5.5 5zM10.2 9.3l4.6 2.7-4.6 2.7z',
   };
   const TYPES = [['standard', 'Standard'], ['vip', 'VIP'], ['restaurant', 'Restaurant'], ['hotel', 'Hôtel'], ['wholesale', 'Gros'], ['other', 'Autre']];
   const MODES = [['delivery', 'Livraison'], ['pickup', 'Magasin'], ['both', 'Les deux']];
@@ -406,6 +407,12 @@
       c.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'qr-formulaire-bureau-magasin-' + shop + '.png'; document.body.appendChild(a); a.click(); a.remove(); }, 'image/png'); };
     img.src = url;
   }
+  /** Le film des bureaux, dans le coin de la carte (26/11/2026, Sam : « un petit film spécialisé, disponible dans un coin
+   *  dans bureau ») : le parcours d'un bureau, du QR à la tournée ; il s'ouvre dans le lecteur des vidéos (tutos.js). */
+  function boutonFilm() {
+    const v = window.DashTutos && window.DashTutos.video ? window.DashTutos.video('bureaux-film') : null;
+    return v ? `<button type="button" class="pcl-film" data-tu="voir" data-id="bureaux-film" title="${esc(v.titre)}">${SVG(ICO.film)}Le film${v.duree ? ' · ' + esc(v.duree) : ''}</button>` : '';
+  }
   function blocDev() {
     const B = st.b, D = B.dev;
     if (!D) { return B.devErr ? note('Les bureaux en développement ne se lisent pas : ' + esc(B.devErr), 'pcl-note-doux') : ''; }
@@ -418,7 +425,7 @@
       <td class="num">${x.statut === 'a_valider' ? '<span class="btn btn--sm">Valider</span>' : etiquetteDev(x.statut)}</td></tr>`).join('')}</tbody></table></div>`;
     return `<section class="card pcl-carte pcl-dev"><div class="pcl-dev-tete"><div><div class="pcl-dev-titre">Bureaux en développement${A.length ? ` <span class="page-tabs__count">${A.length} à valider</span>` : ''}</div>
         <div class="pcl-aide">Chaque inscription crée le compte webshop de la personne${promo ? ', son bon' : ''} et la société dans TF Buddy ; si le bureau de sa société existe déjà, elle le rejoint aussitôt. Sinon, le bureau attend ici votre validation.</div></div>
-        <span class="pcl-sp"></span><button type="button" class="btn btn--sm btn--primary" data-act="dev-nouveau">${SVG(ICO.plus)}Nouveau bureau en développement</button></div>
+        <span class="pcl-sp"></span><div class="pcl-dev-acts">${boutonFilm()}<button type="button" class="btn btn--sm btn--primary" data-act="dev-nouveau">${SVG(ICO.plus)}Nouveau bureau en développement</button></div></div>
       ${blocLien()}${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}</section>`;
   }
   /** Le tiroir d'une demande : ce qu'elle a créé dans TF Buddy, et la validation (le bureau créé, la personne reliée). */
@@ -929,6 +936,8 @@
         st.onglet = ['b2c', 'b2b', 'bur', 'an'].includes(on) ? on : 'b2b';
         st.el = document.createElement('div'); st.el.className = 'pcl';
         st.el.addEventListener('click', geste); st.el.addEventListener('input', saisie); st.el.addEventListener('change', saisie);
+        // Le registre des vidéos lu après le premier rendu : le bouton « Le film » de l'onglet Bureaux apparaît alors.
+        if (!st.ecouteVideos) { st.ecouteVideos = true; window.addEventListener('dashtutos:registre', () => { if (st.el && st.onglet === 'bur' && st.b.dev) { rendre(); } }); }
         rendre(); charger();
       } else { rendre(); }
       return st.el;

@@ -25,7 +25,9 @@
  * « Vu » et « plus tard » sont gardés par appareil (localStorage) : rien n'est écrit au serveur.
  * Au téléphone, le rail n'est pas affiché : ni carré ni annonce. Rien dans le mode incorporé (?embed=).
  * La page ouverte : ?vue= à l'ouverture, puis l'évènement `dashboard:vue` (urlMaj de dashboard.js).
- * `window.DashTutos.ouvrir(id?)` ouvre le lecteur ; `window.DashTutos.carre()` rend le carré (HTML).
+ * `window.DashTutos.ouvrir(id?)` ouvre le lecteur ; `window.DashTutos.carre()` rend le carré (HTML) ; `window.DashTutos.video(id)`
+ * rend l'entrée du registre (null si elle n'y est pas : le bouton « Le film » de Clients › Bureaux ne se montre qu'avec elle) ;
+ * l'évènement `dashtutos:registre` dit que le registre est lu.
  */
 (function () {
   'use strict';
@@ -216,9 +218,9 @@
   function demarrer() {
     fetch(REGISTRE, { cache: 'no-cache', headers: { Accept: 'application/json' } })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
-      .then(j => { T.videos = (j && Array.isArray(j.videos) ? j.videos : []).filter(v => v && v.id && v.fichier); remplir(); })
+      .then(j => { T.videos = (j && Array.isArray(j.videos) ? j.videos : []).filter(v => v && v.id && v.fichier); remplir(); window.dispatchEvent(new CustomEvent('dashtutos:registre')); })
       .catch(() => { /* pas de registre : pas de carré */ });
   }
-  window.DashTutos = { ouvrir, carre, n: () => T.videos.length };
+  window.DashTutos = { ouvrir, carre, n: () => T.videos.length, video: id => parId(id) };
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', demarrer); } else { demarrer(); }
 })();

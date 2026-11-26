@@ -102,6 +102,11 @@ autre) », « une vidéo type formative, à utiliser en formation », les pages 
   le 25/11 après les primes en onglet, les ETP et le mois par section), Trésorerie et Frais 6 et 18, Promotions 6 et 2,
   Offres 13 et 14, Mon catalogue 8 et 28 ; 149 Mo. Restent : l'onglet Primes de Mon équipe et la fiche d'une personne
   (venus après la liste), la page Commandes, et les autres pages (lots suivants).
+- **Le film des bureaux** (26/11/2026, `26-film-bureaux.mp4`, id `bureaux-film`, genre `nouveau`, vues `clients` et
+  `commandes`, 1 min 40) : le lien et son QR, le client qui s'inscrit au formulaire public, la demande validée, le bureau
+  mis dans sa tournée, ses commandes rangées. Le bouton « Le film » en haut à droite de la carte « Bureaux en
+  développement » (Clients › Bureaux) l'ouvre dans le lecteur (`DashTutos.video(id)`, `DashTutos.ouvrir(id)` ;
+  l'évènement `dashtutos:registre` redessine l'onglet quand le registre arrive).
 - Tests : `php panel/bin/tests_videos.php` (registre, fichiers présents, pages connues, les trois niveaux et leurs
   passages, le carré dans le rail, aucune pilule).
 
