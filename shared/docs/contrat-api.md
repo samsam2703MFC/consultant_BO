@@ -3483,8 +3483,11 @@ une société B2B, donc un numéro de TVA.
     GET  /bureau-questionnaire/{jeton}       PUBLIC (avant la garde) → {magasin, titre, message, bon: texte | null} | 404
     POST /bureau-questionnaire/{jeton}       PUBLIC {prenom, nom, email, tel, societe, tva?, adresse, cp, ville, personnes?, jours?, remarque?, accord, site_web (piège)}
                                              → {ok, magasin, bon: {code, texte} | null} | 422 {error, manque} | 429 (5 réponses / heure / appareil)
+    GET|POST /bureau-questionnaire/m/{magasin} PUBLIC, le lien court « …/bureau/?m=corbais » (26/11/2026, « Donne moi le lien pour corbais ») : le nom
+                                             du magasin, entier ou un mot qui n'est qu'à lui ; le même questionnaire (créé ouvert s'il n'existait pas),
+                                             fermé avec lui ; il se devine, d'où au plus 40 réponses par jour et par magasin (pour les deux liens)
     GET  /dashboard/bureaux-dev?shop=        → {demandes: [{id, source, statut: a_valider|cree|refuse, personne, donnees, clientId, societeId, bon, erreurs, officeId, le}],
-                                                questionnaire: {jeton, actif, promo, titre, message}, promos: [{id, nom}]}
+                                                questionnaire: {jeton, actif, promo, titre, message}, promos: [{id, nom}], lienCourt: "corbais"}
     POST /dashboard/bureaux-dev              {shop, donnees}   une demande saisie au dashboard (l'accord n'y est pas demandé)
     POST /dashboard/bureaux-dev/questionnaire {shop, actif, promo, titre, message, regenerer}   (regenerer : un nouveau jeton, l'ancien lien meurt)
     POST /dashboard/bureaux-dev/valider      {shop, id, statut: active|pending, nom, tva, route_id}

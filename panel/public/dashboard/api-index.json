@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-26T06:59:26Z",
+ "genere": "2026-11-26T08:03:13Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1038,7 +1038,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:834",
+    "clients.js:837",
     "clients.js:97"
    ],
    "magasin": true,
@@ -1049,7 +1049,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:375",
+     "source": "panel/src/bureaux_dev.php:427",
      "resume": ""
     }
    ]
@@ -1060,7 +1060,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:830"
+    "clients.js:833"
    ],
    "magasin": true,
    "routes": [
@@ -1070,7 +1070,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:375",
+     "source": "panel/src/bureaux_dev.php:427",
      "resume": ""
     }
    ]
@@ -1081,7 +1081,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:826"
+    "clients.js:829"
    ],
    "magasin": true,
    "routes": [
@@ -1091,7 +1091,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:375",
+     "source": "panel/src/bureaux_dev.php:427",
      "resume": ""
     }
    ]
@@ -1102,7 +1102,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:822"
+    "clients.js:825"
    ],
    "magasin": true,
    "routes": [
@@ -1112,7 +1112,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:375",
+     "source": "panel/src/bureaux_dev.php:427",
      "resume": ""
     }
    ]
@@ -1192,8 +1192,8 @@
     "clients.js:332",
     "clients.js:343",
     "clients.js:354",
-    "clients.js:602",
-    "clients.js:740",
+    "clients.js:604",
+    "clients.js:743",
     "clients.js:91"
    ],
    "magasin": true,
@@ -1215,7 +1215,7 @@
     "POST"
    ],
    "fichiers": [
-    "clients.js:734"
+    "clients.js:737"
    ],
    "magasin": true,
    "routes": [
@@ -1236,7 +1236,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:718"
+    "clients.js:721"
    ],
    "magasin": true,
    "routes": [
@@ -1320,7 +1320,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:724"
+    "clients.js:727"
    ],
    "magasin": true,
    "routes": [
