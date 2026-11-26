@@ -3328,6 +3328,144 @@ et `po` (`po_hash`) ; sa clé de mémo devient `coCmd3:`. La ligne « Commandes 
 (`/exploitation/canaux`, `liste[].differe`) fait le même rapprochement sur le relevé pro gravé du jour (sans appel) :
 une commande réglée en différé n'est plus « à vérifier », ni « à préparer ».
 
+### `/dashboard/commandes/*` — la page Commandes : webshop, comptoir, bureau, liées aux tournées (24/11/2026)
+
+La page Commandes du dashboard (La journée › Commandes, `commandes.js`, maquettes `panel/docs/maquettes/commandes-tournees/`,
+A et B retenues sur un interrupteur abricot). Serveur : `panel/src/commandes_tournees.php`. Ouvert à une session de magasin
+(`/dashboard`), pour son magasin ; le `shop` de la requête et du corps est vérifié.
+
+    GET    /dashboard/commandes/jour?shop=&date=       la journée (défaut : aujourd'hui)
+    GET    /dashboard/commandes/periode?shop=&du=&au=  la semaine ou le mois (31 jours au plus), face à la période d'avant
+    GET    /dashboard/commandes/bureaux?shop=&q=       les clients pro du magasin (30 au plus), pour composer une tournée
+    POST   /dashboard/commandes/tournees               {shop, nom, depart, retour, livreur, vehicule, jours}   → {ok, id}
+    PUT    /dashboard/commandes/tournees               {shop, id, …les mêmes champs}                           → {ok, id}
+    DELETE /dashboard/commandes/tournees               {shop, id}  (ses bureaux et les choix qui la nomment s'effacent)
+    POST   /dashboard/commandes/tournees/bureaux       {shop, tournee, bureaux: [{client, nom, consigne}]}  (la liste remplace l'ancienne, dans l'ordre de passage)
+    POST   /dashboard/commandes/affecter               {shop, commande, date, tournee: id | 0 (au magasin) | null (automatique)}
+
+**Les commandes** se lisent au panel à chaque appel (`/shops/{id}/client-orders?date_from=&date_to=`, le jour et le
+lendemain), sans être gardées : elles portent le nom du client (la société d'un client pro ; pour un particulier, le
+prénom et l'initiale du nom). Canal : **bureau** si `office_offer_id` ou `id_client_department` est posé, ou si
+`fulfilment_mode` dit `office` ; **webshop** si `is_webshop` ; sinon **comptoir**. Une commande annulée
+(`non_collection_id_reason`) ne compte pas. État : `fait` (remise ou livrée : `issuing_timestamp`, `picked_up`, ou
+encaissée en caisse et l'heure passée), `prete` (`completed`), `prep` (`in_production`), `nonretiree` (`unpicked`), sinon
+`afaire` ; l'heure de la remise ne se montre que si le panel l'a notée à ± 90 min de l'heure prévue. Paiement :
+`caisse` (encaissée), `enligne` (`payment_status` paid), `facture` (client à paiement différé, « Sur facture · 14 j »),
+`attente`, `aencaisser`.
+
+**Les tournées** n'existent pas au panel (mesuré le 24/11/2026 : aucune route de tournée, de bureau ni de département ;
+`office_id` et `department_id` vides sur toutes les fiches clients). Elles se tiennent au cockpit : `panel_tournee`
+(magasin, nom, départ, retour, livreur, véhicule, jours ISO « 12345 »), `panel_tournee_bureau` (tournée, client pro du
+panel, nom, consigne, ordre de passage), `panel_tournee_commande` (le choix du magasin pour une commande : une tournée, ou
+0 = gardée au magasin). Une commande va d'elle-même dans la tournée de son bureau qui roule ce jour-là et dont la fenêtre
+(départ − 60 min → retour + 30 min) couvre son heure (la plus proche du départ s'il y en a plusieurs) ; hors de cette
+fenêtre, elle est « à placer » (`sansTournee`, `mode: "hors"`), comme une commande que le panel dit livrée sans tournée.
+Les arrêts suivent l'ordre des heures. 30 tournées par magasin, 60 bureaux par tournée.
+
+La journée :
+
+    { shop, panel (les commandes du panel ont-elles été lues), motif, coupure: "16:00", date, maintenant (HH:MM, aujourd'hui seulement),
+      commandes: [ { id, jour, heure, canal: webshop|comptoir|bureau, livraison (le panel dit « livrée »),
+                     client: {id, nom, pro}, note, montant, statut, fait (HH:MM | null), paiement: {code, lib},
+                     tournee (id | null), mode: auto|manuel|hors|null, arret (n | null), sansTournee } ],
+      tournees: [ { id, nom, depart, retour, livreur, vehicule, jours, etat: terminee|route|prep|afaire|vide,
+                    commandes: [id…] (dans l'ordre des arrêts), bureaux: [{client, nom, consigne, commande: id | null}],
+                    sansCommande, total: {n, ca} } ],   les tournées qui roulent ce jour
+      totaux: { total, webshop, comptoir, bureau, livrer, retirer: {n, ca}, aPreparer, sansTournee },
+      demain: { date, coupure, ouvert (avant 16:00), commandes: {n, ca}, tournees: [{id, nom, depart, bureaux: [{client, nom, commande: bool}]}] } | null,
+      toutes: [ les tournées du magasin, avec leurs bureaux ] }
+
+La semaine et le mois (24/11/2026, « faire une vue semaine et mois (en plus) ») : les commandes de la période et de la
+période d'avant (la même longueur, juste avant) en une lecture du panel ; chaque jour se range comme la journée (les
+tournées qui roulent ce jour-là, le choix du magasin, la fenêtre de la tournée).
+
+    { shop, panel, motif, du, au, aujourdhui,
+      jours:    [ { date, total, webshop, comptoir, bureau, livrer, retirer: {n, ca}, sansTournee } ],
+      totaux:   { total, webshop, comptoir, bureau, livrer, retirer: {n, ca}, sansTournee },
+      avant:    { du, total, webshop, comptoir, bureau: {n, ca} },   la période d'avant
+      tournees: [ { id, nom, depart, retour, livreur, vehicule, jours, bureaux (leur nombre), roule (jours roulés),
+                    parJour: { date: {n, ca, servis (bureaux servis)} } (les jours où elle roule), total: {n, ca} } ],
+      bureaux:  [ { client, nom, tournees: [id…], parJour: { date: {n, ca} }, total: {n, ca}, dernier } ],   les bureaux des
+                tournées et les clients qui commandent par le canal bureau, le plus gros d'abord ; un bureau sans commande reste, à 0
+      toutes:   [ les tournées du magasin, avec leurs bureaux ] }
+
+Les clients pro (`/bureaux`) : la liste `/shops/{id}/clients` du panel (2,4 Mo à Gosselies : 1 332 fiches), réduite aux
+fiches pro actives avec un nom de société — `{id, nom, ville, cp}`, rien d'autre (la fiche du panel porte aussi des
+secrets) — et gardée six heures (`ceo_app_setting`, `pcoBur:{shop}`). Tests : `php panel/bin/tests_commandes.php`.
+
+### `/dashboard/clients/*` — Vendre › Clients : particuliers, entreprises B2B, bureaux, analyse B2B (25/11/2026)
+
+Le module « Klienci » du panel TF Buddy dans le dashboard (`clients.js`, maquettes `panel/docs/maquettes/clients-panel/`).
+Serveur : `panel/src/clients_panel.php`. Ouvert à une session de magasin (`/dashboard`), pour son magasin ; le `shop`
+de la requête et du corps est vérifié. Tout se lit et s'écrit dans TF Buddy par trois comptes : le compte TF Buddy du magasin s'il est connecté (`/dashboard/tfb/*`,
+en-tête `X-TFB-Jeton`), le consultant (PanelApi), l'admin (ErpApi), chacun essayé quand le précédent est refusé (401,
+403, 404 d'un magasin non couvert) ; rien n'est
+gardé, sauf la liste des clients d'un magasin un quart d'heure (`pclClients:{shop}:{b2b|b2c}`) et les mois clos du
+relevé des tickets pro (`pclMois:{shop}:{AAAA-MM}`). Les champs secrets d'une réponse (mot de passe, hachage, jeton, PIN,
+IBAN…) ne sortent jamais.
+
+    GET  /dashboard/clients/particuliers?shop=&q=&filtre=remise&frais=1   {total, trouves, clients: [{id, nom, tel (en partie), email (bool), ville, cp, remise, cree}] (50 au plus), avecRemise, lu}
+    GET  /dashboard/clients/entreprises?shop=&frais=1                     {source: panel|base, entreprises: [{id, nom, tva, ville, email, tel, score, type, mode, n12, ca12, panier,
+                                                                          dernier, premier, cycle, recurrence, differe, credit: {actif, limite, utilise, pct, alerte} | null, manques: [nom|adresse|tva|contact]}],
+                                                                          total, incompletes, panel (le refus, si source = base), releve: {jours, lus, texte}}
+    GET  /dashboard/clients/fiche?shop=&id=                               {client (les champs de la fiche, sans secret), b2b, manques, profil: {score, type, mode, creditActif, creditLimite, statut, depuis},
+                                                                          factures: {n, impayees, impaye, liste}, credit, commandes | null, releve: {ca, n, premier, dernier, cycle}}   404 : pas un client du magasin
+    POST /dashboard/clients/client {shop, action, id?, entreprise?, champs}
+         creer      particulier : surname et phone obligatoires (name, email, street, street_number, zip, city, comment)   → POST /shops/{s}/clients
+                    entreprise (entreprise: true) : tax_number (BE0123456789) ; TF Buddy complète par VIES et rattache au magasin
+         modifier   PATCH /clients/{id} (name, surname, company_name, tax_number, adresse, phone, email, comment, peppol_identifier)
+         profil     PATCH /shops/{s}/clients/{id} {score A–D, type standard|vip|restaurant|hotel|wholesale|other, mode delivery|pickup|both, creditActif, creditLimite}
+         entreprise le geste du panel : PATCH /clients/{id} {is_b2b: 1, name: null, surname: null, tax_number, company_name, can_deferral, payment_terms, personal_discount_percent}
+         supprimer  DELETE /clients/{id} — seulement un client né dans ce magasin (id_main_shop), 409 sinon
+    POST /dashboard/clients/tva {shop, tva}                                {trouve, source, existe, rattache, societe}   (POST /shops/{s}/clients/vat-lookup, puis POST /vies/lookup)
+    GET  /dashboard/clients/analyse?shop=&annee=&mois=                     {source: panel|releve|null, kpi: {ventes, tickets, panier, clients, part, factures: {v, mom, yoy}}, graphique: [{mois, ventes: [année, année−1], tickets, clients, part}],
+                                                                          ca, memesJours, couverture, panel (le refus), texte}
+    GET  /dashboard/clients/bureaux?shop=&chemin=[&query=…]                {ok, data} | {ok: false, refus, motif, texte}   relais de /panel/shops/{s}/offices{chemin}
+    POST /dashboard/clients/bureaux {shop, methode, chemin, corps}         écriture des bureaux (onboard, sites, delivery-settings, members/invite, invite…)
+    POST /dashboard/clients/bureaux/pdf {shop, bureau, type: poster|cards|brochure, corps}   le PDF que TF Buddy rend, tel quel
+
+Avant toute écriture sur un client, le module relit `/shops/{s}/clients/{id}` : un client d'un autre magasin répond 404.
+Les chemins des bureaux suivent la liste blanche du panel (`OfficeService::read` / `write`) ; tout autre chemin : 400.
+
+**L'accès** (mesuré le 24/11/2026) : les routes `/shops/{s}/clients…`, `/clients/{id}` et `/vies/lookup` répondent
+aux comptes du cockpit ; celles sous `/panel/shops/{s}/…` (`b2b/clients`, `b2b/dashboard`, `offices…`) les refusent (404
+`ORDER_NOT_FOUND`). Le module les tente à chaque lecture ; refusées : les entreprises viennent de
+`/shops/{s}/clients?type=b2b`, avec la fréquence, le CA et le cycle sur 12 mois lus dans le relevé des tickets pro
+(`consultant/src/ventes_pro.php`, pro = fiche avec une TVA valide) ; le score, le type, le mode et le crédit viennent
+de la fiche (`/shops/{s}/clients/{id}` → `profile`), le crédit utilisé des factures impayées ; l'analyse B2B est
+calculée sur le même relevé : un mois en cours se compare aux mêmes jours du mois d'avant et de l'an dernier. Les
+bureaux n'ont pas de repli : l'écran dit ce qui manque. Demande à TF Buddy : R1 de
+`panel/docs/livreur/CAHIER_DES_CHARGES_TFBUDDY.md`.
+
+### `/dashboard/tfb/*` — le compte TF Buddy du magasin : téléphone, PIN, code SMS (25/11/2026)
+
+Sam : « all should work either with admin, consultant or shop token ». Les routes du panel sous `/panel/shops/{s}/…`
+(entreprises B2B, bureaux, analyse B2B, livraisons) ne répondent qu'à un employé du magasin connecté. Le dashboard ouvre
+cette connexion, celle du panel (`panel/src/tfb_magasin.php`, écran `tfb-magasin.js`) ; la session (12 h) reste dans le
+navigateur, le cockpit ne garde ni le PIN ni les jetons et ne les journalise pas (le Journal note seulement la connexion réussie, « connexion au panel TF Buddy depuis le dashboard »).
+
+    POST /dashboard/tfb/connexion   {shop, phone, pin}            → {etape: "sms", challenge, texte} | {etape: "ok", jetons}   (POST /panel/auth/login)
+    POST /dashboard/tfb/confirmer   {shop, challenge, code}       → {ok, jetons: {acces, renouvellement, expireAcces, expireSession}}   (POST /panel/auth/confirm)
+    POST /dashboard/tfb/sms         {shop, challenge}             → {ok}   (POST /panel/auth/resend)
+    POST /dashboard/tfb/renouveler  {shop, renouvellement}        → {ok, jetons} | 401 {error, expire}   (POST /panel/auth/refresh)
+    POST /dashboard/tfb/deconnexion {shop, renouvellement}        → {ok}   (POST /panel/auth/logout)
+
+Le jeton d'accès part dans l'en-tête **`X-TFB-Jeton`** des appels de Clients (`/dashboard/clients/*`) et de Commandes
+(`/dashboard/commandes/*`) ; le navigateur le renouvelle 45 s avant son échéance (un seul renouvellement à la fois : TF
+Buddy fait tourner le jeton de renouvellement). Le serveur l'impose à PanelApi le temps d'un appel
+(`PanelApi::$jetonImpose`). L'ordre des comptes : pour une route `/panel/…`, le magasin, puis le consultant, puis
+l'admin ; pour les autres, le consultant, l'admin, puis le magasin. Un jeton du magasin refusé en 401 : la réponse porte
+`magasinExpire: true`, le navigateur oublie la session et propose de se reconnecter.
+
+**Les refus de connexion** (25/11/2026) : les limites sont celles de TF Buddy, le cockpit n'ajoute aucune pause. Un refus rend
+`{error, code}` (le message lisible, avec le code de TF Buddy entre parenthèses, et ce code seul) : `PANEL_AUTH_LIMIT` (429, trop
+d'essais pour ce téléphone ou depuis l'adresse du serveur du cockpit, la même pour tous les magasins), `PANEL_AUTH_RESEND_WAIT`
+(60 s entre deux SMS ; `connexion` rend alors `attente: true`), `PANEL_CODE_INVALID` (code incorrect, expiré ou déjà utilisé :
+5 minutes, 5 essais), `PANEL_INVALID_CREDENTIALS` (téléphone ou PIN incorrect, ou accès inactif), `PANEL_AUTH_INPUT` (téléphone
+au format international), `PANEL_SMS_UNAVAILABLE`, `PANEL_AUTH_UNAVAILABLE`. Le navigateur garde le code SMS en cours 5 minutes
+dans l'onglet (`sessionStorage`, `tfb-challenge:{shop}`) : rouvrir la fenêtre, ou redonner le même téléphone après
+`attente`, reprend sa saisie au lieu de renvoyer un SMS ; « renvoyer le code » attend la fin d'un compte à rebours de 60 s.
+
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 
 `?shop=4&mois=2026-10&n=6` (`n` de 2 à 12, 6 par défaut ; un mois futur est ramené au mois en cours). Pour la carte
@@ -5584,6 +5722,9 @@ le mois court), l'objectif, ce que chacune touche, ce qu'il reste ; puis les él
 d'heures — la forme du dashboard magasin. Elles comptent toujours dans le cumul de chacune. Dans l'année : un anneau par
 prime d'équipe, les mois où le magasin y est arrivé, et ce qui a été versé à l'équipe.
 Rien ne change côté API (`/ventes/primes-equipe`, `/ventes/primes-annee`).
+Depuis le 25/11/2026, l'anneau de l'année compte les mois **clos** gagnés sur les mois clos : chaque case de
+`/ventes/primes-annee` porte `foisClos` à côté de `fois` (le mois en cours n'y compte pas ; avant, l'anneau pouvait dire
+10 / 10 malgré un mois manqué, ou dépasser 100 %).
 
 **Fiches à imprimer et à envoyer** (31/10/2026, demande de Sam : « les PDF peuvent être imprimés de la page édition prime,
 avec envoi par mail à l'équipe » ; `panel/src/primes_fiches.php`, voir `panel/docs/primes/LISEZMOI.md`). Un volet de la page d'un
@@ -5747,6 +5888,7 @@ routes ci-dessous restent, le dashboard du magasin lit les profils publiés). Il
 |---|---|---|
 | GET | `/fidelite?shop=&mois=` | `{test, source, ref, magasins[], missions[], regles[], stats:{regles:{id:{txt,n,cls}}, budget:{cout, ca, pct, plafond, tickets, points, nouveaux, hypotheses}}, profils[], maintenant}` — les règles (`{id, bloc, type, params, shop, actif, ordre}`), ce que chacune a donné sur les 30 derniers jours, le budget estimé, trois clients types (médianes des habitués, réguliers, occasionnels) pour le simulateur. |
 | GET | `/fidelite/clients?shop=&mois=` | `{test, source, ref, magasins[], missions[], kpis:{actifs, actifsPrec, retour30, nouveauxPrec, montes, descendus, ca30, tickets30, panier}, rf:{lignes, colonnes, cases[5][5], segments[5][5]}, segments[], mixMoyen[6], transitions:{ordre, noms, m[5][5]}, retourSpontane:{7,14,21,30,45,60}}`. |
+| GET | `/fidelite/programme` | (25/11/2026) le programme tel que l'expliquent les documents remis aux franchisés — le Recrutement l'imprime dans l'annexe 2 du Guide pré-ouverture : `{seuilEuros, tousLes, validite, bons[], superBon:{valeur, provisoire}|null, multiplicateurCase, palier:{points, valeur}|null, saisons:[{id, nom, du, aValider, bons[], semaines:[{titre, sous, fete}]}]}` (la carte à points et le bingo, `marketing/src/fidelite_bingo.php`). Ni client, ni campagne de l'ERP, ni note interne. Lisible avec le jeton de service (`X-Service-Token`, `erpRouteIntegration`). |
 | POST | `/fidelite/regles` | `{regles:[{id?, type, params, shop, actif, supprimer?}], qui}` — publie en une transaction ; une règle invalide refuse tout l'envoi (422 type inconnu, règle unique retirée ou doublée, magasin inconnu ; 404 règle introuvable). Journalisé (`Fidélité`). |
 
 **Règles** (`mar_fid_regle`, posées une fois sur table vide : le programme de la maquette C). Blocs et types :
@@ -5966,6 +6108,20 @@ QR du catalogue en ligne, PDF léger, affiche A4 / A3). Un catalogue de la marqu
     PUT    /dashboard/catalogues[/marque]/{id}/verifications/{code} {seen} → …/checks/{code}
     POST   /dashboard/catalogues[/marque]/{id}/imprime {quantity}       → …/prints (la charte publiée est figée pour ce catalogue)
     GET|POST /dashboard/catalogues[/marque]/{id}/lien                   → …/public-links (POST : nouveau lien, l'ancien révoqué)
+
+**Le bon de commande** (25/11/2026, client : « conditions par magasin – contenu exact de ce qu'il y a dans le
+catalogue », puis « cadre vide à remplir, délai boutique sous chaque catégorie » ; contrat du Marketing v1.20) —
+étape 5, « Ce que j'imprime » › « Le bon de commande » : une feuille A4 au contenu exact de mon catalogue (produits,
+prix, remises et offres avec leurs dates, disponibilité par catégorie), FR / NL / FR + NL, sur mon imprimante ou chez
+l'imprimeur (traits de coupe). Mes conditions se règlent une fois pour tous mes bons ; le Marketing les lit. Sans
+conditions, le cadre s'imprime vide, à remplir à la main.
+
+    GET    /dashboard/catalogues/conditions?shop=               → …/order-conditions (configured false : rien de réglé)
+    PUT    /dashboard/catalogues/conditions?shop=               → …/order-conditions {minDelay {value, unit hours|days} | null,
+           depositPct, holidayDeadlines [{for, until}], pickup, delivery {enabled, radiusKm, feeCents}, note {fr, nl}}
+    GET    /dashboard/catalogues[/marque]/{id}/bon?shop=&lang=  → …/{catalogues|brand-catalogues}/{id}/order-form
+
+Le PDF du bon : le lien d'impression du catalogue (`…/impression`) ouvert avec `&bon=fr|nl|fr,nl` (et `&mode=printer`).
 
 Le lien d'impression s'ouvre avec `&mode=printer` (PDF imprimeur), `&mode=livret` (livret A4, catalogue A5), `&mode=proof`
 (PDF léger) ou `&affiche=A4|A3&l={jeton du lien permanent}` (affiche), ajoutés par l'écran. Le QR et l'affiche mènent au

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autocontrôle qualité — paramétrage réseau (maquette)</title>
+<!-- Au design system (docs/DESIGN_SYSTEM.md) : la feuille commune du cockpit, sa coquille (rail, barre supérieure) et
+     ses composants, sans autre règle que la mise en page de cet écran. Servir depuis la racine du dépôt.
+     Adresse : parametrage.html#categorie=brioche&critere=mie_toucher -->
+<link rel="stylesheet" href="../../../../shared/public/assets/ds/global.css">
+<style>
+/* La mise en page de l'écran ; tout le reste vient de global.css. */
+.pa-2 { display: grid; grid-template-columns: 1fr 1.6fr; gap: 16px; margin-bottom: 16px; }
+.pa-2 .card { margin: 0; }
+.pa-ligne { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--row-line); font-size: 13px; }
+.pa-ligne:first-of-type { border-top: 0; padding-top: 0; }
+.pa-ligne > span:first-child { width: 130px; display: inline-flex; align-items: center; gap: 8px; }
+.pa-ligne small { color: var(--muted); font-size: 12px; flex: 1; }
+.pa-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 10px 0 16px; }
+.pa-col h2 { display: flex; align-items: center; gap: 8px; font-size: 15px; margin: 0 0 10px; }
+.pa-col h2 .section-label__aside { margin-left: auto; }
+.pa-cr { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+.pa-cr.is-on { border: 2px solid var(--accent); padding: 11px; }
+.pa-cr-h { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; margin-bottom: 8px; }
+.pa-cr-h > span { flex: 1; }
+.pa-cr-h .ico { color: var(--faint); margin-top: 1px; }
+.pa-ops { display: flex; flex-wrap: wrap; gap: 4px; }
+.pa-ops .chip, .pa-ops .tag-warn, .pa-ops .tag-stop { padding: 2px 7px; }
+.pa-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.pa-ed { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.pa-ed h2 { margin: 0; font-size: 15px; }
+.pa-ed .muted { margin-left: auto; font-size: 12px; }
+.pa-surch { display: flex; gap: 10px; flex-wrap: wrap; }
+.pa-surch > div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.pa-surch small { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="workspace">
+  <nav class="sidebar" aria-label="Navigation principale" id="rail"></nav>
+  <div class="workspace__main">
+    <header class="topbar">
+      <div><p class="topbar__kicker">Vue Réseau</p><h1>Autocontrôle qualité</h1></div>
+      <div class="topbar__actions" id="actions"></div>
+    </header>
+    <main class="app__body" id="page"></main>
+  </div>
+</div>
+<script src="icones.js"></script>
+<script>
+(async function () {
+  const G = await (await fetch('grilles.json')).json();
+  const p = new URLSearchParams(location.hash.slice(1));
+  const cat = G.categories.find(c => c.cle === (p.get('categorie') || 'brioche'));
+  // Les critères de la catégorie, puis ceux de tous les produits (photo de référence, planogramme).
+  const COMMUNS = G.criteres_communs || [];
+  const tous = cat.criteres.concat(COMMUNS);
+  const sel = tous.find(c => c.cle === (p.get('critere') || 'mie_toucher')) || tous[0];
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  // Les icônes au format du §7.12, avec la classe .ico de global.css.
+  const ico = n => window.AQ_ICO(n, 16).replace('class="aq-ico"', 'class="ico"');
+  const TYPE = { echelle: 'Échelle', oui_non: 'Oui / non', mesure: 'Mesure' };
+  // L'état se dit par un mot (§3, §7.9) : pastille verte, étiquette or, étiquette d'arrêt.
+  const etat = (n, txt, avant = '') => n === 'ok' ? `<span class="chip chip--ok">${avant}${esc(txt)}</span>` : `<span class="${n === 'mineur' ? 'tag-warn' : 'tag-stop'}">${esc(txt)}</span>`;
+  const coche = () => ico('coche').replace('class="ico"', 'class="ico" style="width:12px;height:12px;flex-basis:12px"');
+  const NIV = { ok: 'Conforme', mineur: 'À surveiller', majeur: 'Non conforme' };
+  const PH = { obligatoire: 'Obligatoire', facultative: 'Facultative', non: 'Non' };
+
+  // Les réponses d'un critère, quel que soit son type, sous une même forme : libellé, niveau, correction.
+  const options = c => {
+    if (c.type === 'echelle') return c.options;
+    if (c.type === 'oui_non') return ['oui', 'non'].map(v => v === c.attendu
+      ? { libelle: v === 'oui' ? 'Oui' : 'Non', niveau: 'ok', cible: true }
+      : Object.assign({ libelle: v === 'oui' ? 'Oui' : 'Non' }, c[v]));
+    const cible = c.minimum !== undefined ? `${c.minimum} ${c.unite} minimum` : `${c.cible - c.tolerance} à ${c.cible + c.tolerance} ${c.unite}`;
+    return [{ libelle: cible, niveau: 'ok', cible: true }, Object.assign({ libelle: 'Hors tolérance' }, c.hors)];
+  };
+
+  /* Le rail du portail de formation (formation/public/formation/portail.js), avec l'entrée proposée. */
+  const RAIL = [
+    ['Formation', [['tableau', 'Accueil'], ['modeles', 'Formations'], ['horloge', 'Formation continue'], ['agences', 'Postes'], ['etoile', 'Compétences'], ['analyse', 'Données du panel']]],
+    ['Opérationnel', [['calendrier', 'Ouverture'], ['horloge', 'Journée de travail'], ['calendrier', 'Fermeture'], ['ecran', 'La tablette'], ['ecrire', 'Rédaction des SOP'], ['controle', 'Autocontrôle qualité', true]]],
+    ['Documents', [['plan', 'Catalogue des manuels ↗'], ['plan', 'Dépliant des manuels ↗']]],
+  ];
+  document.getElementById('rail').innerHTML = `
+    <div class="sidebar__head"><img class="sidebar__logo" src="../../../../shared/public/assets/img/logo.png" alt="L'Atelier By"><div class="sidebar__kicker">Portail de formation</div></div>
+    <div class="sidebar__back"><a href="#">${ico('retour')}Retour au cockpit</a></div>
+    <div class="sidebar__groups">${RAIL.map(([g, items]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${items.map(([i, l, on]) =>
+      `<a href="#" class="sidebar__item${on ? ' is-active' : ''}"${on ? ' aria-current="page"' : ''}>${ico(i)}${esc(l)}</a>`).join('')}</div>`).join('')}</div>`;
+  document.getElementById('actions').innerHTML = `<button type="button" class="btn">${ico('oeil')}Aperçu tablette</button><button type="button" class="btn btn--primary">${ico('publier')}Publier aux magasins</button>`;
+
+  const onglets = `<nav class="page-tabs">${G.categories.map(c => `<button type="button" class="page-tabs__tab${c === cat ? ' is-on' : ''}">${esc(c.libelle)}<span class="page-tabs__count">${c.criteres.length + COMMUNS.length}</span></button>`).join('')}
+    <button type="button" class="page-tabs__tab">${ico('ajouter')}Catégorie</button></nav>`;
+
+  const regles = `<div class="pa-2">
+    <section class="card"><h2 class="block-title">Quand contrôler</h2>
+      <p style="margin:0 0 12px;font-size:13px;line-height:1.5">${esc(cat.quand)}.</p>
+      <button type="button" class="switch is-on" aria-pressed="true"><span class="switch__track"></span><span><span class="switch__label">Rappel sur la tablette</span><br><span class="switch__hint">si la fournée n'est pas contrôlée 45 min après la sortie du four</span></span></button></section>
+    <section class="card"><h2 class="block-title">Photos par étape</h2>${G.etapes.map(e => `<div class="pa-ligne"><span>${ico(e.icone)}${e.titre}</span>
+        <span class="seg">${Object.keys(PH).map(k => `<button type="button" class="${cat.photos[e.cle] === k ? 'is-on' : ''}">${PH[k]}</button>`).join('')}</span>
+        <small>${esc((cat.consignes_photo || {})[e.cle] || '')}</small></div>`).join('')}</section>
+  </div>`;
+
+  const carte = c => `<div class="pa-cr${c === sel ? ' is-on' : ''}"><div class="pa-cr-h">${ico('deplacer')}<span>${esc(c.libelle)}</span></div>
+      <div class="pa-ops">${options(c).map(o => etat(o.niveau, o.libelle, o.cible ? coche() : '')).join('')}</div>
+      <div class="pa-meta"><span class="chip chip--draft">${TYPE[c.type]}</span>${COMMUNS.includes(c) ? '<span class="chip chip--draft">Tous les produits</span>' : ''}</div></div>`;
+  const colonnes = `<p class="section-label">Les critères, par étape<span class="section-label__aside">Glisser pour ordonner · en vert, la réponse attendue</span></p>
+    <div class="pa-cols">${G.etapes.map(e => {
+      const cs = tous.filter(c => c.etape === e.cle);
+      return `<div class="pa-col"><h2>${e.titre}<span class="section-label__aside">${cs.length} critère${cs.length > 1 ? 's' : ''}</span></h2>${cs.map(carte).join('')}
+        <button type="button" class="btn btn--ghost btn--sm">${ico('ajouter')}Ajouter un critère</button></div>`;
+    }).join('')}</div>`;
+
+  const editeur = `<section class="card table-card"><div class="pa-ed"><h2>${esc(sel.libelle)}</h2><span class="chip chip--draft">${TYPE[sel.type]}</span>
+      ${sel.visuel ? `<span class="chip chip--draft">Visuel : ${sel.visuel === 'teinte' ? 'photo du produit' : 'dessin « ' + esc(sel.visuel) + ' »'}</span>` : ''}
+      ${sel.aide ? `<span class="muted">Aide : ${esc(sel.aide)}</span>` : ''}</div>
+    <div class="table-scroll"><table class="ds-table"><thead><tr><th>Réponse</th><th>Niveau</th><th>Cause probable</th><th>À faire maintenant</th><th>Prochaine fournée</th><th>Le lot</th></tr></thead><tbody>
+    ${options(sel).map(o => `<tr><td>${esc(o.libelle)}${o.cible ? ' <span class="muted" style="font-size:12px">(attendu)</span>' : ''}</td><td>${etat(o.niveau, NIV[o.niveau])}</td>
+      <td>${esc(o.cause || '—')}</td><td>${esc(o.maintenant || '—')}</td><td>${esc(o.prochaine || '—')}</td><td>${o.decision ? esc(G.decisions[o.decision].split(' (')[0]) : '—'}</td></tr>`).join('')}
+    </tbody></table></div></section>`;
+
+  const surch = Object.values(G.produits).filter(x => x.categorie === cat.cle);
+  const surcharges = `<section class="card" style="margin-top:16px"><h2 class="block-title">Surcharges par produit</h2><div class="pa-surch">${surch.map(x => `<div>${esc(x.nom)}
+      ${Object.entries(x.surcharges).map(([k, v]) => `<small>${esc(cat.criteres.find(c => c.cle === k).libelle)} : ${v.cible} g (${v.cible - v.tolerance} à ${v.cible + v.tolerance} g)</small>`).join('')}
+      ${x.planogramme ? `<small>Planogramme : ${esc(x.planogramme.zone)}, ${esc(x.planogramme.libelle)}, ${x.planogramme.facade} pièces en façade</small>` : ''}</div>`).join('')}
+    <button type="button" class="btn btn--ghost btn--sm">${ico('ajouter')}Surcharger un produit</button></div></section>`;
+
+  document.getElementById('page').innerHTML = onglets + regles + colonnes + editeur + surcharges;
+  document.documentElement.dataset.pret = '1';
+})();
+</script>
+</body>
+</html>

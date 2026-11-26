@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'assistant', 'coffre', 'formation', 'equipe'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'assistant', 'coffre', 'formation', 'equipe', 'commandes', 'clients'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -164,6 +164,10 @@
     if (S.vue === 'formation') { rendre(); if (force && window.DashFormation) { window.DashFormation.relire(); } return; }
     // Mon équipe (23/11/2026) : le module lit et écrit lui-même (equipe.js) ; « ↻ Relire » relit la carte et le planning.
     if (S.vue === 'equipe') { rendre(); if (force && window.DashEquipe) { window.DashEquipe.relire(); } return; }
+    // Commandes (24/11/2026) : le module lit et écrit lui-même (commandes.js) ; « ↻ Relire » relit la journée.
+    if (S.vue === 'commandes') { rendre(); if (force && window.DashCommandes) { window.DashCommandes.relire(); } return; }
+    // Clients (25/11/2026) : le module lit et écrit lui-même dans TF Buddy (clients.js) ; « ↻ Relire » relit l'onglet ouvert.
+    if (S.vue === 'clients') { rendre(); if (force && window.DashClients) { window.DashClients.relire(); } return; }
     // L'assistant en pleine page (17/11/2026) : il lit ses questions et ses modèles ; les chiffres, il les lit à la question.
     if (S.vue === 'assistant') { if (!IA.modeles) { iaModelesLire(); } rendre(); return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
@@ -5266,7 +5270,7 @@
     return `<div class="pr-eqb${mobile ? ' mob' : ''}">
       <div class="pr-eqb-h"><div><div class="pr-eqb-t">Le magasin, ensemble</div><div class="s">Les primes que toute l’équipe gagne d’un coup : les mois où le magasin y est arrivé</div></div>
         <div class="pr-eqb-pot"><b>${esc(prEur(verse))}</b><small>versés à l’équipe en ${esc(String(A.y || prAn()))}</small></div></div>
-      <div class="pr-eqb-rs">${V.equipe.map(p => { const n = Math.max(0, ...(A.personnes || []).map(r => +(((r.cases || {})[p.cle] || {}).fois) || 0));
+      <div class="pr-eqb-rs">${V.equipe.map(p => { const n = Math.max(0, ...(A.personnes || []).map(r => { const c = (r.cases || {})[p.cle] || {}; return +(c.foisClos != null ? c.foisClos : Math.min(+c.fois || 0, clos)) || 0; }));   // les mois clos gagnés, sur les mois clos (25/11/2026)
         return prAnneau(clos ? 100 * n / clos : 0, false, `<b>${n} / ${clos}</b><small>mois</small>`,
           `<b>${esc(p.lib)}</b><small>atteint ${prPl(n, 'mois')} sur ${clos} clos · ${esc(prPayeur(p))}</small><small>${esc(prEur(+p.total || 0))} · ${prPl(+p.gagnantes || 0, 'gagnante')}</small>`); }).join('')}</div>
     </div>`;
@@ -5367,7 +5371,7 @@
       ? `<button class="db-btn" data-pry="-1"${y > PR_Y_DEBUT ? '' : ' disabled'} aria-label="Année précédente">‹</button><span class="pr-per">${y}${y === yMax ? '<small> · en cours</small>' : ''}</span><button class="db-btn" data-pry="1"${y < yMax ? '' : ' disabled'} aria-label="Année suivante">›</button>`
       : `<button class="db-btn" data-prm="-1"${m > PR_M_DEBUT ? '' : ' disabled'} aria-label="Mois précédent">‹</button><span class="pr-per">${esc(prLibMois(m))}${m === mMax ? '<small> · en cours</small>' : ''}</span><button class="db-btn" data-prm="1"${m < mMax ? '' : ' disabled'} aria-label="Mois suivant">›</button>`;
     const sous = an ? (V && V.periode ? esc(V.periode) + ' · ' + esc(V.total) + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes, prime par prime.';
-    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Primes</div><div class="pm-titre">Où en sont tes vendeuses</div><div class="db-mini pr-sous">${sous}</div></div><span style="flex:1"></span>
+    let h = `<div class="pm-tete"><div><div class="pm-titre">Où en sont tes vendeuses</div><div class="db-mini pr-sous">${sous}</div></div><span style="flex:1"></span>
       <div class="pr-outils">
         <div class="db-ong db-ong-p">${[['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
         <div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
@@ -5634,7 +5638,7 @@
       const k = LIB[c.classement] || ['mu', c.classement];
       const quoi = c.classement === 'ailleurs' ? 'zone de ' + (c.aussi || []).join(', ') : (c.classement === 'zone' && (c.aussi || []).length ? 'dans la zone · aussi ' + c.aussi.join(', ') : k[1]);
       return `<tr><td>${esc(c.nom)}<div class="db-mini">${esc(c.type || '—')} · ${c.source === 'tfbuddy' ? 'TFBuddy' : (c.source === 'import' ? 'relevé importé, à encoder' : 'relevé web du cockpit')}</div></td>
-        <td>${c.cp ? '<span class="bm-cp">CP ' + esc(c.cp) + '</span> ' : ''}<span class="db-mini">${esc(c.commune || c.ville || '')}</span></td><td><span class="bm-cl ${k[0]}">${esc(quoi)}</span></td></tr>`;
+        <td>${c.cp ? '<span class="bm-cp">CP ' + esc(c.cp) + '</span> ' : ''}<span class="db-mini">${esc(c.commune || c.ville || '')}</span></td><td><span class="bm-rang ${k[0]}">${esc(quoi)}</span></td></tr>`;
     }).join('');
     // Une liste déroulante, fermée par défaut (15/11/2026) : l'en-tête et ses compteurs ; un clic montre le tableau.
     const ouvert = !!S.bmCpOuvert;
@@ -6673,6 +6677,8 @@
         ${vide ? '<span class="fd-vide">Aucun client à ce rythme pour l’instant.</span>' : `<span class="fd-kv"><span>Part du CA scanné</span><b>${fP(p.partCa)}</b><span>Panier moyen</span><b>${fU(p.panier)}</b><span>En commande</span><b>${fP0(p.commande)}</b></span>`}</button>`;
     }).join('')}</div>
       <p class="fd-note">Les conditions se règlent au cockpit (ERP franchisé › Fidélité › Profils clients). Cliquer une vignette affiche son profil dans les radars.</p>`;
+    // Aucun profil (25/11/2026 : la page plantait, « Cannot read properties of undefined (reading 'couleur') ») : on le dit.
+    if (!choisi) { return h + `<div class="db-attente">Aucun profil client n’est encore réglé pour ce magasin : les vignettes et les radars apparaîtront dès qu’il y en aura un (cockpit › ERP franchisé › Fidélité › Profils clients).</div>`; }
     const M = d.moyenne || {};
     const serie = { c: choisi.couleur, lib: choisi.nom + ' · ' + nf(choisi.clients, 0) + ' client' + (choisi.clients > 1 ? 's' : '') };
     h += `<div class="fd-g2 fd-g3"><div class="db-card fd-c"><div class="ct">Récurrence · ${esc(choisi.nom)}<span class="db-mini">0 au centre, 100 au bord</span></div>
@@ -7437,7 +7443,8 @@
       ecrire('/exploitation/frais/tva', { shop: S.shop, poste: l.poste, tva: tva, taux: taux })
         .then(() => {
           // Le Résultat se refait au serveur avec les nouveaux frais hors TVA : on le relira.
-          Object.keys(S.res).forEach(c => { delete S.res[c]; }); delete S.aux['jourM|' + S.date];
+          // Relu, pas effacé (25/11/2026 : effacé sans relecture, « Objectif du jour » du rail restait sur « lecture… »).
+          Object.keys(S.res).forEach(c => { delete S.res[c]; }); lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, true);
           lireAux(cleFR(), cheminFR(), true);
         })
         .catch(e => { S.err.frEcr = e.message; })
@@ -7537,7 +7544,7 @@
   /** Après un ajout ou une annulation : les frais des mois touchés se relisent (le mois regardé tout de suite), et le Résultat. */
   function frRelire(mois) {
     (mois || []).forEach(m => { if (m !== S.frMois) { delete S.aux['frais|' + S.shop + '|' + m]; } });
-    Object.keys(S.res).forEach(c => { delete S.res[c]; }); delete S.aux['jourM|' + S.date];
+    Object.keys(S.res).forEach(c => { delete S.res[c]; }); lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, true);
     lireAux(cleFR(), cheminFR(), true);
   }
   function frEnvoyer() {
@@ -7627,16 +7634,25 @@
     formation: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6',
     // Mon équipe (23/11/2026) : deux personnes.
     equipe: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+    // Commandes (24/11/2026) : le bloc-notes d'une commande.
+    commandes: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2 2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2M9 12h6M9 16h4',
+    // Clients (25/11/2026) : deux personnes, la seconde en retrait.
+    clients: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   };
   const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
   // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
   const RAIL = [
     // Mon équipe (23/11/2026, « adapter le module équipe du panel ») : la carte des responsabilités et le planogramme des horaires.
-    ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal'], ['equipe', 'Mon équipe', 'equipe']]],
+    // Commandes (24/11/2026, maquettes docs/maquettes/commandes-tournees/) : webshop, comptoir, bureau, liées aux tournées.
+    ['La journée', [['ops', 'Opérationnel', 'tdb'], ['commandes', 'Commandes', 'commandes'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal'], ['equipe', 'Mon équipe', 'equipe']]],
     ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
     // Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy (offres.js).
     // Analyse (15/11/2026, « go E et F, A en entrée ») : le magasin, ses familles et ses produits, question par question (analyse.js).
-    ['Vendre', [['analyse', 'Analyse', 'loupe'], ['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['offres', 'Offres', 'offre'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
+    // Primes (24/11/2026, « mettre les primes dans l'icône Mon équipe, après le planning ») : plus dans Vendre ; un onglet
+    // de Mon équipe, après Planning (railOn, eqpOngletsPrimes).
+    // Clients (25/11/2026, maquettes docs/maquettes/clients-panel/) : le module Klienci de TF Buddy — particuliers, entreprises
+    // B2B, bureaux, analyse B2B (clients.js) ; les offres restent la page Offres.
+    ['Vendre', [['analyse', 'Analyse', 'loupe'], ['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['clients', 'Clients', 'clients'], ['offres', 'Offres', 'offre'], ['concurrence', 'Concurrence', 'analyse']]],
     // Le Marketing du magasin (15/11/2026, maquette docs/maquettes/rail-franchise/marketing.png) : le calendrier des posts
     // (l'espace boutique du Marketing, dans un nouvel onglet tant qu'il ne sait pas s'afficher incorporé), la fidélité et
     // le catalogue, qui relèvent du Marketing.
@@ -7649,7 +7665,9 @@
     // Se former (22/11/2026) : la page Formation du magasin, où mène aussi le bouton abricot de la barre.
     ['Se former', [['formation', 'Formations et suivi', 'formation']]],
   ];
-  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : v === 'assistant' ? 'Assistant IA' : v === 'coffre' ? 'Mon coffre-fort' : v === 'mails' ? 'Mails et automatisations' : 'Dashboard'; };
+  /** L'entrée du rail allumée : la sienne ; les primes allument Mon équipe (24/11/2026). */
+  const railOn = v => S.vue === v || (v === 'equipe' && S.vue === 'primes');
+  const railLib = v => { if (v === 'primes') { return 'Mon équipe'; } for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : v === 'assistant' ? 'Assistant IA' : v === 'coffre' ? 'Mon coffre-fort' : v === 'mails' ? 'Mails et automatisations' : 'Dashboard'; };
   /** Le dossier de formation (22/11/2026) : ce qu'il reste à faire (en retard, en cours) et les nouveautés pas encore ouvertes. */
   function fcAFaire() { const F = S.aux['fc|' + S.shop]; return F && F.reperes ? (F.reperes.enRetard || 0) + (F.reperes.enCours || 0) : 0; }
   function fcNouveaux() { const F = S.aux['fc|' + S.shop]; return F && F.nouveautes ? F.nouveautes.filter(n => n.nouveau).length : 0; }
@@ -7669,12 +7687,35 @@
     if (id === 'db-mod-mob') { p.appendChild(el); } else { p.replaceWith(el); }
   }
   /** Mon équipe (23/11/2026) : le module dans l'élément `id` ; « Demander au bureau » ouvre la demande au bureau. */
+  /** Commandes (24/11/2026) : l'élément du module (commandes.js), gardé d'un rendu à l'autre ; il dit au rail combien de
+   *  commandes sont à préparer aujourd'hui. */
+  function pcoMonter(id) {
+    const p = document.getElementById(id);
+    if (!p) { return; }
+    if (!window.DashCommandes) { p.innerHTML = '<div class="db-err">Le module Commandes n’a pas été chargé.</div>'; return; }
+    const el = window.DashCommandes.racine(S.shop, { apiBase: API, date: S.date, onCompte: n => { if (S.cmdN !== n) { S.cmdN = n; railMaj(avecRail()); } } });
+    if (id === 'db-mod-mob') { p.appendChild(el); } else { p.replaceWith(el); }
+  }
+  /** Clients (25/11/2026) : l'élément du module (clients.js), gardé d'un rendu à l'autre ; « Préparer une offre » mène aux Offres. */
+  function pclMonter(id) {
+    const p = document.getElementById(id);
+    if (!p) { return; }
+    if (!window.DashClients) { p.innerHTML = '<div class="db-err">Le module Clients n’a pas été chargé.</div>'; return; }
+    const el = window.DashClients.racine(S.shop, { apiBase: API, nomShop: nomShop(), aller: allerVers });
+    if (id === 'db-mod-mob') { p.appendChild(el); } else { p.replaceWith(el); }
+  }
   function eqpMonter(id) {
     const p = document.getElementById(id);
     if (!p) { return; }
     if (!window.DashEquipe) { p.innerHTML = '<div class="db-err">Le module Mon équipe n’a pas été chargé.</div>'; return; }
-    const el = window.DashEquipe.racine(S.shop, { apiBase: API, aller: allerVers, bureau: () => iaOuvrir('d') });
+    const el = window.DashEquipe.racine(S.shop, { apiBase: API, aller: allerVers, bureau: () => iaOuvrir('d'), primes: () => allerVers('primes') });
     if (id === 'db-mod-mob') { p.appendChild(el); } else { p.replaceWith(el); }
+  }
+  /** La page des primes, onglet de Mon équipe (24/11/2026, « mettre les primes dans l'icône Mon équipe, après le
+   *  planning ») : la rangée d'onglets du module (equipe.js), Primes allumé ; Responsabilités et Planning y ramènent. */
+  function eqpOngletsPrimes() {
+    return `<nav class="page-tabs eqp-tabs db-eqp-tabs" aria-label="Mon équipe">${[['resp', 'Responsabilités'], ['planning', 'Planning'], ['primes', 'Primes']]
+      .map(([k, l]) => `<button type="button" class="page-tabs__tab${k === 'primes' ? ' is-on' : ''}" data-eqponglet="${k}"${k === 'primes' ? ' aria-current="page"' : ''}>${l}</button>`).join('')}</nav>`;
   }
   /** Le calendrier des posts du magasin : l'espace boutique du Marketing (GET /meta → espaceBoutiqueUrl) ; '' : pas d'entrée. */
   function postsUrl() {
@@ -7738,7 +7779,7 @@
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
       <div class="sidebar__groups"><div class="sidebar__group db-rail-boite${railIaOuvert() ? '' : ' db-rail-tu'}"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button>${railIaOuvert() ? '' : railTuto()}</div>${railIa()}${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
-        : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}${v === 'formation' && fcNouveaux() ? `<span class="sidebar__count">${fcNouveaux()} nouv.</span>` : ''}</button>`).join('')}</div>`).join('')}</div>${railCoffre()}`;
+        : `<button type="button" class="sidebar__item${railOn(v) ? ' is-active' : ''}" data-vue="${v}"${railOn(v) ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}${v === 'commandes' && S.cmdN ? `<span class="sidebar__count" title="À préparer aujourd’hui">${S.cmdN}</span>` : ''}${v === 'formation' && fcNouveaux() ? `<span class="sidebar__count">${fcNouveaux()} nouv.</span>` : ''}</button>`).join('')}</div>`).join('')}</div>${railCoffre()}`;
   }
   /* --- Les paramètres (22/11/2026, Sam : « Mails et automatisations sont des paramètres : pour gagner de la place dans
    * le rail, une roue dans une icône carrée à gauche du Coffre-fort ; au clic, tous les paramètres dans une fenêtre type
@@ -7935,10 +7976,10 @@
   }
   /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
   function navPeriode() {
-    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'actions', 'campagne'];
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'commandes', 'clients', 'actions', 'campagne'];
     return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+      ${!['promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'commandes', 'clients', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
   /** L'icône de « Relire » (15/11/2026, « soigner l'icône ») : un cercle ouvert et sa flèche, au trait des autres vignettes. */
@@ -7953,9 +7994,10 @@
     const L = S.aux[cleRVL()], e = rvEtat(), vif = e === 'afaire' || e === 'encours';
     const rv = !L ? '…' : ({ faite: 'faite', encours: 'en cours', afaire: 'à faire', pasfaite: 'pas faite' }[e] || 'à ' + String(L.heure || '18:00').replace(/:00$/, ' h').replace(':', ' h '));
     const av = (attr, cl, o, k, x) => `<button type="button" class="db-av${cl}" ${attr}><span class="db-av__o">${o}</span><span class="db-av__t"><span class="k">${k}</span><span class="v">${x}</span></span></button>`;
-    // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Primes, Trésorerie, Mon
+    // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Trésorerie, Mon
     // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
-    const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
+    // Les primes (24/11/2026) : un onglet de Mon équipe, sous son titre, comme Responsabilités et Planning.
+    const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
     // Les vignettes (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles, sous le
     // titre, six vignettes égales sur toute la largeur ; le titre et la date au-dessus, s'il y en a.
     const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();
@@ -7998,12 +8040,12 @@
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
-      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches', 'coffre', 'formation', 'equipe'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches', 'coffre', 'formation', 'equipe', 'commandes', 'clients'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
       // Le coffre-fort et Formations et suivi (22/11/2026) : la même page qu'au bureau, en une colonne, sous l'en-tête du téléphone.
-      if (S.vue === 'coffre' || S.vue === 'formation' || S.vue === 'equipe') {
-        $.innerHTML = mbEntete({ boutons: 'relire', sous: S.vue === 'coffre' ? 'Mon coffre-fort' : S.vue === 'equipe' ? 'Mon équipe' : 'Formations et suivi' }) + '<div class="mb-sc"><div id="db-mod-mob" style="flex:1 0 auto;padding:12px"></div></div>' + mbOnglets();
+      if (S.vue === 'coffre' || S.vue === 'formation' || S.vue === 'equipe' || S.vue === 'commandes' || S.vue === 'clients') {
+        $.innerHTML = mbEntete({ boutons: 'relire', sous: S.vue === 'coffre' ? 'Mon coffre-fort' : S.vue === 'equipe' ? 'Mon équipe' : S.vue === 'commandes' ? 'Commandes' : S.vue === 'clients' ? 'Clients' : 'Formations et suivi' }) + '<div class="mb-sc"><div id="db-mod-mob" style="flex:1 0 auto;padding:12px"></div></div>' + mbOnglets();
         $.classList.add('mob'); brancher();
-        if (S.vue === 'formation') { fcMonter('db-mod-mob'); } else if (S.vue === 'equipe') { eqpMonter('db-mod-mob'); } else { const p = document.getElementById('db-mod-mob'); if (p && window.DashCoffre) { p.appendChild(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } }
+        if (S.vue === 'formation') { fcMonter('db-mod-mob'); } else if (S.vue === 'equipe') { eqpMonter('db-mod-mob'); } else if (S.vue === 'commandes') { pcoMonter('db-mod-mob'); } else if (S.vue === 'clients') { pclMonter('db-mod-mob'); } else { const p = document.getElementById('db-mod-mob'); if (p && window.DashCoffre) { p.appendChild(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } }
         return;
       }
       // Les tâches et les checklists (08/11/2026) : la même page qu'au bureau, en une colonne.
@@ -8047,10 +8089,10 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button><button class="db-btn db-btn-fc" data-fcouvrir="1">🎓 Mon dossier de formation${fcAFaire() ? `<span class="n">${fcAFaire()}</span>` : ''}</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia${S.vue === 'assistant' ? ' on' : ''}" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['equipe', 'Mon équipe'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'assistant' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && S.vue !== 'coffre' && S.vue !== 'formation' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['commandes', 'Commandes'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['analyse', 'Analyse'], ['promos', 'Promotions'], ['clients', 'Clients'], ['offres', 'Offres'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['equipe', 'Mon équipe'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${railOn(o[0]) ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'commandes', 'clients'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'analyse', 'marketing', 'social', 'boite', 'mails', 'assistant', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'frais', 'coffre', 'formation', 'equipe', 'commandes', 'clients'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'assistant' && S.vue !== 'offres' && S.vue !== 'analyse' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && S.vue !== 'frais' && S.vue !== 'coffre' && S.vue !== 'formation' && S.vue !== 'clients' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
     }
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
@@ -8075,13 +8117,15 @@
     // Formations et suivi (22/11/2026) : l'élément du module ; le Professeur s'ouvre sur la page (modale).
     if (S.vue === 'formation') { h += '<div id="db-formation"></div>'; $.innerHTML = h; brancher(); fcMonter('db-formation'); return; }
     if (S.vue === 'equipe') { h += '<div id="db-equipe"></div>'; $.innerHTML = h; brancher(); eqpMonter('db-equipe'); return; }
+    if (S.vue === 'commandes') { h += '<div id="db-commandes"></div>'; $.innerHTML = h; brancher(); pcoMonter('db-commandes'); return; }
+    if (S.vue === 'clients') { h += '<div id="db-clients"></div>'; $.innerHTML = h; brancher(); pclMonter('db-clients'); return; }
     // Mon coffre-fort (22/11/2026) : l'élément du module, gardé d'un rendu à l'autre.
     if (S.vue === 'coffre') { h += '<div id="db-coffre"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-coffre'); if (p && window.DashCoffre) { p.replaceWith(window.DashCoffre.racine(S.shop, { apiBase: API, aller: allerVers })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du coffre-fort n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); bndMonter(); pmRestaurer(g); return; }
     if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
-    if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
+    if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += eqpOngletsPrimes() + rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
     // Sur le rail, le détail de la valeur est le panneau de la vignette (15/11/2026) ; sans rail, le tiroir d'avant.
     if (!surRail) { h += rendValeur(); }
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
@@ -9018,8 +9062,11 @@
           <div class="fi-raxe"><span>× 1</span><span>× ${nf(FI_ZONES.ko, 2)} · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div>
           </div></div>`;
     if (simOn) {
+      // Face au prix réseau : la médiane est un prix ENCAISSÉ (chiffre ÷ pièces, comme celui du magasin), le prix testé est
+      // hors TVA. On compare dans l'unité de la médiane : l'encaissé du magasin, au prorata du nouveau prix (25/11/2026 :
+      // l'écart mélangeait hors TVA et TVA comprise).
       const sLab = sim * se.labour / 100, sOh = sim * se.overhead / 100, sNet = sim - mat - sLab - sOh, nv = niv(sCoef);
-      h += `<div class="fi-rverdict ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null ? ` ${fPs(100 * (sim - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div>`;
+      h += `<div class="fi-rverdict ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null && P && P.magasin && P.magasin.p > 0 && prix > 0 ? ` Encaissé à ce prix : environ ${fPt(P.magasin.p * sim / prix)}, ${fPs(100 * (P.magasin.p * sim / prix - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div>`;
       F.simInfo = { coef: sCoef, taux: sTaux };
       h += ficheAdapter(F, sim);
     } else if (coef != null) {
@@ -11496,6 +11543,8 @@
     // L'assistant s'ouvre en pleine page au bureau (17/11/2026) ; la fenêtre reste pour la demande au bureau et au téléphone.
     $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', () => { if (b.dataset.iaouvrir === 'd') { iaOuvrir('d'); } else if (estMobile()) { iaOuvrir(null); } else { iaPage(null); } }));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
+    // La page des primes, onglet de Mon équipe (24/11/2026) : Responsabilités et Planning rouvrent le module sur leur onglet.
+    $.querySelectorAll('[data-eqponglet]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.eqponglet; if (k === 'primes') { return; } if (window.DashEquipe) { window.DashEquipe.onglet(k); } allerVers('equipe'); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;

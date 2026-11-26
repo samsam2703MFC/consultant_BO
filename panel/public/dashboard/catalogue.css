@@ -492,6 +492,9 @@
   font-size: calc(var(--u) * 6.4mm); line-height: 1.5;
 }
 .cat-h__text.cat-h__script { font-size: calc(var(--u) * 8mm); line-height: 1.4; color: var(--p); }
+/* Sur le bandeau (gabarit B ou en-tête « bandeau »), le titre manuscrit prend la couleur du texte du bandeau : en couleur
+   principale, il était invisible (Ruby sur Ruby, 25/11/2026). */
+.cat-t-B .cat-h__text.cat-h__script, .cat-head-bandeau .cat-h__text.cat-h__script { color: var(--s); }
 .cat-t-B .cat-h, .cat-t-C .cat-h, .cat-head-bandeau .cat-h { align-items: flex-start; }
 .cat-t-B .cat-h__top, .cat-t-C .cat-h__top, .cat-head-bandeau .cat-h__top { justify-content: flex-start; }
 .cat-t-C .cat-h--grande .cat-h__top { align-items: flex-start; }
@@ -865,3 +868,40 @@ button.cm-pas{cursor:pointer}
 .fb-plein{position:fixed;inset:0;z-index:60;background:rgba(36,28,26,.62);display:grid;place-items:center;padding:20px}
 .fb-plein .fb{margin:0;max-width:calc(100vw - 40px)}
 @media (prefers-reduced-motion:reduce){.fb-tourne{transition:none}}
+
+/* ---------- Le bon de commande (25/11/2026, maquette F) : « Ce que j'imprime », puis le bon et « Mes conditions ». ---------- */
+.cm-quois{margin-bottom:14px}
+.cm-quoi3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.cm-quoi{display:flex;gap:14px;align-items:flex-start;text-align:left;border:1px solid var(--color-border-tertiary);background:var(--color-surface);border-radius:12px;padding:14px;cursor:pointer;font:inherit;color:inherit}
+.cm-quoi.on{border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary)}
+.cm-quoi .il{flex:0 0 46px;height:62px;border-radius:4px;border:1px solid #e6e0d8;background:#FBF9F5;position:relative;overflow:hidden}
+.cm-quoi .il-catalogue{background:var(--color-primary);border-color:var(--color-primary)}
+.cm-quoi .il-affiche i{position:absolute;inset:9px;border:1.5px solid var(--color-primary)}
+.cm-quoi .il-bon i{position:absolute;left:7px;right:7px;top:8px;height:4px;background:var(--color-primary);box-shadow:0 9px 0 -1px #e6e0d8,0 17px 0 -1px #e6e0d8,0 25px 0 -1px #e6e0d8,0 33px 0 -1px #e6e0d8,0 41px 0 -1px #e6e0d8}
+.cm-quoi .tx{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cm-quoi b{font-weight:400;font-size:15px}
+.cm-quoi .tx>span:not(.tg){font-size:12.5px;line-height:1.45;color:var(--color-text-muted)}
+.cm-quoi .tg{align-self:flex-start;margin-top:4px;font-size:11.5px;padding:2px 8px;border-radius:6px;background:#F0F7F2;color:#2c5a3b}
+.cm-quoi .tg.nv{background:#F6EDEE;color:var(--color-primary)}
+.cm-bon{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:14px;align-items:start}
+.cm-bon .lb{display:block;font:400 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:14px 0 6px}
+.cm-bon .cm-imp3 .lb{margin-top:0}
+.cm-bcond{margin-top:16px;border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;background:#FBF9F5}
+.cm-bcond .hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cm-bcond .hd b{font-weight:400;font-size:16px}
+.cm-bcond .hd .tg{font-size:11.5px;padding:2px 8px;border-radius:6px;background:#EDE7DE;color:var(--color-text-muted)}
+.cm-bcond .hd .sp{flex:1}
+.cm-bcond .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 20px}
+.cm-bcond .cm-cpt{margin:6px 0 0}
+.cm-bcond .cm-lig{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cm-bcond .cm-qte{width:72px}
+.cm-bcond .cm-court{width:64px}
+.cm-bcond .cm-mention{width:100%;max-width:none;margin-bottom:8px}
+.cm-dates{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.cm-date{border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;font:400 13px var(--font-ui);background:var(--color-surface);color:var(--color-text)}
+.cm-bsave{margin-top:14px}
+.cm-sw.abr.on .tr{background:#B0792A}
+.cm-sw .tr+.l{color:var(--color-text);font-size:13px}
+.cm-bapercu .cm-bframe{width:410px;height:580px;overflow:auto;border:1px solid var(--color-border-tertiary);border-radius:8px;background:#EDE7DE}
+.cm-bapercu iframe{width:820px;height:2400px;border:0;transform:scale(.5);transform-origin:0 0;display:block;margin-bottom:-1200px;background:#fff}
+@media (max-width:1100px){.cm-bon,.cm-quoi3{grid-template-columns:1fr}.cm-bapercu .cm-bframe{width:100%}}

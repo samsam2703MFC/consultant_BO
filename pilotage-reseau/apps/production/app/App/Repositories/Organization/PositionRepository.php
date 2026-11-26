@@ -13,7 +13,9 @@ final class PositionRepository extends WorkshopRepository
     private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'due_time', 'month_day', 'link_path', 'extra_links', 'form_code', 'auto_code',
         'cron_on', 'cron_freq', 'cron_days', 'cron_time', 'cron_action', 'cron_then', 'remind_time', 'escalate_days', 'sort_order', 'active', 'id_backup_position',
         // [280] zadania obowiązkowe (blokada ERP) i kroki kreatora zadania bez własnego kreatora
-        'mandatory', 'block_mode', 'block_time', 'block_tolerance', 'wizard_steps'];
+        'mandatory', 'block_mode', 'block_time', 'block_tolerance', 'wizard_steps',
+        // [422] karta stanowiska : jak wykonać zadanie ręczne i « Problem ? » (migracja 254)
+        'how_pl', 'how_fr', 'problem_pl', 'problem_fr'];
     /**
      * [238] Stanowisko, które faktycznie robi zadanie (alias t = n_position_task) : stanowisko zastępcze, gdy na stanowisku
      * zadania nikogo nie ma (brak konta ERP), inaczej stanowisko zadania.

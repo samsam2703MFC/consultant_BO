@@ -1,10 +1,12 @@
 /* Vendre › Offres (vue=offres) : les routes lues et écrites par panel/public/dashboard/offres.js, aux formes de
  * panel/src/offres_client.php (offres normalisées par ocNormaliser), de marketing/src/promos_magasin.php (les produits
  * du magasin et leur coût de recette) et de marketing/src/promos_bons.php (les clients) ; l'onglet Newsletter : la forme
- * de marketing/src/newsletter.php (ep_newsletter) au rôle du magasin.
+ * de marketing/src/newsletter.php (ep_newsletter) au rôle du magasin, et ses écritures (panel/src/offres_newsletter.php :
+ * programmer, envoyer maintenant, retirer, le test à 3 adresses, l'expéditeur du magasin), en mode test.
  * Huit offres fictives du Magasin démo (clients inventés, adresses à « Val-Fleuri », e-mails @exemple.be) ; les produits
  * et leurs prix sont ceux du catalogue de démo (lib/demo.js). Les écritures (créer, modifier, archiver, remettre en
- * cours, supprimer, convertir) changent l'état en mémoire : la relecture de la liste montre le changement. */
+ * cours, supprimer, convertir ; les campagnes et l'expéditeur de la newsletter) changent l'état en mémoire : la
+ * relecture montre le changement. */
 'use strict';
 const D = require('./lib/demo');
 const { r2 } = D;
@@ -131,19 +133,105 @@ const NL = {
     { id: 27, name: 'Réveil 45 jours', src: 'indiv', segment: 'dormant', langs: ['fr', 'nl'], templateId: 'produit', channel: 'email', subjects: { fr: 'On ne vous a pas vu depuis un moment' },
       sendMode: 'auto', trigger: 'dormant45', sendAt: '2026-09-19 08:30:00', maxVouchers: 40, sender: '4', status: 'live', testSent: true, stats: { sent: 96, open: 51, click: 14, vouchers: 9 }, exemple: false, createdBy: 'brand' },
     { id: 22, name: 'La tarte du mois — octobre', src: 'indiv', segment: 'tous-4', langs: ['fr', 'nl'], templateId: 'gagne', channel: 'email', subjects: { fr: 'Votre part de tarte vous attend' },
-      sendMode: 'manual', trigger: null, sendAt: '2026-10-08 08:30:00', maxVouchers: 30, sender: '4', status: 'sent', testSent: true, stats: { sent: 1003, open: 452, click: 118, vouchers: 23 }, exemple: false, createdBy: '4' },
+      sendMode: 'manual', trigger: null, sendAt: '2026-10-08 08:30:00', maxVouchers: 30, sender: '4', status: 'sent', testSent: true, stats: { sent: 1003, open: 452, click: 118, vouchers: 23, revenue: 386 }, exemple: false, createdBy: '4' },
     { id: 18, name: 'Petit-déjeuner au bureau', src: 'b2b', segment: 'b2b-all', langs: ['fr'], templateId: 'produit', channel: 'email', subjects: { fr: 'Le petit-déjeuner livré au bureau' },
-      sendMode: 'manual', trigger: null, sendAt: '2026-09-15 08:30:00', maxVouchers: null, sender: '4', status: 'sent', testSent: true, stats: { sent: 41, open: 27, click: 9, vouchers: 0 }, exemple: false, createdBy: '4' },
+      sendMode: 'manual', trigger: null, sendAt: '2026-09-15 08:30:00', maxVouchers: null, sender: '4', status: 'sent', testSent: true, stats: { sent: 41, open: 27, click: 9, vouchers: 0, revenue: 214 }, exemple: false, createdBy: '4' },
   ],
 };
 NL.magasins = [NL.moi];
 NL.chiffres = { optin: 1037 + 43, envoisMois: 0, vouchers: [32, 100] };
+NL.prochain = 32;
+
+/* Les écritures de la newsletter, aux réponses de marketing/src/newsletter.php et newsletter_envoi.php au rôle du
+ * magasin, en MODE TEST (NL.test) : rien ne part vers les clients ; le test à 3 adresses, lui, part (« même en mode
+ * test », Paramètres de la marque) ; « envoyer maintenant » reprogramme pour maintenant et l'horloge dit pourquoi rien
+ * ne part. La relecture (GET) montre chaque changement. */
+const MAINTENANT_NL = '2026-11-19 15:40:00';
+const nlErr = (status, error) => ({ __status: status, json: { error } });
+/** Les vouchers du haut du tableau : utilisés / prévus, sur les campagnes qui en ont (ep_newsletter). */
+function nlChiffres() {
+  const v = [0, 0];
+  NL.campagnes.forEach(c => { if (c.maxVouchers) { v[0] += +((c.stats || {}).vouchers || 0); v[1] += +c.maxVouchers; } });
+  NL.chiffres = Object.assign({}, NL.chiffres, { vouchers: v });
+}
+/** Le lien du bouton : vide, ou une adresse complète en http(s):// (nlLienValide). */
+const nlLien = l => { const s = String(l == null ? '' : l).trim(); return s === '' ? '' : (s.length <= 500 && /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(s) ? s : null); };
+const nlTextes = (o, max) => { const r = {}; ['fr', 'nl', 'en'].forEach(l => { if (o && typeof o[l] === 'string') { r[l] = o[l].slice(0, max); } }); return r; };
+const IMAGES = { produit: 'bread.png', happy: 'croissant.png', fidelite: 'cake.png', gagne: 'tart.png', office: 'sandwiches.png' };
+/** Range une campagne à sa place dans la lecture : la date d'envoi, la plus lointaine d'abord. */
+function ranger(c) {
+  const i = NL.campagnes.findIndex(x => String(x.sendAt || '') < c.sendAt);
+  NL.campagnes.splice(i < 0 ? NL.campagnes.length : i, 0, c);
+}
+/** POST …/newsletter/campagnes : programmer une campagne (wr_newsletter_campagne_post, rôle du magasin). */
+function nlProgrammer(b) {
+  if (!NL.moi.canSend) { return nlErr(403, 'Envoi bloqué par la marque.'); }
+  const seg = NL.segments.find(s => s.id === String(b.segment || ''));
+  if (!seg) { return nlErr(422, 'segment inconnu'); }
+  if (seg.shop !== '' && seg.shop !== NL.role) { return nlErr(403, 'Ce segment n’est pas celui de votre magasin.'); }
+  if (b.sendMode === 'auto') { return nlErr(403, 'Seule la marque crée une automatisation.'); }
+  if (String(b.sender || NL.role) !== NL.role) { return nlErr(403, 'Un franchisé envoie depuis l’adresse de son magasin.'); }
+  const date = String(b.date || ''), heure = String(b.time || '08:30');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(heure)) { return nlErr(422, 'date ou heure invalide'); }
+  const nom = String(b.name || '').trim().slice(0, 160);
+  if (!nom) { return nlErr(422, 'nom attendu'); }
+  const lien = nlLien(b.lien);
+  if (lien === null) { return nlErr(422, 'Lien du bouton : une adresse complète qui commence par https:// ({{code}} pour le code du destinataire).'); }
+  const tpl = IMAGES[b.templateId] ? b.templateId : 'blank';
+  const langs = (Array.isArray(b.langs) ? b.langs : ['fr']).filter(l => ['fr', 'nl', 'en'].includes(l));
+  const mv = b.maxVouchers !== undefined && b.maxVouchers !== null && b.maxVouchers !== '' ? Math.max(0, Math.min(100000, parseInt(b.maxVouchers, 10) || 0)) : null;
+  const c = { id: NL.prochain++, name: nom, src: seg.src, segment: seg.id, langs: langs.length ? langs : ['fr'], templateId: tpl, channel: ['email', 'sms', 'both'].includes(b.channel) ? b.channel : 'email',
+    subjects: nlTextes(b.subjects, 200), bodies: nlTextes(b.bodies, 20000), sms: nlTextes(b.sms, 400), headlines: nlTextes(b.headlines, 200), ctas: nlTextes(b.ctas, 80), image: IMAGES[tpl] || '',
+    sendMode: 'manual', trigger: null, sendAt: date + ' ' + heure + ':00', maxVouchers: mv, sender: NL.role, status: b.status === 'draft' ? 'draft' : 'sched', testSent: !!b.testSent,
+    stats: {}, exemple: false, createdBy: NL.role, createdAt: MAINTENANT_NL, lien, startedAt: null, finishedAt: null, campagneId: null };
+  ranger(c); nlChiffres();
+  return { ok: true, campagne: c, test: NL.test };
+}
+/** Les écritures de l'écran newsletter (POST, PUT, DELETE sous /dashboard/marketing/newsletter). */
+function nlEcrire(m, sous, b) {
+  if (m === 'POST' && sous === '/campagnes') { return nlProgrammer(b); }
+  if (m === 'POST' && sous === '/test') {
+    // nlEnvoyerTest : le SMTP du cockpit et les trois adresses de test de la marque ; il part même en mode test.
+    return { ok: true, simule: false, adresses: 3, erreur: null };
+  }
+  let x = sous.match(/^\/campagnes\/(\d+)(\/envoyer)?$/);
+  if (x && ((m === 'DELETE' && !x[2]) || (m === 'POST' && x[2]))) {
+    const c = NL.campagnes.find(k => k.id === +x[1]);
+    if (!c) { return nlErr(404, 'campagne inconnue'); }
+    if (c.createdBy !== NL.role) { return nlErr(403, 'Cette campagne n’est pas la vôtre.'); }
+    if (m === 'DELETE') {
+      if (c.status === 'sent') { return nlErr(409, 'Une campagne envoyée reste dans l’historique.'); }
+      NL.campagnes = NL.campagnes.filter(k => k !== c); nlChiffres();
+      return { ok: true };
+    }
+    if (c.status === 'sent') { return nlErr(409, 'déjà envoyée'); }
+    if (c.sendMode === 'auto') { return nlErr(409, 'une automatisation part par sa règle, pas à la demande'); }
+    // wr_newsletter_campagne_envoyer : la date passe à maintenant ; en mode test, l'horloge ne fait rien partir.
+    c.status = 'sched'; c.sendAt = MAINTENANT_NL;
+    NL.campagnes = NL.campagnes.filter(k => k !== c); ranger(c);
+    return { ok: true, campagne: c, horloge: { dispatch: false, smtp: true, campagnes: [], automatisations: [], attente: [{ id: c.id, nom: c.name, sendAt: c.sendAt }], motif: 'mode test : aucun envoi ne part' } };
+  }
+  x = sous.match(/^\/magasins\/(\d{1,10})$/);
+  if (m === 'PUT' && x) {
+    if (x[1] !== NL.role) { return nlErr(403, 'Un magasin ne modifie que son adresse d’expéditeur.'); }
+    const nom = b.senderName !== undefined ? String(b.senderName).trim().slice(0, 120) : NL.moi.senderName;
+    const email = b.email !== undefined ? String(b.email).trim().slice(0, 190) : NL.moi.email;
+    if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { return nlErr(422, 'adresse invalide'); }
+    if (nom === '') { return nlErr(422, 'nom d’expéditeur attendu'); }
+    // Le statut suit l'adresse : le domaine de la marque est vérifié, tout autre domaine ne l'est pas.
+    if (email !== NL.moi.email) { NL.moi.status = email !== '' && email.toLowerCase().endsWith('@' + NL.domaine) ? 'verified' : 'unverified'; }
+    NL.moi.senderName = nom; NL.moi.email = email;
+    return { ok: true, magasin: NL.moi };
+  }
+  return nlErr(404, 'route inconnue');
+}
 
 module.exports = function (m, p, q, c) {
   if (p === '/exploitation/offres-client') {
     if (m === 'GET') { return liste(); }
     if (m === 'POST') { return ecrire(c || {}); }
   }
+  if (m !== 'GET' && p.startsWith('/dashboard/marketing/newsletter/')) { return nlEcrire(m, p.slice('/dashboard/marketing/newsletter'.length), c || {}); }
   if (m !== 'GET') { return undefined; }
   if (p === '/exploitation/offres-client/employes') {
     return { shop: '4', employes: [{ id: 205, nom: 'Emma G.' }, { id: 206, nom: 'Fanny L.' }, { id: 201, nom: 'Camille R.' }, { id: 210, nom: 'Lucie B.' }].sort((a, b) => a.nom.localeCompare(b.nom, 'fr')) };

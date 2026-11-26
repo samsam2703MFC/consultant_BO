@@ -16,6 +16,8 @@ use App\Services\Utils\TCPDFService;
  * wymagania, warunki, wskaźniki, higiena i bezpieczeństwo, współpraca (PL i FR, jedna linia = jeden punkt), do tego
  * z ERP : przełożony i podwładni, osoby na stanowisku (użytkownicy ERP i pracownicy produkcji), zadania cykliczne
  * i strony ERP stanowiska. Zmiana treści = nowa wersja do ponownego zatwierdzenia. Wydruk PDF w stylu dokumentów.
+ * [422] Feuille de fonction : « Zadania i jak je wykonać » — un bloc par tâche (TaskSheet : kiedy, gdzie, jak, gotowe,
+ * problem), à l'écran et dans le PDF ; PDF de toutes les fiches des postes actifs (un groupe de pages par poste).
  */
 final class PositionSheetService
 {
@@ -31,10 +33,6 @@ final class PositionSheetService
         'relations' => ['Współpraca', 'Relations de travail'],
     ];
     public const KINDS = ['erp' => ['Biuro', 'Bureau'], 'atelier' => ['Pracownia', 'Atelier']];
-    private const FREQUENCIES = [
-        'daily' => ['codziennie', 'chaque jour'], 'weekly' => ['co tydzień', 'chaque semaine'],
-        'monthly' => ['co miesiąc', 'chaque mois'], 'quarterly' => ['co kwartał', 'chaque trimestre'],
-    ];
     private const MAX_TEXT = 4000;
 
     public function __construct(private PositionRepository $positions, private TransactionManager $tx)
@@ -76,11 +74,13 @@ final class PositionSheetService
             'updated_at' => $sheet['updated_at'] ?? null,
             'updated_by_name' => $sheet['updated_by_name'] ?? null,
             'subordinates' => array_values(array_map(fn($p) => ['id' => (int) $p['id'], 'name_pl' => $p['name_pl'], 'name_fr' => $p['name_fr']],
-                array_filter($all, fn($p) => (int) ($p['id_reports_to'] ?? 0) === $id))),
+                // [422] un poste inactif (fusionné, ex. Jakość) n'est plus un poste rattaché
+                array_filter($all, fn($p) => (int) ($p['id_reports_to'] ?? 0) === $id && (int) ($p['active'] ?? 1) === 1))),
             'users' => array_values(array_filter($this->positions->users(), fn($u) => (int) $u['id_position'] === $id)),
             'employees' => array_values(array_filter($this->positions->employees(), fn($e) => (int) $e['id_position'] === $id)),
-            'tasks' => array_map(fn($t) => ['title_pl' => $t['title_pl'], 'title_fr' => $t['title_fr'] ?: $t['title_pl'],
-                'frequency' => self::FREQUENCIES[$t['frequency']] ?? [$t['frequency'], $t['frequency']]], $this->positions->tasks($id, true)),
+            // [422] un bloc par tâche : kiedy, gdzie, jak, gotowe, problem (PL, FR)
+            'tasks' => TaskSheet::blocks($this->positions->tasks($id, true), $boss ? [(string) $boss['name_pl'], (string) ($boss['name_fr'] ?: $boss['name_pl'])] : null, $kind === 'atelier'),
+            'no_steps' => TaskSheet::NO_STEPS,
             'pages' => array_values(array_filter(array_map(fn($k) => PageAccess::PAGES[$k][0] ?? null, $this->positions->pageGrants($id)))),
             'manager_module' => $position['code'] === 'KIEROWNIK_PRODUKCJI',
         ];
@@ -178,10 +178,33 @@ final class PositionSheetService
     public function pdf(int $id, string $lang): array
     {
         $data = $this->sheet($id);
-        $pdf = new TCPDFService('P', 'mm', 'A4', true, 'UTF-8', false);
-        foreach ($lang === 'both' ? ['pl', 'fr'] : [$lang === 'fr' ? 'fr' : 'pl'] as $l) $this->render($pdf, $data, $l);
         $code = preg_replace('/[^A-Z0-9_]+/', '_', (string) $data['position']['code']);
-        return ['filename' => 'KARTA_STANOWISKA_' . $code . ($lang === 'both' ? '' : '_' . strtoupper($lang)) . '.pdf', 'content' => $pdf->Output('', 'S')];
+        return ['filename' => 'KARTA_STANOWISKA_' . $code . ($lang === 'both' ? '' : '_' . strtoupper($lang)) . '.pdf', 'content' => $this->document([$data], $lang)];
+    }
+
+    /**
+     * [422] Toutes les fiches des postes actifs (bureau puis atelier, ordre de la liste des postes) : chaque poste est un
+     * groupe de pages (pagination « Strona 1 / 2 » par poste). @return array{filename:string, content:string}
+     */
+    public function pdfAll(string $lang): array
+    {
+        $sheets = [];
+        foreach ($this->positions->positions() as $p) {
+            if ((int) $p['active'] === 1) $sheets[] = $this->sheet((int) $p['id']);
+        }
+        if (!$sheets) throw new CustomException('Brak aktywnych stanowisk.', 'errors', 404);
+        return ['filename' => 'KARTY_STANOWISK' . ($lang === 'both' ? '' : '_' . strtoupper($lang)) . '.pdf', 'content' => $this->document($sheets, $lang)];
+    }
+
+    /** PDF de fiches déjà calculées (sheet()) : pl, fr ou both (chaque fiche en PL puis en FR). */
+    public function document(array $sheets, string $lang): string
+    {
+        $pdf = new TCPDFService('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->SetTitle('Karta stanowiska');
+        foreach ($sheets as $data) {
+            foreach ($lang === 'both' ? ['pl', 'fr'] : [$lang === 'fr' ? 'fr' : 'pl'] as $l) $this->render($pdf, $data, $l);
+        }
+        return $pdf->Output('', 'S');
     }
 
     private function render(TCPDFService $pdf, array $d, string $lang): void
@@ -209,8 +232,15 @@ final class PositionSheetService
             $pdf->brandText($field === 'mission' ? implode(' ', $lines) : implode("\n", array_map(fn($l) => '•  ' . $l, $lines)));
         }
         if ($d['tasks']) {
-            $pdf->brandSection($t('Zadania cykliczne w ERP', 'Tâches récurrentes dans l’ERP'), $t('Na liście « Moje zadania »', 'Dans la liste « Moje zadania »'));
-            $pdf->brandText(implode("\n", array_map(fn($task) => '•  ' . ($i ? $task['title_fr'] : $task['title_pl']) . ' — ' . $task['frequency'][$i], $d['tasks'])));
+            $pdf->brandSection($t('Zadania i jak je wykonać', 'Tâches et comment les faire'),
+                $t('Każde zadanie : kiedy, gdzie, krok po kroku, kiedy jest zrobione — te same zadania co « Moje zadania » w ERP',
+                    'Chaque tâche : quand, où, pas à pas, quand elle est faite — les mêmes tâches que « Moje zadania » dans l’ERP'));
+            $pdf->SetFont(TCPDFService::TABLE_FONT, '', 8.5);
+            $pdf->SetTextColorArray(TCPDFService::INK);
+            $html = '';
+            foreach ($d['tasks'] as $n => $task) $html .= self::taskHtml($n + 1, $task, $i);
+            $pdf->writeHTML($html, true, false, true, false, '');
+            $pdf->SetTextColorArray(TCPDFService::INK);
         }
         if ($d['subordinates']) {
             $pdf->brandSection($t('Podległe stanowiska', 'Postes rattachés'));
@@ -223,6 +253,39 @@ final class PositionSheetService
             $pdf->brandText(implode(', ', $people));
         }
         $pdf->brandSignatures([$t('Pracownik', 'Salarié'), $t('Przełożony', 'Responsable')]);
+    }
+
+    /**
+     * [422] Bloc d'une tâche (maquette validée) : en-tête titre + rythme · durée, puis Kiedy, Gdzie, Jak (étapes
+     * numérotées ou ligne neutre), Gotowe, gdy, Problem ? — un tableau insécable (nobr) pour ne pas couper une tâche.
+     */
+    private static function taskHtml(int $n, array $task, int $i): string
+    {
+        $e = fn(string $v) => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $hex = fn(array $c) => sprintf('#%02X%02X%02X', ...$c);
+        [$brand, $muted, $line, $soft] = [$hex(TCPDFService::BRAND), $hex(TCPDFService::MUTED), $hex(TCPDFService::LINE), $hex(TCPDFService::BRAND_SOFT)];
+        $lang = $i ? 'fr' : 'pl';
+        $L = $i ? ['Quand', 'Où', 'Comment', 'Fait quand', 'Problème ?'] : ['Kiedy', 'Gdzie', 'Jak', 'Gotowe, gdy', 'Problem ?'];
+        $row = fn(string $k, string $v) => '<tr><td width="18%" style="color:' . $muted . '">' . $e($k) . '</td><td width="82%">' . $v . '</td></tr>';
+        $steps = $task['steps'][$lang] ?? [];
+        if ($steps) {
+            $how = '<table cellpadding="2" cellspacing="1">';
+            foreach ($steps as $k => $step) {
+                $how .= '<tr><td width="6%" align="center" style="color:#FFFFFF;background-color:' . $brand . ';font-weight:bold">' . ($k + 1) . '</td><td width="94%">' . $e($step) . '</td></tr>';
+            }
+            $how .= '</table>';
+        } else {
+            $how = '<i style="color:' . $muted . '">' . $e(TaskSheet::NO_STEPS[$i]) . '</i>';
+        }
+        $rhythm = $task['rhythm'][$i] . ($task['duration'] ? ' · ' . $task['duration'] : '');
+        return '<table cellpadding="3" cellspacing="0" style="border:0.4px solid ' . $line . '" nobr="true">'
+            . '<tr style="background-color:' . $soft . '"><td width="70%"><b>' . $n . '. ' . $e($task['title'][$i]) . '</b></td>'
+            . '<td width="30%" align="right" style="color:' . $brand . '">' . $e($rhythm) . '</td></tr>'
+            . '<tr><td colspan="2"><table cellpadding="2" cellspacing="0">'
+            . $row($L[0], $e($task['when'][$i])) . $row($L[1], $e($task['where'][$i]))
+            . '<tr><td width="18%" style="color:' . $muted . '">' . $e($L[2]) . '</td><td width="82%">' . $how . '</td></tr>'
+            . $row($L[3], '<b>' . $e($task['done'][$i]) . '</b>') . $row($L[4], $e($task['problem'][$i]))
+            . '</table></td></tr></table><br>';
     }
 
     /** Czy stanowisko $from podlega (pośrednio) stanowisku $target. */

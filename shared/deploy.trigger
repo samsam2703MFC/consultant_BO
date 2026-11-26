@@ -291,3 +291,31 @@
 2026-11-23T20:36:49Z Vidéothèque dans le catalogue de formation (toutes les vidéos d'instruction par genre, avec lecteur) ; « Plus tard » sur l'annonce d'une nouvelle vidéo la range pour la journée
 2026-11-23T20:44:20Z Dashboard magasin : l'annonce d'une nouvelle vidéo devient une bulle minimaliste (Nouveau, le titre, deux liens)
 2026-11-23T21:59:28Z Dashboard magasin : une vidéo d'instruction par entrée du rail (21 nouveaux modes d'emploi, dont « Éditer mon catalogue »), dans le carré des vidéos et la vidéothèque du catalogue de formation
+2026-11-24T06:01:12Z Manuels du 23/11/2026 : l'annonce des vidéos sans croix, les tables de Mon équipe, le statut des demandes gardé (documentation seulement)
+2026-11-24T06:01:15Z [409-427] tablet hali, tablet jakosci, karty stanowisk, Jakosc w KP
+2026-11-24T07:52:40Z Dashboard magasin : « Plus tard » ferme toujours la bulle des vidéos, même quand le navigateur refuse d'écrire
+2026-11-24T07:59:40Z [428] stan ogolny zamowione tydzien
+2026-11-24T08:20:13Z [429] stan ogolny zalegle osobno
+2026-11-24T10:02:32Z [430] stan ogolny okno zamowien
+2026-11-24T12:24:01Z Autocontrôle qualité : la tablette du magasin (autocontrole/?shop=, &produit=, &essai=1), les résultats et les grilles au siège (autocontrole/grilles.html)
+2026-11-24T15:31:13Z Dashboard magasin : les primes passent dans Mon équipe, troisième onglet après le planning (?vue=primes ; plus dans Vendre)
+2026-11-24T15:51:47Z Mon équipe › Planning : les ETP planifiés, la jauge du CA par ETP (cible 13 000 €), le mois groupé par section
+2026-11-24T17:03:19Z Mon équipe : la fiche d'une personne (identité, contrat et taux modifiables, évaluations par service, ventes des 12 semaines, compétences, primes)
+2026-11-24T17:14:34Z Mon équipe › Planning : la jauge du CA par ETP au mois seulement ; vidéos 02 et 03 retournées
+2026-11-24T17:24:39Z Dashboard magasin › Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer ; vues Liste et Tournées sur un interrupteur abricot (tables panel_tournee*)
+2026-11-24T17:32:35Z Dashboard magasin › Commandes : les vues Semaine et Mois, en plus du jour (Liste et Tournées)
+2026-11-24T17:34:10Z Commandes : un jour sans commande au panel (404 NO_ORDERS_FOR_PICKUP_DATE) est une liste vide, pas une panne
+2026-11-24T20:36:11Z Commandes : lecture des livraisons de TF Buddy (tournées, horaires, heure limite) avec les comptes du dashboard
+2026-11-25T19:40:49Z [431-437] karty produktow na tablecie, obchod chlodni
+2026-11-25T19:46:59Z Dashboard magasin › Vendre › Clients : le module Klienci de TF Buddy (particuliers, entreprises B2B, bureaux, analyse B2B) par les comptes consultant et admin
+2026-11-25T20:02:14Z Clients et Commandes : le compte TF Buddy du magasin (téléphone, PIN, SMS) en plus des comptes consultant et admin
+2026-11-25T20:11:54Z [438-441] roznice kursowe
+2026-11-25T20:15:28Z Vidéos d'instruction : une vidéo par onglet, ses fonctions en chapitres — lot 1 (Boîte mail, Mon équipe, Trésorerie et Frais, Promotions, Offres, Mon catalogue : 58 onglets, 99 fonctions) ; Boîte mail : modèles et messages automatiques enregistrent ce qui est tapé, « Envoyer par e-mail » d'une offre remplit son modèle
+2026-11-25T20:21:50Z Mon catalogue : le bon de commande (Export PDF) et « Mes conditions » de la boutique
+2026-11-25T20:43:41Z Compte TF Buddy du magasin : la limite des connexions dite comme celle de TF Buddy, le code SMS en cours repris
+2026-11-25T20:45:44Z Dashboard : défauts relevés en tournant les vidéos corrigés (Mon catalogue, Trésorerie, Mon équipe, Boîte mail, Promotions, newsletter)
+2026-11-25T20:46:50Z Production : commandes en retard jamais fermées — fermeture en lot (Stan ogólny › Zaległe) et avec la WDT (Wyślij dzień)
+2026-11-25T21:03:21Z Production : Różnice kursowe ouvertes au Kierownik operacyjny (lecture et calcul, montants)
+2026-11-25T21:04:21Z Fidélité : GET /fidelite/programme (règles et saisons du programme, sans client), lisible par le Recrutement avec le jeton de service — l'annexe 2 du Guide pré-ouverture le reprend
+2026-11-25T21:04:35Z Dashboard : défauts du premier lot de vidéos corrigés (Fidélité sans profil, Concurrence, conversion d'une offre, anneau des primes de l'année, fiche produit, panier du mois) ; plus de ville dans les exemples de la newsletter
+2026-11-26T03:59:24Z Manuels du 26/11 : bon de commande de Mon catalogue, limites de connexion TF Buddy du magasin, GET /fidelite/programme, anneau des primes de l'année (documentation seulement)

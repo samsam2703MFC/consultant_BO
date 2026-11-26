@@ -620,7 +620,8 @@
         afterLogin = null;
         // Widget « Nouveaux produits » : directement la fiche du produit touché ; menu du bas : l'onglet touché.
         if (typeof target === 'number') { session.dev = 1; session.tab = 'dev'; renderDevProduct(target); return; }
-        openTab(target || 'production');
+        // [409] Tablet hali : « Mój dzień » (hala.js) d'abord ; groupe sans ścieżka prowadzona → Produkcja.
+        openTab(target || (window.tfbHala ? 'day' : 'production'));
     }
 
     // Onglets Maszyny et Nowe produkty : seulement si le groupe a des machines TRS / des produits montrés sur la tablette.
@@ -713,20 +714,22 @@
     }
 
     // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
-    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['complaints', 'message-square-warning', 'tab_complaints'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev'], ['orders', 'handshake', 'tab_orders'], ['bonus', 'trophy', 'tab_bonus']];
+    const TABS = [['day', 'list-ordered', 'tab_day'], ['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['complaints', 'message-square-warning', 'tab_complaints'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev'], ['orders', 'handshake', 'tab_orders'], ['bonus', 'trophy', 'tab_bonus']];
     const personHeader = () => header();
     function tabs(active) {
         if (session) session.tab = active;
         // Zakładki Maszyny (TRS) i Nowe produkty tylko, gdy grupa tabletu ma maszyny z TRS / produkty pokazane na tablecie.
         const shown = ([k]) => (k !== 'machines' || (session && session.machines > 0)) && (k !== 'dev' || (session && session.dev > 0))
             && (k !== 'clock' || !(deviceInfo && deviceInfo.mode === 'atelier')) && (k !== 'bonus' || (session && session.bonus))
-            && (k !== 'orders' || (session && session.orders)) && (k !== 'complaints' || (session && session.complaints > 0));
+            && (k !== 'orders' || (session && session.orders)) && (k !== 'complaints' || (session && session.complaints > 0))
+            && (k !== 'day' || (session && session.hala));
         // [358] Plus de 6 onglets : deux rangées (tablette en portrait) au lieu de libellés coupés.
         const list = TABS.filter(shown);
         return `<nav class="kiosk-tabs ${list.length > 6 ? 'is-many' : ''}" role="tablist" aria-label="${esc(t('tabs'))}">${list.map(([k, ic, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
             role="tab" aria-selected="${k === active}" data-tab="${k}"><span class="kiosk-tab-icon">${icon(ic)}</span><span class="kiosk-tab-label">${esc(t(label))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t(label + '_short'))}</span></button>`).join('')}</nav>`;
     }
     function openTab(k, message) {
+        if (k === 'day') return window.tfbHala ? window.tfbHala.open(hala, message) : renderProduction(message);
         if (k === 'recipes') return renderRecipes(message);
         if (k === 'machines') return renderMachines(message);
         if (k === 'dev') return renderDev(message);
@@ -3103,6 +3106,14 @@
     });
     ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (session) resetIdle(); else weekIdle(); }, {passive: true}));
     window.setInterval(() => { const c = el.querySelector('[data-clock]'); if (c) c.textContent = new Date().toTimeString().slice(0, 5); }, 10000);
+    // [409] Tablet hali « Mój dzień » (hala.js) : les outils de cette tablette — API avec jetons, session, libellés, icônes,
+    // écrans existants (partie, onglets, accueil) — sans dupliquer l'appairage ni l'identification.
+    const hala = {
+        el, root, api, t, esc, icon, toast, uuid, fmt,
+        lang: () => lang, session: () => session,
+        resetIdle, logout, openTab, renderHome, renderBatch: (id) => renderBatch(id),
+        setLongIdle: (v) => { longIdle = !!v; resetIdle(); },
+    };
     // Stockage « persistant » : le navigateur ne l'efface plus de lui-même (manque de place, inactivité).
     function persist() {
         try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* non pris en charge */ }

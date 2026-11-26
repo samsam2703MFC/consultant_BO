@@ -128,6 +128,17 @@ final class PageAccessService
         return $this->trackingProfile($userId) === self::OPERATIONS_POSITION;
     }
 
+    /**
+     * [443] Kwoty na stronie « Różnice kursowe » : Finanse, CEO oraz Kierownik operacyjny (decyzja z 25.11.2026 — odczyt
+     * i obliczenie jak Administracja). Inne ekrany z kwotami : bez zmian.
+     */
+    public function seesFxValues(?int $userId): bool
+    {
+        if (!$userId) return false;
+        if ($this->seesOrderValues($userId)) return true;
+        return $this->trackingProfile($userId) === self::OPERATIONS_POSITION;
+    }
+
     public const OPERATIONS_POSITION = 'KIEROWNIK_OPERACYJNY';
 
     /**

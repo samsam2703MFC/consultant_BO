@@ -16,7 +16,12 @@
  * - L'ANNONCE : une nouvelle fonction pas encore vue (moins de JOURS_NOUVEAU jours) s'annonce dans une bulle
  *   accrochée au carré (« Voir la vidéo » ; « Plus tard » la range pour la journée : elle revient le lendemain, tant que
  *   la vidéo n'est pas vue).
- * - Le lecteur : une fenêtre, la vidéo, la liste des autres vidéos. Ouvrir une vidéo la marque « vue ».
+ * - Le lecteur : une fenêtre, la vidéo, puis la page onglet par onglet (les vidéos des onglets et, sous chacune, celles
+ *   de ses fonctions), puis les vidéos des autres pages. Ouvrir une vidéo la marque « vue ».
+ * - TROIS NIVEAUX (24/11/2026, Sam : « chaque vidéo dans le rail, ensuite une vidéo par onglet interne, ensuite une
+ *   vidéo spécifique à chaque fonction ») : `niveau` page (par défaut), onglet ou fonction ; `parent` dit sous quelle
+ *   vidéo elle se range. Les onglets et leurs fonctions partagent un fichier (un MP4 par onglet, les fonctions en
+ *   chapitres) : `debut` et `fin` (secondes) bornent le passage, que le lecteur joue seul.
  * « Vu » et « plus tard » sont gardés par appareil (localStorage) : rien n'est écrit au serveur.
  * Au téléphone, le rail n'est pas affiché : ni carré ni annonce. Rien dans le mode incorporé (?embed=).
  * La page ouverte : ?vue= à l'ouverture, puis l'évènement `dashboard:vue` (urlMaj de dashboard.js).
@@ -33,11 +38,24 @@
   const ICO_VIDEO = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m10.2 9.3 4.6 2.7-4.6 2.7z"/></svg>';
   const ICO_X = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
   const GENRES = { nouveau: 'Nouvelle fonction', tuto: 'Mode d’emploi', formation: 'Formation' };
-  const T = { videos: [], vue: vueDeLAdresse(), lecteur: null, annonce: null, minuterie: null, attente: null };
+  const NIVEAUX = { onglet: 'Onglet', fonction: 'Fonction' };
+  // `memo` : « vu » et « plus tard » gardés aussi en mémoire de la page (24/11/2026, Sam : « si je pousse plus tard, la
+  // bulle doit partir ») — quand le navigateur refuse d'écrire (stockage plein ou bloqué : plusieurs applications
+  // partagent l'adresse du serveur), la bulle part quand même et ne revient pas avant le rechargement.
+  const T = { videos: [], vue: vueDeLAdresse(), lecteur: null, annonce: null, minuterie: null, attente: null, memo: { [CLE_VUS]: {}, [CLE_TARD]: {} } };
 
   function vueDeLAdresse() { return new URLSearchParams(location.search).get('vue') || 'ops'; }
-  function lireSet(cle) { try { return JSON.parse(localStorage.getItem(cle) || '{}') || {}; } catch (e) { return {}; } }
-  function ecrireSet(cle, o) { try { localStorage.setItem(cle, JSON.stringify(o)); } catch (e) { /* stockage indisponible : l'annonce reviendra */ } }
+  /** Ce qui est gardé : l'appareil (localStorage), l'onglet (sessionStorage, en secours) et la page (T.memo). */
+  function lireSet(cle) {
+    const lu = st => { try { return JSON.parse(st.getItem(cle) || '{}') || {}; } catch (e) { return {}; } };
+    return Object.assign({}, lu(window.sessionStorage), lu(window.localStorage), T.memo[cle] || {});
+  }
+  function ecrireSet(cle, o) {
+    T.memo[cle] = Object.assign(T.memo[cle] || {}, o);
+    const txt = JSON.stringify(o);
+    try { localStorage.setItem(cle, txt); return; } catch (e) { /* plein ou bloqué : l'onglet, sinon la page seule */ }
+    try { sessionStorage.setItem(cle, txt); } catch (e) { /* la page seule */ }
+  }
   function vue(id) { return !!lireSet(CLE_VUS)[id]; }
   function marquerVue(id) { const o = lireSet(CLE_VUS); o[id] = new Date().toISOString().slice(0, 10); ecrireSet(CLE_VUS, o); }
   /** Le jour local (AAAA-MM-JJ) : « plus tard » vaut pour la journée. */
@@ -53,10 +71,32 @@
     return !isNaN(d) && (Date.now() - d) / 864e5 <= JOURS_NOUVEAU;
   }
   const dePage = v => (v.vues || []).includes(T.vue) || (v.vues || []).includes('*');
+  const estPage = v => !v.niveau || v.niveau === 'page';
+  const parId = id => T.videos.find(x => x.id === id) || null;
+  const enfants = v => T.videos.filter(x => x.parent === v.id && !estPage(x));
+  /** La vidéo de page sous laquelle une vidéo se range (elle-même pour une page). */
+  function racine(v) { let r = v; for (let i = 0; i < 4 && r && !estPage(r); i++) { const p = parId(r.parent); if (!p) { break; } r = p; } return r; }
   /** La vidéo qu'ouvre le carré : celle de la page (une nouveauté d'abord), sinon une nouveauté, sinon le mode d'emploi. */
   function choix() {
-    const L = T.videos;
+    const L = T.videos.filter(estPage);
     return L.find(v => dePage(v) && aVoir(v)) || L.find(dePage) || L.find(aVoir) || L.find(v => v.genre === 'tuto') || L[0] || null;
+  }
+  /** Le chemin d'une vidéo d'onglet ou de fonction : « Boîte mail › Classique ». */
+  function chemin(v) {
+    const L = []; let r = v;
+    for (let i = 0; i < 3 && r && r.parent; i++) { r = parId(r.parent); if (r) { L.unshift(r.titre); } }
+    return L.join(' › ');
+  }
+  const src = v => 'videos/' + esc(v.fichier) + (v.debut != null && v.fin != null ? '#t=' + (+v.debut).toFixed(2) + ',' + (+v.fin).toFixed(2) : '');
+  const item = (x, actif) => `<button type="button" class="tu-item${actif ? ' on' : ''}" data-tuf="v" data-id="${esc(x.id)}"${actif ? ' aria-current="true"' : ''}>${x.affiche ? `<img src="videos/${esc(x.affiche)}" alt="" loading="lazy">` : ''}<span><b>${esc(x.titre)}</b><small>${aVoir(x) ? '<em class="tu-tag">Nouveau</em> ' : ''}${esc(x.duree || '')}</small></span></button>`;
+  /** La page, onglet par onglet : chaque onglet, puis ses fonctions en lignes courtes. */
+  function arbre(page, v) {
+    const O = enfants(page);
+    if (!O.length) { return ''; }
+    return `<div class="tu-autres"><div class="tu-k">${esc(page.titre)} · onglet par onglet</div><div class="tu-arbre">${O.map(o => {
+      const F = enfants(o);
+      return `<div class="tu-ong">${item(o, o.id === v.id)}${F.length ? `<div class="tu-fns">${F.map(f => `<button type="button" class="tu-fn${f.id === v.id ? ' on' : ''}" data-tuf="v" data-id="${esc(f.id)}"${f.id === v.id ? ' aria-current="true"' : ''}><span>${esc(f.titre)}</span><small>${esc(f.duree || '')}</small></button>`).join('')}</div>` : ''}</div>`;
+    }).join('')}</div></div>`;
   }
 
   /* --- le carré ------------------------------------------------------------------------------------------------- */
@@ -125,12 +165,24 @@
     retirerAnnonce();
     const o = document.createElement('div');
     o.className = 'tu-voile';
+    const page = racine(v) || v;
+    const autres = T.videos.filter(x => estPage(x) && x.id !== page.id);
+    const k = (NIVEAUX[v.niveau] ? NIVEAUX[v.niveau] + ' · ' + esc(chemin(v)) : GENRES[v.genre] || GENRES.tuto) + (v.duree ? ' · ' + esc(v.duree) : '');
     o.innerHTML = `<div class="tu-fen" role="dialog" aria-modal="true" aria-label="${esc(v.titre)}">
-      <div class="tu-f-h"><div><div class="tu-k">${GENRES[v.genre] || GENRES.tuto}${v.duree ? ' · ' + esc(v.duree) : ''}</div><h3>${esc(v.titre)}</h3></div><button type="button" class="tu-x" data-tuf="x" aria-label="Fermer">${ICO_X}</button></div>
-      <video class="tu-video" src="videos/${esc(v.fichier)}"${v.affiche ? ` poster="videos/${esc(v.affiche)}"` : ''} controls autoplay playsinline preload="metadata"></video>
+      <div class="tu-f-h"><div><div class="tu-k">${k}</div><h3>${esc(v.titre)}</h3></div><button type="button" class="tu-x" data-tuf="x" aria-label="Fermer">${ICO_X}</button></div>
+      <video class="tu-video" src="${src(v)}"${v.affiche ? ` poster="videos/${esc(v.affiche)}"` : ''} controls autoplay playsinline preload="metadata"></video>
       ${v.resume ? `<p class="tu-res">${esc(v.resume)}</p>` : ''}
-      ${T.videos.length > 1 ? `<div class="tu-autres"><div class="tu-k tu-k-l"><span>Les autres vidéos</span><a href="../formation/catalogue/#/videos" target="_blank" rel="noopener">Toute la vidéothèque ↗</a></div><div class="tu-liste">${T.videos.filter(x => x.id !== v.id).map(x => `<button type="button" class="tu-item" data-tuf="v" data-id="${esc(x.id)}">${x.affiche ? `<img src="videos/${esc(x.affiche)}" alt="">` : ''}<span><b>${esc(x.titre)}</b><small>${aVoir(x) ? '<em class="tu-tag">Nouveau</em> ' : ''}${esc(x.duree || '')}</small></span></button>`).join('')}</div></div>` : ''}
+      ${page.id !== v.id ? `<div class="tu-autres tu-retour">${item(page, false)}</div>` : ''}
+      ${arbre(page, v)}
+      ${autres.length ? `<div class="tu-autres"><div class="tu-k tu-k-l"><span>Les autres pages</span><a href="../formation/catalogue/#/videos" target="_blank" rel="noopener">Toute la vidéothèque ↗</a></div><div class="tu-liste">${autres.map(x => item(x, false)).join('')}</div></div>` : ''}
     </div>`;
+    // Un passage (onglet ou fonction) s'arrête à sa fin, une fois : on peut ensuite avancer à la main dans le fichier.
+    const vid = o.querySelector('video');
+    if (vid && v.fin != null) {
+      let fini = false;
+      vid.addEventListener('timeupdate', () => { if (!fini && vid.currentTime >= +v.fin - 0.05) { fini = true; vid.pause(); } });
+      vid.addEventListener('loadedmetadata', () => { if (v.debut != null && vid.currentTime < +v.debut) { vid.currentTime = +v.debut; } }, { once: true });
+    }
     o.addEventListener('click', e => {
       if (e.target === o || e.target.closest('[data-tuf="x"]')) { fermer(); return; }
       const it = e.target.closest('[data-tuf="v"]');

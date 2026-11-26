@@ -1482,6 +1482,9 @@ class App {
       // (dashboard/), et Résultat l'ouvre magasin par magasin.
       ['Applications', [
         ['ext:caisse/', 'Caisse ↗', 0],
+        // L'autocontrôle qualité (24/11/2026, consultant/src/autocontrole.php) : les résultats des magasins et les grilles ;
+        // la tablette du magasin s'ouvre à autocontrole/?shop=.
+        ['ext:autocontrole/grilles.html', 'Autocontrôle qualité ↗', 0],
         // La Prospection n'a plus d'entrée à part (19/11/2026, « éviter les doubles vues ») : elle est dans Commercial ↗.
         // Le portail Commercial (19/11/2026) : servi à la racine, /commercial/ ; sur un téléphone, il s'ouvre sur le suivi de terrain.
         ['ext:/commercial/', 'Commercial ↗', 0],

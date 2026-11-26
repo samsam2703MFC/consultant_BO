@@ -133,6 +133,7 @@ require __DIR__ . '/../../../consultant/src/coffre.php';
 require __DIR__ . '/../../../consultant/src/coffre_dates.php';
 require __DIR__ . '/../../../consultant/src/ca_net_mois.php';
 require __DIR__ . '/../../../consultant/src/controles_qualite.php';
+require __DIR__ . '/../../../consultant/src/autocontrole.php';             // L'autocontrôle qualité des produits, à la tablette du magasin (24/11/2026)
 require __DIR__ . '/../../../consultant/src/kpi_table.php';
 require __DIR__ . '/../../../panel/src/tablette.php';
 require __DIR__ . '/../../../panel/src/tablette_objectifs.php';
@@ -178,6 +179,10 @@ require __DIR__ . '/../../../panel/src/offres_newsletter.php';  // Vendre › Of
 require __DIR__ . '/../../../panel/src/boite_mail.php';         // Boîte mail du magasin : IMAP/SMTP de sa boîte OVH, modèles, messages automatiques (15/11/2026)
 require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
 require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe : la carte des responsabilités, le planning et son budget d'heures (23/11/2026)
+require __DIR__ . '/../../../panel/src/equipe_fiche.php';       // Mon équipe › la fiche d'une personne : identité, contrat, taux, évaluations, ventes (24/11/2026)
+require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
+require __DIR__ . '/../../../panel/src/tfb_magasin.php';               // Le compte TF Buddy du magasin : téléphone, PIN, SMS ; le jeton reste dans le navigateur (25/11/2026)
+require __DIR__ . '/../../../panel/src/clients_panel.php';             // Vendre › Clients : le module Klienci de TF Buddy, par les comptes du cockpit (25/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
 require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
@@ -233,6 +238,11 @@ try {
     if ($method === 'GET' && $path === '/coffre/magasin/fichier') {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_coffre_fichier();   // sort le fichier, puis exit
+    }
+    // Les documents d'un bureau (25/11/2026) : l'affiche, les cartes, la brochure que TF Buddy rend (panel/src/clients_panel.php).
+    if ($method === 'POST' && $path === '/dashboard/clients/bureaux/pdf') {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); echo json_encode($r[1], JSON_UNESCAPED_UNICODE); exit; }
+        ep_clients_bureaux_pdf();   // sort le PDF, puis exit
     }
     // Le PDF d'une offre client (15/11/2026) : celui que TF Buddy rend, tel quel (src/offres_client.php).
     if ($method === 'GET' && $path === '/exploitation/offres-client/pdf') {
@@ -412,6 +422,12 @@ function route(string $method, string $path): mixed
     if (($c = daRoute($method, $path)) !== null) { return $c; }
     // Mon équipe (23/11/2026) : la carte des responsabilités, le planogramme des horaires, le budget d'heures (panel/src/equipe.php).
     if (($c = eqpRoute($method, $path)) !== null) { return $c; }
+    // Commandes (24/11/2026) : les commandes du jour par canal, les tournées et leurs bureaux (panel/src/commandes_tournees.php, tables panel_tournee*).
+    if (($c = pcoRoute($method, $path)) !== null) { return $c; }
+    // Vendre › Clients (25/11/2026) : particuliers, entreprises B2B, bureaux, analyse B2B, lus et écrits dans TF Buddy (panel/src/clients_panel.php).
+    if (($c = pclRoute($method, $path)) !== null) { return $c; }
+    // Le compte TF Buddy du magasin (25/11/2026) : connexion au panel depuis le dashboard (panel/src/tfb_magasin.php).
+    if (($c = tfbmRoute($method, $path)) !== null) { return $c; }
     // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
     if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.
@@ -426,6 +442,8 @@ function route(string $method, string $path): mixed
     if (str_starts_with($path, '/audits/')) { return auRoute($method, $path); }
     // Franchisés › Suivi des franchisés › Fil du franchisé (19/11/2026, src/fil_franchise.php).
     if ($path === '/fil' || str_starts_with($path, '/fil/')) { return filRoute($method, $path); }
+    // L'autocontrôle qualité (24/11/2026, consultant/src/autocontrole.php) : la tablette du magasin et les grilles du siège.
+    if (($c = aqRoute($method, $path)) !== null) { return $c; }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
@@ -799,6 +817,7 @@ function route(string $method, string $path): mixed
             $path === '/scouting/demarchage'            => ep_scouting_demarchage(),
             $path === '/marketing/newsletter'                    => ep_newsletter(),
             $path === '/fidelite'                      => ep_fidelite(),
+            $path === '/fidelite/programme'            => ep_fidelite_programme(),
             $path === '/fidelite/clients'              => ep_fidelite_clients(),
             $path === '/fidelite/profils'              => ep_fidelite_profils(),
             $path === '/fidelite/profils/tendance'     => ep_fidelite_profils_tendance(),

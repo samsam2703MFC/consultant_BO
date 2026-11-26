@@ -52,6 +52,9 @@ const OBJ_AUJ = 1910, CA_EN_COURS = 1673;
 // Les autres semaines : la part du personnel visée par jour de semaine (le CA en découle, entre 1 600 et 2 900 €).
 const PCT = { 1: 16.3, 2: 17.4, 3: 16.9, 4: 16.6, 5: 17.6, 6: 15.4, 7: 16.8 };
 const CA_MOYEN = [0, 1660, 1850, 1750, 1950, 2200, 2800, 2500];
+// La semaine du 30 novembre (vide, celle des vidéos de l'assistant, de la recopie et du shift maker) : un début de
+// décembre plus calme (CA prévu ×0,92) — la semaine passée recopiée y a des heures de trop, l'assistant des propositions.
+const CALME_APRES = 0.92;
 const OUVERTURES = { 1: [420, 1140], 2: [420, 1140], 3: [420, 1140], 4: [420, 1140], 5: [420, 1140], 6: [420, 1140], 7: [450, 810] };
 const PREMIER = '2026-11-01', DERNIER = '2026-11-29';   // le planning existe du 1er au 29 novembre
 
@@ -67,7 +70,7 @@ const hh = x => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 6
 const bruit = (s, k = 0) => { let h = 2166136261 ^ k; for (const c of s) { h = Math.imul(h ^ c.charCodeAt(0), 16777619); } return ((h >>> 0) % 2001) / 1000 - 1; };
 
 /* ── l'état ── */
-const S = { services: {}, ca: {}, options: { assistant: false, taches: false, matrice: false, recopie: false }, prochainId: 90001,
+const S = { fiches: {}, evals: {}, services: {}, ca: {}, options: { assistant: false, taches: false, matrice: false, recopie: false }, prochainId: 90001,
   postes: Object.fromEntries(EQUIPE.map(e => [e.id, e.postes.slice()])), matrice: null,
   roulements: { 201: 'B', 202: 'A', 203: 'A', 204: 'D', 205: 'C', 206: 'D', 207: 'C', 208: 'B', 209: 'C', 210: 'A' } };
 const COMPTOIR_IDS = new Set([201, 204, 205, 206, 208, 210]);
@@ -97,8 +100,8 @@ function caDu(date) {
   const w = wd(date), cout = coutDu(date), r10 = x => Math.round(x / 10) * 10;
   let base = CA16[date];
   if (base == null) {
-    base = cout > 0 ? cout / (PCT[w] + bruit(date, 3) * 0.9) * 100 : CA_MOYEN[w] * (1 + bruit(date, 5) * 0.05);
-    base = r10(Math.max(1600, Math.min(2900, base)));
+    base = cout > 0 ? cout / (PCT[w] + bruit(date, 3) * 0.9) * 100 : CA_MOYEN[w] * (1 + bruit(date, 5) * 0.05) * (date > DERNIER ? CALME_APRES : 1);
+    base = r10(Math.max(date > DERNIER ? 1500 : 1600, Math.min(2900, base)));
   }
   let o;
   if (date < AUJ) { o = { objectif: r10(base * (1 + bruit(date, 7) * 0.05)), ca: base, caSource: 'reel', caEnCours: null }; }
@@ -155,7 +158,7 @@ function planning(du, n) {
   const out = jours.map(j => { const c = caDu(j); return { date: j, objectif: c.objectif, ca: c.ca, caSource: c.caSource, caEnCours: c.caEnCours, lu: true, services: servicesDu(j).map(s => Object.assign({}, s)) }; });
   const r = { shop: 4, du: jours[0], au: jours[n - 1], aujourdhui: AUJ, maintenant: MAINTENANT, jours: out,
     employes: EQUIPE.map(personnePlanning), secteurs: SECTEURS.filter(s => s.id !== 4 || true).map(s => ({ id: s.id, nom: s.nom })),
-    objectif: { source: 'budget', motif: null }, budget: { cible: 17, rouge: 20, noir: 22, source: 'réglage' },
+    objectif: { source: 'budget', motif: null }, budget: { cible: 17, rouge: 20, noir: 22, source: 'réglage' }, etp: { heuresMois: 168, caCible: 13000, caCritique: 10000 },
     durees: { min: 4, max: 8, source: 'départ' }, options: Object.assign({}, S.options),
     taches: S.options.taches ? { liste: TACHES, fixes: FIXES, places: placesEntre(jours[0], jours[n - 1]) } : null, nonLus: [],
     ouvertures: Object.fromEntries(Object.entries(OUVERTURES).map(([k, v]) => [k, v])) };
@@ -242,10 +245,60 @@ const OPTIONS_LISTE = [
   { cle: 'recopie', nom: 'Recopier la semaine précédente', dit: 'Dans « Préparer la semaine » : la semaine d’avant reportée de sept jours, aperçu puis création.' },
 ];
 
+/* La fiche d'une personne (24/11/2026) : des données fictives, stables d'un tournage à l'autre. */
+const CONTRATS = { employment_contract: 'Contrat de travail', civil_law_contract: 'Contrat civil', b2b: 'B2B', temporary_work: 'Intérim', internship: 'Stage', volunteer: 'Bénévole', other: 'Autre' };
+const ROLES = { employee: 'Employé·e', franchisee: 'Franchisé·e (hors primes)', franchise_partner: 'Associé·e' };
+const COMPETENCES = { 201: ['Encaissement', 'Conseil client', 'Mise en vitrine', 'Hygiène (HACCP)'], 206: ['Encaissement', 'Ouverture du magasin', 'Former une nouvelle', 'Commandes'], 202: ['Four', 'Pâte feuilletée', 'Hygiène (HACCP)'] };
+function personneFiche(id) {
+  const e = EQUIPE.find(x => x.id === id); if (!e) { return null; }
+  const o = S.fiches[id] || {}, [pr, ...rest] = e.nom.split(' ');
+  const prenom = o.prenom != null ? o.prenom : pr, nomF = o.nomFamille != null ? o.nomFamille : rest.join(' ');
+  return { id, shop: 4, nom: (prenom + ' ' + nomF).trim(), fonctions: e.fonctions, postes: (S.postes[id] || e.postes).map(pid => ({ id: pid, nom: (posteDe(pid) || {}).nom || '' })),
+    actif: true, taux: o.taux != null ? o.taux : e.taux, franchise: false, prenom, nomFamille: nomF, affiche: o.affiche != null ? o.affiche : pr + ' ' + (rest[0] || '').slice(0, 1) + '.',
+    langue: o.langue || 'fr', contrat: o.contrat || (id === 208 ? 'internship' : 'employment_contract'), role: o.role || 'employee', telephone: '+32 ·· ·· ' + String(id).slice(-2),
+    pin: true, appPrete: id !== 209, roles: [], competences: COMPETENCES[id] || ['Hygiène (HACCP)'], positions: [{ nom: e.fonctions[0], niveau: id === 206 ? 'Niveau 4' : 'Niveau 2' }] };
+}
+const MOTS = ['Très bonne vente des tartes, comptoir rangé.', 'Un peu lente au rush de midi.', '', 'Bon accueil, vitrine tenue jusqu’à la fermeture.', 'Ouverture en retard de 10 min.', ''];
+function evaluations(id) {
+  if (!S.evals[id]) {
+    S.evals[id] = [];
+    for (let d = '2026-11-02'; d < plus(AUJ, -3); d = plus(d, 1)) {
+      servicesDu(d).filter(s => s.employe === id).forEach((s, k) => { const b = bruit(d + id, k); if (b > -0.55) { S.evals[id].push({ id: 5000 + S.evals[id].length, service: s.id, date: d, de: s.de, a: s.a, note: b > 0.35 ? 5 : b > -0.2 ? 4 : 3, mot: MOTS[Math.abs(Math.round(b * 10)) % MOTS.length], par: 'Fanny Leroy' }); } });
+    }
+  }
+  const L = S.evals[id].slice().sort((x, y) => (y.date + y.de).localeCompare(x.date + x.de)), notes = new Set(L.map(x => x.service)), aNoter = [];
+  for (let i = 0; i < 14; i++) { const d = plus(AUJ, -i); servicesDu(d).filter(s => s.employe === id && !notes.has(s.id) && (d < AUJ || s.a <= MAINTENANT)).forEach(s => aNoter.push({ service: s.id, date: d, de: s.de, a: s.a })); }
+  const n = L.filter(x => x.note != null);
+  return { evaluations: L, lues: true, aNoter: aNoter.sort((x, y) => (y.date + y.de).localeCompare(x.date + x.de)), joursLus: 14, moyenne: n.length ? Math.round(100 * n.reduce((a, x) => a + x.note, 0) / n.length) / 100 : null, echelle: 5 };
+}
+function ventes(id) {
+  const lundi = lundiDe(AUJ), semaines = [], k = (EQUIPE.findIndex(e => e.id === id) + 1) || 1, vend = COMPTOIR_IDS.has(id);
+  let ca = 0, t = 0, l = 0;
+  for (let i = 12; i >= 1; i--) {
+    const du = plus(lundi, -7 * i), base = vend ? 1650 + 45 * (12 - i) : 260, w = Math.round(base * (1 + 0.06 * bruit(du, k))), tk = Math.round(w / ((vend ? 13.7 : 11.5) + 0.09 * (12 - i) + 0.3 * bruit(du, k + 7))), pcs = Math.round(100 * ((vend ? 2.06 : 1.7) + 0.022 * (12 - i) + 0.04 * bruit(du, k + 3))) / 100;
+    semaines.push({ du, ca: w, tickets: tk, panier: Math.round(100 * w / tk) / 100, pieces: pcs, jours: 7, joursLignes: 7 }); ca += w; t += tk; l += pcs * tk;
+  }
+  return { personne: (EQUIPE.find(e => e.id === id) || {}).nom, semaines, total: { ca, tickets: t, panier: Math.round(100 * ca / t) / 100, pieces: Math.round(100 * l / t) / 100, part: vend ? 21.4 : 3.1 },
+    equipe: { panier: 14.05, pieces: 2.14 }, rang: vend ? { position: id === 201 ? 2 : 3, sur: 6 } : null, couverture: { jours: 84, ventes: 84, lignes: 84 }, cibles: { panier: 13, pieces: 3.6 } };
+}
+function fiche(m, p, id, c) {
+  const P = personneFiche(id);
+  if (!P) { return err(404, 'cette personne n’est pas de l’équipe du magasin', { motif: 'employe_inconnu' }); }
+  const choix = { contrats: CONTRATS, roles: ROLES, langues: { fr: 'Français', nl: 'Néerlandais', en: 'Anglais', pl: 'Polonais' } };
+  if (p === '/dashboard/equipe/personne' && m === 'GET') { return { personne: P, detailLu: true, choix }; }
+  if (p === '/dashboard/equipe/personne' && m === 'PATCH') { S.fiches[id] = Object.assign(S.fiches[id] || {}, c.champs || {}); const e = EQUIPE.find(x => x.id === id); if (c.champs && c.champs.taux != null) { e.taux = c.champs.taux; } return { ok: true, personne: personneFiche(id), detailLu: true, choix }; }
+  if (p === '/dashboard/equipe/personne/evaluations' && m === 'GET') { return evaluations(id); }
+  if (p === '/dashboard/equipe/personne/evaluation' && m === 'POST') { evaluations(id); const s = servicesDu(c.date).find(x => x.id === c.service); S.evals[id].push({ id: 6000 + S.evals[id].length, service: c.service, date: c.date, de: s ? s.de : '', a: s ? s.a : '', note: c.note, mot: c.mot || '', par: 'vous' }); return Object.assign({ ok: true }, evaluations(id)); }
+  if (p === '/dashboard/equipe/personne/ventes' && m === 'GET') { return ventes(id); }
+  return undefined;
+}
+
 module.exports = function (m, p, q, c) {
   if (!p.startsWith('/dashboard/equipe')) { return undefined; }
   c = (c && typeof c === 'object') ? c : {};
   if (p === '/dashboard/equipe/carte' && m === 'GET') { return carte(); }
+  // La fiche d'une personne (24/11/2026, panel/src/equipe_fiche.php) : identité, évaluations, ventes des 12 semaines.
+  if (p.startsWith('/dashboard/equipe/personne')) { const id = +(m === 'GET' ? q.get('id') : c.id); const r = fiche(m, p, id, c); if (r !== undefined) { return r; } }
   if (p === '/dashboard/equipe/options') {
     if (m === 'POST') { Object.entries(c.options || {}).forEach(([k, v]) => { if (k in S.options) { S.options[k] = !!v; } }); return { ok: true, options: Object.assign({}, S.options) }; }
     return { shop: 4, options: Object.assign({}, S.options), liste: OPTIONS_LISTE.map(o => Object.assign({}, o, { on: S.options[o.cle] })) };

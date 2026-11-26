@@ -1,7 +1,7 @@
 /* Dashboard magasin › Mon équipe (23/11/2026, étape 1 ; maquettes panel/docs/maquettes/equipe-gestion/).
  *
  * La gestion de l'équipe du panel TF Buddy, reprise pour le cockpit (le paquet panel-team-files : la carte des
- * responsabilités et le planning). Deux onglets :
+ * responsabilités et le planning). Trois onglets :
  *   - RESPONSABILITÉS : qui a quel poste, et les produits qui en dépendent (le secteur du poste) ; la fiche de la personne
  *     choisie ; « Modifier les affectations » (ce que le changement donne avant d'enregistrer) ;
  *   - PLANNING : le planogramme des horaires — vue Jour (une ligne par personne, ses services en barres ; dessous, les
@@ -13,12 +13,21 @@
  *     17 %, orange au-dessus, rouge au-dessus de 20 %, noir au-dessus de 22 % (personnelPaliers, réglables), et ce qu'il
  *     faut retirer pour revenir à la cible ; au jour, la souris suffit : tirer une ligne sur celle d'une personne lui
  *     crée un service, glisser ou étirer une barre le change ; la fenêtre montre l'effet sur le comptoir, les secteurs et
- *     le budget avant d'enregistrer.
+ *     le budget avant d'enregistrer ; les ETP planifiés (jour, semaine, mois) et, au mois seulement, le CA par ETP face
+ *     à la cible du réseau (13 000 €, la jauge sous celle du budget ; 24/11/2026 : « seulement par mois, pas par
+ *     semaine ») ;
+ *   - PRIMES (24/11/2026, « mettre les primes dans l'icône Mon équipe, après le planning ») : la page des primes du
+ *     dashboard (?vue=primes, rendPrimes de dashboard.js), qui reprend cette rangée d'onglets ; l'onglet n'est là que si
+ *     le dashboard passe `primes` (le geste qui l'ouvre).
+ * LA FICHE D'UNE PERSONNE (24/11/2026, variante A de la maquette fiche-personne) : « Fiche complète » dans
+ * Responsabilités, ou un clic sur un nom (semaine, mois) ; six onglets (identité et contrat, heures et coût, évaluations,
+ * ventes des 12 semaines, compétences et postes, primes) ; routes de panel/src/equipe_fiche.php.
  * Routes (panel/src/equipe.php) : GET /dashboard/equipe/carte, POST …/postes, GET …/planning, GET …/planning/pdf,
  * POST|PATCH|DELETE …/service.
  *
- * `window.DashEquipe.racine(shop, {apiBase, aller, bureau})` rend l'élément du module, gardé d'un rendu à l'autre ;
- * `relire()` relit tout ; `bureau()` ouvre la demande au bureau du dashboard.
+ * `window.DashEquipe.racine(shop, {apiBase, aller, bureau, primes})` rend l'élément du module, gardé d'un rendu à l'autre ;
+ * `relire()` relit tout ; `onglet('resp' | 'planning')` choisit l'onglet (le retour depuis la page des primes) ;
+ * `bureau()` ouvre la demande au bureau du dashboard.
  */
 (function () {
   'use strict';
@@ -50,11 +59,11 @@
   const COMPTOIR = /vente|vendeu|comptoir|caisse|verkoop|kassa|sprzeda|kasa|sales|counter/i;
   const SVG = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
-  const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, onglet: 'resp',
+  const st = { shop: null, api: '../api/cockpit', el: null, aller: null, bureau: null, primes: null, onglet: 'resp',
     R: null, Rerr: null, sel: null, q: '', secteur: '', tousProduits: false, mod: null,
     PJ: null, PS: null, PM: null, Perr: null, vue: 'tableau', ouvrir: null, jour: AUJ, lundi: lundiDe(AUJ), mois: moisDe(AUJ), edit: null, edSection: null, as: null, glisse: null,
     opts: { assistant: false, taches: false, matrice: false, recopie: false }, O: null, optMod: false,
-    pdf: null, rec: null, M: null, mat: null, flash: null, occupe: false };
+    pdf: null, rec: null, M: null, mat: null, flash: null, occupe: false, fp: null };
 
   /* ── L'API ──────────────────────────────────────────────────────────────────────────────────────────────────── */
   const json = r => r.json().catch(() => ({})).then(j => (r.ok ? j : Promise.reject(Object.assign(new Error((j && j.error) || ('HTTP ' + r.status)), { j, code: r.status }))));
@@ -124,7 +133,9 @@
     return { sv, eq, h, cout, sansTaux, ouv, lin, objectif: base, prevu: J.objectif, caSource: J.ca > 0 ? J.caSource : (J.objectif ? 'prevu' : null), pct: base ? cout / base * 100 : null,
       presents: new Set(sv.map(s => s.employe)).size };
   }
-  const niveau = (P, x) => { const b = P.budget || { cible: 17, rouge: 20, noir: 22 }; return x <= b.cible ? 'ok' : x <= b.rouge ? 'orange' : x <= b.noir ? 'rouge' : 'noir'; };
+  // Le niveau se lit sur le pourcentage tel qu'il s'affiche, au dixième (25/11/2026 : 17,03 % s'affichait « 17,0 % » en
+  // orange, à côté de « dans la cible »).
+  const niveau = (P, x) => { const b = P.budget || { cible: 17, rouge: 20, noir: 22 }; x = Math.round(x * 10) / 10; return x <= b.cible ? 'ok' : x <= b.rouge ? 'orange' : x <= b.noir ? 'rouge' : 'noir'; };
   const marq = (P, x, cl) => x == null ? '<span class="eqp-tiret">—</span>' : `<span class="eqp-m eqp-m-${niveau(P, x)}${cl ? ' ' + cl : ''}" title="${esc(NIV[niveau(P, x)](P))}">${fP(x)}</span>`;
   /** D'où vient le CA d'un jour, en clair. */
   const SRC_CA = { reel: 'de CA (caisse : comptoir + B2B)', projection: 'de CA projeté (comptoir + B2B)', encours: 'de CA à cette heure (comptoir + B2B)', prevu: 'de CA prévu (l’objectif)' };
@@ -136,10 +147,11 @@
   function rendre() {
     if (!st.el) { return; }
     const garde = st.el.querySelector('.eqp-pg-defil'), x = garde ? garde.scrollLeft : 0;
-    const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
+    // Primes (24/11/2026) : après le planning ; la page est celle du dashboard (st.primes l'ouvre).
+    const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].concat(st.primes ? [['primes', 'Primes']] : []).map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
     const nOpt = Object.values(st.opts).filter(Boolean).length;
     st.el.innerHTML = `<nav class="page-tabs eqp-tabs" aria-label="Mon équipe">${tabs}<span class="eqp-sp"></span><button type="button" class="btn btn--sm btn--ghost eqp-opt-btn" data-eqp-options="1"${st.O ? '' : ' disabled'}>Options${nOpt ? ' · ' + nOpt + ' allumée' + (nOpt > 1 ? 's' : '') : ''}</button></nav>${st.flash ? `<div class="eqp-flash ${st.flash[0]}" role="status">${esc(st.flash[1])}</div>` : ''}`
-      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal() + rendAssistant() + rendOptions();
+      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal() + rendAssistant() + rendOptions() + rendFichePersonne();
     const g2 = st.el.querySelector('.eqp-pg-defil'); if (g2) { g2.scrollLeft = x; }
     brancher();
   }
@@ -188,7 +200,7 @@
       ${prods.length ? `<ul class="eqp-prods${st.tousProduits ? ' tous' : ''}">${(st.tousProduits ? prods : prods.slice(0, 18)).map(p => `<li>${esc(p.nom)}</li>`).join('')}</ul>${prods.length > 18 ? `<button type="button" class="linklike" data-eqp-tous="1">${st.tousProduits ? 'Replier' : 'Voir les ' + prods.length + ' produits'}</button>` : ''}` : '<p class="eqp-note">Aucun produit lié dans l’assortiment du magasin.</p>'}
       ${semaine ? `<button type="button" class="eqp-sem" data-eqp-aller-planning="semaine">${SVG('M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z')}<span>Semaine : <b>${fH(semaine.h)}</b> · ${semaine.n} service${semaine.n > 1 ? 's' : ''}</span><span class="eqp-sp"></span><span aria-hidden="true">›</span></button>` : ''}
       ${st.opts.matrice ? rendRoulement(e) : ''}
-      <div class="eqp-actions"><button type="button" class="btn btn--sm" data-eqp-postes="${e.id}">Modifier ses postes</button></div>
+      <div class="eqp-actions"><button type="button" class="btn btn--sm btn--primary" data-eqp-fiche="${e.id}">Fiche complète</button><button type="button" class="btn btn--sm" data-eqp-postes="${e.id}">Modifier ses postes</button></div>
     </aside>`;
   }
 
@@ -303,6 +315,39 @@
         <div class="eqp-bj-r">${pct > b.cible && moy > 0 ? `<span class="t">Pour revenir à ${String(b.cible).replace('.', ',')} %</span><span><b>−${fH(h - bH)}</b> au coût moyen de ${fEh(moy)}<span class="sub">budget ${fH(bH)} au lieu de ${fH(h)}</span></span><span class="ou">ou <b>${fEh(bC)}</b> de coût moyen pour les mêmes heures</span>` : `<span class="t">Dans la cible</span><span>${moy > 0 ? 'encore ' + fH(bH - h) + ' possibles au coût moyen de ' + fEh(moy) : 'aucune heure au planning'}</span>`}</div></div></section>`;
   }
 
+  /** Les ETP et le CA par ETP (24/11/2026, Sam : « rajouter comme info les ETP et le CA par ETP », « mettre une jauge
+   *  pour le 13 000 », puis « seulement par mois, pas par semaine » : la jauge n'est plus qu'à la vue Mois) : la règle du réseau (eqpEtp, panel/src/equipe.php) — 1 ETP = heuresMois heures planifiées par
+   *  mois (168 h) ; le CA par ETP est le CA ÷ les heures × heuresMois, ramené au mois pour un jour ou une semaine (ce
+   *  qu'un temps plein rapporte en un mois à ce rythme) ; cible du réseau 13 000 €, grave sous 10 000 €. */
+  const ETP0 = { heuresMois: 168, caCible: 13000, caCritique: 10000 };
+  const etpDe = P => Object.assign({}, ETP0, P.etp || {});
+  /** Les heures d'un temps plein sur la période vue : le mois, la semaine (× 12 / 52) ou le jour (× 12 / 365). */
+  const heuresEtp = (P, quoi) => { const H = etpDe(P).heuresMois; return quoi === 'mois' ? H : quoi === 'semaine' ? H * 12 / 52 : H * 12 / 365; };
+  const fN1 = x => (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
+  const PER_ETP = { jour: 'par jour', semaine: 'par semaine', mois: 'par mois' };
+  /** La tuile « ETP planifiés » de la rangée du haut. */
+  function kpiEtp(P, quoi, h) {
+    const he = heuresEtp(P, quoi);
+    return `<div class="kpi"><div class="kpi__value">${h > 0 ? fN1(h / he) : '0'}</div><div class="kpi__label">ETP planifiés</div><div class="kpi__note">1 ETP = ${fN1(he).replace(/,0$/, '')} h ${PER_ETP[quoi]}${quoi === 'mois' ? '' : ' (' + fH(etpDe(P).heuresMois) + ' par mois)'}</div></div>`;
+  }
+  /** Le niveau d'un CA par ETP : dans la cible, en dessous (orange), sous le seuil critique (rouge). */
+  const niveauEtp = (E, v) => v >= E.caCible ? 'ok' : v >= E.caCritique ? 'orange' : 'rouge';
+  function jaugeEtp(P, quoi, titre, h, ca) {
+    const E = etpDe(P), he = heuresEtp(P, quoi);
+    if (!ca || !(h > 0)) { return ''; }
+    const v = ca / h * E.heuresMois, etp = h / he, niv = niveauEtp(E, v);
+    const A = Math.max(0, E.caCritique - (E.caCible - E.caCritique)), B = Math.max(E.caCible * 1.5, v * 1.06);
+    const x = w => ((Math.min(B, Math.max(A, w)) - A) / (B - A) * 100).toFixed(2) + '%';
+    const zone = (a, c, cl) => `<span class="eqp-bj-z ${cl}" style="left:${x(a)};width:calc(${x(c)} - ${x(a)})"></span>`;
+    const hMax = ca * E.heuresMois / E.caCible, caMin = E.caCible * h / E.heuresMois;
+    const etat = { ok: 'dans la cible de ' + fE(E.caCible), orange: 'sous la cible de ' + fE(E.caCible), rouge: 'sous ' + fE(E.caCritique) }[niv];
+    return `<section class="card eqp-bj eqp-etp" aria-label="${esc(titre)}"><div class="eqp-bj-t"><h2>${esc(titre)}</h2><span class="sub">le CA ÷ les ETP planifiés, ramené au mois${quoi === 'mois' ? '' : ' (au rythme de ' + (quoi === 'jour' ? 'ce jour' : 'cette semaine') + ')'} · 1 ETP = ${fH(E.heuresMois)} par mois · cible du réseau ${fE(E.caCible)}</span></div>
+      <div class="eqp-bj-l"><div class="eqp-bj-v"><span class="eqp-m eqp-m-${niv} gros">${fE(v)}</span><span class="eqp-bj-n"><b>${esc(etat)}</b>${fE(ca)} de CA pour ${fN1(etp)} ETP (${fH(h)})</span></div>
+        <div class="eqp-bj-g"><div class="eqp-bj-piste">${zone(A, E.caCritique, 'rouge g')}${zone(E.caCritique, E.caCible, 'orange')}${zone(E.caCible, B, 'ok d')}<span class="eqp-bj-k" style="left:${x(v)}"><i></i></span></div>
+          <div class="eqp-bj-ech"><span style="left:${x(A)}">${fE(A)}</span><span style="left:${x(E.caCritique)}">${fE(E.caCritique)}</span><span class="c" style="left:${x(E.caCible)}">${fE(E.caCible)} cible</span></div></div>
+        <div class="eqp-bj-r">${v < E.caCible ? `<span class="t">Pour atteindre ${fE(E.caCible)}</span><span><b>−${fH(h - hMax)}</b> au planning<span class="sub">${fH(hMax)} au lieu de ${fH(h)} pour ce CA</span></span><span class="ou">ou <b>+${fE(caMin - ca)}</b> de CA pour les mêmes heures</span>` : `<span class="t">Dans la cible</span><span>encore ${fH(hMax - h)} possibles pour rester à ${fE(E.caCible)} par ETP</span>`}</div></div></section>`;
+  }
+
   /* — Vue Jour : le planogramme — */
   function bornes(P, sv) {
     let a = 4 * 60, b = 20 * 60;
@@ -334,6 +379,7 @@
       <div class="kpi"><div class="kpi__value">${C.presents}</div><div class="kpi__label">Au planning ce jour</div></div>
       <div class="kpi"><div class="kpi__value">${fH(C.h)}</div><div class="kpi__label">Heures du jour</div><div class="kpi__note">coût estimé ${fE(C.cout)}${C.sansTaux ? ' · ' + fH(C.sansTaux) + ' sans taux' : ''}</div></div>
       <div class="kpi"><div class="kpi__value">${marq(P, C.pct, 'gros')}</div><div class="kpi__label">Personnel / CA du jour</div><div class="kpi__note">${C.objectif ? fE(C.cout) + ' pour ' + fE(C.objectif) + ' ' + SRC_CA[C.caSource || 'prevu'] + (C.caSource !== 'prevu' && C.prevu ? ' · objectif ' + fE(C.prevu) : '') : 'pas de CA prévu'}</div></div>
+      ${kpiEtp(P, 'jour', C.h)}
       <div class="kpi"><div class="kpi__value">${TM.habitude && TM.habitude.jours >= 2 ? dm(tmMin) : '—'}</div><div class="kpi__label">Temps morts habituels</div><div class="kpi__note">${TM.habitude && TM.habitude.jours >= 2 ? (tmMin ? fH(tmPers / 60) + ' de personnel pendant ces creux' : 'aucun creux d’un quart d’heure') : 'pas assez de jours mesurés'}</div></div>
       <div class="kpi"><div class="kpi__value">${nTrous}${nTrous ? '<span class="tag-warn">à vérifier</span>' : ''}</div><div class="kpi__label">Trous dans les linéaires</div><div class="kpi__note">${[...vides.map(l => esc(l.nom) + ' vide'), ...(comptoirL ? comptoirL.trous.map(([a, b]) => 'comptoir ' + hh(a) + '–' + hh(b)) : [])].join(' · ') || 'aucun'}</div></div>
     </div></section>`;
@@ -426,6 +472,7 @@
       <div class="kpi"><div class="kpi__value">${auPlanning.size}</div><div class="kpi__label">Employés au planning</div><div class="kpi__note">${nSv} service${nSv > 1 ? 's' : ''}</div></div>
       <div class="kpi"><div class="kpi__value">${fH(h)}</div><div class="kpi__label">Heures planifiées</div><div class="kpi__note">${ca && coutCa && hCa ? 'budget ' + fH(P.budget.cible / 100 * ca / (coutCa / hCa)) + ' à ' + String(P.budget.cible).replace('.', ',') + ' %' : (auPlanning.size ? fH(h / auPlanning.size) + ' par personne en moyenne' : '—')}</div></div>
       <div class="kpi"><div class="kpi__value">${nSv ? marq(P, pct, 'gros') : fE(0)}</div><div class="kpi__label">Personnel / CA</div><div class="kpi__note">${fE(cout)} estimés${ca ? ' pour ' + fE(ca) + ' ' + srcCaJours(CJ) : ''}</div></div>
+      ${kpiEtp(P, 'semaine', h)}
       <div class="kpi"><div class="kpi__value">${joursTrou}${joursTrou ? '<span class="tag-warn">à vérifier</span>' : ''}</div><div class="kpi__label">Jours avec un trou</div><div class="kpi__note">${joursTrou ? P.jours.filter((_, i) => trousJ[i].length).map(J => JOURS[dt(J.date).getDay()]).join(', ') : 'secteurs et comptoir tenus'}</div></div>
     </div></section>`;
     const zone = e => (e.secteurs || []).length ? secteurNom(P, e.secteurs[0]) : ((e.postes || [])[0] || {}).nom || 'sans poste';
@@ -437,7 +484,7 @@
         const ouvert = st.edit && st.edit.mode === 'modal' && st.edit.date === d && (st.edit.employe === e.id);
         return `<td class="eqp-c${d === P.aujourdhui ? ' auj' : ''}${ouvert ? ' on' : ''}${e.actif === false ? '' : ' cliquable'}" data-eqp-cell="${d}" data-emp="${e.id}">${L.length ? L.map(s => `<button type="button" class="eqp-sv${st.edit && st.edit.id === s.id ? ' on' : ''}" data-eqp-svc="${s.id}" title="Ouvrir le service">${hh(s.de)}–${hh(s.a)}<small>${esc(zone(e))}</small><span class="eqp-mini" aria-hidden="true">${ouv(i)}<i style="left:${X(s.de)};width:${W(s.de, s.a)}"></i></span></button>`).join('') : `<span class="eqp-tiret">—</span>${e.actif === false ? '' : '<span class="eqp-plus">+ Ajouter</span>'}`}</td>`;
       }).join('');
-      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
+      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b class="eqp-fp-lien" data-eqp-fiche="${e.id}" role="button" tabindex="0" title="Ouvrir la fiche">${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
     }).join('') || `<tr><td colspan="10" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
     const tot = `<tr class="tot"><td>Par jour</td>${CJ.map((C, i) => `<td class="${P.jours[i].date === P.aujourdhui ? 'auj' : ''}">${C.presents} pers. · ${fH(C.h)}${C.pct != null && C.h > 0 ? '<br>' + marq(P, C.pct, 'eqp-m-j') : ''}</td>`).join('')}<td class="num">${fH(h)}</td><td class="num">${fE(cout)}</td></tr>`;
     // Les linéaires (du planogramme de la semaine) : une ligne par secteur et le comptoir, une piste par jour.
@@ -455,7 +502,11 @@
 
   /* — Vue Mois (23/11/2026, « rajouter mois ») : une ligne par personne, une colonne par jour du mois (ses heures, le
    * matin ou l'après-midi), son total du mois ; dessous, chaque jour et chaque semaine face au budget. Un clic sur une
-   * case ouvre le service ou en ajoute un ; sur un jour, l'ouvre en grand ; sur une semaine, la montre. — */
+   * case ouvre le service ou en ajoute un ; sur un jour, l'ouvre en grand ; sur une semaine, la montre.
+   * Groupé par section (24/11/2026, « dans le tableau mensuel, groupé par section ») : les sections du planogramme du
+   * jour (groupes : le secteur de la personne, le comptoir, sinon son premier poste) ; la ligne de la section dit ses
+   * personnes, ses heures du mois et, chaque jour, combien d'entre elles sont au planning — 0 un jour d'ouverture : la
+   * section est vide ce jour-là (marquée). — */
   function rendMois(P) {
     const CJ = P.jours.map(J => calculJour(P, J, null)), b = P.budget;
     const somme = f => CJ.reduce((a, c) => a + f(c), 0);
@@ -469,10 +520,20 @@
       <div class="kpi"><div class="kpi__value">${auPlanning.size}</div><div class="kpi__label">Employés au planning</div><div class="kpi__note">${nSv} service${nSv > 1 ? 's' : ''}</div></div>
       <div class="kpi"><div class="kpi__value">${fH(h)}</div><div class="kpi__label">Heures du mois</div><div class="kpi__note">${ca && coutCa && hCa ? 'budget ' + fH(b.cible / 100 * ca / (coutCa / hCa)) + ' à ' + String(b.cible).replace('.', ',') + ' %' : (auPlanning.size ? fH(h / auPlanning.size) + ' par personne en moyenne' : '—')}</div></div>
       <div class="kpi"><div class="kpi__value">${nSv ? marq(P, pct, 'gros') : fE(0)}</div><div class="kpi__label">Personnel / CA</div><div class="kpi__note">${fE(cout)} estimés${ca ? ' pour ' + fE(ca) + ' ' + srcCaJours(CJ) : ''}</div></div>
+      ${kpiEtp(P, 'mois', h)}
       <div class="kpi"><div class="kpi__value">${hors.length}${hors.length ? '<span class="tag-warn">à revoir</span>' : ''}</div><div class="kpi__label">Jours au-dessus de la cible</div><div class="kpi__note">${hors.length ? (graves.length ? graves.length + ' au-dessus de ' + String(b.rouge).replace('.', ',') + ' %' : 'tous sous ' + String(b.rouge).replace('.', ',') + ' %') : (nSv ? 'tous dans la cible' : 'aucun service ce mois')}</div></div>
     </div></section>`;
     const tete = `<tr><th>Employé</th>${P.jours.map(J => { const d = dt(J.date); return `<th class="${cl(J, 'eqp-mj')}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le ${esc(long(J.date))}"><span>${LETTRE[d.getDay()]}</span><b>${d.getDate()}</b></button></th>`; }).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr>`;
-    const lignes = (P.employes || []).filter(e => e.actif !== false || CJ.some(c => c.sv.some(x => x.employe === e.id))).map(e => {
+    const visible = e => e.actif !== false || CJ.some(c => c.sv.some(x => x.employe === e.id));
+    const G = groupes(P, equipeDe(P)).map(([g, L]) => [g, L.filter(visible)]).filter(([, L]) => L.length);
+    const ligneSec = (g, L) => {
+      const ids = new Set(L.map(e => e.id)), hs = CJ.reduce((a, C) => a + C.sv.filter(x => ids.has(x.employe)).reduce((b, x) => b + (x.a - x.de) / 60, 0), 0);
+      const cs = CJ.reduce((a, C) => a + C.sv.filter(x => ids.has(x.employe)).reduce((b, x) => b + (x.a - x.de) / 60 * ((L.find(e => e.id === x.employe) || {}).taux || 0), 0), 0);
+      const cells = CJ.map((C, i) => { const n = new Set(C.sv.filter(x => ids.has(x.employe)).map(x => x.employe)).size, J = P.jours[i], trou = !n && g !== 'Sans poste' && C.ouv;
+        return `<td class="${cl(J, 'eqp-mc')}${trou ? ' trou' : ''}"${trou ? ` title="${esc(g)} : personne au planning ce jour-là"` : ''}>${n || (trou ? '0' : '')}</td>`; }).join('');
+      return `<tr class="eqp-msec"><td><b>${esc(g)}</b><span class="sub">${L.length} personne${L.length > 1 ? 's' : ''}</span></td>${cells}<td class="num">${hs ? fH(hs) : '—'}</td><td class="num">${hs ? fE(cs) : '—'}</td></tr>`;
+    };
+    const ligne = e => {
       let hp = 0, cp = 0;
       const cells = CJ.map((C, i) => {
         const J = P.jours[i], L = C.sv.filter(x => x.employe === e.id);
@@ -480,16 +541,17 @@
         const ouvert = st.edit && st.edit.mode === 'modal' && st.edit.date === J.date && st.edit.employe === e.id;
         return `<td class="${cl(J, 'eqp-mc')}${e.actif === false ? '' : ' cliquable'}${ouvert ? ' on' : ''}" data-eqp-cell="${J.date}" data-emp="${e.id}">${L.map(x => `<button type="button" class="eqp-ms ${x.de < 12 * 60 ? 'm' : 'a'}" data-eqp-svc="${x.id}" title="${esc(court(J.date))} · ${hh(x.de)}–${hh(x.a)}">${nb((x.a - x.de) / 60)}</button>`).join('')}</td>`;
       }).join('');
-      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
-    }).join('') || `<tr><td colspan="${P.jours.length + 3}" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
+      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b class="eqp-fp-lien" data-eqp-fiche="${e.id}" role="button" tabindex="0" title="Ouvrir la fiche">${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
+    };
+    const lignes = G.map(([g, L]) => ligneSec(g, L) + L.map(ligne).join('')).join('') || `<tr><td colspan="${P.jours.length + 3}" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
     const parJour = `<tr class="tot"><td>Par jour<span class="sub">heures · budget</span></td>${CJ.map((C, i) => `<td class="${cl(P.jours[i], 'eqp-mc')}">${C.h ? nb(C.h) : '<span class="eqp-tiret">—</span>'}${C.pct != null && C.h > 0 ? `<i class="eqp-pt eqp-m-${niveau(P, C.pct)}" title="${fP(C.pct)} du CA prévu"></i>` : ''}</td>`).join('')}<td class="num">${fH(h)}</td><td class="num">${fE(cout)}</td></tr>`;
     const parSem = `<tr class="tot eqp-msem"><td>Par semaine</td>${semaines.map(w => {
       const C = w.i.map(i => CJ[i]), hw = C.reduce((a, c) => a + c.h, 0), caw = C.reduce((a, c) => a + (c.objectif || 0), 0), cw = C.reduce((a, c) => a + (c.objectif ? c.cout : 0), 0);
       return `<td colspan="${w.i.length}"><button type="button" class="linklike" data-eqp-semaine="${w.lundi}" title="Voir la semaine du ${esc(long(w.lundi))}">${w.i.length < 7 ? '' : 'Sem. du '}${dt(w.lundi).getDate()}/${dt(w.lundi).getMonth() + 1}</button>${hw ? ' · ' + fH(hw) + (caw && cw ? ' ' + marq(P, cw / caw * 100, 'eqp-m-j') : '') : ''}</td>`;
     }).join('')}<td></td><td></td></tr>`;
     const vide = nSv ? '' : `<div class="eqp-vide7"><b>Aucun service au planning ce mois.</b> Préparez-le semaine par semaine : un clic sur une semaine l’ouvre, puis « Préparer la semaine » (recopier la précédente, ou le shift maker).</div>`;
-    return vide + kpis + (nSv ? jauge(P, 'Budget d’heures du mois', hCa || h, coutCa, ca) : '') + `<section class="card eqp-tab eqp-moi"><div class="eqp-table"><table><thead>${tete}</thead><tbody>${lignes}${parJour}${parSem}</tbody></table></div></section>
-      <p class="eqp-note">Dans chaque case, les heures du service : <span class="eqp-ms m">8</span> le matin (avant midi), <span class="eqp-ms a">6</span> l’après-midi. Un clic sur une case l’ouvre (adapter, retirer, ajouter quelqu’un sur le shift) ou ajoute un service ; un clic sur un jour l’ouvre en grand ; sur une semaine, la montre. Les points sous chaque jour suivent les paliers du budget (cible ${String(b.cible).replace('.', ',')} %, orange au-dessus, rouge au-dessus de ${String(b.rouge).replace('.', ',')} %, noir au-dessus de ${String(b.noir).replace('.', ',')} %).</p>`;
+    return vide + kpis + (nSv ? jauge(P, 'Budget d’heures du mois', hCa || h, coutCa, ca) + jaugeEtp(P, 'mois', 'CA par ETP du mois', hCa, ca) : '') + `<section class="card eqp-tab eqp-moi"><div class="eqp-table"><table><thead>${tete}</thead><tbody>${lignes}${parJour}${parSem}</tbody></table></div></section>
+      <p class="eqp-note">Groupé par section : sur la ligne de chaque section, le nombre de ses personnes au planning ce jour-là ; un <b class="eqp-trou-n">0</b> : personne de la section un jour d’ouverture. Dans chaque case, les heures du service : <span class="eqp-ms m">8</span> le matin (avant midi), <span class="eqp-ms a">6</span> l’après-midi. Un clic sur une case l’ouvre (adapter, retirer, ajouter quelqu’un sur le shift) ou ajoute un service ; un clic sur un jour l’ouvre en grand ; sur une semaine, la montre. Les points sous chaque jour suivent les paliers du budget (cible ${String(b.cible).replace('.', ',')} %, orange au-dessus, rouge au-dessus de ${String(b.rouge).replace('.', ',')} %, noir au-dessus de ${String(b.noir).replace('.', ',')} %).</p>`;
   }
 
   /* ── La fenêtre d'un service (23/11/2026, « on clic je dois pouvoir adapter, rajouter et effacer une personne du
@@ -1165,10 +1227,263 @@
     return `<h3>Roulement · matrice A B C D</h3>${seg}${l && M ? `<ul class="eqp-roul"><li><b>Cette semaine</b> (semaine ${c + 1}) : ${esc(resumeLettre(M, l, c))}</li><li><b>La suivante</b> (semaine ${2 - c}) : ${esc(resumeLettre(M, l, 1 - c))}</li></ul>` : `<p class="eqp-note" style="margin-top:6px">${l ? '' : 'Sans lettre, le shift maker ne la planifie pas.'}</p>`}`;
   }
 
+  /* ── La fiche d'une personne (24/11/2026, maquette panel/docs/maquettes/equipe-gestion/fiche-personne/, variante A) ──
+   * Une fenêtre à onglets : identité et contrat (modifiables : PATCH /dashboard/equipe/personne), heures et coût (le
+   * planning du mois × le taux), évaluations (une note par service : POST …/personne/evaluation), ventes (les 12
+   * dernières semaines complètes : vendu, panier moyen, pièces par ticket, face à l'équipe et à la cible du réseau),
+   * compétences et postes, primes (la page des primes). Le téléphone, le PIN et la désactivation restent au panel. */
+  const fD = (n, d) => (Math.round(n * 10 ** d) / 10 ** d).toFixed(d).replace('.', ',');
+  const FP_ONGLETS = [['identite', 'Identité et contrat'], ['cout', 'Heures et coût'], ['evaluations', 'Évaluations'], ['ventes', 'Ventes'], ['competences', 'Compétences et postes'], ['primes', 'Primes']];
+  const FP_CHAMPS = ['prenom', 'nomFamille', 'affiche', 'langue', 'contrat', 'role', 'taux'];
+  // Les étoiles : une note entière telle quelle ; une moyenne arrondie au plus proche, 4,5 montrant 4 étoiles (pas 5).
+  const etoiles = (n, cl) => { const k = Math.max(0, Math.min(5, Math.floor((n || 0) + 0.25))); return `<span class="eqp-fp-et${cl ? ' ' + cl : ''}" aria-label="${k} sur 5">${'★'.repeat(k)}<i>${'★'.repeat(5 - k)}</i></span>`; };
+  const tauxLu = v => { const x = parseFloat(String(v == null ? '' : v).replace(/\s|€|\/h/g, '').replace(',', '.')); return Number.isFinite(x) ? x : null; };
+  function ouvrirFiche(id, onglet) {
+    st.fp = { id, onglet: onglet || 'identite', F: null, Ferr: null, EV: null, EVerr: null, VT: null, VTerr: null, mode: 'euros', tableau: false, survol: null, form: null, envoi: false, msg: null, note: null };
+    lireFiche(); fpCharger(); rendre();
+  }
+  function lireFiche() {
+    const f = st.fp; if (!f) { return; }
+    f.Ferr = null;
+    lire('/dashboard/equipe/personne', { id: f.id }).then(r => { if (st.fp !== f) { return; } f.F = r; f.form = fpForm(r.personne); })
+      .catch(e => { if (st.fp === f) { f.Ferr = e.message; } }).finally(rendre);
+  }
+  const fpForm = p => ({ prenom: p.prenom, nomFamille: p.nomFamille, affiche: p.affiche, langue: p.langue, contrat: p.contrat || '', role: p.role, taux: p.taux != null ? fD(p.taux, 2) : '' });
+  /** Ce que l'onglet ouvert doit lire : les évaluations, les ventes, ou le planning du mois (heures, coût, effet du taux). */
+  function fpCharger() {
+    const f = st.fp; if (!f) { return; }
+    if (f.onglet === 'evaluations' && !f.EV && !f.EVerr) { lire('/dashboard/equipe/personne/evaluations', { id: f.id }).then(r => { if (st.fp === f) { f.EV = r; } }).catch(e => { if (st.fp === f) { f.EVerr = e.message; } }).finally(rendre); }
+    if (f.onglet === 'ventes' && !f.VT && !f.VTerr) { lire('/dashboard/equipe/personne/ventes', { id: f.id }).then(r => { if (st.fp === f) { f.VT = r; } }).catch(e => { if (st.fp === f) { f.VTerr = e.message; } }).finally(rendre); }
+    if ((f.onglet === 'cout' || f.onglet === 'identite') && (!st.PM || st.PM.du !== st.mois) && !st.Perr) { lirePlanning('mois'); }
+  }
+  /** Le mois au planning pour cette personne : ses heures et son coût par semaine, et les totaux du magasin. */
+  function fpMois(id) {
+    const P = st.PM; if (!P || P.du !== st.mois) { return null; }
+    const CJ = P.jours.map(J => calculJour(P, J, null)), e = equipeDe(P).get(id) || {};
+    const sem = new Map(); let h = 0, n = 0;
+    CJ.forEach((C, i) => { const L = C.sv.filter(s => s.employe === id), hj = L.reduce((a, s) => a + (s.a - s.de) / 60, 0), l = lundiDe(P.jours[i].date);
+      if (!sem.has(l)) { sem.set(l, { lundi: l, h: 0, n: 0 }); } const w = sem.get(l); w.h += hj; w.n += L.length; h += hj; n += L.length; });
+    const taux = (P.employes || []).filter(x => x.actif !== false && x.taux > 0 && !x.franchise).map(x => x.taux);
+    return { P, e, h, n, semaines: [...sem.values()], cout: h * (e.taux || 0), coutMag: CJ.reduce((a, C) => a + C.cout, 0),
+      ca: CJ.reduce((a, C) => a + (C.objectif || 0), 0), coutCa: CJ.reduce((a, C) => a + (C.objectif ? C.cout : 0), 0),
+      hCa: CJ.reduce((a, C) => a + (C.objectif ? C.sv.filter(s => s.employe === id).reduce((b, s) => b + (s.a - s.de) / 60, 0) : 0), 0),
+      moyTaux: taux.length ? taux.reduce((a, b) => a + b, 0) / taux.length : null };
+  }
+  const moisLib = () => { const d = dt(st.mois); return MOIS[d.getMonth()] + ' ' + d.getFullYear(); };
+  /** L'effet d'un nouveau taux sur le mois au planning (avant d'enregistrer). */
+  function fpEffet() {
+    const f = st.fp, p = f && f.F && f.F.personne; if (!p || !f.form) { return ''; }
+    const t = tauxLu(f.form.taux); if (t == null || p.taux == null || Math.abs(t - p.taux) < 0.005) { return ''; }
+    const M = fpMois(f.id); if (!M) { return `<span>Le planning de ${esc(moisLib())} se lit…</span>`; }
+    if (!M.h) { return `<span>Pas d’heure au planning de ${esc(moisLib())} pour cette personne : le taux ne change rien au mois.</span>`; }
+    const d = M.h * (t - p.taux), avant = M.ca ? M.coutCa / M.ca * 100 : null, apres = M.ca ? (M.coutCa + M.hCa * (t - p.taux)) / M.ca * 100 : null;
+    return `<span>Avec <b>${fD(t, 2)} €/h</b> : ${esc(moisLib())} au planning (${fH(M.h)}) coûte <b>${fE(M.cout + d)}</b>, soit <b>${d >= 0 ? '+' : '−'}${fE(Math.abs(d))}</b></span>${avant != null ? `<span>personnel / CA du mois : <b>${fP(avant) === fP(apres) ? fD(avant, 2) + ' % → ' + fD(apres, 2) + ' %' : fP(avant) + ' → ' + fP(apres)}</b> (cible ${String((M.P.budget || {}).cible || 17).replace('.', ',')} %)</span>` : ''}`;
+  }
+  const fpChange = () => { const f = st.fp, p = f && f.F && f.F.personne; if (!p || !f.form) { return {}; } const o = fpForm(p), c = {};
+    FP_CHAMPS.forEach(k => { if (k === 'taux') { const t = tauxLu(f.form.taux); if (t != null && (p.taux == null || Math.abs(t - p.taux) >= 0.005)) { c.taux = t; } } else if (String(f.form[k] || '').trim() !== String(o[k] || '').trim()) { c[k] = String(f.form[k] || '').trim(); } }); return c; };
+  function fpEnregistrer() {
+    const f = st.fp, p = f && f.F && f.F.personne; if (!p || f.envoi) { return; }
+    const c = fpChange(); if (!Object.keys(c).length) { return; }
+    if (f.form.taux !== '' && tauxLu(f.form.taux) == null) { f.msg = ['err', 'Le taux horaire doit être un nombre (par exemple 15,80).']; rendre(); return; }
+    const avant = {}; Object.keys(c).forEach(k => { avant[k] = p[k]; });
+    f.envoi = true; f.msg = null; rendre();
+    envoyer('PATCH', '/dashboard/equipe/personne', { id: f.id, champs: c, avant }).then(r => {
+      if (st.fp !== f) { return; }
+      f.F = r; f.form = fpForm(r.personne); f.msg = ['ok', r.inchange ? 'Rien n’avait changé.' : 'Enregistré dans TF Buddy.'];
+      if (!r.inchange) { st.PM = null; relireTout(); }
+    }).catch(e => { if (st.fp === f) { f.msg = ['err', e.code === 409 ? 'La fiche a changé au panel entre-temps : elle est relue, recommencez.' : 'Pas enregistré : ' + e.message]; if (e.code === 409) { lireFiche(); } } })
+      .finally(() => { if (st.fp === f) { f.envoi = false; } rendre(); });
+  }
+  function fpNoter() {
+    const f = st.fp, n = f && f.note; if (!n || !n.note || f.envoi) { return; }
+    f.envoi = true; f.msg = null; rendre();
+    envoyer('POST', '/dashboard/equipe/personne/evaluation', { id: f.id, service: n.service, date: n.date, note: n.note, mot: n.mot || '' })
+      .then(r => { if (st.fp === f) { f.EV = r; f.note = null; f.msg = ['ok', 'Note enregistrée.']; } })
+      .catch(e => { if (st.fp === f) { f.msg = ['err', 'Pas enregistrée : ' + e.message]; } })
+      .finally(() => { if (st.fp === f) { f.envoi = false; } rendre(); });
+  }
+
+  function fpIdentite(p, C) {
+    const f = st.fp, F = f.form, o = (k, v, l) => `<option value="${esc(k)}"${v === k ? ' selected' : ''}>${esc(l)}</option>`;
+    const langues = Object.assign({}, C.langues); if (F.langue && !langues[F.langue]) { langues[F.langue] = F.langue.toUpperCase(); }
+    const ch = (k, l, aide) => `<div class="eqp-fp-ch"><label for="eqp-fp-${k}">${l}</label><input class="input" id="eqp-fp-${k}" data-eqp-fp-champ="${k}" value="${esc(F[k] || '')}"${k === 'taux' ? ' inputmode="decimal"' : ''}>${aide ? `<div class="aide">${aide}</div>` : ''}</div>`;
+    const M = fpMois(f.id);
+    return `<div class="eqp-fp-cols">
+      <div><h4>Identité</h4>${ch('prenom', 'Prénom')}${ch('nomFamille', 'Nom')}${ch('affiche', 'Nom affiché', 'sur la caisse, l’app employés et le planning imprimé')}
+        <div class="eqp-fp-ch"><label for="eqp-fp-langue">Langue</label><select class="input" id="eqp-fp-langue" data-eqp-fp-champ="langue">${F.langue ? '' : '<option value="">—</option>'}${Object.entries(langues).map(([k, l]) => o(k, F.langue, l)).join('')}</select></div>
+        <div class="eqp-fp-ch"><label>Fonction</label><span class="val">${esc((p.fonctions.length ? p.fonctions : p.roles).join(', ') || '—')}</span></div></div>
+      <div><h4>Contrat et coût</h4>
+        <div class="eqp-fp-ch"><label for="eqp-fp-contrat">Type de contrat</label><select class="input" id="eqp-fp-contrat" data-eqp-fp-champ="contrat">${F.contrat ? '' : '<option value="">— à préciser</option>'}${Object.entries(C.contrats).map(([k, l]) => o(k, F.contrat, l)).join('')}</select></div>
+        <div class="eqp-fp-ch"><label for="eqp-fp-role">Rôle</label><select class="input" id="eqp-fp-role" data-eqp-fp-champ="role">${Object.entries(C.roles).map(([k, l]) => o(k, F.role, l)).join('')}</select></div>
+        ${ch('taux', 'Taux horaire (€/h)', (p.taux != null ? 'au panel : <b>' + fD(p.taux, 2) + ' €/h</b>' : 'pas de taux au panel : son coût ne compte pas') + (M && M.moyTaux ? ' · moyenne de l’équipe ' + fEh(M.moyTaux) : ''))}
+        <h4 style="margin-top:14px">Accès</h4>
+        <div class="eqp-fp-ch"><label>Téléphone</label><span class="val">${esc(p.telephone || '—')}</span></div>
+        <div class="eqp-fp-ch"><label>PIN de caisse</label><span class="val">${p.pin ? 'défini' : 'pas défini'} · app employés ${p.appPrete ? 'prête' : 'pas prête'}</span></div>
+        <p class="eqp-note" style="margin:4px 0 0">Le téléphone, le PIN et la désactivation se changent au panel TF Buddy.</p></div>
+      <div class="eqp-fp-effet" data-eqp-fp-effet="1"${fpEffet() ? '' : ' hidden'}>${fpEffet()}</div></div>`;
+  }
+  function fpCout(p) {
+    const M = fpMois(st.fp.id);
+    if (!M) { return `<div class="eqp-attente">${st.Perr ? 'Le planning du mois ne se lit pas : ' + esc(st.Perr) : 'Lecture du planning de ' + esc(moisLib()) + '…'}</div>`; }
+    const k = (v, l, n) => `<div class="kpi"><div class="kpi__value">${v}</div><div class="kpi__label">${l}</div><div class="kpi__note">${n}</div></div>`;
+    return `<section class="card eqp-kpis eqp-fp-kpis"><div class="kpi-row">
+        ${k(p.taux != null ? fD(p.taux, 2) + '<span class="u">€/h</span>' : '—', 'Taux horaire', M.moyTaux ? 'moyenne de l’équipe ' + fEh(M.moyTaux) : '—')}
+        ${k(fH(M.h), 'Heures de ' + esc(MOIS[dt(st.mois).getMonth()]), M.n + ' service' + (M.n > 1 ? 's' : '') + ' au planning')}
+        ${k(p.taux != null ? fE(M.cout) : '—', 'Coût du mois', M.coutMag && p.taux != null ? fP(100 * M.cout / M.coutMag) + ' du personnel du magasin' : '—')}
+        ${k(fD(M.h / heuresEtp(M.P, 'mois'), 2), 'ETP', '1 ETP = ' + fH(etpDe(M.P).heuresMois) + ' par mois')}</div></section>
+      <table class="eqp-fp-sem"><thead><tr><th>Semaine</th><th class="num">Services</th><th class="num">Heures</th><th class="num">Coût</th></tr></thead><tbody>
+        ${M.semaines.map(w => `<tr><td>du ${esc(long(w.lundi).replace(/^\S+ /, ''))}</td><td class="num">${w.n || '—'}</td><td class="num">${w.h ? fH(w.h) : '—'}</td><td class="num">${w.h && p.taux != null ? fE(w.h * p.taux) : '—'}</td></tr>`).join('')}
+        <tr class="tot"><td>${esc(moisLib())}</td><td class="num">${M.n}</td><td class="num">${fH(M.h)}</td><td class="num">${p.taux != null ? fE(M.cout) : '—'}</td></tr></tbody></table>
+      <p class="eqp-note">Le mois ouvert dans le Planning (vue Mois). Coût = heures du planning × taux horaire ; TF Buddy ne garde pas le coût employeur (brut, charges) : il n’est pas ici.</p>`;
+  }
+  function fpEvaluations() {
+    const f = st.fp, E = f.EV;
+    if (f.EVerr) { return `<div class="eqp-err">Les évaluations ne se lisent pas : ${esc(f.EVerr)}</div>`; }
+    if (!E) { return '<div class="eqp-attente">Lecture des évaluations…</div>'; }
+    const notees = E.evaluations.filter(x => x.note != null), compte = [5, 4, 3, 2, 1].map(n => [n, notees.filter(x => x.note === n).length]), max = Math.max(1, ...compte.map(c => c[1]));
+    const jl = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? esc(court(d)) + ' ' + esc(MOIS[dt(d).getMonth()]) : '—';
+    const ligne = x => `<div class="eqp-fp-li"><div class="d">${jl(x.date)}<small>${esc(x.de)}–${esc(x.a)}</small></div><div>${x.note != null ? etoiles(x.note) : '—'}</div><div class="c">${x.mot ? '« ' + esc(x.mot) + ' »' : '—'}${x.par ? `<small>notée par ${esc(x.par)}</small>` : ''}</div></div>`;
+    const aNoter = s => { const n = f.note && f.note.service === s.service ? f.note : null;
+      return n ? `<div class="eqp-fp-li ouvert"><div class="d">${jl(s.date)}<small>${esc(s.de)}–${esc(s.a)}</small></div><div class="form"><span class="eqp-fp-et clic" role="group" aria-label="La note">${[1, 2, 3, 4, 5].map(k => `<button type="button" data-eqp-fp-etoile="${k}" aria-label="${k} sur 5" class="${k <= (n.note || 0) ? 'on' : ''}">★</button>`).join('')}</span>
+          <textarea data-eqp-fp-mot="1" maxlength="500" placeholder="Un mot (facultatif) : ce qui était bien, ce qui est à reprendre">${esc(n.mot || '')}</textarea>
+          <div class="eqp-fp-bt"><button class="btn btn--sm btn--primary" type="button" data-eqp-fp-noter="1"${n.note && !f.envoi ? '' : ' disabled'}>${f.envoi ? 'Envoi…' : 'Enregistrer la note'}</button><button class="btn btn--sm" type="button" data-eqp-fp-passer="1">Annuler</button></div></div></div>`
+        : `<div class="eqp-fp-li"><div class="d">${jl(s.date)}<small>${esc(s.de)}–${esc(s.a)}</small></div><div>${etoiles(0)}</div><div class="c"><button class="linklike" type="button" data-eqp-fp-anoter="${s.service}" data-date="${esc(s.date)}">Noter ce service</button></div></div>`; };
+    return `<div class="eqp-fp-ev"><div>${E.moyenne != null ? `<div class="eqp-fp-moy">${fD(E.moyenne, 1)}<small>/ 5</small></div><div style="margin-top:6px">${etoiles(E.moyenne, 'gros')}</div>` : '<div class="eqp-fp-moy">—</div>'}
+        <div class="eqp-note" style="margin-top:6px">${notees.length} service${notees.length > 1 ? 's' : ''} noté${notees.length > 1 ? 's' : ''} · ${E.aNoter.length} à noter (${EQF_JOURS} derniers jours)</div>
+        <div class="eqp-fp-histo">${compte.map(([n, k]) => `<div><span>${n} ★</span><span class="b"><i style="width:${(k / max * 100).toFixed(1)}%"></i></span><span>${k}</span></div>`).join('')}</div>
+        <p class="eqp-note" style="margin-top:12px">Une note par service du planning, de 1 à 5, avec un mot.</p></div>
+      <div>${E.aNoter.length ? `<h4>À noter <span class="eqp-fp-tag">${E.aNoter.length} service${E.aNoter.length > 1 ? 's' : ''} passé${E.aNoter.length > 1 ? 's' : ''}</span></h4><div class="eqp-fp-liste" style="margin-bottom:14px">${E.aNoter.map(aNoter).join('')}</div>` : ''}
+        <h4>Historique</h4> ${E.evaluations.length ? `<div class="eqp-fp-liste">${E.evaluations.slice(0, 12).map(ligne).join('')}</div>${E.evaluations.length > 12 ? `<p class="eqp-note">Et ${E.evaluations.length - 12} note${E.evaluations.length > 13 ? 's' : ''} plus ancienne${E.evaluations.length > 13 ? 's' : ''} (moyenne ci-contre).</p>` : ''}` : `<p class="eqp-note">${E.lues ? 'Aucune note pour l’instant.' : 'Le panel n’a pas rendu les notes de cette personne.'}</p>`}</div></div>`;
+  }
+  const EQF_JOURS = 14;
+  /** Le graphique des 12 semaines : barres pour les ventes (un total), courbe pour le panier et les pièces (des moyennes). */
+  function fpGraphe(V, mode, sel) {
+    const S = V.semaines, W = 936, H = 268, g = 62, dr = 156, h = 18, b = 236, pw = W - g - dr, bande = pw / S.length, x = i => g + bande * (i + 0.5);
+    const val = S.map(s => mode === 'euros' ? s.ca : mode === 'panier' ? s.panier : s.pieces);
+    const refs = mode === 'euros' ? [] : [[V.equipe[mode], 'eq', 'équipe'], [V.cibles[mode], 'ci', 'cible du réseau']].filter(r => r[0] != null);
+    const pres = val.filter(v => v != null).concat(refs.map(r => r[0]));
+    const fmt = v => mode === 'euros' ? fE(v) : mode === 'panier' ? fD(v, 2) + ' €' : fD(v, 2);
+    let lo, hi, pas;
+    if (mode === 'euros') { const m = Math.max(100, ...pres) * 1.3, e = 10 ** Math.floor(Math.log10(m / 5)); pas = [1, 2, 2.5, 5, 10].map(k => k * e).find(k => m / k <= 6); lo = 0; hi = Math.ceil(m / pas) * pas; }
+    else { const mn = Math.min(...pres), mx = Math.max(...pres), r = Math.max(mx - mn, mode === 'panier' ? 1 : 0.3); pas = mode === 'panier' ? (r > 4 ? 2 : r > 2 ? 1 : 0.5) : (r > 1.2 ? 0.4 : 0.2); lo = Math.floor((mn - r * 0.25) / pas) * pas; hi = Math.ceil((mx + r * 0.35) / pas) * pas; if (lo < 0) { lo = 0; } }
+    const y = v => b - (v - lo) / (hi - lo) * (b - h);
+    let s = '';
+    for (let v = lo; v <= hi + 1e-9; v += pas) { s += `<line class="${Math.abs(v - lo) < 1e-9 ? 'axe' : 'gr'}" x1="${g}" x2="${W - dr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${g - 8}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${mode === 'euros' ? fE(v) : fD(v, mode === 'panier' ? (pas < 1 ? 1 : 0) : 1) + (mode === 'panier' ? ' €' : '')}</text>`; }
+    S.forEach((w, i) => { const d = dt(w.du); s += `<text x="${x(i).toFixed(1)}" y="${b + 18}" text-anchor="middle">${d.getDate()}/${d.getMonth() + 1}</text>`; });
+    if (mode === 'euros') {
+      const bw = bande * 0.56;
+      val.forEach((v, i) => { if (!v) { return; } const x0 = x(i) - bw / 2, y0 = y(v), r = Math.min(4, (b - y0) / 2);
+        s += `<path class="br${i === sel ? ' on' : ''}" d="M${x0.toFixed(1)},${b} V${(y0 + r).toFixed(1)} Q${x0.toFixed(1)},${y0.toFixed(1)} ${(x0 + r).toFixed(1)},${y0.toFixed(1)} H${(x0 + bw - r).toFixed(1)} Q${(x0 + bw).toFixed(1)},${y0.toFixed(1)} ${(x0 + bw).toFixed(1)},${(y0 + r).toFixed(1)} V${b} Z"/>`; });
+      const n = val.filter(v => v > 0), moy = n.length ? n.reduce((a, c) => a + c, 0) / n.length : null;
+      if (moy) { s += `<line class="ref eq" x1="${g}" x2="${W - dr}" y1="${y(moy).toFixed(1)}" y2="${y(moy).toFixed(1)}"/><text class="ref eq" x="${W - dr + 8}" y="${(y(moy) + 4).toFixed(1)}">sa moyenne ${fE(moy)}</text>`; }
+    } else {
+      refs.forEach(([v, cl, l]) => { s += `<line class="ref ${cl}" x1="${g}" x2="${W - dr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text class="ref ${cl}" x="${W - dr + 8}" y="${(y(v) + 4).toFixed(1)}">${l} ${fmt(v)}</text>`; });
+      if (sel != null) { s += `<line class="cx" x1="${x(sel).toFixed(1)}" x2="${x(sel).toFixed(1)}" y1="${h}" y2="${b}"/>`; }
+      // La courbe, coupée là où une semaine n'a pas de valeur.
+      let seg = []; const tracer = () => { if (seg.length > 1) { s += `<polyline class="ln" points="${seg.join(' ')}"/>`; } seg = []; };
+      val.forEach((v, i) => { if (v == null) { tracer(); } else { seg.push(x(i).toFixed(1) + ',' + y(v).toFixed(1)); } }); tracer();
+      val.forEach((v, i) => { if (v != null) { s += `<circle class="pt" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === sel ? 5 : 4}"/>`; } });
+    }
+    // Les zones de survol : une par semaine, plus larges que la marque.
+    S.forEach((w, i) => { s += `<rect class="hit" data-eqp-fp-sem="${i}" x="${(g + bande * i).toFixed(1)}" y="${h}" width="${bande.toFixed(1)}" height="${b - h}"/>`; });
+    let tip = '';
+    if (sel != null && S[sel]) {
+      const w = S[sel], d = dt(w.du), gauche = x(sel) > W / 2;
+      // Posée dans une zone vide : au-dessus des barres (ventes) ; sinon, du côté du tracé opposé à la valeur.
+      const vy = val[sel] != null ? y(val[sel]) : b, haut = mode === 'euros' ? 2 : (vy < (h + b) / 2 ? b - 58 : h + 2);
+      tip = `<div class="eqp-fp-tip" style="${gauche ? 'right:' + ((W - x(sel) + 12) / W * 100).toFixed(2) : 'left:' + ((x(sel) + 12) / W * 100).toFixed(2)}%;top:${(haut / H * 100).toFixed(2)}%"><b>Semaine du ${d.getDate()} ${esc(MOIS[d.getMonth()])} · ${fE(w.ca)}</b><span>${w.tickets} tickets · panier ${w.panier != null ? fD(w.panier, 2) + ' €' : '—'} · ${w.pieces != null ? fD(w.pieces, 2) + ' pièces' : 'pièces —'}</span>${w.jours < 7 ? `<span>${w.jours} jour${w.jours > 1 ? 's' : ''} sur 7 lus</span>` : ''}</div>`;
+    }
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${mode === 'euros' ? 'Ventes en euros' : mode === 'panier' ? 'Panier moyen' : 'Pièces par ticket'}, ${S.length} dernières semaines">${s}</svg>${tip}`;
+  }
+  function fpVentes() {
+    const f = st.fp, V = f.VT;
+    if (f.VTerr) { return `<div class="eqp-err">Les ventes ne se lisent pas : ${esc(f.VTerr)}</div>`; }
+    if (!V) { return '<div class="eqp-attente">Lecture des ventes des 12 dernières semaines…</div>'; }
+    const T = V.total, E = V.equipe, Ci = V.cibles, S = V.semaines, sel = f.survol != null ? f.survol : (() => { for (let i = S.length - 1; i >= 0; i--) { if (S[i].tickets) { return i; } } return null; })();
+    const k = (v, l, n) => `<div class="kpi"><div class="kpi__value">${v}</div><div class="kpi__label">${l}</div><div class="kpi__note">${n}</div></div>`;
+    const d0 = dt(S[0].du), d1 = dt(S[S.length - 1].du); d1.setDate(d1.getDate() + 6);
+    const titre = { euros: 'Ventes en euros, par semaine', panier: 'Panier moyen, par semaine', pieces: 'Pièces par ticket, par semaine' }[f.mode];
+    const C = V.couverture, trous = C.ventes < C.jours || C.lignes < C.jours;
+    const tableau = `<table class="eqp-fp-sem"><thead><tr><th>Semaine du</th><th class="num">Vendu</th><th class="num">Tickets</th><th class="num">Panier</th><th class="num">Pièces / ticket</th></tr></thead><tbody>${S.map(w => { const d = dt(w.du); return `<tr><td>${d.getDate()} ${esc(MOIS[d.getMonth()])}</td><td class="num">${w.tickets ? fE(w.ca) : '—'}</td><td class="num">${w.tickets || '—'}</td><td class="num">${w.panier != null ? fD(w.panier, 2) + ' €' : '—'}</td><td class="num">${w.pieces != null ? fD(w.pieces, 2) : '—'}</td></tr>`; }).join('')}</tbody></table>`;
+    return `<section class="card eqp-kpis eqp-fp-kpis"><div class="kpi-row">
+        ${k(fE(T.ca), 'Vendu · 12 semaines', T.part != null ? fP(T.part) + ' des ventes du magasin' : '—')}
+        ${k(T.panier != null ? fD(T.panier, 2) + ' €' : '—', 'Panier moyen', (E.panier != null ? 'équipe ' + fD(E.panier, 2) + ' €' : '') + ' · cible ' + fD(Ci.panier, 2) + ' €')}
+        ${k(T.pieces != null ? fD(T.pieces, 2) : '—', 'Pièces par ticket', (E.pieces != null ? 'équipe ' + fD(E.pieces, 2) : '') + ' · cible ' + fD(Ci.pieces, 1))}
+        ${k(T.tickets.toLocaleString('fr-BE').replace(/\s/g, ' '), 'Tickets', fD(T.tickets / S.length, 0) + ' par semaine')}
+        ${k(V.rang ? V.rang.position + '<sup>e</sup><span class="u">/ ' + V.rang.sur + '</span>' : '—', 'Rang au panier moyen', V.rang ? 'dans l’équipe, 30 tickets au moins' : 'moins de 30 tickets sur la période')}</div></section>
+      <div class="eqp-fp-gt"><div><h4>${titre}</h4><span class="eqp-note">les 12 dernières semaines complètes, du ${d0.getDate()} ${esc(MOIS[d0.getMonth()])} au ${d1.getDate()} ${esc(MOIS[d1.getMonth()])}</span></div><span class="eqp-sp"></span>
+        <div class="seg" role="group" aria-label="La mesure">${[['euros', 'Ventes en €'], ['panier', 'Panier moyen'], ['pieces', 'Pièces par ticket']].map(([m, l]) => `<button type="button" data-eqp-fp-mode="${m}" class="${f.mode === m ? 'is-on' : ''}">${l}</button>`).join('')}</div>
+        <button class="linklike" type="button" data-eqp-fp-tableau="1">${f.tableau ? 'Voir le graphique' : 'Voir en tableau'}</button></div>
+      ${f.tableau ? tableau : `<div class="eqp-fp-gr" data-eqp-fp-gr="1">${fpGraphe(V, f.mode, sel)}</div>`}
+      <p class="eqp-note" style="margin:6px 0 0">${f.mode === 'euros' ? 'Le trait gris : sa moyenne sur les semaines vendues.' : 'Les traits : la moyenne de l’équipe (gris) et la cible du réseau (bleu).'} Pièces par ticket = lignes par ticket, la règle du cockpit (un ticket de 3 croissants compte 1).${trous ? ` Lus : ${C.ventes} jours sur ${C.jours} pour les ventes, ${C.lignes} pour les pièces (la moisson des tickets complète le reste chaque heure).` : ''}</p>`;
+  }
+  function fpCompetences(p) {
+    return `<div class="eqp-fp-cols"><div><h4>Poste et niveau</h4>${p.positions.length ? p.positions.map(x => `<div class="eqp-fp-pos"><b>${esc(x.nom)}</b>${x.niveau ? ' · ' + esc(x.niveau) : ''}</div>`).join('') : '<p class="eqp-note">Aucun poste de carrière au panel.</p>'}
+        <h4 style="margin-top:16px">Compétences</h4>${p.competences.length ? `<div class="eqp-fp-chips">${p.competences.map(c => `<span class="chip chip--ok">✓ ${esc(c)}</span>`).join('')}</div>` : '<p class="eqp-note">Aucune compétence enregistrée au panel.</p>'}</div>
+      <div><h4>Postes de travail</h4>${p.postes.length ? `<div class="eqp-fp-chips">${p.postes.map(x => `<span class="chip chip--neutral">${esc(x.nom || '#' + x.id)}</span>`).join('')}</div>` : '<p class="eqp-note">Aucun poste de travail.</p>'}
+        <div style="margin-top:12px"><button class="btn btn--sm" type="button" data-eqp-fp-postes="1">Modifier ses postes</button></div>
+        <p class="eqp-note">Les postes de travail disent ses produits et ses secteurs (onglet Responsabilités). Les compétences et les niveaux se règlent au panel.</p></div></div>`;
+  }
+  function rendFichePersonne() {
+    const f = st.fp; if (!f) { return ''; }
+    const F = f.F, p = F && F.personne;
+    const tete = p ? `<div class="eqp-fp-tete"><span class="eqp-av eqp-fp-av">${esc(ini(p.nom))}</span><div><div class="eqp-fp-nm">${esc(p.nom)}</div>
+        <div class="eqp-fp-chips">${(p.fonctions.length ? p.fonctions : p.roles).slice(0, 2).map(x => `<span class="chip chip--neutral">${esc(x)}</span>`).join('')}${p.contrat ? `<span class="chip chip--neutral">${esc(F.choix.contrats[p.contrat])}</span>` : ''}${p.franchise ? '<span class="chip chip--neutral">Franchisé·e</span>' : ''}<span class="chip ${p.actif ? 'chip--ok' : 'chip--draft'}">${p.actif ? 'Active' : 'Désactivée'}</span></div></div>
+        <button type="button" class="eqp-fo-x" data-eqp-fp-fermer="1" aria-label="Fermer">×</button></div>`
+      : `<div class="eqp-fp-tete"><div class="eqp-fp-nm">${f.Ferr ? 'La fiche ne se lit pas' : 'Lecture de la fiche…'}</div><button type="button" class="eqp-fo-x" data-eqp-fp-fermer="1" aria-label="Fermer">×</button></div>`;
+    const nav = `<nav class="page-tabs eqp-fp-tabs" aria-label="La fiche">${FP_ONGLETS.map(([k, l]) => `<button type="button" class="page-tabs__tab${f.onglet === k ? ' is-on' : ''}" data-eqp-fp-onglet="${k}">${l}${k === 'evaluations' && f.EV && f.EV.aNoter.length ? ` <span class="page-tabs__count">${f.EV.aNoter.length} à noter</span>` : ''}</button>`).join('')}</nav>`;
+    let corps = '', pied = '';
+    if (f.Ferr) { corps = `<div class="eqp-err">${esc(f.Ferr)} <button type="button" class="linklike" data-eqp-fp-relire="1">Réessayer</button></div>`; }
+    else if (!p) { corps = '<div class="eqp-attente">Lecture de la fiche…</div>'; }
+    else if (f.onglet === 'identite') {
+      corps = fpIdentite(p, F.choix);
+      const n = Object.keys(fpChange()).length;
+      pied = `<span class="eqp-note">Écrit dans TF Buddy ; rien n’est envoyé avant « Enregistrer ».</span><span class="eqp-sp"></span><button class="btn" type="button" data-eqp-fp-reset="1"${n && !f.envoi ? '' : ' disabled'}>Annuler</button><button class="btn btn--primary" type="button" data-eqp-fp-enr="1"${n && !f.envoi && p.actif ? '' : ' disabled'}>${f.envoi ? 'Enregistrement…' : 'Enregistrer'}</button>`;
+    }
+    else if (f.onglet === 'cout') { corps = fpCout(p); }
+    else if (f.onglet === 'evaluations') { corps = fpEvaluations(); }
+    else if (f.onglet === 'ventes') { corps = fpVentes(); }
+    else if (f.onglet === 'competences') { corps = fpCompetences(p); }
+    else { corps = `<div class="eqp-fp-primes"><p>Les primes de ${esc(p.prenom || p.nom)} sont dans la page des primes de l’équipe : chaque prime, sa place, ce qu’elle a déjà gagné ce mois-ci, comme elle le voit dans « Mes primes ».</p>${p.franchise ? '<p class="eqp-note">Franchisé·e : hors primes (dans les statistiques seulement).</p>' : ''}${st.primes ? '<button class="btn btn--primary" type="button" data-eqp-fp-primes="1">Ouvrir les primes de l’équipe</button>' : ''}</div>`; }
+    const msg = f.msg ? `<div class="eqp-flash ${f.msg[0] === 'ok' ? 'ok' : 'ko'}" role="status">${esc(f.msg[1])}</div>` : '';
+    return `<div class="eqp-voile eqp-fp-voile" data-eqp-fp-fermer="1"><div class="eqp-mod eqp-fp card" role="dialog" aria-modal="true" aria-label="Fiche de ${esc(p ? p.nom : 'la personne')}" data-eqp-garde="1">${tete}${nav}<div class="eqp-fp-corps">${msg}${corps}</div>${pied ? `<div class="eqp-fp-pied">${pied}</div>` : ''}</div></div>`;
+  }
+  function fpBrancher(el, on) {
+    on('[data-eqp-fiche]', 'click', e => { e.stopPropagation(); ouvrirFiche(+e.currentTarget.dataset.eqpFiche); });
+    if (!st.fp) { return; }
+    const f = st.fp;
+    on('[data-eqp-fp-fermer]', 'click', e => { if (e.target !== e.currentTarget || f.envoi) { return; } st.fp = null; rendre(); });
+    on('[data-eqp-fp-onglet]', 'click', e => { f.onglet = e.currentTarget.dataset.eqpFpOnglet; f.msg = null; fpCharger(); rendre(); });
+    on('[data-eqp-fp-relire]', 'click', () => { lireFiche(); rendre(); });
+    on('[data-eqp-fp-champ]', 'input', e => {
+      f.form[e.target.dataset.eqpFpChamp] = e.target.value;
+      const z = el.querySelector('[data-eqp-fp-effet]'); if (z) { const h = fpEffet(); z.innerHTML = h; z.hidden = !h; }
+      const n = Object.keys(fpChange()).length, b1 = el.querySelector('[data-eqp-fp-enr]'), b2 = el.querySelector('[data-eqp-fp-reset]');
+      if (b1) { b1.disabled = !n || f.envoi; } if (b2) { b2.disabled = !n || f.envoi; }
+    });
+    on('[data-eqp-fp-reset]', 'click', () => { f.form = fpForm(f.F.personne); f.msg = null; rendre(); });
+    on('[data-eqp-fp-enr]', 'click', fpEnregistrer);
+    on('[data-eqp-fp-anoter]', 'click', e => { const b = e.currentTarget; f.note = { service: +b.dataset.eqpFpAnoter, date: b.dataset.date, note: 0, mot: '' }; f.msg = null; rendre(); });
+    on('[data-eqp-fp-etoile]', 'click', e => { f.note.note = +e.currentTarget.dataset.eqpFpEtoile; rendre(); });
+    on('[data-eqp-fp-mot]', 'input', e => { f.note.mot = e.target.value; });
+    on('[data-eqp-fp-passer]', 'click', () => { f.note = null; rendre(); });
+    on('[data-eqp-fp-noter]', 'click', fpNoter);
+    on('[data-eqp-fp-mode]', 'click', e => { f.mode = e.currentTarget.dataset.eqpFpMode; f.survol = null; rendre(); });
+    on('[data-eqp-fp-tableau]', 'click', () => { f.tableau = !f.tableau; rendre(); });
+    // Le survol du graphique : seul le graphique se redessine.
+    const gr = el.querySelector('[data-eqp-fp-gr]');
+    if (gr && f.VT) {
+      gr.addEventListener('mouseover', e => { const r = e.target.closest('[data-eqp-fp-sem]'); if (!r) { return; } const i = +r.dataset.eqpFpSem; if (i !== f.survol) { f.survol = i; gr.innerHTML = fpGraphe(f.VT, f.mode, i); } });
+    }
+    on('[data-eqp-fp-postes]', 'click', () => { const id = f.id; st.fp = null; st.onglet = 'resp'; ouvrirPostes(id); });
+    on('[data-eqp-fp-primes]', 'click', () => { st.fp = null; if (st.primes) { st.primes(); } });
+  }
+
   /* ── Les gestes ──────────────────────────────────────────────────────────────────────────────────────────────── */
   function brancher() {
     const el = st.el, on = (sel, ev, f) => el.querySelectorAll(sel).forEach(n => n.addEventListener(ev, f));
-    on('[data-eqp-onglet]', 'click', e => { st.onglet = e.currentTarget.dataset.eqpOnglet; st.edit = null; if (st.onglet === 'planning') { chargerVue(); } rendre(); });
+    fpBrancher(el, on);
+    on('[data-eqp-onglet]', 'click', e => { const k = e.currentTarget.dataset.eqpOnglet; if (k === 'primes') { if (st.primes) { st.primes(); } return; } st.onglet = k; st.edit = null; if (st.onglet === 'planning') { chargerVue(); } rendre(); });
     on('[data-eqp-relire]', 'click', () => relireTout());
     on('[data-eqp-sel]', 'click', e => { st.sel = +e.currentTarget.dataset.eqpSel; st.tousProduits = false; rendre(); });
     on('[data-eqp-q]', 'input', e => { st.q = e.target.value; const p = e.target.selectionStart; rendre(); const n = el.querySelector('[data-eqp-q]'); if (n) { n.focus(); n.setSelectionRange(p, p); } });
@@ -1324,11 +1639,14 @@
       if (!st.el || st.shop !== String(shop)) {
         Object.assign(st, { shop: String(shop), R: null, PJ: null, PS: null, edit: null, mod: null, sel: null });
         st.el = document.createElement('div'); st.el.className = 'eqp';
-        st.api = o.apiBase || st.api; st.aller = o.aller || null; st.bureau = o.bureau || null;
+        st.api = o.apiBase || st.api; st.aller = o.aller || null; st.bureau = o.bureau || null; st.primes = o.primes || null;
         rendre(); relireTout();
-      } else { st.bureau = o.bureau || st.bureau; rendre(); }
+      } else { st.bureau = o.bureau || st.bureau; st.primes = o.primes || st.primes; rendre(); }
       return st.el;
     },
     relire() { if (st.el) { st.PJ = null; st.PS = null; relireTout(); if (st.onglet === 'planning') { chargerVue(); } } },
+    /** L'onglet à montrer (24/11/2026) : la page des primes y revient par sa rangée d'onglets. Avant le premier rendu,
+     *  l'onglet attend racine() (qui lit la semaine du planning) ; après, la vue du planning se lit si besoin. */
+    onglet(k) { if (k !== 'resp' && k !== 'planning') { return; } st.onglet = k; st.edit = null; if (st.el && k === 'planning') { chargerVue(); } },
   };
 })();

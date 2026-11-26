@@ -1505,8 +1505,11 @@ function primesAnnee(int $y, bool $frais = false): array
             if (!isset($pers[$id])) { $pers[$id] = ['id' => $id, 'nom' => $p['nom'], 'shopId' => (string) $p['shopId'], 'magasinNom' => $p['magasinNom'], 'total' => 0.0, 'mois' => [], 'cases' => []]; }
             foreach ($g as $k => $x) {
                 $libDe[$k] = $x['lib'];
-                $c = $pers[$id]['cases'][$k] ?? ['montant' => 0.0, 'fois' => 0];
-                $pers[$id]['cases'][$k] = ['montant' => round($c['montant'] + $x['montant'], 2), 'fois' => $c['fois'] + 1];
+                $c = $pers[$id]['cases'][$k] ?? ['montant' => 0.0, 'fois' => 0, 'foisClos' => 0];
+                // `foisClos` : les mois clos seulement (25/11/2026) — l'anneau de l'année divise par les mois clos ; avec le
+                // mois en cours, il pouvait afficher 10 / 10 malgré un mois manqué, ou dépasser 100 %.
+                $pers[$id]['cases'][$k] = ['montant' => round($c['montant'] + $x['montant'], 2), 'fois' => $c['fois'] + 1,
+                    'foisClos' => ($c['foisClos'] ?? 0) + ($m === date('Y-m') ? 0 : 1)];
                 $pers[$id]['total'] = round($pers[$id]['total'] + $x['montant'], 2);
                 $totalM += $x['montant'];
             }

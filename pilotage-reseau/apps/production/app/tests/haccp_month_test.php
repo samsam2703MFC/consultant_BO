@@ -90,7 +90,7 @@ $today = '2026-11-24';
 
 // --- Sources vides : « brak danych » (tables présentes mais personne n'y a rien enregistré)
 $e = $svc->data($today);
-$check($e['review'] === [] && $e['can_finish'] === true && array_map(fn($s) => $s['available'], $e['sources']) === ['haccp' => false, 'sop' => false, 'sop_haccp' => false, 'sop_run' => false, 'temp' => false]
+$check($e['review'] === [] && $e['can_finish'] === true && array_map(fn($s) => $s['available'], $e['sources']) === ['haccp' => false, 'sop' => false, 'sop_haccp' => false, 'sop_run' => false, 'temp' => false, 'hala_chill' => false, 'hala_clean' => false, 'cold_clean' => false]
     && $e['sources']['haccp']['note'] === 'brak danych — nikt nie wpisuje zdarzeń HACCP (moduł Kierownik produkcji)' && $e['trend']['rows'][0]['values'] === [null, null, null, null, null]
     && $e['summary'] === 'październik 2026 : brak sygnałów HACCP', 'empty sources → « brak danych », nothing to review, trend without data');
 $pdo->exec('RENAME TABLE n_delivery_incident TO n_delivery_incident_x');
@@ -180,12 +180,14 @@ $check($codes($rv['sop_run:11']) === ['sop_deviation_haccp'] && $rv['sop_run:11'
 $check($codes($rv['temp:41']) === ['delivery_temp'] && $rv['temp:41']['title'] === 'Bistro Lumière' && $rv['temp:43']['title'] === 'Jan Kowal' && $rv['temp:43']['link']['href'] === '/logistics/deliveries?date=2026-11-03'
     && !isset($rv['temp:42']), 'temperature incidents (customer name as in DeliveryRepository) ; other incident kinds ignored');
 $t = $d['totals'];
-$check($t['review'] === 12 && $t['waiting'] === 12 && $t['by_kind'] === ['haccp_event' => 5, 'sop_review' => 2, 'sop_run' => 3, 'delivery_temp' => 2]
-    && $t['month_by_kind'] === ['haccp_event' => 3, 'sop_review' => 2, 'sop_run' => 2, 'delivery_temp' => 1] && $t['current'] === 3 && $t['backlog'] === 1 && $t['month_events'] === 5
-    && $t['month_runs_haccp'] === 1 && $t['sops_active'] === 3 && $d['can_finish'] === false && array_filter(array_column($d['sources'], 'available')) === array_column($d['sources'], 'available'), 'totals ; all sources available');
+$check($t['review'] === 12 && $t['waiting'] === 12 && $t['by_kind'] === ['haccp_event' => 5, 'sop_review' => 2, 'sop_run' => 3, 'delivery_temp' => 2, 'hala_chill' => 0, 'hala_clean' => 0, 'cold_clean' => 0]
+    && $t['month_by_kind'] === ['haccp_event' => 3, 'sop_review' => 2, 'sop_run' => 2, 'delivery_temp' => 1, 'hala_chill' => 0, 'hala_clean' => 0, 'cold_clean' => 0] && $t['current'] === 3 && $t['backlog'] === 1 && $t['month_events'] === 5
+    && $t['month_runs_haccp'] === 1 && $t['sops_active'] === 3 && $d['can_finish'] === false && array_slice(array_column($d['sources'], 'available'), 0, 5) === [true, true, true, true, true]
+    && $d['sources']['hala_chill']['note'] === 'brak danych — brak tabeli w bazie' && $d['sources']['hala_clean']['available'] === false && $d['sources']['cold_clean']['available'] === false,
+    'totals ; all sources available (tablet hali [409], obchód chłodni [432] : no table here, tests/hala_tablet_test.php, tests/cold_visit_test.php)');
 $tr = $d['trend'];
 $check(array_column($tr['months'], 'key') === ['2026-07', '2026-08', '2026-09', '2026-10', '2026-11'] && $tr['months'][3]['reviewed'] && $tr['months'][4]['current']
-    && array_column($tr['rows'], 'values', 'key') === ['haccp' => [0, 0, 1, 3, 1], 'sop_run' => [0, 0, 1, 2, 1], 'temp' => [0, 1, 0, 1, 1]]
+    && array_column($tr['rows'], 'values', 'key') === ['haccp' => [0, 0, 1, 3, 1], 'sop_run' => [0, 0, 1, 2, 1], 'temp' => [0, 1, 0, 1, 1], 'hala_chill' => [null, null, null, null, null]]
     && $tr['rows'][0]['avg_prev'] === 0.3 && $tr['rows'][0]['dir'] === 'up' && $tr['rows'][2]['dir'] === 'up', 'trend: 3 previous months, reviewed month, current month');
 $check($erp0 === $sum(), 'reading writes nothing in the source tables');
 
