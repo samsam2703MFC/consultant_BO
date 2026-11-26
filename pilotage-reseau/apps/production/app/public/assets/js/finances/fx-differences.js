@@ -138,7 +138,7 @@
     function statements() {
         const list = D.statements.map(s => `<div class="fx-li"><div><b>${esc(s.label)}</b>
                 <span class="fx-sub">${s.customers} ${plural(s.customers, 'wpłata klienta', 'wpłaty klientów', 'wpłat klientów')}${s.other ? ` · ${s.other} ${plural(s.other, 'inna linia', 'inne linie', 'innych linii')}` : ''}</span>
-                ${s.status === 'unsupported' ? `<span class="fx-sub" title="${esc(s.message || '')}">format ING w przygotowaniu — wpłaty wpisane ręcznie</span>` : ''}
+                ${s.status === 'unsupported' ? `<span class="fx-sub" title="${esc(s.message || '')}">nie odczytano — wpłaty wpisane ręcznie</span>` : ''}
                 ${s.status === 'no_text' ? `<span class="fx-sub">${esc(s.message || '')}</span>` : ''}
                 <span class="fx-sub">${s.has_file ? `<a class="fx-link" href="${esc(at.root + BASE + '/statements/' + s.id + '/file')}" target="_blank" rel="noopener">PDF</a>` : ''}
                     <button type="button" class="fx-link" data-fx-del-statement="${s.id}">Usuń</button></span></div>${chip(s.chip[0], s.chip[1])}</div>`).join('');
@@ -197,7 +197,7 @@
             <label class="fx-wide">Plik PDF<input type="file" name="file" accept="application/pdf,.pdf" required></label>
             <label class="fx-wide">Rachunek<select name="account" required>${acc}</select></label>
             <label>Okres od<input type="date" name="period_from"></label><label>Okres do<input type="date" name="period_to"></label>
-            <p class="fx-note fx-wide">Plik jest zapisywany zaszyfrowany. Format wyciągu ING jest jeszcze w przygotowaniu : jeśli nie da się go odczytać, wpisz wpłaty ręcznie (« Dodaj wpłatę »).</p></form>`,
+            <p class="fx-note fx-wide">Plik jest zapisywany zaszyfrowany. Wyciąg z rachunku EUR jest odczytywany sam (wpłaty klientów, sprawdzone z sumami wyciągu) ; wyciąg PLN — jeszcze w przygotowaniu : wpisz wpłaty ręcznie z kursem ING (« Dodaj wpłatę »).</p></form>`,
             async (form) => {
                 const fd = new FormData(form);
                 fd.append('month', D.month);

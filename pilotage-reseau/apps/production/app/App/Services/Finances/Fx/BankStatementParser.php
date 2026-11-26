@@ -14,6 +14,13 @@ interface BankStatementParser
     public function name(): string;
 
     /**
+     * [444] En-tête du relevé, sans lever d'exception (null = pas lu) : devise du compte (contrôle du compte choisi à
+     * l'envoi), période, numéro.
+     * @return array{account_currency?: ?string, period_from?: ?string, period_to?: ?string, number?: ?string}
+     */
+    public function header(string $text): array;
+
+    /**
      * @return list<array{booked_on: string, amount: float, currency: string, amount_pln: ?float, bank_rate: ?float,
      *     payer: ?string, title: ?string, incoming: bool}> toutes les lignes du relevé (crédits et débits) ; seuls les
      *     crédits en devise sont gardés comme paiements de clients, les autres sont comptés (« inne linie »)
