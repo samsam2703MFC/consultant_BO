@@ -9882,7 +9882,7 @@
   /**
    * Les douze dernières semaines, face au N-1 (19/10/2026, la courbe de Résultat › Trafic clients, demande de Sam) : une
    * mesure de chaque semaine close sur celle de la même semaine un an plus tôt en pointillé, la bande entre les deux —
-   * bleue au-dessus du N-1, orange en dessous —, l'écart semaine par semaine et trois tuiles. Un sélecteur à trois
+   * verte au-dessus du N-1, or en dessous —, l'écart semaine par semaine et trois tuiles. Un sélecteur à trois
    * positions choisit la mesure : les clients (tickets), le panier moyen (CA ÷ tickets), les articles par client (pièces
    * vendues ÷ tickets). La semaine en cours, servie un jour ou deux, reste hors de la courbe (elle la ferait plonger) :
    * sa tuile la compare au N-1 aux mêmes jours. Sans N-1 (magasin trop jeune), la courbe reste seule et le motif se lit
