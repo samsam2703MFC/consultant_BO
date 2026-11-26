@@ -550,6 +550,12 @@ class App {
     }
     if (id === 'apiModule') { return { apiSrc: (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('source') || '').trim() }; }
     if (id === 'filFranchise') { const shop = App.shopDeAdresse(); return shop ? { flMag: shop } : {}; }
+    if (id === 'verifRecettes') {
+      // « ?vue=refs&recette=tagliata » (26/11/2026) : Matières premières › Références et pertes, la recette ouverte.
+      const a = new URLSearchParams(String(location.hash || '').split('?')[1] || ''), vue = (a.get('vue') || '').trim(), r = (a.get('recette') || '').trim().slice(0, 80);
+      if (vue !== 'refs') { return {}; }
+      return Object.assign({ vrVue: 'matieres', vmAff: 'refs' }, r ? { vfRefQ: r, vfRefAuto: r } : {});
+    }
     if (id === 'cadreTaches') {
       // « ?checklist=43 » ouvre la checklist ; « ?sop=ouv-mag » (Formation › la fiche d'une SOP) ouvre l'assistant sur ce standard.
       const a = new URLSearchParams(String(location.hash || '').split('?')[1] || ''), cl = (a.get('checklist') || '').trim(), sop = (a.get('sop') || '').trim();

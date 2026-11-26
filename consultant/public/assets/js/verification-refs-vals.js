@@ -21,6 +21,8 @@ const envoyer = (app, corps) => write(app.source || 'api', 'POST', ROUTE + 'refe
 
 export function valsRefs(app){
   const S = app.state, R = S.vfRef;
+  // Ouverte par son adresse (« ?vue=refs&recette=tagliata ») : la recette se lit tout de suite.
+  if (S.vfRefAuto && !R) { const t = S.vfRefAuto; app.setState({ vfRefAuto: null }); setTimeout(() => charger(app, /^\d+$/.test(t) ? { rid: Number(t) } : { q: t }), 0); }
   const d = R && R.d && R.d.ok ? R.d : null;
   const v = {
     q: S.vfRefQ || '', poserQ: e => app.setState({ vfRefQ: e.target.value }),
