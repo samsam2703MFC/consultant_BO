@@ -13,8 +13,11 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   `caisse/`, `audit/`, `audits/`, `autocontrole/` et les scripts du cockpit dans `assets/js/`). La SPA du cockpit et
   son routeur sont dans `shared/`.
 - **Autocontrôle qualité** (`src/autocontrole.php`, grilles d'exemple `src/data/autocontrole_grilles.json`) : la
-  tablette `autocontrole/?shop=` (`&produit=` ouvre un produit, `&essai=1` enregistre à part), le siège
-  `autocontrole/grilles.html` (résultats, grilles par catégorie, publication). Maquettes et choix :
+  tablette `autocontrole/?shop=` (`&produit=` ouvre un produit, `&essai=1` enregistre à part, `&role=` qui contrôle :
+  équipe, manager, franchisé, consultant), le siège `autocontrole/grilles.html` (résultats, grilles par catégorie,
+  publication), l'onglet Qualité de la fiche produit du cockpit (réglages par produit). Dans la visite (26/11/2026) :
+  l'étape « Le contrôle qualité de 3 produits » de `visites.js` ouvre la tablette dans un cadre (`&visite=&cadre=1`) ;
+  les contrôles (`con_aq_controle.visite_id`) entrent dans le rapport (`suQualite*`). Maquettes et choix :
   `formation/docs/maquettes/autocontrole-qualite/LISEZMOI.md`.
 - **Crons** : `consultant/bin/rapports_cron.sh`, `consultant/bin/visites_cron.sh`, `consultant/bin/stock_cron.sh`,
   `consultant/bin/helpdesk_cron.sh` (relances SMS du helpdesk) ; `consultant/bin/push_stock.php`.

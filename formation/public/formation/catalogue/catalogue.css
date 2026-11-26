@@ -218,6 +218,17 @@ html, body { background: var(--paper, #faf7f2); }
 .pg .ft-vide { color: var(--prize-ink, #7A5207); font-style: italic; }
 .pg .ft-manque { margin-top: 3mm; font-size: 7.5pt; color: var(--prize-ink, #7A5207); background: var(--prize-soft, #F6E7CE); border-radius: 1.5mm; padding: 1.5mm 2mm; }
 .pg .ft-comp { font-size: 8pt; }
+/* Le contrôle qualité (26/11/2026) : ce qui est regardé, ce qui est bon (vert), à surveiller (or), pas bon (arrêt). */
+.pg .ft-q-leg { display: flex; gap: 1.5mm; align-items: center; flex-wrap: wrap; margin: 0 0 1.5mm; font-size: 7pt; }
+.pg .ft-q-leg small { color: var(--muted, #7a736a); }
+.pg .ft-q-et { margin: 2mm 0 .5mm; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #7a736a); }
+.pg .ft-q-et small { text-transform: none; letter-spacing: 0; }
+.pg .ft-q { display: grid; grid-template-columns: 34mm 1fr; gap: 2mm; align-items: baseline; padding: .7mm 0; border-bottom: 1px dotted var(--line, #e6e0d8); font-size: 8pt; }
+.pg .ft-q > span:last-child { display: flex; flex-wrap: wrap; gap: 1mm; }
+.pg .ft-q-ok, .pg .ft-q-mi, .pg .ft-q-ko { font-size: 7pt; line-height: 1.6; padding: 0 1.4mm; border-radius: 1mm; }
+.pg .ft-q-ok { background: rgba(63, 122, 82, 0.12); color: var(--green, #3f7a52); }
+.pg .ft-q-mi { background: var(--prize-soft, #F6E7CE); color: var(--prize-ink, #7A5207); }
+.pg .ft-q-ko { background: var(--stop-soft, #F7E0DC); color: var(--stop, #A32014); }
 .pg .ft-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; margin: 2mm 0 3mm; }
 .pg .ft-stats div { border: 1px solid var(--line, #e6e0d8); border-radius: 2mm; padding: 2mm; }
 .pg .ft-stats b { display: block; font-weight: 400; font-size: 16pt; color: var(--accent, #8D1D2C); }

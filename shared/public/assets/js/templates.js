@@ -390,6 +390,8 @@ function tplCatalogue(c, x){
         <div style="display:flex;justify-content:space-between;font-size:10.5px;${mu}"><span>${esc(f.courbeDe)}</span><span>max ${esc(f.courbeMax)}</span><span>${esc(f.courbeA)}</span></div>` : `<div style="font-size:12px;${mu}">Pas de série lue pour cette référence.</div>`}
       <div style="font-size:12.5px;margin-top:10px"><b>Tendance</b> : ${esc(f.tendance)}</div>
       <div style="margin-top:10px">${lien(f.versAnalyse, 'Groupes et catégories, magasin par magasin, face à l’an dernier ›')}</div>`;
+  } else if (f && f.onglet === 'qualite') {
+    corps = tplAqFiche(f.qualite || {}, x, mu);
   } else if (f) {
     corps = f.prod ? f.prod.map(kv).join('') + `<div style="font-size:11px;${mu};margin-top:8px">L’assortiment obligatoire se règle dans Comptoir · planogramme.</div>` : `<div style="font-size:12px;${mu}">Pas de fiche au catalogue pour cette référence.</div>`;
   }
@@ -407,6 +409,54 @@ function tplCatalogue(c, x){
   return `<div data-screen="catalogue">${tuiles}${c.catLienVue ? `<div style="margin:-6px 0 10px">${lien(c.catLienVue.go, c.catLienVue.txt)}</div>` : ''}${outils}<div style="display:flex;gap:14px;align-items:flex-start">${tableau}${fiche}</div>
     <div style="font-size:11.5px;${mu};margin-top:10px">${esc(c.catPeriode)} · le score et la décision sont ceux du réseau (volume, marge, perte, comptoir, revue) ; une question filtre la liste, un second clic la retire.</div>
     ${c.refEdit ? tplRefEdit(c, x) : ''}</div>`;
+}
+
+
+/* L'onglet Qualité de la fiche d'une référence (26/11/2026, consultant/src/autocontrole.php) : la grille
+   d'autocontrôle, les valeurs propres au produit, la photo de référence qualité, le standard (ce qui est regardé, ce qui
+   est bon, ce qui ne l'est pas) et les contrôles des 30 derniers jours. L'état se dit par un mot (design system §3). */
+function tplAqFiche(q, x, mu){
+  const { esc } = x;
+  if (q.vide) { return `<div style="font-size:12px;${mu}">${esc(q.vide)}</div>`; }
+  if (q.charge) { return `<div style="font-size:12px;${mu}">Lecture de l’autocontrôle…</div>`; }
+  if (q.err) { return `<div style="font-size:12px;color:var(--danger)">${esc(q.err)}</div>`; }
+  const d = q.d, b = q.b;
+  const T = 'font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:14px 0 6px';
+  const IN = 'font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink)';
+  const etat = (n, t) => `<span style="display:inline-block;padding:2px 7px;border-radius:${n === 'ok' ? 6 : 4}px;font-size:11px;margin:0 3px 3px 0;${n === 'ok' ? 'background:rgba(63,122,82,.12);color:var(--green)' : n === 'mineur' ? 'background:var(--prize-soft);color:var(--prize-ink)' : 'background:var(--stop-soft);color:var(--stop)'}">${esc(t)}</span>`;
+  const NIV = { ok: 'Conforme', mineur: 'À surveiller', majeur: 'Non conforme' };
+  const photo = b.photo !== undefined ? b.photo : (d.photo.qualite || d.photo.catalogue);
+  const sourcePhoto = b.photo ? 'nouvelle photo, à enregistrer' : b.photo === null ? 'photo du catalogue (la photo qualité sera retirée)' : d.photo.qualite ? 'photo de référence qualité' : d.photo.catalogue ? 'photo du catalogue' : '';
+  const r = d.resultats;
+  return `${d.aValider ? `<div style="padding:7px 10px;border-radius:8px;background:var(--prize-soft);color:var(--prize-ink);font-size:11.5px;margin-bottom:8px">Grilles d’exemple : critères et corrections à valider par la production.</div>` : ''}
+    <label style="font-size:11.5px;${mu};display:block;margin-bottom:4px">Grille d’autocontrôle</label>
+    <select ${x.C(q.choisirGrille)} style="${IN};width:100%">
+      <option value=""${b.categorie === '' ? ' selected' : ''}>Par mots-clés : ${esc(d.grille.autoNom || 'aucune grille (critères communs)')}</option>
+      ${d.categories.map(c => `<option value="${esc(c.cle)}"${b.categorie === c.cle ? ' selected' : ''}>${esc(c.libelle)}</option>`).join('')}</select>
+    <div style="${T}">Photo de référence</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      ${photo ? `<img src="${esc(photo)}" alt="" style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">` : `<div style="width:92px;height:92px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;${mu};text-align:center">pas de photo</div>`}
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px"><span style="${mu}">${esc(sourcePhoto)}</span>
+        <label class="btn btn--sm" style="cursor:pointer">Changer la photo<input type="file" accept="image/*" ${x.C(q.poserPhoto)} style="display:none"></label>
+        ${d.photo.qualite && b.photo !== null ? `<button ${x.A(q.retirerPhoto)} class="linklike" style="text-align:left">Revenir à la photo du catalogue</button>` : ''}</div></div>
+    ${d.mesures.length ? `<div style="${T}">Valeurs propres au produit</div>${d.mesures.map(m => { const v = b.surcharges[m.cle] || {}; const g = m.grille;
+      return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 74px 74px;gap:6px;align-items:center;padding:3px 0"><span style="font-size:12px">${esc(m.libelle)} <span style="${mu};font-size:11px">(${esc(m.unite)})</span></span>
+        <input ${x.I(q.poserMesure(m.cle, 'cible'))} value="${esc(v.cible ?? '')}" placeholder="${esc(g.cible ?? '')}" inputmode="decimal" aria-label="cible" style="${IN}">
+        <input ${x.I(q.poserMesure(m.cle, 'tolerance'))} value="${esc(v.tolerance ?? '')}" placeholder="± ${esc(g.tolerance ?? '')}" inputmode="decimal" aria-label="tolérance" style="${IN}"></div>`; }).join('')}
+      <div style="font-size:11px;${mu}">Vide : la valeur de la grille (en gris).</div>` : ''}
+    <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
+      <button ${x.A(q.enregistrer)} class="btn btn--primary btn--sm"${!q.modifie || q.busy ? ' disabled' : ''}>${q.busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+      ${q.modifie ? `<button ${x.A(q.annuler)} class="btn btn--ghost btn--sm">Annuler</button>` : ''}<span style="flex:1"></span>
+      <button ${x.A(q.tablette)} class="linklike">Tablette, en essai ↗</button><button ${x.A(q.grilles)} class="linklike">Grilles ↗</button></div>
+    <div style="${T}">Le standard · ${esc(d.grille.libelle)}${d.grille.forcee ? ' (forcée)' : ''}</div>
+    ${d.standard.map(e => `<div style="font-size:11.5px;margin:8px 0 3px">${esc(e.titre)}${e.photo === 'obligatoire' ? ` <span style="${mu}">· photo obligatoire</span>` : ''}</div>
+      ${e.criteres.map(c => `<div style="padding:4px 0;border-top:1px solid var(--color-border-tertiary);font-size:12px"><div style="margin-bottom:3px">${esc(c.libelle)}${c.facultatif ? ` <span style="${mu};font-size:11px">facultatif</span>` : ''}</div>
+        ${c.bon.map(t => etat('ok', t)).join('')}${c.surveiller.map(t => etat('mineur', t)).join('')}${c.pasBon.map(t => etat('majeur', t)).join('')}</div>`).join('')}`).join('')}
+    <div style="font-size:11px;${mu};margin-top:4px">En vert ce qui est bon, en or ce qui est à surveiller, en rouge ce qui ne l’est pas.</div>
+    <div style="${T}">Les 30 derniers jours</div>
+    <div style="font-size:12.5px">${r.n ? `${r.n} contrôle${r.n > 1 ? 's' : ''} · ${r.conformes} conforme${r.conformes > 1 ? 's' : ''}` : `<span style="${mu}">Aucun contrôle.</span>`}</div>
+    ${r.recurrents.map(k => `<div style="font-size:12px;margin-top:4px">${etat('mineur', k.fois + ' fois')} ${esc(k.libelle)}</div>`).join('')}
+    ${r.derniers.map(k => `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid var(--color-border-tertiary);font-size:12px"><span>${esc(k.cree_le.slice(8, 10) + '/' + k.cree_le.slice(5, 7))} · ${esc(k.magasin)}</span><span>${etat(k.niveau, NIV[k.niveau] || k.niveau)}</span></div>`).join('')}`;
 }
 
 

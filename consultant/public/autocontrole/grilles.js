@@ -65,7 +65,7 @@
       const ecarts = c.ecarts.map(e => e.libelle).join(', ');
       const ph = c.photos.map(p => `<img src="${API + esc(p.url)}" alt="" loading="lazy">`).join('');
       const tr = `<tr class="row-link" data-ouvrir="${c.id}"><td>${date(c.cree_le)}${c.essai ? ' <span class="chip chip--draft">essai</span>' : ''}<span class="sub">${c.fournee ? 'fournée de ' + esc(c.fournee) : 'sans fournée'}${c.pieces ? ' · ' + c.pieces + ' pcs' : ''}</span></td>
-        <td>${esc(c.magasin)}<span class="sub">${esc(c.auteur)}</span></td><td>${esc(c.produit)}<span class="sub">${esc(c.grille || 'critères communs')}</span></td>
+        <td>${esc(c.magasin)}<span class="sub">${esc([c.auteur, c.roleNom, c.visite ? 'visite du consultant' : ''].filter(Boolean).join(' · '))}</span></td><td>${esc(c.produit)}<span class="sub">${esc(c.grille || 'critères communs')}</span></td>
         <td>${etat(c.niveau)}</td><td>${esc(DEC[c.decision] || c.decision)}${c.decision !== c.suggestion ? `<span class="sub">suggéré : ${esc((DEC[c.suggestion] || '').toLowerCase())}</span>` : ''}</td>
         <td class="num">${c.ecarts.length}${ecarts ? `<span class="sub" style="text-align:left">${esc(ecarts)}</span>` : ''}</td><td><div class="gq-ph">${ph}</div></td>
         <td>${c.prevenir ? '<span class="chip chip--draft">Responsable prévenu</span> ' : ''}${c.reclamer ? '<span class="chip chip--draft">Réclamation</span>' : ''}</td></tr>`;
@@ -89,7 +89,7 @@
 
   /* ── Les grilles ─────────────────────────────────────────────────────────────────────────────────────── */
   const ETAPES = () => (S.doc && S.doc.etapes) || [];
-  const onglets = () => (S.doc ? S.doc.categories.map((c, i) => [i, c.libelle, c.criteres.length]).concat([['communs', 'Tous les produits', S.doc.communs.criteres.length], ['produits', 'Surcharges par produit', Object.keys(S.doc.produits || {}).length]]) : []);
+  const onglets = () => (S.doc ? S.doc.categories.map((c, i) => [i, c.libelle, c.criteres.length]).concat([['communs', 'Tous les produits', S.doc.communs.criteres.length], ['produits', 'Réglages par produit', Object.keys(S.doc.produits || {}).length]]) : []);
   const grille = () => (S.cat === 'communs' ? S.doc.communs : S.doc.categories[S.cat]);
   // Les réponses d'un critère sous une même forme, pour l'aperçu de sa carte.
   function reponses(c) {
@@ -180,18 +180,19 @@
         <label class="gq-champ">Clé (unique, a-z, 0-9, _)${champ(p + '.cle', c.cle || '')}</label></div>${corps}</section>`;
   }
 
+  // Les réglages par produit se posent dans la fiche produit du cockpit (Catalogue › fiche › Qualité, 26/11/2026) : effectifs
+  // tout de suite, ils ne passent pas par le brouillon. Ici, on les voit tous.
   function surcharges() {
     const prods = Object.entries(S.doc.produits || {});
-    const cats = Object.fromEntries([['', 'Par mots-clés']].concat(S.doc.categories.map(c => [c.cle, c.libelle])));
-    return `<section class="card table-card"><h2 class="block-title">Surcharges par produit</h2>
-      <p class="muted" style="font-size:13px">Un produit peut recevoir une autre grille que celle de ses mots-clés, et ses propres valeurs pour un critère (le poids du Cougnou Nature 400 g : cible 400, tolérance 20).</p>
-      ${prods.length ? `<div class="table-scroll"><table class="ds-table"><thead><tr><th>Produit (id du catalogue)</th><th>Nom</th><th>Grille</th><th>Valeurs propres</th><th></th></tr></thead><tbody>
-        ${prods.map(([id, x]) => `<tr><td class="etroit">${esc(id)}</td><td>${champ('produits.' + id + '.nom', x.nom || '')}</td><td>${choix('produits.' + id + '.categorie', x.categorie || '', cats)}</td>
-          <td>${Object.entries(x.surcharges || {}).map(([k, v]) => `<div class="gq-ed-g" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:6px"><span class="chip chip--draft">${esc(k)}</span>
-            ${champ('produits.' + id + '.surcharges.' + k + '.cible', v.cible ?? '', ' type="number" data-nombre="1" placeholder="cible"')}${champ('produits.' + id + '.surcharges.' + k + '.tolerance', v.tolerance ?? '', ' type="number" data-nombre="1" placeholder="tolérance"')}</div>`).join('') || '<span class="muted">—</span>'}</td>
-          <td class="etroit"><button type="button" class="btn btn--danger btn--sm" data-retirer-produit="${esc(id)}">${ICO('croix')}</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="gq-vide">Aucune surcharge.</p>'}
-      <div class="gq-filtres" style="margin-top:12px"><input id="np-id" placeholder="Id du produit (6700139)" inputmode="numeric"><input id="np-nom" placeholder="Nom"><input id="np-cle" placeholder="Critère mesuré (poids)">
-        <button type="button" class="btn btn--sm" data-act="produit">${ICO('ajouter')}Ajouter</button></div></section>`;
+    const nomCat = k => ((S.doc.categories.find(c => c.cle === k) || {}).libelle) || 'par mots-clés';
+    return `<section class="card table-card"><h2 class="block-title">Réglages par produit</h2>
+      <p class="muted" style="font-size:13px">Une grille forcée, des valeurs propres (le poids…), une photo de référence qualité : ils se règlent dans la fiche du produit,
+        cockpit › Catalogue › la référence › onglet Qualité, et s'appliquent tout de suite.</p>
+      ${prods.length ? `<div class="table-scroll"><table class="ds-table"><thead><tr><th>Produit</th><th>Grille</th><th>Valeurs propres</th><th>Photo qualité</th></tr></thead><tbody>
+        ${prods.map(([id, x]) => `<tr><td>${esc(x.nom || 'Produit ' + id)}<span class="sub">${esc(id)}</span></td><td>${esc(x.categorie ? nomCat(x.categorie) : 'par mots-clés')}</td>
+          <td>${Object.entries(x.surcharges || {}).map(([k, v]) => `<span class="chip chip--draft">${esc(k)} : ${v.minimum != null ? esc(v.minimum) + ' minimum' : esc(v.cible) + ' ± ' + esc(v.tolerance)}</span>`).join(' ') || '—'}</td>
+          <td>${x.photo ? `<img src="../${esc(x.photo)}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">` : '—'}</td></tr>`).join('')}</tbody></table></div>`
+        : '<p class="gq-vide">Aucun réglage par produit.</p>'}</section>`;
   }
 
   /* ── Modifier le brouillon ───────────────────────────────────────────────────────────────────────────── */
@@ -250,7 +251,6 @@
       return;
     }
     if (d.retirerOption !== undefined) { grille().criteres[S.sel].options.splice(Number(d.retirerOption), 1); S.modifie = true; rendre(); return; }
-    if (d.retirerProduit) { delete S.doc.produits[d.retirerProduit]; S.modifie = true; rendre(); return; }
     if (d.act === 'option') { grille().criteres[S.sel].options.push({ cle: 'reponse_' + Date.now().toString(36), libelle: 'Nouvelle réponse', niveau: 'mineur', cause: '', maintenant: '', prochaine: '', decision: 'vente' }); S.modifie = true; rendre(); return; }
     if (d.act === 'supprimer') { if (confirm('Retirer ce critère de la grille ?')) { grille().criteres.splice(S.sel, 1); S.sel = null; S.modifie = true; rendre(); } return; }
     if (d.act === 'categorie') {
@@ -259,15 +259,8 @@
       S.doc.categories.push({ cle, libelle: nom, motsCles: [], quand: '', photos: { cuisson: 'facultative', structure: 'facultative', organoleptique: 'non', presentation: 'facultative' }, consignes_photo: {}, criteres: [] });
       S.cat = S.doc.categories.length - 1; S.sel = null; S.modifie = true; rendre(); return;
     }
-    if (d.act === 'produit') {
-      const id = ($('np-id').value || '').replace(/\D/g, ''); if (!id) return;
-      const cle = ($('np-cle').value || '').trim();
-      S.doc.produits = S.doc.produits || {};
-      S.doc.produits[id] = Object.assign(S.doc.produits[id] || {}, { nom: $('np-nom').value.trim() }, cle ? { surcharges: Object.assign((S.doc.produits[id] || {}).surcharges || {}, { [cle]: {} }) } : {});
-      S.modifie = true; rendre(); return;
-    }
     if (d.act === 'enregistrer') {
-      envoyer('PUT', '/autocontrole/grilles', { categories: S.doc.categories, communs: S.doc.communs, produits: S.doc.produits || {} })
+      envoyer('PUT', '/autocontrole/grilles', { categories: S.doc.categories, communs: S.doc.communs })
         .then(r => { S.modifie = false; S.erreurs = r.erreurs || {}; S.msg = 'Brouillon enregistré' + (Object.keys(S.erreurs).length ? ' : il reste des points à corriger avant de publier.' : ' : il peut être publié.'); rendre(); })
         .catch(e => { S.msg = 'Pas enregistré : ' + e.message; rendre(); });
       return;

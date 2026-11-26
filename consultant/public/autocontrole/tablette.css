@@ -217,6 +217,7 @@ body { background: var(--paper); }
 .aq-ov.aq-inline { position: static; min-height: 100vh; }
 .aq-bandeau { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.45; }
 .aq-bandeau.essai { background: var(--chip); color: var(--muted-2); }
+.aq-bandeau.visite { background: var(--chip); color: var(--ink); }
 .aq-bandeau.valider { background: var(--prize-soft); color: var(--prize-ink); }
 .aq-bandeau.erreur { background: var(--stop-soft); color: var(--stop); }
 .aq-recherche { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: 400 15px 'Gotham', system-ui, sans-serif; color: var(--ink); }
@@ -230,6 +231,12 @@ body { background: var(--paper); }
 .aq-champ { height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: 400 13px 'Gotham', system-ui, sans-serif; color: var(--ink); }
 .aq-champ[type=time] { width: 112px; } .aq-champ[type=number] { width: 92px; } .aq-champ.qui { width: 170px; }
 .aq-ctx label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+/* Qui contrôle (26/11/2026) : un segment comme .seg du design system ; dans une visite, « Consultant » seul. */
+.aq-roles { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
+.aq-role { min-height: 40px; padding: 0 12px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--muted-2); font: 400 12.5px 'Gotham', system-ui, sans-serif; cursor: pointer; display: inline-flex; align-items: center; }
+.aq-role:first-child { border-left: 0; }
+.aq-role.is-on { background: var(--ink); color: #fff; }
+span.aq-role { cursor: default; }
 .aq-vide { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
 .aq-fin { max-width: 640px; margin: 40px auto; text-align: center; }
 .aq-fin .aq-card { text-align: left; }

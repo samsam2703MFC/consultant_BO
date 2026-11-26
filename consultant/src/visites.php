@@ -1092,6 +1092,8 @@ function wr_visites_delete(string $id): array
         }
         $n['reponses'] = Db::exec('DELETE FROM con_visite_point WHERE visite_id = ?', [$vid]);
         if (function_exists('ensureVisitesCadre')) { $n['taches'] = Db::exec('DELETE FROM con_consultant_tache WHERE visite_id = ?', [$vid]); }
+        // Les contrôles qualité de la visite (26/11/2026) restent ceux du magasin, détachés.
+        if (function_exists('aqDetacherVisites')) { aqDetacherVisites('visite_id = ?', [$vid]); }
         Db::exec('DELETE FROM con_visite WHERE id = ?', [$vid]);
         $pdo->commit();
     } catch (Throwable $e) {
@@ -1192,6 +1194,7 @@ function wr_visites_remise(): array
         Db::exec('DELETE FROM con_visite_point WHERE visite_id <= ?', [$max]);
         if (function_exists('ensureVisitesCadre')) { Db::exec('DELETE FROM con_consultant_tache WHERE visite_id IS NOT NULL AND visite_id <= ?', [$max]); }
         if (function_exists('hdkTable')) { Db::exec('DELETE FROM con_hdk_mission WHERE visite_id <= ?', [$max]); }
+        if (function_exists('aqDetacherVisites')) { aqDetacherVisites('visite_id <= ?', [$max]); }
         Db::exec('DELETE FROM con_visite WHERE id <= ?', [$max]);
         $pdo->commit();
     } catch (Throwable $e) {
