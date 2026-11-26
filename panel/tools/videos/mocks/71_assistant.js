@@ -3,7 +3,11 @@
  * Les réponses sont FICTIVES, à la forme exacte que rend le serveur (titre, résumé, chiffres, points, visuels relus,
  * priorités, sources, suites) ; leurs chiffres sont tirés du générateur du magasin de démo (lib/demo.js), pour rester
  * d'accord avec les pages Semaine et Mois. Les concurrents et les documents du manuel sont inventés (lib/manuel.js).
- * Le nom des coachs se règle au cockpit : le coach bienveillant porte ici un nom de démonstration. */
+ * Le nom des coachs se règle au cockpit : le coach bienveillant porte ici un nom de démonstration.
+ * Les vidéos par onglet (26/11/2026, scenarios/21-0x et 22-0x) ont ajouté : le Coach « à la dure » sur le jour le plus
+ * faible (mêmes chiffres, tutoiement), la tuile « Comment va ma journée ? » (les chiffres de l'Opérationnel à 15 h 40),
+ * le Professeur sur un document du manuel (« Explique-moi « titre » », « Comment ouvrir le magasin ? ») et la réponse en
+ * PDF (POST /assistant/magasin/pdf : une page de démonstration). La demande au bureau : 71_assistant_helpdesk.js. */
 const D = require('./lib/demo');
 const M = require('./lib/manuel');
 const { r2 } = D;
@@ -133,7 +137,69 @@ function croissant() {
     suites: ['Où suis-je plus cher que mes concurrents ?', 'Quel bundle pour le petit-déjeuner ?', 'Quels prix monter pour baisser mon food cost ?'], sources: [],
   };
 }
+/* Le Coach « à la dure » (AM_COACHS.coach de panel/src/assistant_magasin.php : il tutoie, style vestiaire, cash ; il
+ * finit sur l'ordre de marche du jour) : les MÊMES chiffres que jourFaible, seul le ton change. */
+function jourFaibleCoach() {
+  const r = jourFaible(), J = parJour(), lun = J[0], moy = J.reduce((a, x) => a + x.ca, 0) / 7, ecart = Math.round(100 * (1 - lun.ca / moy));
+  const creux = Math.round(100 * (D.poids('2026-11-16')[7] + D.poids('2026-11-16')[8] + D.poids('2026-11-16')[9]));
+  return Object.assign(r, {
+    titre: 'Ton jour le plus faible : le lundi',
+    chiffres: r.chiffres.map(x => Object.assign({}, x, { libelle: x.libelle.replace('vos jours', 'tes jours') })),
+    resume: `Le lundi, c’est ton maillon faible : ${fE(lun.ca)} en moyenne sur huit semaines, ${ecart} % sous la moyenne de tes jours. Le panier tient ; ce sont les clients qui ne viennent pas, surtout l’après-midi. Ça, c’est pas un score de gagnant.`,
+    points: [{ titre: 'L’après-midi dort.', texte: `De 14 h à 17 h, ton lundi ne fait que ${creux} % de son chiffre.` },
+      { titre: 'Pas d’excuse côté prix.', texte: `${f2(lun.panier)} de panier le lundi, presque ta semaine : il manque du passage, pas du prix.` }],
+    priorites: [
+      { titre: 'Une offre goûter le lundi après-midi', constat: 'Ton moment le plus creux : un bundle boisson + viennoiserie de 14 h à 17 h.', gain: r.priorites[0].gain, ecran: 'promos' },
+      { titre: 'La vitrine pleine jusqu’à 17 h', constat: 'Le lundi, ta vitrine se vide trop tôt : moins de choix, moins d’envie.', gain: '', ecran: 'ops' },
+      { titre: 'Suivre le lundi, semaine après semaine', constat: 'Chaque lundi face au précédent, dans la page Semaine. Sans excuse.', gain: '', ecran: 'semaine' },
+    ],
+    conclusion: 'Ordre de marche : l’offre goûter en place lundi, et tu regardes le chiffre le soir même.',
+  });
+}
+/* « Comment va ma journée ? » (une tuile) : la journée à 15 h 40 face à hier et au jeudi d'avant, à la même heure ; les
+ * chiffres sont ceux de l'Opérationnel (lib/jour.js : le CA à cette heure, l'objectif du jour, la projection). */
+function journee(ton) {
+  const tu = ton === 'coach';
+  const J = D.journee(D.AUJ, D.MAINTENANT), H = D.journee(D.plus(D.AUJ, -1), D.MAINTENANT), S7 = D.journee(D.plus(D.AUJ, -7), D.MAINTENANT);
+  const obj = D.objectifJour(D.AUJ), P = D.poids(D.AUJ);
+  let part = 0; D.HEURES.forEach((h, i) => { if (h * 60 < D.MAINTENANT) { part += P[i] * Math.min(1, (D.MAINTENANT - h * 60) / 60); } });
+  const proj = J.ca / part, pct = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(100 * v)) + ' %';
+  const vsH = J.ca / H.ca - 1, vs7 = J.ca / S7.ca - 1, pan = J.ca / J.tickets;
+  const hh = J.heures.map(x => x.h);
+  return {
+    titre: tu ? 'Ta journée à 15 h 40 : devant' : 'Votre journée à 15 h 40 : en avance',
+    resume: tu ? `${fE(J.ca)} encaissés à 15 h 40, ${Math.round(100 * J.ca / obj)} % de ton objectif de ${fE(obj)}. ${pct(vsH)} sur hier à la même heure, ${pct(vs7)} sur jeudi dernier. Garde le rythme jusqu’à la fermeture.`
+      : `À 15 h 40, vous avez fait ${fE(J.ca)}, ${Math.round(100 * J.ca / obj)} % de votre objectif du jour (${fE(obj)}). C’est ${pct(vsH)} face à hier à la même heure, et ${pct(vs7)} face à jeudi dernier. À ce rythme, la journée finit vers ${fE(proj)}.`,
+    chiffres: [{ valeur: fE(J.ca), libelle: 'à 15 h 40' }, { valeur: Math.round(100 * J.ca / obj) + ' %', libelle: 'de l’objectif du jour' }, { valeur: pct(vsH), libelle: 'face à hier, même heure' }, { valeur: f2(pan), libelle: 'panier moyen' }],
+    points: [{ titre: tu ? 'Le matin a fait le travail.' : 'Le matin a bien tourné.', texte: `${J.tickets} clients depuis l’ouverture, ${J.tickets - S7.tickets >= 0 ? (J.tickets - S7.tickets) + ' de plus' : (S7.tickets - J.tickets) + ' de moins'} que jeudi dernier à la même heure.` },
+      { titre: tu ? 'La projection passe l’objectif.' : 'La projection passe l’objectif.', texte: `Vers ${fE(proj)} en fin de journée, pour ${fE(obj)} visés.` }],
+    visuels: [visuel({ forme: 'colonnes', titre: 'Ma journée heure par heure, face à jeudi dernier', donnees: 'ventes_par_heure', mesure: 'ca', mesureNom: 'Chiffre d’affaires',
+      periode: 'jeudi 19/11/2026 jusqu’à 15 h 40 · jeudi 12/11/2026 à la même heure', libelles: hh.map(h => h + ' h'),
+      series: [{ nom: 'Aujourd’hui', role: 'moi', valeurs: J.heures.map(x => Math.round(x.ca)) }, { nom: 'Jeudi dernier', role: 'ref', valeurs: S7.heures.map(x => Math.round(x.ca)) }],
+      tableau: { entetes: ['Heure', 'Aujourd’hui', 'Jeudi dernier'], lignes: hh.map((h, i) => [h + ' h', Math.round(J.heures[i].ca), Math.round(S7.heures[i].ca)]), mesures: [null, 'ca', 'ca'] },
+      source: 'les tickets du jour au panel ; jeudi dernier, l’historique des ventes du magasin' })],
+    priorites: [
+      { titre: tu ? 'Tiens la vitrine jusqu’à la fermeture' : 'La vitrine pleine jusqu’à la fermeture', constat: tu ? 'Il reste trois heures : une vitrine vide, c’est de l’argent laissé sur le comptoir.' : 'Il reste trois heures d’ouverture : gardez du choix en vitrine pour la fin d’après-midi.', gain: '', ecran: 'ops' },
+      { titre: tu ? 'Un café avec chaque goûter' : 'Proposer un café avec le goûter', constat: tu ? `Ton panier est à ${f2(pan)} : une boisson de plus le fait monter.` : `Votre panier est à ${f2(pan)} : une boisson proposée au comptoir le fait monter.`, gain: '', ecran: 'promos' },
+    ],
+    conclusion: tu ? 'Ordre de marche : vitrine pleine, un café proposé à chaque client, et tu fais le point à la fermeture.' : 'Une belle journée en vue : gardez ce rythme jusqu’à la fermeture.',
+    suites: ['Qu’est-ce que je vends le plus le matin ?', 'Mon panier moyen est-il bon ?'], sources: [],
+  };
+}
 function source(id) { const d = M.doc(id); return { id: d.id, code: d.code, type: d.type, titre: d.titre, version: '3', statut: 'publié' }; }
+/* Le Professeur sur un document du manuel (« Explique-moi « titre » », « Comment ouvrir le magasin ? ») : ses étapes, ses
+ * points critiques, et le document cité (« Lu dans le manuel »). Tout vient de lib/manuel.js. */
+function expliquer(d, d2) {
+  const C = M.contenu(d), E = [].concat(...C.sections.map(s => s.etapes)), crit = E.filter(e => e.critique).map(e => e.titre.toLowerCase());
+  return {
+    titre: d.titre,
+    resume: `${d.objectif} La ${d.type === 'SOP' ? 'SOP' : d.type.toLowerCase()} ${d.code} le fait en ${E.length} étape${E.length > 1 ? 's' : ''}${crit.length ? ', dont ' + crit.length + ' point' + (crit.length > 1 ? 's' : '') + ' critique' + (crit.length > 1 ? 's' : '') : ''}.`,
+    chiffres: [], points: E.map(e => ({ titre: e.titre + (e.critique ? ' (point critique).' : '.'), texte: e.texte })).concat((C.points_critiques || []).map(p => ({ titre: 'À retenir.', texte: p }))),
+    visuels: [], priorites: [],
+    conclusion: d2 ? `Cochez ensuite la checklist ${d2.code} « ${d2.titre} » : c’est elle qui vérifie que c’est fait.` : (crit.length ? 'Les points critiques ne se sautent jamais : c’est sur eux que porte le contrôle.' : ''),
+    suites: d2 ? ['Que faut-il vérifier à la fermeture ?'] : ['Comment ouvrir le magasin ?'], sources: [source(d.id)].concat(d2 ? [source(d2.id)] : []),
+  };
+}
 function fermeture() {
   return {
     titre: 'La fermeture : ce qu’il faut vérifier',
@@ -169,7 +235,10 @@ function repondre(c) {
   if (/croissant/i.test(q) && ton === 'vente') { r = croissant(); }
   else if (/fermeture/i.test(q) && ton === 'professeur') { r = fermeture(); }
   else if (ton === 'professeur' && /(dossier|bûche|terminer|formation)/i.test(q)) { r = professeurDossier(q); }
-  else if (/jour le plus faible/i.test(q)) { r = jourFaible(); }
+  else if (ton === 'professeur' && /ouvrir le magasin/i.test(q)) { r = expliquer(M.doc('ouv-mag'), M.doc('chk-ac-01')); }
+  else if (ton === 'professeur' && /«\s*(.+?)\s*»/.test(q) && M.DOCS.find(d => d.titre === q.match(/«\s*(.+?)\s*»/)[1])) { r = expliquer(M.DOCS.find(d => d.titre === q.match(/«\s*(.+?)\s*»/)[1])); }
+  else if (/jour le plus faible/i.test(q)) { r = ton === 'coach' ? jourFaibleCoach() : jourFaible(); }
+  else if (/comment va ma journée/i.test(q) && ton !== 'professeur' && ton !== 'vente') { r = journee(ton); }
   else if (/bundle/i.test(q) && /lundi/i.test(q)) { r = bundleLundi(); }
   else { r = generique(q, ton); }
   return { reponse: r, question: 700 + (++VID % 100), luLe: ton === 'professeur' ? null : '2026-11-19 15:40', modele: ton === 'professeur' ? 'claude-haiku-5-5' : 'claude-opus-5-5', ton };
@@ -189,6 +258,8 @@ module.exports = function (m, p, q, c) {
   if (!p.startsWith('/assistant/magasin')) { return undefined; }
   if (p === '/assistant/magasin/questions') { return questions(); }
   if (p === '/assistant/magasin' && m === 'POST') { return repondre(c); }
+  // La réponse en PDF (POST /assistant/magasin/pdf, rapPdfRendu au serveur) : une page de démonstration, qui se télécharge.
+  if (p === '/assistant/magasin/pdf' && m === 'POST') { return { __body: '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n', type: 'application/pdf' }; }
   if (p === '/assistant/magasin/modeles') {
     if (m === 'POST') {
       const deja = S.modeles.find(x => x.visuel === +c.visuel);

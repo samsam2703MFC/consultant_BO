@@ -809,6 +809,29 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "taches-photo",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "taches",
+      "titre": "La photo en grand",
+      "resume": "La photo du contrôle en grand, les repères entourés, le constat, qui l’a rendue et qui l’a notée, puis ‹ › et la bande des vignettes du jour.",
+      "vues": [
+        "taches"
+      ],
+      "fichier": "04-01-photo.mp4",
+      "debut": 0,
+      "fin": 65.71,
+      "affiche": "taches-photo.jpg",
+      "duree": "1 min 06",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "temps-morts",
       "genre": "tuto",
       "titre": "Les temps morts",
@@ -4129,6 +4152,339 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "assistant-bilan",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "Le Bilan",
+      "resume": "La question en haut, les quatre tuiles et Mes modèles, puis la réponse : graphique ou tableau, téléchargements, PDF.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 0,
+      "fin": 60.04,
+      "affiche": "assistant-bilan.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-poser",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-bilan",
+      "titre": "Poser une question",
+      "resume": "Taper sa question en haut, « Demander » : l’assistant lit les chiffres du magasin, puis répond — résumé, chiffres, graphique, priorités.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 60.04,
+      "fin": 94.51,
+      "affiche": "assistant-poser.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-question-prete",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-bilan",
+      "titre": "Poser une question toute prête",
+      "resume": "Un clic sur une des quatre tuiles : la question part telle quelle, et sa réponse prend la place de la précédente.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 94.51,
+      "fin": 117.82,
+      "affiche": "assistant-question-prete.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-garder-modele",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-bilan",
+      "titre": "Garder un graphique comme modèle",
+      "resume": "« Garder comme modèle », sous un graphique : il rejoint Mes modèles, d’où un clic le refait avec les chiffres du jour.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 117.82,
+      "fin": 140.65,
+      "affiche": "assistant-garder-modele.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-retirer-modele",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-bilan",
+      "titre": "Retirer un modèle",
+      "resume": "La croix à côté d’un modèle le retire de Mes modèles ; les autres restent.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 140.65,
+      "fin": 163.11,
+      "affiche": "assistant-retirer-modele.jpg",
+      "duree": "22 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-conversation",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "La conversation",
+      "resume": "Les questions toutes prêtes par thème à gauche, avec Mes modèles ; le fil à droite ; la saisie en bas.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-02-conversation.mp4",
+      "debut": 0,
+      "fin": 57.24,
+      "affiche": "assistant-conversation.jpg",
+      "duree": "57 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-creuser",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-conversation",
+      "titre": "Creuser une question",
+      "resume": "Un bouton « Creuser » sous la réponse, ou une question de la colonne de gauche : la réponse arrive dans le fil, qui part avec la question.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-02-conversation.mp4",
+      "debut": 57.24,
+      "fin": 86.4,
+      "affiche": "assistant-creuser.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-coachs",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "Les deux coachs",
+      "resume": "Mr. Basile, bienveillant, et Le Coach, à la dure : les mêmes questions et les mêmes chiffres ; seul le ton change. Le choix reste sur l’appareil.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-03-coachs.mp4",
+      "debut": 0,
+      "fin": 55.19,
+      "affiche": "assistant-coachs.jpg",
+      "duree": "55 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-coach-vente",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "Le Coach Vente",
+      "resume": "Ses questions — prix face à la concurrence, bundles, ventes, objectifs 2026 — et ses réponses : prix relevés, marge, hausse et lot.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-04-coach-vente.mp4",
+      "debut": 0,
+      "fin": 44,
+      "affiche": "assistant-coach-vente.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_vente.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-comparer-prix",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-coach-vente",
+      "titre": "Comparer un prix à la concurrence",
+      "resume": "« Mon croissant face aux boulangeries proches ? » : les prix relevés autour du magasin, le sien et sa marge, puis la hausse proposée et un lot qui garde le prix aux fidèles.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-04-coach-vente.mp4",
+      "debut": 44,
+      "fin": 92.65,
+      "affiche": "assistant-comparer-prix.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_vente.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-professeur",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "Le Professeur",
+      "resume": "Les questions tirées du manuel, famille par famille, et des réponses qui citent les documents lus (« Lu dans le manuel »), sans lire l’ERP.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-05-professeur.mp4",
+      "debut": 0,
+      "fin": 47.87,
+      "affiche": "assistant-professeur.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-demander-geste",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-professeur",
+      "titre": "Demander un geste au Professeur",
+      "resume": "« Que faut-il vérifier à la fermeture ? » : les étapes dans l’ordre de la SOP, un tableau recopié du manuel, et les documents lus.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-05-professeur.mp4",
+      "debut": 47.87,
+      "fin": 82.39,
+      "affiche": "assistant-demander-geste.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-demande-bureau",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "La demande au bureau",
+      "resume": "L’assistant choisi transmet la demande : sujet, titre, texte, photos, passage du consultant, urgent ; dessous, « Mes demandes » avec statut, échéance et réponse du bureau.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-06-demande-bureau.mp4",
+      "debut": 0,
+      "fin": 48.16,
+      "affiche": "assistant-demande-bureau.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "consultant/src/helpdesk.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-envoyer-demande",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-demande-bureau",
+      "titre": "Envoyer une demande au bureau",
+      "resume": "Le sujet, le titre, la demande, une photo, un passage du consultant ou non, urgent ou non, puis « Envoyer au bureau » : la demande rejoint Mes demandes.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-06-demande-bureau.mp4",
+      "debut": 48.16,
+      "fin": 96.28,
+      "affiche": "assistant-envoyer-demande.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "consultant/src/helpdesk.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "se-former",
       "genre": "tuto",
       "titre": "Formations et suivi",
@@ -4149,6 +4505,313 @@
       ],
       "tourne_sur": "24028fad00ac4daeb93221b46d2fb2e9ad25caec",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "former-accueil",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "L’accueil de la formation",
+      "resume": "Le bandeau « Mon dossier de formation » et ses quatre nombres, la méga-barre et ses catalogues, la phrase et le tableau Apprendre · Comprendre · Faire · Vérifier ; chaque colonne ouvre son catalogue.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-01-accueil.mp4",
+      "debut": 0,
+      "fin": 67.18,
+      "affiche": "former-accueil.jpg",
+      "duree": "1 min 07",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "panel/public/dashboard/seformer.js",
+        "formation/src/formation_recherche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-mega-barre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "La méga-barre",
+      "resume": "Deux lettres ouvrent le panneau : les catalogues à gauche avec leurs nombres, les résultats étiquetés et surlignés, l’aperçu à droite ; ↑ ↓, Entrée, Échap.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-02-mega-barre.mp4",
+      "debut": 0,
+      "fin": 50.75,
+      "affiche": "former-mega-barre.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/seformer.js",
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_recherche.php",
+        "panel/public/dashboard/dashboard.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-professeur-recherche",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-mega-barre",
+      "titre": "Demander au Professeur depuis la recherche",
+      "resume": "« Demander au Professeur » sur l’aperçu d’un résultat (ou dans le lecteur) : la fenêtre de l’assistant s’ouvre sur le Professeur, qui explique le document et le cite.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-02-mega-barre.mp4",
+      "debut": 50.75,
+      "fin": 86.09,
+      "affiche": "former-professeur-recherche.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/seformer.js",
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_recherche.php",
+        "panel/public/dashboard/dashboard.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-lecteur",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "Le lecteur",
+      "resume": "Le document s’ouvre sur place, en tiroir : objectif, étapes et photos, points critiques en rouge, « Feuilleter dans le catalogue », « Demander au Professeur ».",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-03-lecteur.mp4",
+      "debut": 0,
+      "fin": 65.18,
+      "affiche": "former-lecteur.jpg",
+      "duree": "1 min 05",
+      "sources": [
+        "panel/public/dashboard/seformer.js",
+        "formation/src/formation_recherche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-dossier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "Mon dossier de formation",
+      "resume": "Les Nouveautés, les quatre nombres, le dossier (statut, avancement, échéance), le suivi de l’équipe, le document de formation au coffre-fort, et le Professeur.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-04-dossier.mp4",
+      "debut": 0,
+      "fin": 59.81,
+      "affiche": "former-dossier.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-ouvrir-formation",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-dossier",
+      "titre": "Ouvrir une formation",
+      "resume": "Une carte des Nouveautés ou une ligne du dossier : la formation s’ouvre, sa première ouverture est notée et « NOUVEAU » s’efface. « ← Mon dossier » pour revenir.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-04-dossier.mp4",
+      "debut": 59.81,
+      "fin": 82.87,
+      "affiche": "former-ouvrir-formation.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-question-dossier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-dossier",
+      "titre": "Poser une question au Professeur sur son dossier",
+      "resume": "Une question toute prête tirée du dossier, ou la sienne puis « Demander » : la fenêtre du Professeur répond à partir du dossier du magasin.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-04-dossier.mp4",
+      "debut": 82.87,
+      "fin": 113.37,
+      "affiche": "former-question-dossier.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-formation",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "Une formation",
+      "resume": "La version adaptée pour le magasin, les étapes et points critiques, la grille de la photo du jour, « Qui la suit », la mise en place et l’état de validation.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 0,
+      "fin": 44.61,
+      "affiche": "former-formation.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-declarer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-formation",
+      "titre": "Déclarer lu, quiz réussi, vu faire",
+      "resume": "Dans « Qui la suit », cocher la case de la personne : lue, quiz réussi, vu faire. L’avancement de la formation monte.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 44.61,
+      "fin": 70.17,
+      "affiche": "former-declarer.jpg",
+      "duree": "26 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-ajouter-personne",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-formation",
+      "titre": "Ajouter une personne qui suit la formation",
+      "resume": "Sous « Qui la suit » : « prénom N. », puis « Ajouter ». La personne rejoint la liste, ses trois cases à cocher.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 70.17,
+      "fin": 91.29,
+      "affiche": "former-ajouter-personne.jpg",
+      "duree": "21 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-mise-en-place",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-formation",
+      "titre": "Déclarer la mise en place en magasin",
+      "resume": "« Mise en place en magasin : c’est fait » : la date est notée ; « annuler » la retire. Quand tout est fait, la formation passe « À valider ».",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 91.29,
+      "fin": 112.41,
+      "affiche": "former-mise-en-place.jpg",
+      "duree": "21 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-photo-du-jour",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-formation",
+      "titre": "Envoyer la photo du jour",
+      "resume": "« Envoyer la photo du jour », choisir la photo : la case du jour passe « envoyée, pas encore relue » ; votre consultant la relit.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 112.41,
+      "fin": 135.74,
+      "affiche": "former-photo-du-jour.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-fenetre-professeur",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "La fenêtre du Professeur",
+      "resume": "L’assistant s’ouvre par-dessus la page, sur le Professeur, et répond à partir du dossier et du manuel en citant ce qu’il a lu.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-06-fenetre-professeur.mp4",
+      "debut": 0,
+      "fin": 51.08,
+      "affiche": "former-fenetre-professeur.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/formation.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "coffre-fort",
