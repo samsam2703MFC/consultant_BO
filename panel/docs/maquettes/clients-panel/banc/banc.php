@@ -142,9 +142,19 @@ function bancRep(string $m, string $p, ?array $b): array
     if ($chem === '/panel/shops/3/offices/options') { return [200, ['companies' => array_map(static fn ($c) => ['id' => $c['id'], 'name' => $c['company_name'], 'tax_number' => $c['tax_number']], array_values($D['b2b'])), 'routes' => [['id' => 1, 'name' => 'Midi · Gosselies – Charleroi', 'start_time' => '11:15:00'], ['id' => 2, 'name' => 'Matin · Jumet', 'start_time' => '08:30:00']],
         'delivery_sites' => [['id' => 5, 'name' => 'Lunchroom', 'address' => 'bd Tirou 45, Charleroi', 'route_id' => 1]], 'vouchers' => [['id' => 3, 'code' => 'BIENVENUE5', 'name' => '5 % la première commande']], 'department_presets' => ['Direction', 'Comptabilité', 'Ressources humaines', 'Commercial', 'Informatique']]]; }
     if ($chem === '/panel/shops/3/offices/onboard') { return [200, ['office' => ['id' => 47], 'onboarding' => ['notifications' => ['status' => 'queued', 'membership' => 0]]]]; }
+    // Un bureau sans site : TF Buddy refuse sa livraison (422 OFFICE_DELIVERY_SITE_REQUIRED, vu à Corbais le 26/11/2026).
+    if (preg_match('#^/panel/shops/3/offices/(\d+)/(delivery-settings|sites)$#', $chem, $mm) && $m === 'GET') {
+        $o = array_values(array_filter($D['bureaux'], static fn ($x) => (int) $x['id'] === (int) $mm[1]))[0] ?? null;
+        if ($o && (int) $o['site_count'] === 0) { return $mm[2] === 'sites' ? [200, []] : [422, ['status' => 'error', 'description' => 'OFFICE_DELIVERY_SITE_REQUIRED']]; }
+    }
+    if (preg_match('#^/panel/shops/3/offices/(\d+)/sites$#', $chem) && $m === 'POST') { return [200, ['id' => 77]]; }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/delivery-settings$#', $chem)) { return [200, ['route' => ['id' => 1, 'name' => 'Midi · Gosselies – Charleroi'], 'delivery_window_start' => '12:00:00', 'delivery_window_end' => '12:30:00', 'cutoff_time' => '16:00:00', 'cutoff_days_before' => 1, 'drop_minutes' => 5]]; }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/sites$#', $chem)) { return [200, [['id' => 5, 'name' => 'Lunchroom', 'address' => 'bd Tirou 45', 'postal_code' => '6000', 'city' => 'Charleroi', 'access_minutes' => 5]]]; }
-    if (preg_match('#^/panel/shops/3/offices/(\d+)/members$#', $chem)) { return [200, [['id' => 1, 'name' => 'Marie', 'surname' => 'Dupont', 'department_name' => 'Comptabilité'], ['id' => 2, 'name' => 'Jean', 'surname' => 'Lambert', 'department_name' => 'Direction']]]; }
+    if (preg_match('#^/panel/shops/3/offices/(\d+)/members$#', $chem)) {
+        $P = ['Marie Dupont', 'Jean Lambert', 'Sophie Renard', 'Thomas Peeters', 'Julie Simon', 'Nicolas Claes', 'Camille Leroy', 'Pierre Hermans', 'Sarah Mertens', 'Antoine Jacobs', 'Emma Wouters', 'Lucas Maes'];
+        $Dp = ['Direction', 'Comptabilité', 'Ressources humaines', 'Sinistres'];
+        return [200, array_map(static fn ($i) => ['id' => $i + 1, 'name' => explode(' ', $P[$i])[0], 'surname' => explode(' ', $P[$i])[1], 'department_name' => $Dp[$i % 4]], array_keys($P))];
+    }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/members/invite$#', $chem)) { return [200, ['invite' => ['status' => 'queued']]]; }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/invite$#', $chem)) { return [200, ['invite' => ['expires_at' => '2026-12-31', 'uses' => 23, 'url' => 'https://webshop.exemple/rejoindre/abc123']]]; }
     if (preg_match('#^/panel/shops/3/offices/(\d+)/assortment$#', $chem)) { return [200, ['mode' => 'restricted', 'products' => array_fill(0, 38, ['id' => 1])]]; }
