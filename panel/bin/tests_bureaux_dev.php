@@ -39,18 +39,36 @@ function verifie(string $nom, bool $cond, string $detail = ''): void
 
 echo "La réponse rendue propre\n";
 $bon = ['prenom' => ' Marie ', 'nom' => 'Dupont', 'email' => 'Marie.Dupont@Horizon.be', 'tel' => '+32 470 12 34 56', 'societe' => 'Centre Horizon', 'tva' => 'be 0789.114.256',
-    'adresse' => 'Rue de la Station 14', 'cp' => '6040', 'ville' => 'Jumet', 'personnes' => '18', 'jours' => ['5', '1', '9', '1'], 'accord' => true, 'remarque' => str_repeat('x', 900)];
+    'factRue' => 'Rue de l’Industrie', 'factNum' => '22', 'factCp' => '6041', 'factVille' => 'Gosselies', 'secteur' => 'corporate', 'paiement' => 'company',
+    'adresse' => 'Rue de la Station 14', 'cp' => '6040', 'ville' => 'Jumet', 'personnes' => '18', 'jours' => ['5', '1', '9', '1'], 'de' => '11:30', 'a' => '12:15', 'remise' => 'qr',
+    'services' => ['RH', 'RH', 'Direction'], 'collegues' => [['nom' => 'Tom', 'email' => 'tom@horizon.be'], ['nom' => 'x', 'email' => 'pas-un-mail'], ['email' => 'TOM@horizon.be']],
+    'accord' => true, 'remarque' => str_repeat('x', 900), 'logo' => 'data:text/html;base64,AAAA', 'motdepasse' => 'secret'];
 [$d, $e] = bdvNettoyer($bon, true);
 verifie('une réponse complète passe', $e === [], implode(', ', $e));
 verifie('TVA, e-mail, téléphone, jours mis en forme', $d['tva'] === 'BE0789114256' && $d['email'] === 'marie.dupont@horizon.be' && $d['tel'] === '+32470123456' && $d['jours'] === [1, 5] && $d['prenom'] === 'Marie');
-verifie('le nom du bureau : la société, la remarque coupée', $d['bureau'] === 'Centre Horizon' && mb_strlen($d['remarque']) === 600 && $d['personnes'] === 18);
+verifie('le nom du bureau : la société, la remarque coupée, la facturation à l’e-mail de la personne', $d['bureau'] === 'Centre Horizon' && mb_strlen($d['remarque']) === 600 && $d['personnes'] === 18 && $d['emailFact'] === 'marie.dupont@horizon.be');
+verifie('services sans doublon, collègues aux e-mails valides et uniques', $d['services'] === ['RH', 'Direction'] && array_column($d['collegues'], 'email') === ['tom@horizon.be']);
+verifie('aucun mot de passe gardé, un logo qui n’est pas une image refusé', !array_key_exists('motdepasse', $d) && $d['logo'] === '');
 [, $e] = bdvNettoyer(['accord' => true], true);
-verifie('vide : ce qui manque, dit en clair', count($e) === 5 && in_array('un e-mail valide', $e, true));
+verifie('vide : ce qui manque, dit en clair', in_array('un e-mail valide', $e, true) && in_array('le numéro de TVA de la société', $e, true) && in_array('au moins un jour de livraison', $e, true));
 [, $e] = bdvNettoyer(['accord' => false] + $bon, true);
-verifie('le questionnaire exige l’accord, le dashboard non', $e === ['votre accord pour être recontacté'] && bdvNettoyer(['accord' => false] + $bon, false)[1] === []);
+verifie('le formulaire exige l’accord, le dashboard non', $e === ['votre accord avec les conditions et la vie privée'] && bdvNettoyer(['accord' => false, 'de' => '', 'a' => ''] + $bon, false)[1] === []);
 [, $e] = bdvNettoyer(['tva' => '12'] + $bon, true);
-verifie('une TVA fausse est refusée, une TVA absente non', $e === ['un numéro de TVA valide (BE0123456789), ou rien'] && bdvNettoyer(['tva' => ''] + $bon, true)[1] === []);
+verifie('une TVA fausse est refusée ; absente : obligatoire au formulaire, pas au dashboard', $e === ['un numéro de TVA valide (BE0123456789)'] && bdvNettoyer(['tva' => ''] + $bon, true)[1] === ['le numéro de TVA de la société'] && bdvNettoyer(['tva' => ''] + $bon, false)[1] === []);
+verifie('un créneau à l’envers est refusé', bdvNettoyer(['de' => '12:00', 'a' => '11:00'] + $bon, true)[1] === ['le créneau de livraison (de … à …)']);
 verifie('un téléphone trop court ne passe pas', bdvTel('0470 12') === '' && bdvTel('0032 470 12 34 56') === '0032470123456');
+verifie('le téléphone au format international', bdvE164('0470123456') === '+32470123456' && bdvE164('0032470123456') === '+32470123456' && bdvE164('+33612345678') === '+33612345678' && bdvE164('0612345678', 'FR') === '+33612345678');
+$jwt = 'x.' . rtrim(strtr(base64_encode(json_encode(['app' => 'CLIENT', 'client_id' => 4567])), '+/', '-_'), '=') . '.y';
+verifie('le client d’un jeton webshop', bdvJwtClient($jwt) === 4567 && bdvJwtClient('pas.un.jeton') === null && bdvJwtClient('x') === null);
+
+echo "Le bureau pour TF Buddy\n";
+$c = bdvCorpsOnboard($d, 'Horizon · Jumet', 'BE0789114256', 77, 'active', 5, 1999, 12);
+verifie('le bureau : société, facturation, secteur, remise, créneau, jours', $c['office']['id_company_client'] === 77 && $c['office']['billing_mode'] === 'company' && $c['office']['segment'] === 'corporate'
+    && $c['office']['delivery_validation'] === 'qr' && $c['office']['delivery_window_start'] === '11:30' && $c['office']['delivery_days'] === [1, 5] && !isset($c['office']['logo_data_url']));
+verifie('le site, les services, les collègues invités', $c['sites'][0]['city'] === 'Jumet' && $c['sites'][0]['route_id'] === 5 && $c['departments'][1]['name'] === 'Direction'
+    && $c['staff'] === [['name' => 'Tom', 'email' => 'tom@horizon.be']] && $c['send_membership'] === true && $c['request_key'] === 'bdv-12');
+$c = bdvCorpsOnboard(['collegues' => []] + $d, 'H', 'BE0789114256', 77, 'pending', null, null, 13);
+verifie('sans id de client : la personne invitée par son e-mail', $c['staff'] === [['name' => 'Marie Dupont', 'email' => 'marie.dupont@horizon.be']] && $c['office']['status'] === 'pending' && !isset($c['sites'][0]['route_id']));
 
 echo "La demande et TF Buddy\n";
 $l = bdvLigne(['id' => '7', 'source' => 'questionnaire', 'statut' => 'a_valider', 'cree_le' => '2026-11-26 06:55:12', 'donnees' => json_encode($d), 'client_id' => '1999', 'societe_id' => null,

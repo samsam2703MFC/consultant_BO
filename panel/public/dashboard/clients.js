@@ -378,7 +378,34 @@
   /* ── Les bureaux en développement (26/11/2026, bureaux_dev.php) ─────────────────────────────────────────────
    * « Relier directement une nouvelle personne et un nouveau bureau (development) ou par après je peux valider le
    * bureau » ; « un questionnaire directement (1 par magasin) qui crée directement aussi un voucher ». */
-  const SOURCES = { questionnaire: 'questionnaire', dashboard: 'saisi ici' };
+  const SOURCES = { questionnaire: 'formulaire', dashboard: 'saisi ici' };
+  const SECTEURS_DEV = { corporate: 'entreprise, bureaux', retail: 'commerce', horeca: 'horeca', event: 'événementiel' };
+  const etiquetteDev = t => t === 'cree' ? '<span class="chip chip--ok">Créé</span>' : t === 'rejoint' ? '<span class="chip chip--ok">A rejoint son bureau</span>' : t === 'refuse' ? '<span class="chip chip--draft">Refusé</span>' : '<span class="tag-warn">À valider</span>';
+  /** Le générateur de liens (26/11/2026, Sam : « le générateur de lien par shop dans l'onglet bureau ») : le lien du
+   *  formulaire d'un magasin (…/bureau/?m={shop}), son QR à télécharger ; le siège choisit n'importe quel magasin. */
+  function blocLien() {
+    const B = st.b, D = B.dev, q = D.questionnaire, M = D.magasins || [];
+    const shop = String(B.lienShop || D.shop), lien = lienCourt(shop), ici = shop === String(D.shop);
+    const nomM = (M.find(m => String(m.id) === shop) || {}).nom || (ici ? 'ce magasin' : 'magasin ' + shop);
+    const promo = q.promo ? (D.promos.find(p => p.id === q.promo) || null) : null;
+    return `<div class="pcl-lien"><div class="pcl-lien-qr" title="QR code du formulaire">${qrSvg(lien)}</div>
+      <div class="pcl-lien-corps"><div class="pcl-lien-titre">Le formulaire d’inscription des bureaux</div>
+        <div class="pcl-aide">Six étapes pour le client : son compte webshop, sa société, la livraison, son équipe, puis son bon. À mettre sur une affiche, un e-mail, une carte de visite.</div>
+        <div class="pcl-lien-ligne">${M.length > 1 ? `<label class="pcl-champ pcl-lien-mag"><span>Magasin</span><select data-lien-shop>${M.map(m => `<option value="${esc(m.id)}"${String(m.id) === shop ? ' selected' : ''}>${esc(m.nom)} (n° ${esc(m.id)})</option>`).join('')}</select></label>` : ''}
+          <label class="pcl-champ pcl-lien-url"><span>Le lien de ${esc(nomM)}</span><input id="pcl-q-url" value="${esc(lien)}" readonly></label></div>
+        <div class="pcl-acts"><button type="button" class="btn btn--sm btn--primary" data-act="dev-copier">${B.lienCopie === shop ? 'Lien copié' : 'Copier le lien'}</button><a class="btn btn--sm" href="${esc(lien)}" target="_blank" rel="noopener">Ouvrir</a>
+          <button type="button" class="btn btn--sm" data-act="lien-qr" data-shop="${esc(shop)}">Télécharger le QR</button>${ici ? '<button type="button" class="btn btn--sm btn--ghost" data-act="dev-questionnaire">Réglages et bon</button>' : ''}</div>
+        <div class="pcl-aide" style="margin-top:6px">${ici ? `Formulaire ${q.actif ? '<b class="pcl-vert">ouvert</b>' : '<b>fermé</b>'}${promo ? ' · bon de bienvenue : ' + esc(promo.nom) : ' · sans bon de bienvenue'} · au plus 40 inscriptions par jour.` : 'Son ouverture et son bon se règlent dans le dashboard de ce magasin.'}</div></div></div>`;
+  }
+  /** Le QR d'un lien en PNG (1024 px), pour une affiche. */
+  function telechargerQr(shop) {
+    const lien = lienCourt(shop), svg = qrSvg(lien);
+    if (!svg) { return; }
+    const img = new Image(), url = URL.createObjectURL(new Blob([svg.replace('<svg ', '<svg width="1024" height="1024" ')], { type: 'image/svg+xml' }));
+    img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 1024, 1024); g.drawImage(img, 0, 0, 1024, 1024); URL.revokeObjectURL(url);
+      c.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'qr-formulaire-bureau-magasin-' + shop + '.png'; document.body.appendChild(a); a.click(); a.remove(); }, 'image/png'); };
+    img.src = url;
+  }
   function blocDev() {
     const B = st.b, D = B.dev;
     if (!D) { return B.devErr ? note('Les bureaux en développement ne se lisent pas : ' + esc(B.devErr), 'pcl-note-doux') : ''; }
@@ -388,16 +415,17 @@
       <td>${esc(x.bureau)}${x.erreurs.length ? ' <span class="tag-warn" title="' + esc(x.erreurs.join(' · ')) + '">à reprendre</span>' : ''}<span class="sub">${esc([x.societe, x.tva, x.ville].filter(Boolean).join(' · '))}</span></td>
       <td>${esc(x.personne)}<span class="sub">${esc(x.fonction || x.email)}</span></td><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(SOURCES[x.source] || x.source)}</span></td>
       <td>${x.bon ? `<span class="pcl-bon">${esc(x.bon.code)}</span>` : '<span class="muted">—</span>'}</td>
-      <td class="num">${x.statut === 'a_valider' ? '<span class="btn btn--sm">Valider</span>' : x.statut === 'cree' ? '<span class="chip chip--ok">Créé</span>' : '<span class="chip chip--draft">Refusé</span>'}</td></tr>`).join('')}</tbody></table></div>`;
+      <td class="num">${x.statut === 'a_valider' ? '<span class="btn btn--sm">Valider</span>' : etiquetteDev(x.statut)}</td></tr>`).join('')}</tbody></table></div>`;
     return `<section class="card pcl-carte pcl-dev"><div class="pcl-dev-tete"><div><div class="pcl-dev-titre">Bureaux en développement${A.length ? ` <span class="page-tabs__count">${A.length} à valider</span>` : ''}</div>
-        <div class="pcl-aide">Questionnaire du magasin ${q.actif ? '<b class="pcl-vert">ouvert</b>' : 'fermé'}${promo ? ' · bon de bienvenue : ' + esc(promo.nom) : ' · sans bon'} — chaque réponse crée la personne${promo ? ', son bon' : ''} et la société dans TF Buddy ; le bureau attend ici votre validation.</div></div>
-        <span class="pcl-sp"></span><button type="button" class="btn btn--sm" data-act="dev-questionnaire">Questionnaire du magasin</button><button type="button" class="btn btn--sm btn--primary" data-act="dev-nouveau">${SVG(ICO.plus)}Nouveau bureau en développement</button></div>
-      ${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}</section>`;
+        <div class="pcl-aide">Chaque inscription crée le compte webshop de la personne${promo ? ', son bon' : ''} et la société dans TF Buddy ; si le bureau de sa société existe déjà, elle le rejoint aussitôt. Sinon, le bureau attend ici votre validation.</div></div>
+        <span class="pcl-sp"></span><button type="button" class="btn btn--sm btn--primary" data-act="dev-nouveau">${SVG(ICO.plus)}Nouveau bureau en développement</button></div>
+      ${blocLien()}${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}</section>`;
   }
   /** Le tiroir d'une demande : ce qu'elle a créé dans TF Buddy, et la validation (le bureau créé, la personne reliée). */
   function tiroirDemande() {
     const B = st.b, D = B.dev, x = D && D.demandes.find(y => y.id === B.devSel);
     if (!x) { return ''; }
+    const d = x.d || {};
     const o = B.options || {}, R = [['', 'Aucune tournée pour l’instant'], ...(o.routes || []).map(r => [r.id, r.name + (r.start_time ? ' (' + String(r.start_time).slice(0, 5) + ')' : '')])];
     const sec = (titre, corps) => `<section class="pcl-tir-sec"><h4>${titre}</h4>${corps}</section>`;
     const tfbId = (id, l) => id ? `<span class="chip chip--ok">client TF Buddy n° ${id}</span>` : `<span class="tag-warn">${l}</span>`;
@@ -414,14 +442,20 @@
         ${B.devMsg ? `<p class="${B.devMsg.err ? 'error' : 'pcl-ok'}">${esc(B.devMsg.err || B.devMsg.texte)}</p>` : ''}</section>` : `${B.devMsg ? `<p class="${B.devMsg.err ? 'error' : 'pcl-ok'}">${esc(B.devMsg.err || B.devMsg.texte)}</p>` : ''}`;
     return `<div class="pcl-tir-voile" data-act="dev-fermer-fond"></div>
       <aside class="pcl-tir${entree()}" role="dialog" aria-modal="true" aria-label="${esc(x.bureau)}">
-        <div class="pcl-tir-tete"><div><div class="pcl-tir-nom">${esc(x.bureau)} ${ouverte ? '<span class="tag-warn">À valider</span>' : x.statut === 'cree' ? '<span class="chip chip--ok">Créé</span>' : '<span class="chip chip--draft">Refusé</span>'}</div>
+        <div class="pcl-tir-tete"><div><div class="pcl-tir-nom">${esc(x.bureau)} ${etiquetteDev(x.statut)}</div>
           <div class="pcl-fmeta">Bureau en développement · reçu le ${fD(x.le.slice(0, 10))} à ${esc(x.le.slice(11, 16))} · ${esc(SOURCES[x.source] || x.source)}${x.traite ? ' · traité le ' + fD(x.traite.slice(0, 10)) : ''}</div></div>
           <button type="button" class="btn btn--sm btn--icon" data-act="dev-fermer" aria-label="Fermer">${SVG(ICO.x)}</button></div>
         <div class="pcl-tir-corps">
           ${x.erreurs.length ? `<div class="pcl-manque">${SVG(ICO.alerte)}<div><b>À reprendre dans TF Buddy :</b> ${x.erreurs.map(esc).join(' · ')}</div></div>` : ''}
-          <div class="pcl-tir-2">${sec('La personne', ligneF('Nom', esc(x.personne)) + ligneF('Fonction', esc(x.fonction)) + ligneF('E-mail', x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : '') + ligneF('Téléphone', x.tel ? `<a href="tel:${esc(x.tel)}">${esc(x.tel)}</a>` : '') + ligneF('Dans TF Buddy', tfbId(x.clientId, 'pas encore créée')))}
-            ${sec('La société', ligneF('Nom', esc(x.societe)) + ligneF('TVA', esc(x.tva)) + ligneF('Dans TF Buddy', tfbId(x.societeId, x.tva ? 'pas encore créée' : 'sans TVA : à donner pour valider')))}</div>
-          <div class="pcl-tir-2">${sec('Le bureau', ligneF('Adresse', esc([x.adresse, [x.cp, x.ville].filter(Boolean).join(' ')].filter(Boolean).join(', '))) + ligneF('Personnes', x.personnes ? nf(x.personnes) : '') + ligneF('Jours souhaités', jours) + (x.remarque ? `<div class="pcl-aide" style="margin-top:6px">« ${esc(x.remarque)} »</div>` : ''))}
+          <div class="pcl-tir-2">${sec('La personne', ligneF('Nom', esc(x.personne)) + ligneF('Fonction', esc(x.fonction)) + ligneF('E-mail', x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : '') + ligneF('Téléphone', x.tel ? `<a href="tel:${esc(x.tel)}">${esc(x.tel)}</a>` : '')
+              + ligneF('Langue', esc({ fr: 'français', nl: 'néerlandais', en: 'anglais' }[d.langue] || '')) + ligneF('Compte webshop', x.compte === 'cree' ? '<span class="chip chip--ok">créé</span> <span class="muted">mot de passe choisi par e-mail</span>' : x.compte === 'existant' ? '<span class="chip">existait déjà</span>' : '')
+              + ligneF('Dans TF Buddy', tfbId(x.clientId, 'pas encore créée')) + ligneF('Accords', [d.recontact ? 'peut être appelé' : '', d.nouvelles ? 'veut les nouvelles' : ''].filter(Boolean).join(' · ')))}
+            ${sec('La société', ligneF('Nom', esc(x.societe)) + ligneF('TVA', esc(x.tva)) + ligneF('Secteur', esc(SECTEURS_DEV[d.secteur] || '')) + ligneF('Facturation', esc([[d.factRue, d.factNum].filter(Boolean).join(' ') + (d.factBoite ? ' bte ' + d.factBoite : ''), [d.factCp, d.factVille].filter(Boolean).join(' ')].filter(Boolean).join(', ')))
+              + ligneF('E-mail de facturation', d.emailFact && d.emailFact !== x.email ? esc(d.emailFact) : '') + ligneF('Qui paie', d.paiement ? (d.paiement === 'company' ? 'la société (facture)' : 'chacun sa commande') : '') + ligneF('Bon de commande', esc(d.bonCommande || ''))
+              + ligneF('Logo', x.logo ? 'fourni, repris à la création' : '') + ligneF('Dans TF Buddy', tfbId(x.societeId, x.tva ? 'pas encore créée' : 'sans TVA : à donner pour valider')))}</div>
+          <div class="pcl-tir-2">${sec('La livraison', ligneF('Adresse', esc([x.adresse, [x.cp, x.ville].filter(Boolean).join(' ')].filter(Boolean).join(', '))) + ligneF('Bâtiment, étage', esc([d.batiment, d.etage].filter(Boolean).join(' · '))) + ligneF('Personnes', x.personnes ? nf(x.personnes) : '') + ligneF('Jours souhaités', jours)
+              + ligneF('Créneau', d.de && d.a ? esc(d.de + ' – ' + d.a) : '') + ligneF('À la livraison', esc({ qr: 'scan du QR code', signature: 'signature', dropoff: 'dépôt' }[d.remise] || '')) + (x.remarque ? `<div class="pcl-aide" style="margin-top:6px">« ${esc(x.remarque)} »</div>` : '')
+              + ((d.services || []).length || (d.collegues || []).length ? `<h4 style="margin-top:14px">L’équipe</h4>${ligneF('Services', esc((d.services || []).join(', ')))}${(d.collegues || []).length ? ligneF('Collègues invités à la validation', (d.collegues || []).map(c => esc(c.nom ? c.nom + ' · ' + c.email : c.email)).join('<br>')) : ''}` : ''))}
             ${sec('Le bon de bienvenue', x.bon ? ligneF('Code', `<span class="pcl-bon">${esc(x.bon.code)}</span>`) + (x.bon.texte ? `<div class="pcl-aide" style="margin-top:6px">${esc(x.bon.texte)}</div>` : '') : '<div class="pcl-aide">Pas de bon pour cette demande.</div>')}</div>
           ${form}
         </div>
@@ -828,7 +862,8 @@
       case 'dev-refuser': if (window.confirm('Refuser ce bureau ? La personne et la société restent dans TF Buddy ; le bureau ne sera pas créé.')) {
         envoyer('/dashboard/bureaux-dev/refuser', { id: B.devSel }).then(() => { B.devSel = null; return lireDev(); }).catch(e => { B.devMsg = { err: e.message }; rendre(); }); } break;
       case 'dev-questionnaire': { const q = B.dev.questionnaire; ouvrir('dev-questionnaire', { actif: q.actif, titre: q.titre, message: q.message, promo: q.promo || '', regenerer: false }); break; }
-      case 'dev-copier': { const i = st.el.querySelector('#pcl-q-url'); const t = i ? i.value : ''; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(() => { if (i) { i.select(); document.execCommand('copy'); } }).finally(() => { if (st.mo) { st.mo.copie = true; rendre(); } }); break; }
+      case 'dev-copier': { const tous = st.el.querySelectorAll('#pcl-q-url'), i = st.mo ? tous[tous.length - 1] : tous[0]; const t = i ? i.value : ''; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(() => { if (i) { i.select(); document.execCommand('copy'); } }).finally(() => { if (st.mo) { st.mo.copie = true; } else { st.b.lienCopie = String(st.b.lienShop || (st.b.dev && st.b.dev.shop)); } rendre(); }); break; }
+      case 'lien-qr': telechargerQr(a.dataset.shop); break;
       case 'dev-questionnaire-ok': { m.busy = true; m.err = null; rendre();
         envoyer('/dashboard/bureaux-dev/questionnaire', { actif: !!m.f.actif, titre: m.f.titre, message: m.f.message, promo: m.f.promo ? Number(m.f.promo) : null, regenerer: !!m.f.regenerer })
           .then(d => { B.dev = d; st.mo = null; rendre(); }).catch(e => { if (st.mo) { m.busy = false; m.err = e.message; } rendre(); }); break; }
@@ -864,6 +899,7 @@
     if (t.id === 'pcl-pq') { st.p.q = t.value; clearTimeout(tRech); tRech = setTimeout(() => lireParticuliers(), 300); return; }
     if (t.id === 'pcl-eq') { st.e.q = t.value; rendre(); return; }
     if (t.id === 'pcl-bq') { st.b.q = t.value; rendre(); return; }
+    if (t.dataset && t.dataset.lienShop !== undefined && ev.type === 'change') { st.b.lienShop = t.value; st.b.lienCopie = null; rendre(); return; }
     if (t.dataset && t.dataset.logo && ev.type === 'change') { logoLire(t.files && t.files[0]); return; }
     if (!t.dataset || !t.dataset.f) { return; }
     const val = t.type === 'checkbox' ? t.checked : t.value;

@@ -3486,6 +3486,8 @@ une société B2B, donc un numéro de TVA.
     GET|POST /bureau-questionnaire/m/{shop}  PUBLIC, le lien court « …/bureau/?m=2 » (26/11/2026, « Use please id shop and no slug ») : le numéro
                                              d'un magasin ouvert du réseau (2 : Corbais) ; le même questionnaire (créé ouvert s'il n'existait pas),
                                              fermé avec lui ; il se devine, d'où au plus 40 réponses par jour et par magasin (pour les deux liens)
+    POST …/{jeton}/tva, …/m/{shop}/tva       PUBLIC {tva} → {tva, verifiee, valide, societe, rue, numero, cp, ville} (VIES ; 20 par heure et par appareil ;
+                                             rien d'autre ne sort : ni si la société est cliente, ni ses contacts)
     GET  /dashboard/bureaux-dev?shop=        → {demandes: [{id, source, statut: a_valider|cree|refuse, personne, donnees, clientId, societeId, bon, erreurs, officeId, le}],
                                                 questionnaire: {jeton, actif, promo, titre, message}, promos: [{id, nom}], lienCourt: "2"}
     POST /dashboard/bureaux-dev              {shop, donnees}   une demande saisie au dashboard (l'accord n'y est pas demandé)
@@ -3494,7 +3496,25 @@ une société B2B, donc un numéro de TVA.
                                              → {ok, officeId} | 422 (TVA manquante) | 409 (déjà traitée) | refus du compte du magasin
     POST /dashboard/bureaux-dev/refuser      {shop, id}
 
-Valider : la société si elle manque (`POST /shops/{s}/clients {vat_number}`), puis `POST /panel/shops/{s}/offices/onboard`
+**Le formulaire en six étapes** (26/11/2026, Sam : « faire le formulaire et le générateur de lien par shop dans l'onglet
+bureau » ; maquette `panel/docs/maquettes/bureau-formulaire/`). Le corps public : `prenom, nom, fonction, tel, langue (fr|nl|en),
+email, tva, pays, societe, secteur (corporate|retail|horeca|event), bureau, emailFact, factRue, factNum, factBoite, factCp,
+factVille, bonCommande, paiement (company|person), logo (data-URL png|jpeg|webp ≤ 300 000 car.), adresse, cp, ville, batiment,
+etage, personnes, remarque, jours[], de, a, remise (qr|signature|dropoff), services[], collegues[{nom, email}] (30 au plus),
+accord*, recontact, nouvelles, site_web (piège)`. **Aucun mot de passe** (le cockpit est servi en http) : le serveur crée le
+compte webshop (`POST /clients/auth/register`, route publique de TF Buddy, `id_main_shop` = le magasin) avec un mot de passe
+jetable tiré sur place, ouvre une fois la session (`/clients/auth/login`, le `client_id` du jeton), puis demande à TF Buddy
+l'e-mail qui fait choisir le sien (`/clients/auth/password/reset/request`, lien d'une heure). Un e-mail ou un téléphone déjà
+connu (409) : le compte existe, la personne est cherchée parmi les clients du magasin. Si un bureau ACTIF a déjà cette TVA
+dans ce magasin, la personne le rejoint aussitôt avec sa session (`POST /webshop/offices/search`, puis `/{id}/join`) : la
+demande passe `rejoint`, sans validation. Réponse : `{ok, magasin, bon, compte: cree|existant|null, rejoint: nom du bureau|null, bureau}`.
+
+**Le générateur de liens** (Clients › Bureaux, en tête de « Bureaux en développement ») : le lien `…/bureau/?m={shop}` du
+magasin, son QR (téléchargé en PNG de 1024 px), Copier, Ouvrir, Réglages et bon ; le siège (ou l'accès ouvert) choisit
+n'importe quel magasin (`magasins: [{id, nom}]` dans la réponse de `GET /dashboard/bureaux-dev`).
+
+Valider : la société si elle manque (celle que `vat-lookup` connaît déjà, sinon `POST /shops/{s}/clients {vat_number}`), puis `POST /panel/shops/{s}/offices/onboard`
+(facturation, secteur, remise, créneau, jours, logo, contact, site avec bâtiment, étage et consignes, services, collègues invités : `send_membership`)
 (`request_key` `bdv-{id}` : une validation rejouée ne crée pas un second bureau), le site (avec sa tournée), puis
 `POST …/offices/{id}/members {client_id}` relie la personne. Tables `panel_bureau_questionnaire` (un par magasin, le jeton
 de 32 caractères hexadécimaux) et `panel_bureau_dev` (les demandes ; effacées 90 jours après traitement ; l'adresse IP

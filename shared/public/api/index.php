@@ -260,12 +260,12 @@ try {
     // Le questionnaire « bureau » d'un magasin (26/11/2026) : PUBLIC, la personne n'a pas de session — le jeton du
     // questionnaire dans l'adresse est la clé (panel/src/bureaux_dev.php : limite par IP, champ piège) ; le lien court
     // /m/{shop} (« 2 », Corbais) ouvre le même, avec en plus un plafond de réponses par jour et par magasin.
-    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/m/(\d{1,6})$#', $path, $m)) {
-        echo json_encode(bdvPublicMagasin($method, $m[1]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/m/(\d{1,6})(/tva)?$#', $path, $m)) {
+        echo json_encode(bdvPublicMagasin($method, $m[1], isset($m[2]) ? 'tva' : ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
-    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/([a-f0-9]{32})$#', $path, $m)) {
-        echo json_encode(bdvPublic($method, $m[1]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/([a-f0-9]{32})(/tva)?$#', $path, $m)) {
+        echo json_encode(bdvPublic($method, $m[1], isset($m[2]) ? 'tva' : ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
     // Le flux ICS d'un consultant : Google Agenda le relit sans session — le jeton de l'adresse est sa clé.
