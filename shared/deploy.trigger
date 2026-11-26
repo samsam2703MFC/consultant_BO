@@ -320,3 +320,4 @@
 2026-11-25T21:04:35Z Dashboard : défauts du premier lot de vidéos corrigés (Fidélité sans profil, Concurrence, conversion d'une offre, anneau des primes de l'année, fiche produit, panier du mois) ; plus de ville dans les exemples de la newsletter
 2026-11-26T03:59:24Z Manuels du 26/11 : bon de commande de Mon catalogue, limites de connexion TF Buddy du magasin, GET /fidelite/programme, anneau des primes de l'année (documentation seulement)
 2026-11-26T04:21:38Z SOP du dashboard magasin : article v1.11, SOP v1.8 (Primes dans Mon équipe ; Commandes et Clients au rail)
+2026-11-26T04:43:30Z Manuel opératoire : thèmes 1 à 10 publiés (codes 0.0.61 à 0.0.70 ; 0.0.66 et 0.0.67 en v1.1 ; nouveaux : 0.0.68 Clients, 0.0.69 Autocontrôle qualité, 0.0.70 Commandes)
