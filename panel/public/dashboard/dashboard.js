@@ -92,7 +92,7 @@
   function bornes() {
     const t = new Date(S.date + 'T12:00:00');
     if (S.vue === 'semaine') { const j = (t.getDay() + 6) % 7; const du = new Date(t); du.setDate(t.getDate() - j); const au = new Date(du); au.setDate(du.getDate() + 6); return [du.toISOString().slice(0, 10), au.toISOString().slice(0, 10)]; }
-    const du = S.date.slice(0, 8) + '01'; const fin = new Date(t.getFullYear(), t.getMonth() + 1, 0); return [du, fin.toISOString().slice(0, 10)];
+    const du = S.date.slice(0, 8) + '01'; const fin = new Date(t.getFullYear(), t.getMonth() + 1, 0, 12); return [du, fin.toISOString().slice(0, 10)];   // à midi (26/11/2026 : à minuit heure belge, toISOString donnait la veille — le mois perdait son dernier jour)
   }
   /** Le lundi et le dimanche de la date regardée, quelle que soit la vue :
    * au téléphone, le mur porte la semaine même quand on lit le jour. */
@@ -1825,7 +1825,10 @@
       <text x="${(xD + 8).toFixed(1)}" y="${((Y(dern[1]) + yA) / 2 + 4).toFixed(1)}" class="ecart ${E.cour >= E.avant ? 'ok' : 'ko'}">${E.cour >= E.avant ? '+' : '−'}${fE(Math.abs(E.cour - E.avant))}${E.enCours ? ' au ' + E.jour : ''}</text>` : '';
     const projL = proj != null && dern[0] < nM ? `<line x1="${xD.toFixed(1)}" y1="${Y(dern[1]).toFixed(1)}" x2="${X(nM).toFixed(1)}" y2="${Y(proj).toFixed(1)}" stroke="${coul}" stroke-width="2" stroke-dasharray="2 4" opacity=".75"/>
       <text x="${X(nM).toFixed(1)}" y="${(Y(proj) - 8).toFixed(1)}" text-anchor="end" class="proj" style="fill:${coul}">fin ${moisNom(hC.m)} au rythme : ${fE(proj)}</text>` : '';
-    const finP = p.length ? `<text x="${(X(p[p.length - 1][0]) - 4).toFixed(1)}" y="${(Y(p[p.length - 1][1]) + (proj != null && Y(proj) < Y(p[p.length - 1][1]) ? 17 : -8)).toFixed(1)}" text-anchor="end" class="mu">${moisNom(hP.m)} ${fE(p[p.length - 1][1])}</text>` : '';
+    // L'étiquette du mois d'avant s'écarte de celle de la projection quand elles se touchent (26/11/2026 : l'une sur l'autre en haut à droite).
+    let yP = p.length ? Y(p[p.length - 1][1]) + (proj != null && Y(proj) < Y(p[p.length - 1][1]) ? 17 : -8) : 0;
+    if (p.length && proj != null && dern[0] < nM && Math.abs(yP - (Y(proj) - 8)) < 14) { yP = Math.min(Hh - 22, Math.max(Y(proj) - 8 + 15, Y(p[p.length - 1][1]) + 17)); }
+    const finP = p.length ? `<text x="${(X(p[p.length - 1][0]) - 4).toFixed(1)}" y="${yP.toFixed(1)}" text-anchor="end" class="mu">${moisNom(hP.m)} ${fE(p[p.length - 1][1])}</text>` : '';
     const svg = `<svg class="co-cumul" viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${esc(nom + ' : cumul de ' + moisNom(hC.m) + ' face à ' + moisNom(hP.m))}">${axes}
       ${p.length ? `<polyline fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" points="${ligne(p)}"/>` : ''}
       <polyline fill="none" stroke="${coul}" stroke-width="3" stroke-linejoin="round" points="${ligne(c)}"/>${projL}
