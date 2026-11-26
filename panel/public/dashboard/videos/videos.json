@@ -3270,6 +3270,78 @@
       "tourne_le": "2026-11-24"
     },
     {
+      "id": "primes-mois",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "primes",
+      "titre": "Le mois en cours",
+      "resume": "Novembre en projection : les primes d’équipe en anneaux, puis le tableau des vendeuses, prime par prime, et ce que chacune a déjà acquis ; trier et garder les primes du magasin.",
+      "vues": [
+        "primes"
+      ],
+      "fichier": "14-01-mois.mp4",
+      "debut": 0,
+      "fin": 89.6,
+      "affiche": "primes-mois.jpg",
+      "duree": "1 min 30",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/primes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "primes-mois-clos",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "primes",
+      "titre": "Le mois clos",
+      "resume": "« ‹ » et « › » changent de mois : octobre, clos, est celui qui se paie — les primes d’équipe atteintes ou pas, la colonne « Gagné », ce qui n’est pas gagné en gris.",
+      "vues": [
+        "primes"
+      ],
+      "fichier": "14-02-clos.mp4",
+      "debut": 0,
+      "fin": 47.33,
+      "affiche": "primes-mois-clos.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/primes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "primes-annee",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "primes",
+      "titre": "L’année",
+      "resume": "2026 : les primes d’équipe en anneaux — les mois atteints sur les mois clos, le montant versé —, puis par vendeuse ce qu’elle a gagné, prime par prime, et en combien de mois.",
+      "vues": [
+        "primes"
+      ],
+      "fichier": "14-03-annee.mp4",
+      "debut": 0,
+      "fin": 69.68,
+      "affiche": "primes-annee.jpg",
+      "duree": "1 min 10",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/primes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "concurrence",
       "genre": "tuto",
       "titre": "Nos prix face à la concurrence",
@@ -3287,6 +3359,198 @@
         "shared/public/assets/ds/global.css"
       ],
       "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "concurrence-top10",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "concurrence",
+      "titre": "Le top 10 du réseau",
+      "resume": "Les 10 produits les plus vendus du réseau face aux concurrents du magasin : les tuiles, les médianes, la position, l’écart et le verdict ; les concurrents par code postal.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-01-top10.mp4",
+      "debut": 0,
+      "fin": 85.39,
+      "affiche": "concurrence-top10.jpg",
+      "duree": "1 min 25",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/benchmark.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "concurrence-cougnou",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "concurrence",
+      "titre": "Le cougnou",
+      "resume": "La famille de saison, comparée au kilo : notre cougnou en €/kg face aux relevés, l’échelle par type de concurrent, la visibilité web et la carte « À faire ».",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-02-cougnou.mp4",
+      "debut": 0,
+      "fin": 49.35,
+      "affiche": "concurrence-cougnou.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/benchmark.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "concurrence-relever-cougnou",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "concurrence-cougnou",
+      "titre": "Relever le prix d’un cougnou",
+      "resume": "« + Relevé terrain » depuis Cougnou : le concurrent, le cougnou vu, son prix et son poids en grammes ; le relevé est ramené au kilo et entre dans les médianes.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-02-cougnou.mp4",
+      "debut": 49.35,
+      "fin": 95.48,
+      "affiche": "concurrence-relever-cougnou.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/benchmark.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "concurrence-galette",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "concurrence",
+      "titre": "La galette des rois",
+      "resume": "Les galettes des concurrents ramenées à notre Ø 22 cm, à surface égale, face à notre prix : les médianes, l’échelle, chaque relevé et son écart.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-03-galette.mp4",
+      "debut": 0,
+      "fin": 45.08,
+      "affiche": "concurrence-galette.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/benchmark.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "concurrence-relever-galette",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "concurrence-galette",
+      "titre": "Relever le prix d’une galette",
+      "resume": "« + Relevé terrain » depuis Galette des rois : le concurrent, la galette vue, son prix et son diamètre en cm ; le relevé est ramené à notre Ø 22 cm.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-03-galette.mp4",
+      "debut": 45.08,
+      "fin": 92.72,
+      "affiche": "concurrence-relever-galette.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/benchmark.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "concurrence-fiche",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "concurrence",
+      "titre": "La fiche d’un produit",
+      "resume": "Un produit, ouvert depuis le top 10 ou cherché dans le catalogue : notre prix face aux médianes des supermarchés, artisans et chaînes, l’échelle, chaque relevé avec son écart, puis les produits proches.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-04-fiche.mp4",
+      "debut": 0,
+      "fin": 48.25,
+      "affiche": "concurrence-fiche.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/benchmark.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "concurrence-releve",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "concurrence-fiche",
+      "titre": "Poser un relevé terrain",
+      "resume": "Un prix vu chez un concurrent : sur la fiche du produit, « + Relevé terrain », le concurrent, le produit vu et son prix, puis « Poser le relevé » : il entre dans la liste et dans les médianes.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-04-fiche.mp4",
+      "debut": 48.25,
+      "fin": 87.37,
+      "affiche": "concurrence-releve.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/benchmark.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "concurrence-nouveau-concurrent",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "concurrence-fiche",
+      "titre": "Ajouter un nouveau concurrent",
+      "resume": "Dans le relevé terrain, laisser « — nouveau concurrent — » : son nom, son code postal et son type, puis le prix ; « Poser le relevé » crée le concurrent dans TFBuddy.",
+      "vues": [
+        "concurrence"
+      ],
+      "fichier": "15-04-fiche.mp4",
+      "debut": 87.37,
+      "fin": 138.58,
+      "affiche": "concurrence-nouveau-concurrent.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/benchmark.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
       "tourne_le": "2026-11-26"
     },
     {
@@ -3349,6 +3613,79 @@
       ],
       "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "fidelite-profils",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "fidelite",
+      "titre": "Les profils des clients",
+      "resume": "La part des tickets scannés, les six profils du moins fidèle au plus fidèle, les radars et l’évolution du profil choisi, puis les clients qui reviennent.",
+      "vues": [
+        "fidelite"
+      ],
+      "fichier": "18-01-profils.mp4",
+      "debut": 0,
+      "fin": 83.11,
+      "affiche": "fidelite-profils.jpg",
+      "duree": "1 min 23",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "marketing/src/fidelite_profils.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "fidelite-cartes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "fidelite",
+      "titre": "Les cartes de fidélité",
+      "resume": "Du client reconnu à la récompense : l’entonnoir, chaque carte et ses timbres, son détail lu dans l’ERP, les clients inscrits, et le réseau sur la même période.",
+      "vues": [
+        "fidelite"
+      ],
+      "fichier": "18-02-cartes.mp4",
+      "debut": 0,
+      "fin": 86.43,
+      "affiche": "fidelite-cartes.jpg",
+      "duree": "1 min 26",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "marketing/src/fidelite_cartes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "fidelite-client",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "fidelite",
+      "titre": "La fiche d’un client",
+      "resume": "Un clic sur un client : son profil, ses passages, comment il achète, sa carte et ce qu’il y a à faire en caisse, ses habitudes et ses tickets ; « ‹ Retour » pour revenir.",
+      "vues": [
+        "fidelite"
+      ],
+      "fichier": "18-03-client.mp4",
+      "debut": 0,
+      "fin": 75.7,
+      "affiche": "fidelite-client.jpg",
+      "duree": "1 min 16",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "marketing/src/fidelite_profils.php",
+        "marketing/src/fidelite_cartes.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "catalogue",
