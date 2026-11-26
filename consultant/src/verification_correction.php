@@ -325,6 +325,19 @@ function vrcModifier(array $o, array $changements): array
             $lisible[] = '− ' . $nom;
             continue;
         }
+        // La perte de la ligne (26/11/2026) : de 0 à moins de 100 %, sur une matière seulement (le contrat exige zéro
+        // sur une sous-recette).
+        if ($t === 'perte') {
+            $p = (float) ($c['p'] ?? -1);
+            if ($liste !== 'materials' || $p < 0 || $p >= 100) { $erreurs[] = 'Perte invalide pour « ' . $nom . ' » (de 0 à 99 %, sur une matière).'; continue; }
+            $dansPivot = !array_key_exists('waste_amount_perc', $e) && isset($e['pivot']) && is_array($e['pivot']) && array_key_exists('waste_amount_perc', $e['pivot']);
+            $pAvant = (float) ($dansPivot ? $e['pivot']['waste_amount_perc'] : ($e['waste_amount_perc'] ?? 0));
+            if (abs($pAvant - $p) < 1e-9) { continue; }
+            if ($dansPivot) { $e['pivot']['waste_amount_perc'] = $p; } else { $e['waste_amount_perc'] = $p; }
+            $listes[$liste][$i] = $e; $touche[$liste] = true;
+            $lisible[] = 'Perte de ' . $nom . ' : ' . vrcQte($pAvant, '%') . ' → ' . vrcQte($p, '%');
+            continue;
+        }
         [$cq, $qAvant] = vrcCle($e, VRC_CLES_QTE);
         if ($cq === null) { $erreurs[] = 'La quantité de « ' . $nom . ' » n’a pas de clé lisible.'; continue; }
         $q = $t === 'facteur' ? ($qAvant ?? 0) * (float) ($c['f'] ?? 1) : (float) ($c['q'] ?? -1);
@@ -344,8 +357,15 @@ function vrcModifier(array $o, array $changements): array
 function vrcProjection(string $cle, mixed $v): mixed
 {
     if (in_array($cle, VRC_CLES_LISTES, true)) {
+        // Une ligne : sa quantité et sa perte (une perte absente vaut zéro, comme au panel).
         $o = [];
-        foreach ((array) $v as $e) { if (is_array($e)) { $id = vrcIdLigne($e, $cle); if ($id !== '') { $o[$id] = vrcCle($e, VRC_CLES_QTE)[1]; } } }
+        foreach ((array) $v as $e) {
+            if (!is_array($e)) { continue; }
+            $id = vrcIdLigne($e, $cle);
+            if ($id === '') { continue; }
+            $perte = $e['waste_amount_perc'] ?? ($e['pivot']['waste_amount_perc'] ?? 0);
+            $o[$id] = [vrcCle($e, VRC_CLES_QTE)[1], is_numeric($perte) ? (float) $perte : 0.0];
+        }
         ksort($o);
         return $o;
     }

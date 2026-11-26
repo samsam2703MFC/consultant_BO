@@ -2,10 +2,14 @@
  * style : verification.css (vm-). Maquette : docs/maquettes/matieres-reference. */
 
 import { tplTableau } from './verification-tableau-tpl.js';
+import { tplRefs } from './verification-refs-tpl.js';
 
 export function tplPrix(P, x){
   const { esc } = x;
   if (!P) { return ''; }
+  if (P.refs) {
+    return `<div class="vr-card"><div class="vt-aff"><div class="rc-seg">${(P.affichages || []).map(a => `<button class="${a.on ? 'on' : ''}" ${x.A(a.choisir)}>${esc(a.nom)}</button>`).join('')}</div></div>${tplRefs(P.refs, x)}</div>`;
+  }
   if (P.chargement) { return `<div class="vr-card vr-etat"><span class="vr-roue"></span>Lecture des matières des recettes, de leur prix dans chaque magasin et des listes de prix des fournisseurs…</div>`; }
   if (P.erreur) { return `<div class="vr-card vr-etat ko">${esc(P.erreur)}</div>`; }
   const aff = `<div class="vt-aff"><div class="rc-seg">${(P.affichages || []).map(a => `<button class="${a.on ? 'on' : ''}" ${x.A(a.choisir)}>${esc(a.nom)}</button>`).join('')}</div><span class="vr-sp"></span><span class="vr-lu">${esc(P.lu || '')}</span><button class="vr-btn" ${x.A(P.rafraichir)}${P.relecture ? ' disabled' : ''}>${P.relecture ? 'Lecture…' : 'Relire'}</button></div>`;

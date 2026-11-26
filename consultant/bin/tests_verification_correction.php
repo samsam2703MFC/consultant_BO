@@ -95,11 +95,16 @@ final class Panel
         $els = []; $t = 0.0; $complet = true;
         foreach ((array) ($o['materials'] ?? []) as $m) {
             $mid = (int) ($m['id_material'] ?? $m['id']); $q = (float) $m['quantity'] * $fac;
-            $px = self::$prix[$sid][$mid] ?? null;
+            // Au panel, le prix du magasin passe avant la référence de la matière (contrat du 26/11/2026).
+            $ref = self::$materiaux[$mid]['reference_unit_price_net'] ?? null;
+            $px = self::$prix[$sid][$mid] ?? ($ref !== null ? (float) $ref : null);
             if ($px === null) { $complet = false; }
-            $c = $px === null ? 0.0 : $q * $px; $t += $c;
+            // La perte : celle de la ligne ; celle de la matière seulement si le panel la lit (réglage de la doublure).
+            $w = (float) ($m['waste_amount_perc'] ?? 0) + (self::$perteMatiereLue ? (float) (self::$materiaux[$mid]['waste_amount_perc'] ?? 0) : 0.0);
+            $c = $px === null ? 0.0 : $q * $px * (1 + $w / 100); $t += $c;
             $els[] = ['type' => 'ingredient', 'material_id' => $mid, 'name' => self::$noms[$mid][0], 'required_quantity' => $q, 'unit_name' => self::$noms[$mid][1],
-                'price_net' => $px, 'price_source' => $px === null ? 'MISSING' : 'SUPPLIER', 'calculated_req_price_net' => $c];
+                'price_net' => $px, 'price_source' => $px === null ? 'MISSING' : (isset(self::$prix[$sid][$mid]) ? 'SUPPLIER' : 'REFERENCE'), 'calculated_req_price_net' => $c,
+                'waste_percent' => $w, 'quantity_waste' => $q * $w / 100];
         }
         foreach ((array) ($o['subrecipes'] ?? []) as $s) {
             $so = self::$sous[(int) ($s['id_subrecipe'] ?? $s['id'])];
@@ -157,6 +162,7 @@ final class Panel
     }
 
     public static array $photosEffacees = [];
+    public static bool $perteMatiereLue = false;   // le coût lit-il la perte de la matière ? (à mesurer au panel)
 
     public static function get(string $c): mixed
     {
@@ -284,7 +290,15 @@ final class PanelApi
 function mfMatieresApi(array $sids, bool $frais): array
 {
     $out = [];
-    foreach ($sids as $sid) { $out[$sid] = []; foreach (Panel::$noms as $mid => $n) { $out[$sid][(string) $mid] = ['prix' => Panel::$prix[$sid][$mid] ?? null, 'nom' => $n[0]]; } }
+    foreach ($sids as $sid) {
+        $out[$sid] = [];
+        foreach (Panel::$noms as $mid => $n) {
+            $loc = Panel::$prix[$sid][$mid] ?? null; $ref = Panel::$materiaux[$mid]['reference_unit_price_net'] ?? null;
+            $out[$sid][(string) $mid] = ['prix' => $loc ?? ($ref !== null ? (float) $ref : null), 'src' => $loc !== null ? 'LOCAL' : ($ref !== null ? 'REFERENCE' : 'MISSING'), 'nom' => $n[0], 'unite' => $n[1],
+                'reference' => $ref !== null ? (float) $ref : null, 'perte' => Panel::$materiaux[$mid]['waste_amount_perc'] ?? null,
+                'type' => Panel::$materiaux[$mid]['material_type'] ?? '', 'source' => Panel::$materiaux[$mid]['source_type'] ?? '', 'cat' => ''];
+        }
+    }
     return $out;
 }
 
@@ -317,6 +331,7 @@ require __DIR__ . '/../src/verification.php';
 require __DIR__ . '/../src/verification_correction.php';
 require __DIR__ . '/../src/verification_matieres_prix.php';
 require __DIR__ . '/../src/verification_matiere_edition.php';
+require __DIR__ . '/../src/verification_references.php';
 require __DIR__ . '/../src/produit_parametrage.php';
 require __DIR__ . '/../src/helpdesk.php';
 
@@ -805,6 +820,72 @@ $BODY = ['shop' => 5, 'domaine' => 'product', 'titre' => 'Tarte 22', 'descriptio
 $r = wr_helpdesk_magasin();
 verifie('helpdesk : la demande part au panel (POST /cases, contrat), le passage noté dans la description', $r['ok'] && $r['id'] === 99 && end(Panel::$ecrits)[1] === '/cases'
     && end(Panel::$ecrits)[2]['area_key'] === 'product' && end(Panel::$ecrits)[2]['shop_id'] === 5 && str_contains(end(Panel::$ecrits)[2]['description'], 'Passage du consultant souhaité'), json_encode($r));
+
+// --- Références et pertes, par lot (26/11/2026, src/verification_references.php) ------------------------------------
+echo "Références et pertes\n";
+verifie('pertes courantes : persil 30, oignons 10, radicchio 15 ; rien sur un produit transformé ni un emballage', vrfPerteCourante('Persil plat')[0] === 30 && vrfPerteCourante('Oignons rouges')[0] === 10
+    && vrfPerteCourante('radicchio')[0] === 15 && vrfPerteCourante('Tomates semi séchées') === null && vrfPerteCourante('Sauce tomate maison') === null && vrfPerteCourante('Tomates cerises')[0] === 3
+    && vrfPerteCourante('Salade feuille de chêne')[0] === 10 && vrfPerteCourante('Bol à salade', 'PACKAGING') === null);
+verifie('moyenne réseau : les prix propres des magasins, pas une référence ni un manque', vrfMoyenneReseau([4 => ['prix' => 0.004, 'src' => 'LOCAL'], 3 => ['prix' => 0.006, 'src' => 'SUPPLIER'], 2 => ['prix' => 0.01, 'src' => 'REFERENCE'], 5 => ['prix' => null, 'src' => 'MISSING']]) === ['prix' => 0.005, 'n' => 2, 'min' => 0.004, 'max' => 0.006]);
+$fic = ['prix' => ['756' => ['prix' => 10.0, 'source' => 'estimé']], 'pertes' => ['282' => ['perte' => 3, 'raison' => 'pédoncules']]];
+$pp = vrfProposition(['mid' => 756, 'nom' => 'Mesclun', 'facteur' => 1000.0, 'prix' => [4 => ['prix' => null, 'src' => 'MISSING']], 'reference' => null, 'perte' => 0], $fic);
+verifie('proposition : sans prix au réseau, le prix de marché (10 €/kg → 0,01 €/g), et la perte courante', $pp['origine'] === 'marche' && abs($pp['prix'] - 0.01) < 1e-12 && $pp['perte'] === 10 && $pp['perteOrigine'] === 'courante' && $pp['change'], json_encode($pp));
+$pp = vrfProposition(['mid' => 282, 'nom' => 'Tomates cerises', 'facteur' => 1000.0, 'prix' => [4 => ['prix' => 0.0042, 'src' => 'LOCAL'], 3 => ['prix' => 0.0042, 'src' => 'LOCAL']], 'reference' => 0.0042, 'perte' => 3], $fic);
+verifie('proposition : déjà au panel (référence et perte), rien à changer', $pp['origine'] === 'reseau' && $pp['n'] === 2 && !$pp['change'] && $pp['perteOrigine'] === 'fichier', json_encode($pp));
+verifie('le fichier des prix de marché : mesclun, radicchio, steak, et les pertes de la Tagliata', (vrfFichier()['prix']['761']['prix'] ?? null) === 17.0 && (vrfFichier()['pertes']['356']['perte'] ?? null) === 30);
+
+// La Salade Tagliata de la doublure : tomates cerises chiffrées au réseau, mesclun et steak sans prix nulle part.
+Panel::$noms += [282 => ['Tomates cerises', 'g'], 756 => ['Mesclun', 'g'], 761 => ['Steak de bœuf', 'g']];
+foreach ([4, 3, 2] as $s) { Panel::$prix[$s][282] = 0.0042; }
+foreach ([282 => ['OPEN', 'Tomates cerises'], 756 => ['CENTRAL', 'Mesclun'], 761 => ['CENTRAL', 'Steak de bœuf']] as $m => [$src, $nm]) {
+    Panel::$materiaux[$m] = ['id' => $m, 'name' => $nm, 'id_category' => 31, 'id_unit' => 3, 'unit_name' => 'g', 'material_type' => 'RAW', 'source_type' => $src, 'waste_amount_perc' => 0, 'reference_unit_price_net' => null, 'allergens' => []];
+}
+Panel::$recettes[216] = $rec(216, 'Salade Tagliata', 1, [$mat(282, 60), $mat(756, 70), $mat(761, 100)]);
+$_GET = ['rid' => '216'];
+$R = ep_verification_references();
+fixture('references-216', $R);
+$par = []; foreach ($R['lignes'] ?? [] as $l) { $par[$l['mid']] = $l; }
+verifie('références : la Tagliata lue, ses trois matières', ($R['ok'] ?? false) && count($R['lignes']) === 3 && $R['nom'] === 'Salade Tagliata' && abs(($par[282]['q'] ?? 0) - 60) < 1e-9, json_encode($R));
+verifie('références : tomates au prix du réseau (4,20 €/kg), mesclun et steak au prix de marché (10 et 17 €/kg)', abs($par[282]['propose']['prix'] * 1000 - 4.2) < 1e-9 && $par[282]['propose']['origine'] === 'reseau'
+    && abs($par[756]['propose']['prix'] * 1000 - 10) < 1e-9 && $par[756]['propose']['origine'] === 'marche' && abs($par[761]['propose']['prix'] * 1000 - 17) < 1e-9);
+verifie('références : les pertes du fichier (tomates 3, mesclun 10, steak 5)', $par[282]['propose']['perte'] === 3 && $par[756]['propose']['perte'] === 10 && $par[761]['propose']['perte'] === 5);
+$coutAvant = Panel::get('/shops/4/recipes/216/cost')['cost_net'];
+$lot = ['rid' => 216, 'lignes' => [['mid' => 282, 'prix' => 4.2, 'perte' => 3], ['mid' => 756, 'prix' => 10, 'perte' => 10], ['mid' => 761, 'prix' => 17, 'perte' => 5]]];
+$n0 = count(Panel::$ecrits);
+$BODY = $lot + ['apercu' => true];
+$ap = wr_verification_references();
+verifie('références : l’aperçu, trois PATCH /materials/{id}, rien d’écrit', ($ap['apercu'] ?? false) && count($ap['ecritures']) === 3 && $ap['ecritures'][1]['route'] === '/materials/756'
+    && $ap['ecritures'][1]['corps'] === ['reference_unit_price_net' => '0.01', 'waste_amount_perc' => 10] && count(Panel::$ecrits) === $n0, json_encode($ap));
+$BODY = $lot;
+$r = wr_verification_references();
+fixture('references-tagliata', $r);
+verifie('références : écrites et relues au panel (référence et perte de la matière)', $r['ok'] && Panel::$materiaux[756]['reference_unit_price_net'] === '0.01' && Panel::$materiaux[761]['waste_amount_perc'] === 5
+    && Panel::$materiaux[282]['reference_unit_price_net'] === '0.0042' && Panel::$prix[4][282] === 0.0042, json_encode($r['ecritures'] ?? $r));
+$e4 = array_values(array_filter($r['effet'], static fn ($m) => $m['sid'] === 4))[0] ?? [];
+$t4 = array_values(array_filter($e4['lignes'] ?? [], static fn ($x) => $x['rid'] === 216))[0] ?? [];
+verifie('références : le food cost de la Tagliata relu, de 0,252 € à 2,652 € (mesclun 0,70 € et steak 1,70 € comptés)', abs(($t4['avant'] ?? 0) - 0.252) < 1e-6 && abs(($t4['apres'] ?? 0) - 2.652) < 1e-6 && count($r['effet']) === 3, json_encode($e4));
+verifie('références : le panel ne lit pas la perte de la matière → elle est à poser sur les lignes', str_contains((string) ($r['pertes']['message'] ?? ''), 'n’entre pas') && count($r['pertes']['aPoser']) === 3, json_encode($r['pertes']));
+$r2 = $geste(['geste' => 'recette', 'rid' => 216, 'nom' => 'Salade Tagliata', 'changements' => array_map(static fn ($x) => ['type' => 'perte', 'mid' => $x['mid'], 'p' => $x['p']], $r['pertes']['aPoser'])]);
+$coutPerte = Panel::get('/shops/4/recipes/216/cost')['cost_net'];
+verifie('pertes sur les lignes : PATCH /recipes/216 complet, relu, et le coût les compte', $r2['ok'] && end(Panel::$ecrits)[1] === '/recipes/216' && array_column(end(Panel::$ecrits)[2]['materials'], 'waste_amount_perc') === [3.0, 10.0, 5.0]
+    && abs($coutPerte - (0.252 * 1.03 + 0.7 * 1.10 + 1.7 * 1.05)) < 1e-6, json_encode($r2['ecritures'] ?? $r2));
+$BODY = ['id' => $r2['ecritures'][0]['id']];
+verifie('pertes sur les lignes : « Annuler » les remet à zéro', wr_verification_annuler()['ok'] && array_sum(array_map(static fn ($l) => (float) ($l['waste_amount_perc'] ?? 0), Panel::$recettes[216]['materials'])) === 0.0);
+$BODY = $lot;
+verifie('références : un lot déjà au panel ne réécrit rien', !wr_verification_references()['ok']);
+Panel::$perteMatiereLue = true;
+$BODY = ['rid' => 216, 'lignes' => [['mid' => 756, 'perte' => 12]]];
+$r3 = wr_verification_references();
+verifie('références : si le panel lit la perte de la matière, rien à poser sur les lignes', $r3['ok'] && str_contains((string) ($r3['pertes']['message'] ?? ''), 'entre dans le coût') && $r3['pertes']['aPoser'] === [], json_encode($r3['pertes'] ?? $r3));
+Panel::$perteMatiereLue = false;
+$BODY = ['id' => $r['ecritures'][1]['id']];
+$u = wr_verification_annuler();
+verifie('références : « Annuler » remet la matière comme avant le lot (sans référence, perte 0)', $u['ok'] && Panel::$materiaux[756]['reference_unit_price_net'] === null && (int) Panel::$materiaux[756]['waste_amount_perc'] === 0, json_encode($u));
+$_GET = ['q' => 'tagliata'];
+verifie('références : une recette se cherche par son nom', (ep_verification_references()['rid'] ?? 0) === 216);
+$_GET = [];
+$T = ep_verification_references();
+verifie('références : toute la carte, la Tagliata comprise', ($T['ok'] ?? false) && count($T['lignes']) > 10 && in_array(756, array_column($T['lignes'], 'mid'), true));
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);

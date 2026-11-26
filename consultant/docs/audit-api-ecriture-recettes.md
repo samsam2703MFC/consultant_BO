@@ -170,3 +170,38 @@ L'effet est calculé dans les trois premiers magasins visés.
 **Constat en passant** : au magasin 4, le food cost de la Salade Tagliata est **partiel** (0,86 € HT connus) :
 le mesclun, le radicchio, le steak de bœuf et la fourme d'Ambert n'y ont pas de prix. Le food cost réel de
 cette salade est donc plus élevé que ce que le panel affiche.
+
+---
+
+## 5. Les prix de référence et les pertes, par lot (26/11/2026)
+
+**La demande** : poser partout les prix moyens belges au kg et les pertes, d'abord sur la Salade Tagliata, puis sur
+toute la carte. **Les décisions** : les valeurs proposées sont validées ; on pose le prix du **réseau** comme prix de
+référence de la matière, sans écraser les prix d'achat des magasins.
+
+**Où** : Vérification › Matières premières › **Références et pertes (réseau)**. On ouvre une recette par son nom
+(« tagliata ») ou son numéro, ou on choisit « Toute la carte ». Pour chaque matière, l'écran montre :
+- le prix de chaque magasin, avec son origine (le prix propre du magasin, ou la référence) ;
+- la référence et la perte actuelles au panel ;
+- la proposition :
+  - **le prix** : la moyenne des magasins qui la chiffrent par leur propre prix, sinon le prix de marché belge de
+    `consultant/src/data/prix_reference_be.json` ;
+  - **la perte** : celle du fichier, sinon une perte courante de sa famille de matière (persil 30 %, oignons 10 %,
+    radicchio 15 %…), jamais sur un produit transformé ni un emballage.
+
+Tout reste modifiable, et seules les lignes cochées partent.
+
+**L'écriture** : `PATCH /materials/{id} {reference_unit_price_net, waste_amount_perc}`, pour tout le réseau. Chaque
+écriture est relue, puis notée au registre (« Annuler » remet l'avant). Le cockpit relit ensuite le food cost des
+recettes touchées dans chaque magasin, avant et après. Le compte administrateur du cockpit peut servir si le compte
+consultant n'a pas le droit.
+
+**La perte, à trancher au premier essai** : le contrat ne dit pas si le coût d'une recette lit la perte de la matière
+ou celle de la ligne. Après l'écriture, le cockpit regarde si la perte entre dans le coût de la recette. Sinon, il le
+dit, et « Poser les pertes sur les lignes » les met dans la recette (geste `recette`, changement `perte`).
+
+**Pour la Tagliata** :
+- **Prix réseau** : la fourme d'Ambert (18,97 €/kg, posée en référence, elle comble le manque du magasin 4) ; les
+  tomates cerises, le parmesan, le persil et les autres matières, au prix du réseau.
+- **Prix de marché estimés** : mesclun 10 €/kg, radicchio 5 €/kg, steak de bœuf 17 €/kg.
+- **Le food cost attendu** : environ 3,48 € sans pertes, et 3,69 à 3,71 € avec les pertes.

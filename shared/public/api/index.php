@@ -61,6 +61,7 @@ require __DIR__ . '/../../../consultant/src/verification.php';
 require __DIR__ . '/../../../consultant/src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
 require __DIR__ . '/../../../consultant/src/verification_matieres_prix.php';   // Recettes à corriger › Matières premières (14/11/2026)
 require __DIR__ . '/../../../consultant/src/verification_matiere_edition.php';   // … › la fiche d'une matière, modifiable (14/11/2026)
+require __DIR__ . '/../../../consultant/src/verification_references.php';   // … › références et pertes, par lot (26/11/2026)
 require __DIR__ . '/../../../consultant/src/produit_parametrage.php';         // Produits › Paramétrage : la fiche d'un produit, modifiable (14/11/2026)
 require __DIR__ . '/../../../consultant/src/helpdesk.php';                  // Le helpdesk des franchisés : demandes, missions de visite (15/11/2026)
 require __DIR__ . '/../../../consultant/src/reclamations.php';              // Réclamations fournisseur : photos, part du livré, tableau annuel (21/11/2026)
@@ -735,6 +736,7 @@ function route(string $method, string $path): mixed
             $path === '/verification/recettes/registre' => ep_verification_registre(),
             $path === '/verification/recettes/matieres' => ep_verification_matieres_prix(),
             $path === '/verification/recettes/matiere'  => ep_verification_matiere(),
+            $path === '/verification/recettes/references' => ep_verification_references(),
             // Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) : la liste, la fiche d'un produit.
             $path === '/produits/parametrage/liste'   => ep_produits_parametrage_liste(),
             $path === '/produits/parametrage'         => ep_produits_parametrage(),
@@ -1081,7 +1083,7 @@ function route(string $method, string $path): mixed
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).
     // Un compte ADMINISTRATEUR du panel (14/11/2026) : connecté par la personne dans le formulaire du prix ou dans le cadre
     // des tâches (POST /task/connexion), son jeton voyage dans l'en-tête X-Panel-Jeton, le temps de la requête — jamais gardé.
-    if ($method === 'POST' && in_array($path, ['/verification/recettes/corriger', '/verification/recettes/matiere', '/produits/parametrage', '/verification/recettes/reception'], true)) {
+    if ($method === 'POST' && in_array($path, ['/verification/recettes/corriger', '/verification/recettes/matiere', '/verification/recettes/references', '/produits/parametrage', '/verification/recettes/reception'], true)) {
         $jAdmin = trim((string) ($_SERVER['HTTP_X_PANEL_JETON'] ?? ''));
         if ($jAdmin !== '' && preg_match('/^[\w.\-]{20,4000}$/', $jAdmin)) { PanelApi::$jetonImpose = $jAdmin; }
         // Ou le compte administrateur du cockpit lui-même (Paramètres › ERP, src/erp_api.php) : {compte: "admin"}.
@@ -1095,6 +1097,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/verification/recettes/reception') { return wr_verification_reception(); }
     if ($method === 'POST' && $path === '/verification/recettes/annuler') { return wr_verification_annuler(); }
     if ($method === 'POST' && $path === '/verification/recettes/matiere') { return wr_verification_matiere(); }
+    if ($method === 'POST' && $path === '/verification/recettes/references') { return wr_verification_references(); }
     if ($method === 'POST' && $path === '/produits/parametrage') { return wr_produits_parametrage(); }
     if ($method === 'POST' && $path === '/helpdesk/magasin') { return wr_helpdesk_magasin(); }
     if ($method === 'PUT' && $path === '/helpdesk/sms') { return wr_helpdesk_sms(); }

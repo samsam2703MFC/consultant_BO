@@ -1,0 +1,23 @@
+{
+  "maj": "2026-11-26",
+  "note": "Prix de marché belges (HT, par kg) pour les matières qu'aucun magasin ne chiffre, et pertes validées par le CEO le 26/11/2026 (Salade Tagliata d'abord). Les prix estimés sont des prix pro déduits des prix de détail belges et des cotations de gros : à remplacer par le tarif du fournisseur dès qu'il existe.",
+  "prix": {
+    "756": { "nom": "Mesclun", "prix": 10.0, "source": "estimé : détail belge 9,50 à 25 €/kg TTC (Carrefour, eFarmz, producteurs), prix pro retenu 10 €/kg HT" },
+    "757": { "nom": "Radicchio", "prix": 5.0, "source": "estimé : gros (Rungis) 4,00 à 5,60 €/kg, détail belge 6 à 8 €/kg" },
+    "761": { "nom": "Steak de bœuf", "prix": 17.0, "source": "estimé : gros (Rungis) 13,40 €/kg en moyenne, steaks Colruyt 21 à 29 €/kg TTC" }
+  },
+  "pertes": {
+    "368": { "nom": "Courgettes", "perte": 5, "raison": "extrémités" },
+    "401": { "nom": "Fourme Ambert pré-pack", "perte": 3, "raison": "croûte" },
+    "304": { "nom": "Grenaille", "perte": 3, "raison": "tri, pommes abîmées" },
+    "756": { "nom": "Mesclun", "perte": 10, "raison": "tri, feuilles fanées" },
+    "353": { "nom": "Oignons rouges", "perte": 10, "raison": "pelure, extrémités" },
+    "332": { "nom": "Olives noires dénoyautées", "perte": 0, "raison": "égouttées : prix au poids net" },
+    "270": { "nom": "Parmesan", "perte": 8, "raison": "croûte" },
+    "356": { "nom": "Persil plat", "perte": 30, "raison": "tiges" },
+    "757": { "nom": "Radicchio", "perte": 15, "raison": "trognon, feuilles extérieures" },
+    "761": { "nom": "Steak de bœuf", "perte": 5, "raison": "parage" },
+    "282": { "nom": "Tomates cerises", "perte": 3, "raison": "pédoncules, fruits abîmés" },
+    "387": { "nom": "Tomates semi séchées", "perte": 0, "raison": "à l'huile : prix au poids net" }
+  }
+}
