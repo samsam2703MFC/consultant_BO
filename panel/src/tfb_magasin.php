@@ -47,13 +47,20 @@ function tfbmJetonRecu(): array
     return [null, null];
 }
 
-/** L'échéance (timestamp) d'un JWT, lue dans sa charge utile sans la vérifier (TF Buddy la vérifie) ; null sinon. */
-function tfbmExpiration(string $jwt): ?int
+/** La charge utile d'un JWT, lue sans la vérifier (TF Buddy la vérifie) ; null si ce n'en est pas un. */
+function tfbmCharge(string $jwt): ?array
 {
     $p = explode('.', $jwt);
     if (count($p) !== 3) { return null; }
     $c = json_decode((string) base64_decode(strtr($p[1], '-_', '+/') . str_repeat('=', (4 - strlen($p[1]) % 4) % 4), true), true);
-    return is_array($c) && isset($c['exp']) && is_numeric($c['exp']) ? (int) $c['exp'] : null;
+    return is_array($c) ? $c : null;
+}
+
+/** L'échéance (timestamp) d'un JWT ; null sinon. */
+function tfbmExpiration(string $jwt): ?int
+{
+    $c = tfbmCharge($jwt);
+    return $c !== null && isset($c['exp']) && is_numeric($c['exp']) ? (int) $c['exp'] : null;
 }
 
 /** Les jetons d'une réponse de connexion ou de renouvellement du panel, dans la forme du dashboard ; null sans jeton. */
@@ -64,8 +71,16 @@ function tfbmJetons($c): ?array
     $acces = $c['token'] ?? $c['access_token'] ?? $d['token'] ?? $d['access_token'] ?? null;
     if (!is_string($acces) || $acces === '') { return null; }
     $ren = $c['refresh_token'] ?? $d['refresh_token'] ?? null;
-    $ses = $c['expires_at'] ?? $d['expires_at'] ?? null;
+    // La fin de la session : celle que porte le jeton du panel (`panel_session_expires_at`, la source sûre), sinon
+    // `expires_at` de la réponse.
+    $ch = tfbmCharge($acces);
+    $ses = isset($ch['panel_session_expires_at']) && is_numeric($ch['panel_session_expires_at']) ? (int) $ch['panel_session_expires_at']
+        : ($c['expires_at'] ?? $d['expires_at'] ?? null);
     $ses = is_numeric($ses) ? (int) $ses : (is_string($ses) && strtotime($ses) ? strtotime($ses) : null);
+    // Une durée (43 200 s) plutôt qu'une date, ou des millisecondes : ramenées à une date en secondes (26/11/2026).
+    if ($ses !== null && $ses > 1_000_000_000_000) { $ses = intdiv($ses, 1000); }
+    elseif ($ses !== null && $ses > 0 && $ses < 1_000_000_000) { $ses = time() + $ses; }
+    elseif ($ses !== null && $ses <= 0) { $ses = null; }
     return ['acces' => $acces, 'renouvellement' => is_string($ren) ? $ren : null,
         'expireAcces' => tfbmExpiration($acces) ?? time() + 240, 'expireSession' => $ses];
 }
