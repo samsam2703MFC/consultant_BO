@@ -26,6 +26,840 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "ops-journee-direct",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La journée en direct",
+      "resume": "La journée à l’heure qu’il est : ta place dans le réseau, la jauge du comptoir face à l’objectif et à jeudi dernier, la projection, les canaux, le B2B, le duel chiffre par chiffre et le P&L court. La page se relit toute seule toutes les deux minutes.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-01-direct.mp4",
+      "debut": 0,
+      "fin": 90.22,
+      "affiche": "ops-journee-direct.jpg",
+      "duree": "1 min 30",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "shared/src/pnl_ht.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-journee-passee",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Une journée passée",
+      "resume": "La même page sur un jour clos : choisi dans la frise, comparé à toute la journée de la semaine d’avant, la vitrine « ont manqué », ‹ › d’une semaine à l’autre et « Aujourd’hui » pour revenir.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-02-passee.mp4",
+      "debut": 0,
+      "fin": 61.96,
+      "affiche": "ops-journee-passee.jpg",
+      "duree": "1 min 02",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-heure-par-heure",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Heure par heure : CA, clients, panier",
+      "resume": "La carte « Heure par heure » : le cumul du chiffre, puis celui des clients, puis le panier moyen de chaque heure, face au même jour la semaine d’avant.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-03-heure-mesure.mp4",
+      "debut": 0,
+      "fin": 49.04,
+      "affiche": "ops-heure-par-heure.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-heure-comptoir-pro",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Heure par heure : comptoir et pro",
+      "resume": "La bascule de la carte « Heure par heure » : le comptoir et les clients pro séparés, chacun face à sa part de l’objectif, ou combinés, face à l’objectif du jour.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-04-heure-pro.mp4",
+      "debut": 0,
+      "fin": 50.96,
+      "affiche": "ops-heure-comptoir-pro.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-ventes-categories",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Ventes par catégorie",
+      "resume": "La vente du jour en quatre vues : la liste groupe › catégorie › produit avec sa marge, le treemap, les promotions lues dans les tickets et les portions.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-05-categories.mp4",
+      "debut": 0,
+      "fin": 85.22,
+      "affiche": "ops-ventes-categories.jpg",
+      "duree": "1 min 25",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/stats_ventes.php",
+        "marketing/src/promos_ventes.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-vitrine",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La vitrine",
+      "resume": "Ce qui va manquer d’ici la fermeture, par durée de vie : heure par heure pour le frais, le stock face à trois jours de vente pour le long life ; les filtres ; et, en bas de page, l’inventaire.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-06-vitrine.mp4",
+      "debut": 0,
+      "fin": 88.29,
+      "affiche": "ops-vitrine.jpg",
+      "duree": "1 min 28",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-controles-photo",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Les contrôles en photo",
+      "resume": "Le carrousel des checklists du jour et leurs photos, filtré selon l’état de la photo : écarts, à contrôler, conformes, non rendues.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-07-controles.mp4",
+      "debut": 0,
+      "fin": 66.28,
+      "affiche": "ops-controles-photo.jpg",
+      "duree": "1 min 06",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-equipe-du-jour",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "L’équipe du jour",
+      "resume": "Qui est là aujourd’hui : le planning sur la journée, puis, pour chaque personne, ses heures faites, ses ventes, ses ventes par heure de vente et son coût ; son heure par heure en un clic.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-08-equipe.mp4",
+      "debut": 0,
+      "fin": 62.85,
+      "affiche": "ops-equipe-du-jour.jpg",
+      "duree": "1 min 03",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-fiche-stock",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fiche de stock d’un produit",
+      "resume": "Un clic sur un produit de La vitrine : faut-il recuire, et combien ? Le calcul, la courbe de la vitrine et les cuissons du jour ; pour un long life, de quoi tenir trois jours.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-09-fiche-stock.mp4",
+      "debut": 0,
+      "fin": 56.73,
+      "affiche": "ops-fiche-stock.jpg",
+      "duree": "57 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-fenetre-categorie",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fenêtre d’une catégorie",
+      "resume": "Le « i » à côté d’un groupe ou d’une catégorie : la tendance des 12 dernières semaines face au réseau, puis la journée heure par heure face aux 6 derniers mêmes jours, en euros ou en pièces.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-10-categorie.mp4",
+      "debut": 0,
+      "fin": 64.1,
+      "affiche": "ops-fenetre-categorie.jpg",
+      "duree": "1 min 04",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/analyse_produits.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "ops-photo-controle",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Une photo de contrôle en grand",
+      "resume": "Un clic sur une photo des contrôles : la photo en plein écran avec ses repères, sa note et le constat ; ‹ › ou les flèches du clavier pour feuilleter, Échap pour fermer.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-11-photo.mp4",
+      "debut": 0,
+      "fin": 54.47,
+      "affiche": "ops-photo-controle.jpg",
+      "duree": "54 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-valeur",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La valeur du magasin",
+      "resume": "Les vignettes de la barre du haut, puis la valeur du magasin : le calcul pas à pas (chiffre d’affaires annuel, marge brute réelle, charges normatives, × 3,5) et les six derniers trimestres.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-15-valeur.mp4",
+      "debut": 0,
+      "fin": 64.58,
+      "affiche": "barre-valeur.jpg",
+      "duree": "1 min 05",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-api",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Les appels à l’API",
+      "resume": "La vignette « API » : les appels de la page à l’API du cockpit (statut, durée, fonction qui répond), puis l’index des chemins du dashboard, avec la recherche.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-16-api.mp4",
+      "debut": 0,
+      "fin": 70.88,
+      "affiche": "barre-api.jpg",
+      "duree": "1 min 11",
+      "sources": [
+        "panel/public/dashboard/api-index.js",
+        "panel/public/dashboard/api-index.css",
+        "panel/public/dashboard/api-index.json"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-bureau",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Demande au bureau",
+      "resume": "La vignette « Demande au bureau » : le formulaire que l’assistant transmet au bureau, et « Mes demandes » — Toutes, Ouvertes, Répondues — avec la réponse du bureau.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-17-bureau.mp4",
+      "debut": 0,
+      "fin": 47.49,
+      "affiche": "barre-bureau.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/helpdesk.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-bureau-demander",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-bureau",
+      "titre": "Poser une demande au bureau",
+      "resume": "Le sujet, le titre, la demande, une photo, un passage du consultant ou non, urgent ou non, puis « Envoyer au bureau » : la demande rejoint « Mes demandes ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-17-bureau.mp4",
+      "debut": 47.49,
+      "fin": 95.74,
+      "affiche": "barre-bureau-demander.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/helpdesk.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-resume",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : le résumé",
+      "resume": "La vignette « Revue du soir » et son premier écran : les tâches obligatoires pas faites, les checklists à passer en revue, « Qui fait la revue ? », puis « Commencer » ou « Plus tard ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-18-soir-resume.mp4",
+      "debut": 0,
+      "fin": 45.27,
+      "affiche": "barre-soir-resume.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-faire",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-soir-resume",
+      "titre": "Faire la revue du soir",
+      "resume": "Qui fait la revue, « Commencer », puis une réponse par écran : chaque checklist pas finie, chaque point de gestion ; ‹ revient en arrière. Chaque réponse s’enregistre tout de suite.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-18-soir-resume.mp4",
+      "debut": 45.27,
+      "fin": 95.69,
+      "affiche": "barre-soir-faire.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-reprendre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-soir-resume",
+      "titre": "Reprendre une revue plus tard",
+      "resume": "On ferme la revue en cours de route : les réponses sont gardées. À la réouverture, « Reprendre » repart avec les réponses déjà données.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-18-soir-resume.mp4",
+      "debut": 95.69,
+      "fin": 135.29,
+      "affiche": "barre-soir-reprendre.jpg",
+      "duree": "40 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-checklist",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : une checklist pas finie",
+      "resume": "Un écran par checklist pas finie : ses tâches pas faites à leur heure prévue, « Pourquoi ? » en un tap, « Autre… » pour écrire sa raison, « + commentaire ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-19-soir-checklist.mp4",
+      "debut": 0,
+      "fin": 60.75,
+      "affiche": "barre-soir-checklist.jpg",
+      "duree": "1 min 01",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-verifie",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : vérifié automatiquement",
+      "resume": "Après les checklists, les points de gestion que le serveur a déjà vérifiés en ordre — invendus déclarés, stock compté, non-conformités reprises — sans aucune question.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-20-soir-verifie.mp4",
+      "debut": 0,
+      "fin": 49.35,
+      "affiche": "barre-soir-verifie.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-point",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : un point de gestion",
+      "resume": "Un point de gestion par écran : le constat lu par le serveur, la question, la réponse en un tap, un commentaire ; puis ce que le serveur ne peut pas voir.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-21-soir-point.mp4",
+      "debut": 0,
+      "fin": 53.74,
+      "affiche": "barre-soir-point.jpg",
+      "duree": "54 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-demain",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : pour demain",
+      "resume": "Le dernier écran de la revue : un mot pour l’équipe de demain, facultatif, ‹ pour revenir sur une réponse, puis « Clôturer la journée ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-22-soir-demain.mp4",
+      "debut": 0,
+      "fin": 46.8,
+      "affiche": "barre-soir-demain.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-cloturer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-soir-demain",
+      "titre": "Clôturer la journée",
+      "resume": "Le mot pour l’équipe de demain, puis « Clôturer la journée » : la revue est figée, le bilan s’affiche et la vignette dit « faite ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-22-soir-demain.mp4",
+      "debut": 46.8,
+      "fin": 78.18,
+      "affiche": "barre-soir-cloturer.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-bilan",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La revue du soir : le bilan",
+      "resume": "La revue clôturée : les chiffres de la journée, une carte par zone avec chaque checklist faite ou pas et sa raison, la gestion en tuiles, le mot pour demain, et « Rouvrir la revue ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-23-soir-bilan.mp4",
+      "debut": 0,
+      "fin": 47.09,
+      "affiche": "barre-soir-bilan.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-soir-rouvrir",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-soir-bilan",
+      "titre": "Rouvrir une revue clôturée",
+      "resume": "« Rouvrir la revue » : on corrige une réponse, puis on avance jusqu’à « Clôturer la journée » ; le bilan se refait.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-23-soir-bilan.mp4",
+      "debut": 47.09,
+      "fin": 96.76,
+      "affiche": "barre-soir-rouvrir.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/revue_soir.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-ventes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fiche produit : les ventes",
+      "resume": "Un produit d’Opérationnel ouvre sa fiche : ses ventes des 12 dernières semaines face à la moyenne du réseau, et les 6 dernières semaines face aux 6 d’avant.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-24-fiche-ventes.mp4",
+      "debut": 0,
+      "fin": 65.5,
+      "affiche": "barre-fiche-ventes.jpg",
+      "duree": "1 min 06",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-prix",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fiche produit : le prix face au réseau",
+      "resume": "Le deuxième onglet de la fiche : le nuage prix × volume, ce magasin face aux autres, le prix réseau, et ce que rapporterait le prix réseau ; sur le dernier mois, 3 ou 12 mois.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-25-fiche-prix.mp4",
+      "debut": 0,
+      "fin": 69.73,
+      "affiche": "barre-fiche-prix.jpg",
+      "duree": "1 min 10",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-recette",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "La fiche produit : recette & marge",
+      "resume": "Le troisième onglet de la fiche : le coefficient et sa jauge, le verdict, un autre prix à tester, la recette ligne par ligne, le prix d’une matière première, la marge brute.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-26-fiche-recette.mp4",
+      "debut": 0,
+      "fin": 70.74,
+      "affiche": "barre-fiche-recette.jpg",
+      "duree": "1 min 11",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/prix_produit.php",
+        "panel/src/matiere_fiche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-adapter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-fiche-recette",
+      "titre": "Adapter son prix de vente",
+      "resume": "Le prix testé devient le prix de vente du magasin : « Adapter mon prix de vente », l’aperçu en caisse TVA comprise, puis « Confirmer ce prix ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-26-fiche-recette.mp4",
+      "debut": 70.74,
+      "fin": 101.61,
+      "affiche": "barre-fiche-adapter.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/prix_produit.php",
+        "panel/src/matiere_fiche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-fiche-relever",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-fiche-recette",
+      "titre": "Demander au réseau de relever le prix maximum",
+      "resume": "Au-dessus du prix maximum du réseau, le prix ne s’écrit pas : « Demander au réseau de relever le maximum » envoie la demande au bureau.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-26-fiche-recette.mp4",
+      "debut": 101.61,
+      "fin": 136.24,
+      "affiche": "barre-fiche-relever.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "panel/src/prix_produit.php",
+        "panel/src/matiere_fiche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-b2b",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Ventes B2B",
+      "resume": "La jauge B2B d’Opérationnel ouvre « Ventes B2B » : aujourd’hui ou le même jour la semaine dernière, les quatre chiffres du B2B, chaque ticket pro avec ses articles, et ce qu’ils ont acheté.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-27-b2b.mp4",
+      "debut": 0,
+      "fin": 51.09,
+      "affiche": "barre-b2b.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-commandes",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Commandes du jour",
+      "resume": "Le ruban des canaux d’Opérationnel ouvre « Commandes du jour » : Toutes, Comptoir ou Webshop, le CA en commandes rangé par état face à la caisse, puis chaque commande avec ses articles et son ticket.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-28-commandes.mp4",
+      "debut": 0,
+      "fin": 60.48,
+      "affiche": "barre-commandes.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-invendus",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "decouvrir",
+      "titre": "Invendus et poubelle",
+      "resume": "« les saisies ▸ » du P&L court : chaque pièce jetée telle qu’encodée en caisse — l’heure, l’opérateur, le produit, la quantité, le motif — et le total par opérateur.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-29-invendus.mp4",
+      "debut": 0,
+      "fin": 46.52,
+      "affiche": "barre-invendus.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-invendus-reclamer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-invendus",
+      "titre": "Réclamer au fournisseur depuis un invendu",
+      "resume": "Sur une saisie Qualité ou Casse : « Réclamer au fournisseur » ouvre la réclamation déjà remplie ; on vérifie la référence, la livraison, la quantité et le problème, on ajoute une photo, on envoie.",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-29-invendus.mp4",
+      "debut": 46.52,
+      "fin": 85.19,
+      "affiche": "barre-invendus-reclamer.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "barre-invendus-remarque",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "barre-invendus",
+      "titre": "Faire une remarque à l’opérateur",
+      "resume": "Sur une saisie Qualité ou Casse : « Remarque à l’opérateur », la personne qui a produit la référence (choisie d’office), le mot, « Enregistrer la remarque ».",
+      "vues": [
+        "ops"
+      ],
+      "fichier": "01-29-invendus.mp4",
+      "debut": 85.19,
+      "fin": 118.86,
+      "affiche": "barre-invendus-remarque.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css",
+        "consultant/src/invendus.php",
+        "panel/src/reclamations_magasin.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "equipe-horaires",
       "genre": "nouveau",
       "titre": "Mon équipe : faire ses horaires",
@@ -251,16 +1085,16 @@
       ],
       "fichier": "02-04-mois.mp4",
       "debut": 0,
-      "fin": 59.43,
+      "fin": 60.4,
       "affiche": "equipe-mois.jpg",
-      "duree": "59 s",
+      "duree": "1 min",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-fenetre",
@@ -274,17 +1108,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 0,
-      "fin": 47.02,
+      "debut": 0.01,
+      "fin": 49.85,
       "affiche": "equipe-fenetre.jpg",
-      "duree": "47 s",
+      "duree": "50 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-adapter",
@@ -298,17 +1132,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 47.02,
-      "fin": 80.97,
+      "debut": 49.85,
+      "fin": 84.86,
       "affiche": "equipe-adapter.jpg",
-      "duree": "34 s",
+      "duree": "35 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-ajouter-shift",
@@ -322,8 +1156,8 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 80.97,
-      "fin": 116.6,
+      "debut": 84.86,
+      "fin": 120.43,
       "affiche": "equipe-ajouter-shift.jpg",
       "duree": "36 s",
       "sources": [
@@ -331,8 +1165,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-retirer",
@@ -346,17 +1180,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 116.6,
-      "fin": 167.01,
+      "debut": 120.43,
+      "fin": 171.25,
       "affiche": "equipe-retirer.jpg",
-      "duree": "50 s",
+      "duree": "51 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-parcourir",
@@ -370,8 +1204,8 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 167.01,
-      "fin": 211.61,
+      "debut": 171.25,
+      "fin": 216.36,
       "affiche": "equipe-parcourir.jpg",
       "duree": "45 s",
       "sources": [
@@ -379,8 +1213,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-creneau",
@@ -394,17 +1228,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 211.61,
-      "fin": 262.92,
+      "debut": 216.36,
+      "fin": 268.68,
       "affiche": "equipe-creneau.jpg",
-      "duree": "51 s",
+      "duree": "52 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-options",
@@ -515,16 +1349,16 @@
       ],
       "fichier": "02-09-assistant-chiffre.mp4",
       "debut": 0,
-      "fin": 45.58,
+      "fin": 47.55,
       "affiche": "equipe-assistant-chiffre.jpg",
-      "duree": "46 s",
+      "duree": "48 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-assistant-temps-morts",
@@ -539,7 +1373,7 @@
       ],
       "fichier": "02-10-assistant-temps-morts.mp4",
       "debut": 0,
-      "fin": 43.81,
+      "fin": 44.1,
       "affiche": "equipe-assistant-temps-morts.jpg",
       "duree": "44 s",
       "sources": [
@@ -547,8 +1381,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-taches",
@@ -562,8 +1396,8 @@
         "equipe"
       ],
       "fichier": "02-10-assistant-temps-morts.mp4",
-      "debut": 43.81,
-      "fin": 86.96,
+      "debut": 44.1,
+      "fin": 87.4,
       "affiche": "equipe-taches.jpg",
       "duree": "43 s",
       "sources": [
@@ -571,8 +1405,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-assistant-verifier",
@@ -587,7 +1421,7 @@
       ],
       "fichier": "02-11-assistant-verifier.mp4",
       "debut": 0,
-      "fin": 43.51,
+      "fin": 44.27,
       "affiche": "equipe-assistant-verifier.jpg",
       "duree": "44 s",
       "sources": [
@@ -595,8 +1429,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-assistant",
@@ -610,17 +1444,17 @@
         "equipe"
       ],
       "fichier": "02-11-assistant-verifier.mp4",
-      "debut": 43.51,
-      "fin": 86.78,
+      "debut": 44.27,
+      "fin": 90.2,
       "affiche": "equipe-assistant.jpg",
-      "duree": "43 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "equipe-recopie",
@@ -809,6 +1643,29 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "taches-photo",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "taches",
+      "titre": "La photo en grand",
+      "resume": "La photo du contrôle en grand, les repères entourés, le constat, qui l’a rendue et qui l’a notée, puis ‹ › et la bande des vignettes du jour.",
+      "vues": [
+        "taches"
+      ],
+      "fichier": "04-01-photo.mp4",
+      "debut": 0,
+      "fin": 65.71,
+      "affiche": "taches-photo.jpg",
+      "duree": "1 min 06",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/dashboard.css"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "temps-morts",
       "genre": "tuto",
       "titre": "Les temps morts",
@@ -903,7 +1760,7 @@
       ],
       "fichier": "09-tresorerie.mp4",
       "affiche": "09-tresorerie.jpg",
-      "duree": "3 min",
+      "duree": "2 min 59",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
@@ -911,8 +1768,8 @@
         "panel/src/tresorerie.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-plan",
@@ -927,15 +1784,15 @@
       ],
       "fichier": "09-01-plan.mp4",
       "debut": 0,
-      "fin": 72.9,
+      "fin": 71.37,
       "affiche": "treso-plan.jpg",
-      "duree": "1 min 13",
+      "duree": "1 min 11",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-solde-dimanche",
@@ -949,16 +1806,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 72.9,
-      "fin": 101.3,
+      "debut": 71.37,
+      "fin": 99.24,
       "affiche": "treso-solde-dimanche.jpg",
       "duree": "28 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-prevision-ventes",
@@ -972,16 +1829,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 101.3,
-      "fin": 134.01,
+      "debut": 99.24,
+      "fin": 131.13,
       "affiche": "treso-prevision-ventes.jpg",
-      "duree": "33 s",
+      "duree": "32 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-montant-semaine",
@@ -995,16 +1852,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 134.01,
-      "fin": 164.47,
+      "debut": 131.13,
+      "fin": 162.6,
       "affiche": "treso-montant-semaine.jpg",
-      "duree": "30 s",
+      "duree": "31 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-ponctuel",
@@ -1018,16 +1875,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 164.47,
-      "fin": 189.86,
+      "debut": 162.6,
+      "fin": 188.45,
       "affiche": "treso-ponctuel.jpg",
-      "duree": "25 s",
+      "duree": "26 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-pilotage",
@@ -1041,16 +1898,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 189.86,
-      "fin": 230.68,
+      "debut": 188.45,
+      "fin": 229.75,
       "affiche": "treso-pilotage.jpg",
       "duree": "41 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-dettes-hors-plan",
@@ -1064,16 +1921,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 230.68,
-      "fin": 280.4,
+      "debut": 229.75,
+      "fin": 279.15,
       "affiche": "treso-dettes-hors-plan.jpg",
-      "duree": "50 s",
+      "duree": "49 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-reessayer",
@@ -1087,16 +1944,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 280.4,
-      "fin": 331.1,
+      "debut": 279.15,
+      "fin": 330.12,
       "affiche": "treso-reessayer.jpg",
       "duree": "51 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-plan-neuf",
@@ -1110,16 +1967,16 @@
         "tresorerie"
       ],
       "fichier": "09-01-plan.mp4",
-      "debut": 331.1,
-      "fin": 376.54,
+      "debut": 330.12,
+      "fin": 376.56,
       "affiche": "treso-plan-neuf.jpg",
-      "duree": "45 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-fournisseurs",
@@ -1134,15 +1991,15 @@
       ],
       "fichier": "09-02-fournisseurs.mp4",
       "debut": 0,
-      "fin": 59.69,
+      "fin": 57.64,
       "affiche": "treso-fournisseurs.jpg",
-      "duree": "1 min",
+      "duree": "58 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-facture-fournisseur",
@@ -1156,16 +2013,16 @@
         "tresorerie"
       ],
       "fichier": "09-02-fournisseurs.mp4",
-      "debut": 59.69,
-      "fin": 101.96,
+      "debut": 57.64,
+      "fin": 97.51,
       "affiche": "treso-facture-fournisseur.jpg",
-      "duree": "42 s",
+      "duree": "40 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-estimation-fournisseur",
@@ -1179,16 +2036,16 @@
         "tresorerie"
       ],
       "fichier": "09-02-fournisseurs.mp4",
-      "debut": 101.96,
-      "fin": 130.26,
+      "debut": 97.51,
+      "fin": 124.89,
       "affiche": "treso-estimation-fournisseur.jpg",
-      "duree": "28 s",
+      "duree": "27 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-fournisseur-ajouter",
@@ -1202,16 +2059,16 @@
         "tresorerie"
       ],
       "fichier": "09-02-fournisseurs.mp4",
-      "debut": 130.26,
-      "fin": 175.25,
+      "debut": 124.89,
+      "fin": 170.73,
       "affiche": "treso-fournisseur-ajouter.jpg",
-      "duree": "45 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-plafond-achats",
@@ -1225,16 +2082,16 @@
         "tresorerie"
       ],
       "fichier": "09-02-fournisseurs.mp4",
-      "debut": 175.25,
-      "fin": 211.05,
+      "debut": 170.73,
+      "fin": 209.92,
       "affiche": "treso-plafond-achats.jpg",
-      "duree": "36 s",
+      "duree": "39 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-paiements",
@@ -1249,15 +2106,15 @@
       ],
       "fichier": "09-03-paiements.mp4",
       "debut": 0,
-      "fin": 50.23,
+      "fin": 53.11,
       "affiche": "treso-paiements.jpg",
-      "duree": "50 s",
+      "duree": "53 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-paiement-ajouter",
@@ -1271,16 +2128,16 @@
         "tresorerie"
       ],
       "fichier": "09-03-paiements.mp4",
-      "debut": 50.23,
-      "fin": 94.69,
+      "debut": 53.11,
+      "fin": 102.38,
       "affiche": "treso-paiement-ajouter.jpg",
-      "duree": "44 s",
+      "duree": "49 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-paiement-modifier",
@@ -1294,16 +2151,16 @@
         "tresorerie"
       ],
       "fichier": "09-03-paiements.mp4",
-      "debut": 94.69,
-      "fin": 140.62,
+      "debut": 102.38,
+      "fin": 151.04,
       "affiche": "treso-paiement-modifier.jpg",
-      "duree": "46 s",
+      "duree": "49 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-budget",
@@ -1318,15 +2175,15 @@
       ],
       "fichier": "09-04-budget.mp4",
       "debut": 0,
-      "fin": 81.24,
+      "fin": 82.65,
       "affiche": "treso-budget.jpg",
-      "duree": "1 min 21",
+      "duree": "1 min 23",
       "sources": [
         "panel/public/dashboard/tresorerie.js",
         "panel/src/tresorerie.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-du-mois",
@@ -1341,16 +2198,16 @@
       ],
       "fichier": "09-05-frais.mp4",
       "debut": 0,
-      "fin": 55.98,
+      "fin": 56.83,
       "affiche": "frais-du-mois.jpg",
-      "duree": "56 s",
+      "duree": "57 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-tva-comprise",
@@ -1364,8 +2221,8 @@
         "frais"
       ],
       "fichier": "09-05-frais.mp4",
-      "debut": 55.98,
-      "fin": 88.61,
+      "debut": 56.83,
+      "fin": 89.64,
       "affiche": "frais-tva-comprise.jpg",
       "duree": "33 s",
       "sources": [
@@ -1373,8 +2230,8 @@
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-taux-tva",
@@ -1388,17 +2245,17 @@
         "frais"
       ],
       "fichier": "09-05-frais.mp4",
-      "debut": 88.61,
-      "fin": 112.41,
+      "debut": 89.64,
+      "fin": 113.1,
       "affiche": "frais-taux-tva.jpg",
-      "duree": "24 s",
+      "duree": "23 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-ajouter",
@@ -1412,17 +2269,17 @@
         "frais"
       ],
       "fichier": "09-05-frais.mp4",
-      "debut": 112.41,
-      "fin": 161.55,
+      "debut": 113.1,
+      "fin": 159.58,
       "affiche": "frais-ajouter.jpg",
-      "duree": "49 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "frais-annuler-ajout",
@@ -1436,17 +2293,17 @@
         "frais"
       ],
       "fichier": "09-05-frais.mp4",
-      "debut": 161.55,
-      "fin": 190.31,
+      "debut": 159.58,
+      "fin": 186.98,
       "affiche": "frais-annuler-ajout.jpg",
-      "duree": "29 s",
+      "duree": "27 s",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/src/frais.php",
         "shared/src/pnl_ht.php"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "treso-mode-emploi",
@@ -1461,14 +2318,14 @@
       ],
       "fichier": "09-06-mode-emploi.mp4",
       "debut": 0,
-      "fin": 56.6,
+      "fin": 58.03,
       "affiche": "treso-mode-emploi.jpg",
-      "duree": "57 s",
+      "duree": "58 s",
       "sources": [
         "panel/public/dashboard/tresorerie.js"
       ],
-      "tourne_sur": "8705a6d5814358e4c63ad4a179063114a578c5eb",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "2928748290827a21d7a6d29b45943fb4d2d9b9a9",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "analyse",
@@ -1480,7 +2337,7 @@
       ],
       "fichier": "10-analyse.mp4",
       "affiche": "10-analyse.jpg",
-      "duree": "2 min 57",
+      "duree": "2 min 49",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/analyse.js",
@@ -1488,8 +2345,8 @@
         "panel/src/dashboard_analyse.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "produits",
@@ -1501,7 +2358,7 @@
       ],
       "fichier": "11-produits.mp4",
       "affiche": "11-produits.jpg",
-      "duree": "2 min 58",
+      "duree": "2 min 41",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
@@ -1510,8 +2367,8 @@
         "panel/src/prix_produit.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "promotions",
@@ -1739,7 +2596,7 @@
       ],
       "fichier": "13-offres.mp4",
       "affiche": "13-offres.jpg",
-      "duree": "2 min 53",
+      "duree": "2 min 36",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/offres.js",
@@ -1747,8 +2604,8 @@
         "marketing/public/assets/js/newsletter.js",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "e54a74b836c25117f6f65b6f28aa26b70c7dcaee",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-en-cours",
@@ -1763,16 +2620,16 @@
       ],
       "fichier": "13-01-en-cours.mp4",
       "debut": 0,
-      "fin": 34.47,
+      "fin": 35.09,
       "affiche": "offres-en-cours.jpg",
-      "duree": "34 s",
+      "duree": "35 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-modifier",
@@ -1786,17 +2643,17 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 34.47,
-      "fin": 63.27,
+      "debut": 35.09,
+      "fin": 65.59,
       "affiche": "offres-modifier.jpg",
-      "duree": "29 s",
+      "duree": "31 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-envoyer",
@@ -1810,8 +2667,8 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 63.27,
-      "fin": 98.08,
+      "debut": 65.59,
+      "fin": 100.88,
       "affiche": "offres-envoyer.jpg",
       "duree": "35 s",
       "sources": [
@@ -1819,8 +2676,8 @@
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-convertir",
@@ -1834,17 +2691,17 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 98.08,
-      "fin": 125.23,
+      "debut": 100.88,
+      "fin": 129.44,
       "affiche": "offres-convertir.jpg",
-      "duree": "27 s",
+      "duree": "29 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-archiver",
@@ -1858,17 +2715,17 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 125.23,
-      "fin": 138.65,
+      "debut": 129.44,
+      "fin": 143.49,
       "affiche": "offres-archiver.jpg",
-      "duree": "13 s",
+      "duree": "14 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-supprimer",
@@ -1882,17 +2739,17 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 138.65,
-      "fin": 163.11,
+      "debut": 143.49,
+      "fin": 169.14,
       "affiche": "offres-supprimer.jpg",
-      "duree": "24 s",
+      "duree": "26 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-converties",
@@ -2068,16 +2925,16 @@
       ],
       "fichier": "13-06-campagnes.mp4",
       "debut": 0,
-      "fin": 59.83,
+      "fin": 57.62,
       "affiche": "offres-nl-campagnes.jpg",
-      "duree": "1 min",
+      "duree": "58 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-envoyer",
@@ -2091,17 +2948,17 @@
         "offres"
       ],
       "fichier": "13-06-campagnes.mp4",
-      "debut": 59.83,
-      "fin": 91.18,
+      "debut": 57.62,
+      "fin": 87.38,
       "affiche": "offres-nl-envoyer.jpg",
-      "duree": "31 s",
+      "duree": "30 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-retirer",
@@ -2115,17 +2972,17 @@
         "offres"
       ],
       "fichier": "13-06-campagnes.mp4",
-      "debut": 91.18,
-      "fin": 120.47,
+      "debut": 87.38,
+      "fin": 114.5,
       "affiche": "offres-nl-retirer.jpg",
-      "duree": "29 s",
+      "duree": "27 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-retrospective",
@@ -2140,16 +2997,16 @@
       ],
       "fichier": "13-07-retrospective.mp4",
       "debut": 0,
-      "fin": 53.68,
+      "fin": 49.55,
       "affiche": "offres-nl-retrospective.jpg",
-      "duree": "54 s",
+      "duree": "50 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-test-ab",
@@ -2163,17 +3020,17 @@
         "offres"
       ],
       "fichier": "13-07-retrospective.mp4",
-      "debut": 53.68,
-      "fin": 103.81,
+      "debut": 49.55,
+      "fin": 92.91,
       "affiche": "offres-nl-test-ab.jpg",
-      "duree": "50 s",
+      "duree": "43 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-templates",
@@ -2188,16 +3045,16 @@
       ],
       "fichier": "13-08-templates.mp4",
       "debut": 0,
-      "fin": 59.12,
+      "fin": 59.59,
       "affiche": "offres-nl-templates.jpg",
-      "duree": "59 s",
+      "duree": "1 min",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-expediteur",
@@ -2212,16 +3069,16 @@
       ],
       "fichier": "13-09-expediteur.mp4",
       "debut": 0,
-      "fin": 46.23,
+      "fin": 45.35,
       "affiche": "offres-nl-expediteur.jpg",
-      "duree": "46 s",
+      "duree": "45 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-changer-expediteur",
@@ -2235,8 +3092,8 @@
         "offres"
       ],
       "fichier": "13-09-expediteur.mp4",
-      "debut": 46.23,
-      "fin": 80.5,
+      "debut": 45.35,
+      "fin": 79.59,
       "affiche": "offres-nl-changer-expediteur.jpg",
       "duree": "34 s",
       "sources": [
@@ -2244,8 +3101,8 @@
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-segment",
@@ -2260,16 +3117,16 @@
       ],
       "fichier": "13-10-segment.mp4",
       "debut": 0,
-      "fin": 70.91,
+      "fin": 67.25,
       "affiche": "offres-nl-segment.jpg",
-      "duree": "1 min 11",
+      "duree": "1 min 07",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-template",
@@ -2284,16 +3141,16 @@
       ],
       "fichier": "13-11-template.mp4",
       "debut": 0,
-      "fin": 67.46,
+      "fin": 62.9,
       "affiche": "offres-nl-template.jpg",
-      "duree": "1 min 07",
+      "duree": "1 min 03",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-texte",
@@ -2308,16 +3165,16 @@
       ],
       "fichier": "13-12-texte.mp4",
       "debut": 0,
-      "fin": 86.18,
+      "fin": 84.28,
       "affiche": "offres-nl-texte.jpg",
-      "duree": "1 min 26",
+      "duree": "1 min 24",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-envoi",
@@ -2332,16 +3189,16 @@
       ],
       "fichier": "13-13-envoi.mp4",
       "debut": 0,
-      "fin": 64.48,
+      "fin": 59.69,
       "affiche": "offres-nl-envoi.jpg",
-      "duree": "1 min 04",
+      "duree": "1 min",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-envoyer-test",
@@ -2355,17 +3212,17 @@
         "offres"
       ],
       "fichier": "13-13-envoi.mp4",
-      "debut": 64.48,
-      "fin": 97.57,
+      "debut": 59.69,
+      "fin": 91.05,
       "affiche": "offres-nl-envoyer-test.jpg",
-      "duree": "33 s",
+      "duree": "31 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-programmer",
@@ -2379,17 +3236,17 @@
         "offres"
       ],
       "fichier": "13-13-envoi.mp4",
-      "debut": 97.57,
-      "fin": 141.36,
+      "debut": 91.05,
+      "fin": 130.5,
       "affiche": "offres-nl-programmer.jpg",
-      "duree": "44 s",
+      "duree": "39 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "primes",
@@ -2422,15 +3279,15 @@
       ],
       "fichier": "15-concurrence.mp4",
       "affiche": "15-concurrence.jpg",
-      "duree": "2 min 42",
+      "duree": "2 min 29",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "d50e8cdedf99f7305989f9bfc2282a5cb8248c12",
-      "tourne_le": "2026-11-23"
+      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "marketing",
@@ -4129,6 +4986,339 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "assistant-bilan",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "Le Bilan",
+      "resume": "La question en haut, les quatre tuiles et Mes modèles, puis la réponse : graphique ou tableau, téléchargements, PDF.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 0,
+      "fin": 60.04,
+      "affiche": "assistant-bilan.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-poser",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-bilan",
+      "titre": "Poser une question",
+      "resume": "Taper sa question en haut, « Demander » : l’assistant lit les chiffres du magasin, puis répond — résumé, chiffres, graphique, priorités.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 60.04,
+      "fin": 94.51,
+      "affiche": "assistant-poser.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-question-prete",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-bilan",
+      "titre": "Poser une question toute prête",
+      "resume": "Un clic sur une des quatre tuiles : la question part telle quelle, et sa réponse prend la place de la précédente.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 94.51,
+      "fin": 117.82,
+      "affiche": "assistant-question-prete.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-garder-modele",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-bilan",
+      "titre": "Garder un graphique comme modèle",
+      "resume": "« Garder comme modèle », sous un graphique : il rejoint Mes modèles, d’où un clic le refait avec les chiffres du jour.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 117.82,
+      "fin": 140.65,
+      "affiche": "assistant-garder-modele.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-retirer-modele",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-bilan",
+      "titre": "Retirer un modèle",
+      "resume": "La croix à côté d’un modèle le retire de Mes modèles ; les autres restent.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-01-bilan.mp4",
+      "debut": 140.65,
+      "fin": 163.11,
+      "affiche": "assistant-retirer-modele.jpg",
+      "duree": "22 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-conversation",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "La conversation",
+      "resume": "Les questions toutes prêtes par thème à gauche, avec Mes modèles ; le fil à droite ; la saisie en bas.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-02-conversation.mp4",
+      "debut": 0,
+      "fin": 57.24,
+      "affiche": "assistant-conversation.jpg",
+      "duree": "57 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-creuser",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-conversation",
+      "titre": "Creuser une question",
+      "resume": "Un bouton « Creuser » sous la réponse, ou une question de la colonne de gauche : la réponse arrive dans le fil, qui part avec la question.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-02-conversation.mp4",
+      "debut": 57.24,
+      "fin": 86.4,
+      "affiche": "assistant-creuser.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-coachs",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "Les deux coachs",
+      "resume": "Mr. Basile, bienveillant, et Le Coach, à la dure : les mêmes questions et les mêmes chiffres ; seul le ton change. Le choix reste sur l’appareil.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-03-coachs.mp4",
+      "debut": 0,
+      "fin": 55.19,
+      "affiche": "assistant-coachs.jpg",
+      "duree": "55 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-coach-vente",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "Le Coach Vente",
+      "resume": "Ses questions — prix face à la concurrence, bundles, ventes, objectifs 2026 — et ses réponses : prix relevés, marge, hausse et lot.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-04-coach-vente.mp4",
+      "debut": 0,
+      "fin": 44,
+      "affiche": "assistant-coach-vente.jpg",
+      "duree": "44 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_vente.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-comparer-prix",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-coach-vente",
+      "titre": "Comparer un prix à la concurrence",
+      "resume": "« Mon croissant face aux boulangeries proches ? » : les prix relevés autour du magasin, le sien et sa marge, puis la hausse proposée et un lot qui garde le prix aux fidèles.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-04-coach-vente.mp4",
+      "debut": 44,
+      "fin": 92.65,
+      "affiche": "assistant-comparer-prix.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_vente.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-professeur",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "Le Professeur",
+      "resume": "Les questions tirées du manuel, famille par famille, et des réponses qui citent les documents lus (« Lu dans le manuel »), sans lire l’ERP.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-05-professeur.mp4",
+      "debut": 0,
+      "fin": 47.87,
+      "affiche": "assistant-professeur.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-demander-geste",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-professeur",
+      "titre": "Demander un geste au Professeur",
+      "resume": "« Que faut-il vérifier à la fermeture ? » : les étapes dans l’ordre de la SOP, un tableau recopié du manuel, et les documents lus.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-05-professeur.mp4",
+      "debut": 47.87,
+      "fin": 82.39,
+      "affiche": "assistant-demander-geste.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/src/assistant_magasin.php",
+        "panel/src/assistant_ia.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-demande-bureau",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "assistant-ia",
+      "titre": "La demande au bureau",
+      "resume": "L’assistant choisi transmet la demande : sujet, titre, texte, photos, passage du consultant, urgent ; dessous, « Mes demandes » avec statut, échéance et réponse du bureau.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-06-demande-bureau.mp4",
+      "debut": 0,
+      "fin": 48.16,
+      "affiche": "assistant-demande-bureau.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "consultant/src/helpdesk.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "assistant-envoyer-demande",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "assistant-demande-bureau",
+      "titre": "Envoyer une demande au bureau",
+      "resume": "Le sujet, le titre, la demande, une photo, un passage du consultant ou non, urgent ou non, puis « Envoyer au bureau » : la demande rejoint Mes demandes.",
+      "vues": [
+        "assistant"
+      ],
+      "fichier": "21-06-demande-bureau.mp4",
+      "debut": 48.16,
+      "fin": 96.28,
+      "affiche": "assistant-envoyer-demande.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "consultant/src/helpdesk.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "se-former",
       "genre": "tuto",
       "titre": "Formations et suivi",
@@ -4149,6 +5339,313 @@
       ],
       "tourne_sur": "24028fad00ac4daeb93221b46d2fb2e9ad25caec",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "former-accueil",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "L’accueil de la formation",
+      "resume": "Le bandeau « Mon dossier de formation » et ses quatre nombres, la méga-barre et ses catalogues, la phrase et le tableau Apprendre · Comprendre · Faire · Vérifier ; chaque colonne ouvre son catalogue.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-01-accueil.mp4",
+      "debut": 0,
+      "fin": 67.18,
+      "affiche": "former-accueil.jpg",
+      "duree": "1 min 07",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "panel/public/dashboard/seformer.js",
+        "formation/src/formation_recherche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-mega-barre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "La méga-barre",
+      "resume": "Deux lettres ouvrent le panneau : les catalogues à gauche avec leurs nombres, les résultats étiquetés et surlignés, l’aperçu à droite ; ↑ ↓, Entrée, Échap.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-02-mega-barre.mp4",
+      "debut": 0,
+      "fin": 50.75,
+      "affiche": "former-mega-barre.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/seformer.js",
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_recherche.php",
+        "panel/public/dashboard/dashboard.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-professeur-recherche",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-mega-barre",
+      "titre": "Demander au Professeur depuis la recherche",
+      "resume": "« Demander au Professeur » sur l’aperçu d’un résultat (ou dans le lecteur) : la fenêtre de l’assistant s’ouvre sur le Professeur, qui explique le document et le cite.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-02-mega-barre.mp4",
+      "debut": 50.75,
+      "fin": 86.09,
+      "affiche": "former-professeur-recherche.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/seformer.js",
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_recherche.php",
+        "panel/public/dashboard/dashboard.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-lecteur",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "Le lecteur",
+      "resume": "Le document s’ouvre sur place, en tiroir : objectif, étapes et photos, points critiques en rouge, « Feuilleter dans le catalogue », « Demander au Professeur ».",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-03-lecteur.mp4",
+      "debut": 0,
+      "fin": 65.18,
+      "affiche": "former-lecteur.jpg",
+      "duree": "1 min 05",
+      "sources": [
+        "panel/public/dashboard/seformer.js",
+        "formation/src/formation_recherche.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-dossier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "Mon dossier de formation",
+      "resume": "Les Nouveautés, les quatre nombres, le dossier (statut, avancement, échéance), le suivi de l’équipe, le document de formation au coffre-fort, et le Professeur.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-04-dossier.mp4",
+      "debut": 0,
+      "fin": 59.81,
+      "affiche": "former-dossier.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-ouvrir-formation",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-dossier",
+      "titre": "Ouvrir une formation",
+      "resume": "Une carte des Nouveautés ou une ligne du dossier : la formation s’ouvre, sa première ouverture est notée et « NOUVEAU » s’efface. « ← Mon dossier » pour revenir.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-04-dossier.mp4",
+      "debut": 59.81,
+      "fin": 82.87,
+      "affiche": "former-ouvrir-formation.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-question-dossier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-dossier",
+      "titre": "Poser une question au Professeur sur son dossier",
+      "resume": "Une question toute prête tirée du dossier, ou la sienne puis « Demander » : la fenêtre du Professeur répond à partir du dossier du magasin.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-04-dossier.mp4",
+      "debut": 82.87,
+      "fin": 113.37,
+      "affiche": "former-question-dossier.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php",
+        "panel/public/dashboard/coffre.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-formation",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "Une formation",
+      "resume": "La version adaptée pour le magasin, les étapes et points critiques, la grille de la photo du jour, « Qui la suit », la mise en place et l’état de validation.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 0,
+      "fin": 44.61,
+      "affiche": "former-formation.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-declarer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-formation",
+      "titre": "Déclarer lu, quiz réussi, vu faire",
+      "resume": "Dans « Qui la suit », cocher la case de la personne : lue, quiz réussi, vu faire. L’avancement de la formation monte.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 44.61,
+      "fin": 70.17,
+      "affiche": "former-declarer.jpg",
+      "duree": "26 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-ajouter-personne",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-formation",
+      "titre": "Ajouter une personne qui suit la formation",
+      "resume": "Sous « Qui la suit » : « prénom N. », puis « Ajouter ». La personne rejoint la liste, ses trois cases à cocher.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 70.17,
+      "fin": 91.29,
+      "affiche": "former-ajouter-personne.jpg",
+      "duree": "21 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-mise-en-place",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-formation",
+      "titre": "Déclarer la mise en place en magasin",
+      "resume": "« Mise en place en magasin : c’est fait » : la date est notée ; « annuler » la retire. Quand tout est fait, la formation passe « À valider ».",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 91.29,
+      "fin": 112.41,
+      "affiche": "former-mise-en-place.jpg",
+      "duree": "21 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-photo-du-jour",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "former-formation",
+      "titre": "Envoyer la photo du jour",
+      "resume": "« Envoyer la photo du jour », choisir la photo : la case du jour passe « envoyée, pas encore relue » ; votre consultant la relit.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-05-formation.mp4",
+      "debut": 112.41,
+      "fin": 135.74,
+      "affiche": "former-photo-du-jour.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/formation.js",
+        "formation/src/formation_continue.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "former-fenetre-professeur",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "se-former",
+      "titre": "La fenêtre du Professeur",
+      "resume": "L’assistant s’ouvre par-dessus la page, sur le Professeur, et répond à partir du dossier et du manuel en citant ce qu’il a lu.",
+      "vues": [
+        "formation"
+      ],
+      "fichier": "22-06-fenetre-professeur.mp4",
+      "debut": 0,
+      "fin": 50.59,
+      "affiche": "former-fenetre-professeur.jpg",
+      "duree": "51 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/formation.js"
+      ],
+      "tourne_sur": "2889a8d42b6660d8de7b08879c7474c9af6faf81",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "coffre-fort",
@@ -4174,6 +5671,483 @@
       "tourne_le": "2026-11-23"
     },
     {
+      "id": "coffre-tout",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Tout : l’accueil du coffre",
+      "resume": "L’état du coffre (les pièces attendues, À traiter, la prochaine grande date), la frise des 12 mois, puis tous les documents, avec leurs filtres et la recherche.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-01-tout.mp4",
+      "debut": 0,
+      "fin": 87.49,
+      "affiche": "coffre-tout.jpg",
+      "duree": "1 min 27",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-legal",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Le dossier Légal",
+      "resume": "Les pièces que le magasin dépose lui-même : reçue, à renouveler, à déposer, ou écartée parce qu’elle ne le concerne pas.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-02-legal.mp4",
+      "debut": 0,
+      "fin": 46.2,
+      "affiche": "coffre-legal.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-renouveler",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-legal",
+      "titre": "Renouveler une pièce",
+      "resume": "« Déposer la nouvelle » sur une pièce à renouveler : la fenêtre s’ouvre, la pièce choisie ; l’assistant relève la nouvelle échéance, puis « Ranger ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-02-legal.mp4",
+      "debut": 46.2,
+      "fin": 96.22,
+      "affiche": "coffre-renouveler.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-ecarter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-legal",
+      "titre": "Écarter une pièce qui ne vous concerne pas",
+      "resume": "« pas concernée ? » sous une pièce à déposer, puis confirmer : elle ne compte plus dans le coffre.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-02-legal.mp4",
+      "debut": 96.22,
+      "fin": 123.47,
+      "affiche": "coffre-ecarter.jpg",
+      "duree": "27 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-reintegrer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-legal",
+      "titre": "Réintégrer une pièce écartée",
+      "resume": "Une pièce écartée par erreur : « la réintégrer », et elle compte de nouveau.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-02-legal.mp4",
+      "debut": 123.47,
+      "fin": 143.78,
+      "affiche": "coffre-reintegrer.jpg",
+      "duree": "20 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-dossiers",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Contrat & DIP, Formation, Finances, Courriers",
+      "resume": "Les dossiers que votre consultant remplit, ou qui se remplissent d’office : leurs pièces attendues, puis leurs autres documents, chacun en aperçu d’un clic.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-03-dossiers.mp4",
+      "debut": 0,
+      "fin": 75.2,
+      "affiche": "coffre-dossiers.jpg",
+      "duree": "1 min 15",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-visites",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Les rapports de visite",
+      "resume": "Le rapport envoyé après chaque visite de votre consultant arrive ici tout seul : lu, ou « à lire » ; son aperçu renvoie à « Mon suivi ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-04-visites.mp4",
+      "debut": 0,
+      "fin": 52.59,
+      "affiche": "coffre-visites.jpg",
+      "duree": "53 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-dates",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Les grandes dates",
+      "resume": "Toutes les échéances du coffre, par année, et d’où chacune vient : calculée, relevée par l’assistant, échéance d’un document, ajoutée à la main. En or, les quatre prochains mois.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-05-dates.mp4",
+      "debut": 0,
+      "fin": 49.47,
+      "affiche": "coffre-dates.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-date-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-dates",
+      "titre": "Ajouter une grande date",
+      "resume": "« ＋ Ajouter une date » : la sorte, le titre, la date (et « jusqu’au »), le document et une note si besoin, puis « Ajouter ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-05-dates.mp4",
+      "debut": 49.47,
+      "fin": 91.35,
+      "affiche": "coffre-date-ajouter.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-date-retirer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-dates",
+      "titre": "Retirer une grande date",
+      "resume": "La croix au bout d’une date rangée par le magasin, puis confirmer. L’échéance d’un document n’en a pas : elle suit le document.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-05-dates.mp4",
+      "debut": 91.35,
+      "fin": 117.35,
+      "affiche": "coffre-date-retirer.jpg",
+      "duree": "26 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-apercu",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "L’aperçu d’un document",
+      "resume": "Un clic sur un document ouvre son aperçu à droite : la page, ses gestes, ses repères, ses grandes dates, et qui l’a ouvert.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-06-apercu.mp4",
+      "debut": 0,
+      "fin": 66.87,
+      "affiche": "coffre-apercu.jpg",
+      "duree": "1 min 07",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-joindre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-apercu",
+      "titre": "Joindre un document à un e-mail",
+      "resume": "« Joindre à un e-mail » ouvre la Boîte mail sur un e-mail, le document en pièce jointe et l’objet rempli ; on écrit, puis on envoie. Le coffre note « joint à un mail ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-06-apercu.mp4",
+      "debut": 66.87,
+      "fin": 114.52,
+      "affiche": "coffre-joindre.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php",
+        "panel/public/dashboard/boite.js"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-depot",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Déposer, étape 1 : le fichier",
+      "resume": "La fenêtre du dépôt : le fichier, glissé ou choisi (au téléphone, une photo), « C’est quelle pièce ? », le titre, la date, l’échéance et une note.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-07-deposer.mp4",
+      "debut": 0,
+      "fin": 41.94,
+      "affiche": "coffre-depot.jpg",
+      "duree": "42 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-deposer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-depot",
+      "titre": "Déposer un document",
+      "resume": "Le fichier, la pièce, le titre et la date, puis « Déposer » : le document est rangé dans le coffre, et l’assistant commence à le lire.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-07-deposer.mp4",
+      "debut": 41.94,
+      "fin": 85,
+      "affiche": "coffre-deposer.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-assistant",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Déposer, étape 2 : l’assistant",
+      "resume": "Après « Déposer », l’assistant lit le document : ce que c’est, la phrase qui fonde les dates, les grandes dates proposées à cocher ; il reconnaît la pièce, remplit le titre et l’échéance.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-08-assistant.mp4",
+      "debut": 0.01,
+      "fin": 48.01,
+      "affiche": "coffre-assistant.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-ranger-dates",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-assistant",
+      "titre": "Ranger les grandes dates proposées",
+      "resume": "Décocher ce qu’on ne garde pas, corriger une date au besoin, puis « Ranger le document et N grandes dates » : elles rejoignent les grandes dates du coffre.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-08-assistant.mp4",
+      "debut": 48.01,
+      "fin": 91.3,
+      "affiche": "coffre-ranger-dates.jpg",
+      "duree": "43 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-releve",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Relever les grandes dates",
+      "resume": "La fenêtre du dépôt, sur un document déjà rangé : l’assistant le relit et propose ses grandes dates ; on garde celles qui sont cochées, puis « Ranger », ou « Valider ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-09-relever.mp4",
+      "debut": 0,
+      "fin": 60.82,
+      "affiche": "coffre-releve.jpg",
+      "duree": "1 min 01",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-relever",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "coffre-releve",
+      "titre": "Relever les grandes dates d’un document rangé",
+      "resume": "« ✦ Relever les dates » dans l’aperçu : l’assistant relit le document ; on garde les dates cochées, puis « Ranger et N grandes dates ».",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-09-relever.mp4",
+      "debut": 60.82,
+      "fin": 100.12,
+      "affiche": "coffre-relever.jpg",
+      "duree": "39 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "coffre-vide",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "coffre-fort",
+      "titre": "Le coffre vide",
+      "resume": "Tant qu’aucun document n’est rangé, le coffre dit ce qu’il doit contenir : chaque dossier, ses pièces, qui les dépose, et « Déposer » sur les vôtres.",
+      "vues": [
+        "coffre"
+      ],
+      "fichier": "23-10-vide.mp4",
+      "debut": 0.01,
+      "fin": 56.24,
+      "affiche": "coffre-vide.jpg",
+      "duree": "56 s",
+      "sources": [
+        "panel/public/dashboard/coffre.js",
+        "panel/public/dashboard/coffre.css",
+        "consultant/src/coffre.php",
+        "consultant/src/coffre_dates.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
       "id": "mails-automatisations",
       "genre": "tuto",
       "titre": "Mails et automatisations",
@@ -4195,6 +6169,344 @@
       ],
       "tourne_sur": "062ad4f3fd4a087e35086e1bca334243c1fc99e9",
       "tourne_le": "2026-11-23"
+    },
+    {
+      "id": "param-fenetre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mails-automatisations",
+      "titre": "La fenêtre des Paramètres",
+      "resume": "La roue, en bas du rail : tous les réglages du magasin rangés dans une fenêtre, l’état de chacun, et une recherche.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-01-fenetre.mp4",
+      "debut": 0,
+      "fin": 75.5,
+      "affiche": "param-fenetre.jpg",
+      "duree": "1 min 16",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-rappel",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mails-automatisations",
+      "titre": "Le rappel, dans la fenêtre",
+      "resume": "Le rappel la veille du retrait se règle dans la fenêtre des Paramètres : allumé ou non, par où, à quelle heure ; « Ouvrir la page complète » pour le reste.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-02-rappel.mp4",
+      "debut": 0,
+      "fin": 34.07,
+      "affiche": "param-rappel.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-rappel-allumer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-rappel",
+      "titre": "Allumer ou éteindre le rappel",
+      "resume": "L’interrupteur « Rappel actif » : c’est enregistré tout de suite. Sur la page complète, l’interrupteur de la liste des envois fait de même.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-02-rappel.mp4",
+      "debut": 34.07,
+      "fin": 56.57,
+      "affiche": "param-rappel-allumer.jpg",
+      "duree": "23 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-rappel-canal",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-rappel",
+      "titre": "Choisir par où part le rappel",
+      "resume": "E-mail, SMS ou les deux : enregistré tout de suite dans la fenêtre. Un client sans e-mail reçoit le SMS à la place, et l’inverse.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-02-rappel.mp4",
+      "debut": 56.57,
+      "fin": 80.6,
+      "affiche": "param-rappel-canal.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-rappel-heure",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-rappel",
+      "titre": "Choisir l’heure du rappel",
+      "resume": "Une heure entre 12:00 et 21:00, de demi-heure en demi-heure : enregistrée tout de suite dans la fenêtre.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-02-rappel.mp4",
+      "debut": 80.6,
+      "fin": 104.6,
+      "affiche": "param-rappel-heure.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-page",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mails-automatisations",
+      "titre": "Mails et automatisations",
+      "resume": "La page complète : ce que le magasin envoie tout seul, l’équipe qui reçoit les fiches des promotions, le rappel la veille du retrait en détail, son aperçu, demain et ce qui est parti.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 0,
+      "fin": 59.65,
+      "affiche": "param-page.jpg",
+      "duree": "1 min",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-recent",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Écarter les commandes passées au dernier moment",
+      "resume": "« Pas de rappel pour une commande passée moins de 24 h avant le retrait », puis « Enregistrer » : la confirmation de la commande suffit, elle passe « trop récente ».",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 59.65,
+      "fin": 94.07,
+      "affiche": "param-recent.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-email",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Écrire l’e-mail du rappel",
+      "resume": "Changer l’objet et le texte, avec les variables {prenom}, {jour}, {heure}, {paiement}… ; l’aperçu suit ; puis « Enregistrer ».",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 94.07,
+      "fin": 125.48,
+      "affiche": "param-email.jpg",
+      "duree": "31 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-sms",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Écrire le SMS du rappel",
+      "resume": "Changer le texte du SMS ; le compteur donne les signes et le nombre de SMS ; puis « Enregistrer ».",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 125.48,
+      "fin": 149.55,
+      "affiche": "param-sms.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-essai",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Envoyer un essai",
+      "resume": "Votre GSM, puis « Envoyer un essai » : l’e-mail part à la boîte du magasin, le SMS au GSM donné. Rien n’est gardé.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 149.55,
+      "fin": 168.94,
+      "affiche": "param-essai.jpg",
+      "duree": "19 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-equipe-ajouter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Ajouter une personne à l’équipe",
+      "resume": "Le prénom et l’initiale, l’adresse e-mail, puis « Ajouter » : la personne reçoit la fiche de la prochaine promotion lancée.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 168.94,
+      "fin": 193.7,
+      "affiche": "param-equipe-ajouter.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-equipe-retirer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "param-page",
+      "titre": "Retirer une personne de l’équipe",
+      "resume": "« Retirer » au bout de sa ligne : elle ne reçoit plus les fiches. Il n’y a pas de confirmation.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-03-page.mp4",
+      "debut": 193.7,
+      "fin": 213.79,
+      "affiche": "param-equipe-retirer.jpg",
+      "duree": "20 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "param-porte",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "mails-automatisations",
+      "titre": "Boîte fermée : la porte",
+      "resume": "Mails et automatisations se règlent boîte ouverte : tant qu’elle ne l’est pas sur cet appareil, ou pas encore reliée, la page le dit et mène à la Boîte mail.",
+      "vues": [
+        "mails"
+      ],
+      "fichier": "24-04-porte.mp4",
+      "debut": 0,
+      "fin": 47.78,
+      "affiche": "param-porte.jpg",
+      "duree": "48 s",
+      "sources": [
+        "panel/public/dashboard/dashboard.js",
+        "panel/public/dashboard/parametres.css",
+        "panel/public/dashboard/automatisations.js",
+        "panel/public/dashboard/automatisations.css",
+        "panel/src/automatisations.php"
+      ],
+      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_le": "2026-11-26"
     }
   ]
 }

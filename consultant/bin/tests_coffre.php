@@ -157,6 +157,14 @@ verifie('la pièce de l’archive d’une formation continue', str_contains((str
 // 8. Le préfixe est un écran de magasin.
 verifie('/coffre/magasin est ouvert aux magasins (ACCES_FRANCHISE)', str_contains((string) file_get_contents(__DIR__ . '/../../shared/src/acces.php'), "'/coffre/magasin'"));
 
+// Une pièce renouvelée (26/11/2026) : seul le document le plus récent compte, l'ancien est « remplacé ».
+$R = cofRemplaces([
+    ['id' => 1, 'piece' => 'rc', 'date' => '2026-01-10'], ['id' => 2, 'piece' => 'rc', 'date' => '2026-11-20'],
+    ['id' => 3, 'piece' => 'bail', 'date' => '2025-05-01'], ['id' => 4, 'piece' => null, 'date' => '2026-01-01'],
+    ['id' => 5, 'piece' => 'rc', 'date' => '2026-11-20'],
+]);
+verifie('renouvellement : les anciens documents d\'une pièce sont remplacés, le plus récent (date puis numéro) reste', $R === [2 => true, 1 => true], json_encode($R));
+
 // Le banc s'efface.
 foreach ([$shop, $autre] as $s) { array_map('unlink', glob(docDossier($s) . '/*') ?: []); @rmdir(docDossier($s)); }
 array_map('unlink', glob($tmp . '/*') ?: []); @rmdir($tmp);

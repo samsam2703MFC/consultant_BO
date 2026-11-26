@@ -233,6 +233,23 @@ function cofOuverturesMagasin(int $shop): array
 }
 
 /**
+ * Les documents remplacés (26/11/2026) : pour une même pièce attendue, seul le plus récent compte (sa date, puis son
+ * numéro, comme cofPieces) ; les autres ne sont plus « à renouveler » et leur échéance sort des grandes dates.
+ * $docs : [{id, piece, date}…] ; rend [id => true].
+ */
+function cofRemplaces(array $docs): array
+{
+    $par = [];
+    foreach ($docs as $d) { if (!empty($d['piece'])) { $par[$d['piece']][] = $d; } }
+    $out = [];
+    foreach ($par as $ds) {
+        usort($ds, static fn ($x, $y) => strcmp((string) ($y['date'] ?? ''), (string) ($x['date'] ?? '')) ?: (int) $y['id'] <=> (int) $x['id']);
+        foreach (array_slice($ds, 1) as $d) { $out[(int) $d['id']] = true; }
+    }
+    return $out;
+}
+
+/**
  * L'état d'un document du coffre, d'après son échéance : expiree (passée), renouveler (dans COF_RENOUVELER_J jours),
  * valide (plus loin), depose (sans échéance). Rend {cle, texte, jours}.
  */
@@ -276,6 +293,12 @@ function ep_coffre_magasin(): array
     }
     // Ce que le magasin a déposé lui-même n'est pas « nouveau » pour lui.
     $docs = array_map(static fn ($r) => cofLigne($r, $traces[(int) $r['id']] ?? [], !isset($vu[(int) $r['id']]) && (string) ($r['depose_role'] ?? '') !== 'franchise', $auj), $rows);
+    // Une pièce renouvelée : l'ancien document n'est plus « à renouveler » ni « échu » — il est remplacé (26/11/2026).
+    $remplaces = cofRemplaces($docs);
+    foreach ($docs as &$d) {
+        if (isset($remplaces[$d['id']]) && in_array($d['etat']['cle'], ['renouveler', 'expiree'], true)) { $d['etat'] = ['cle' => 'remplacee', 'texte' => 'remplacé', 'jours' => null]; }
+    }
+    unset($d);
     $visites = cofVisites($shop);
     $n = array_fill_keys(array_keys(COF_ONGLETS), 0);
     foreach ($docs as $d) { $n[$d['onglet']]++; }
