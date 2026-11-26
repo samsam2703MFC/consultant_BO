@@ -2,7 +2,6 @@
  *   onglet    clients-bureaux               les bureaux en développement (à valider, traités), la liste des bureaux et
  *                                           son filtre, le tiroir d'un bureau (livraison, sites, catalogue, offres,
  *                                           personnes, invitation, documents ; précédent, suivant)
- *   fonction  clients-connecter-tfb         le compte TF Buddy du magasin : téléphone, PIN, code SMS (POST /dashboard/tfb/…)
  *   fonction  clients-questionnaire         le questionnaire du magasin : le lien et son QR, le message, le bon
  *   fonction  clients-bureau-dev            « Nouveau bureau en développement » : la personne, la société, le bon
  *   fonction  clients-valider-demande       une demande validée : le bureau créé dans TF Buddy
@@ -13,7 +12,7 @@
  *   fonction  clients-inviter               une invitation par e-mail (POST …/members/invite)
  * Non filmé : « Ouvrir » le questionnaire (un nouvel onglet du navigateur), le logo de l'assistant (le sélecteur de
  * fichiers du système). Données fictives : mocks/26_clients.js. Le compte TF Buddy du magasin est connecté avant de
- * filmer, et l'onglet Bureaux choisi ; la connexion se refait dans son chapitre (déconnecté sous l'intercalaire).
+ * filmer, et l'onglet Bureaux choisi. La connexion elle-même n'est pas filmée (décision de Sam, 26/11/2026).
  * Chaque phrase vient de panel/public/dashboard/clients.js (vueBureaux, blocDev, tiroirDemande, tiroirBureau,
  * vueAssistant, fenCourante), tfb-magasin.js, panel/src/clients_panel.php, panel/src/bureaux_dev.php ou tfb_magasin.php. */
 const { Film } = require('../film');
@@ -34,7 +33,7 @@ module.exports = async function () {
     id: 'clients-bureaux', titre: 'Les bureaux',
     resume: 'Les bureaux en développement à valider, puis les bureaux livrés : statut, catalogue, offres, sites ; la fiche d’un bureau dans un tiroir.',
     accroche: 'Du questionnaire à la tournée',
-    programme: ['Connecter le compte TF Buddy du magasin', 'Régler le questionnaire', 'Saisir un bureau en développement', 'Valider une demande', 'Refuser une demande',
+    programme: ['Régler le questionnaire', 'Saisir un bureau en développement', 'Valider une demande', 'Refuser une demande',
       'Ajouter un bureau', 'Modifier la livraison', 'Ajouter un site', 'Inviter des personnes'],
   });
   await f.montrer('.pcl-dev', 'En développement');
@@ -66,35 +65,6 @@ module.exports = async function () {
   await f.dire('Les flèches passent au bureau suivant ; Échap ferme le tiroir.', 3400);
   await f.taire(150);
   await f.cliquer(TIR + ' [data-act="b-fermer"]', { apres: 700 });
-
-  /* Connecter le compte TF Buddy du magasin */
-  await fonctionPreparee(f, { id: 'clients-connecter-tfb', titre: 'Connecter le compte TF Buddy du magasin',
-    resume: 'Les bureaux ne s’ouvrent qu’au compte TF Buddy du magasin : téléphone, PIN, puis le code reçu par SMS. La session dure 12 heures sur l’appareil.',
-    points: ['« Connecter le compte TF Buddy du magasin »', 'Le téléphone et le PIN', 'Le code reçu par SMS'] }, async () => {
-    await poster(f.p, '/dashboard/tfb/deconnexion', { shop: '4', renouvellement: 'demo' });
-    await f.p.evaluate(() => { window.DashTfb.oublier('4'); window.DashClients.relire(); window.scrollTo(0, 0); });
-    await attendre(800);
-  });
-  await f.montrer('.pcl-refus', 'Ne se lisent pas');
-  await f.dire('Sans le compte du magasin, <b>les bureaux ne se lisent pas</b> : les comptes du cockpit n’y ont pas accès.', 5000);
-  await f.cacher(150); await f.taire(150);
-  await f.cliquer('.pcl-refus [data-act="tfb-connecter"]', { apres: 900 });
-  await f.cliquer('#tfbm-tel', { apres: 150 });
-  await f.taper('+32 400 12 34 56', 50);
-  await f.cliquer('#tfbm-pin', { apres: 150 });
-  await f.taper('2580', 120);
-  await f.montrer('.tfbm-fen .confirm__box', 'La connexion du panel');
-  await f.dire('La connexion du panel TF Buddy : le <b>téléphone</b> d’un employé du magasin et son <b>PIN</b>.', 4600);
-  await f.cacher(150); await f.taire(150);
-  await f.cliquer('.tfbm-fen [data-tfbm="ok"]', { apres: 1200 });
-  await f.dire('Un <b>code</b> part par SMS ; « renvoyer le code » revient après 60 secondes.', 4000);
-  await f.cliquer('#tfbm-code', { apres: 150 });
-  await f.taper('481516', 130);
-  await f.cliquer('.tfbm-fen [data-tfbm="ok"]', { apres: 2400 });
-  await f.montrer('.pcl-tfb', 'Connecté');
-  await f.dire('Connecté : la session dure <b>12 heures</b> sur cet appareil ; le cockpit ne garde ni le PIN ni la session.', 5400);
-  await f.dire('Les bureaux se lisent ; « déconnecter » referme le compte.', 3400);
-  await f.cacher(300); await f.taire(200);
 
   /* Le questionnaire */
   await fonction(f, { id: 'clients-questionnaire', titre: 'Régler le questionnaire du magasin',
