@@ -1763,16 +1763,16 @@
       ],
       "fichier": "13-01-en-cours.mp4",
       "debut": 0,
-      "fin": 34.47,
+      "fin": 35.09,
       "affiche": "offres-en-cours.jpg",
-      "duree": "34 s",
+      "duree": "35 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-modifier",
@@ -1786,17 +1786,17 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 34.47,
-      "fin": 63.27,
+      "debut": 35.09,
+      "fin": 65.59,
       "affiche": "offres-modifier.jpg",
-      "duree": "29 s",
+      "duree": "31 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-envoyer",
@@ -1810,8 +1810,8 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 63.27,
-      "fin": 98.08,
+      "debut": 65.59,
+      "fin": 100.88,
       "affiche": "offres-envoyer.jpg",
       "duree": "35 s",
       "sources": [
@@ -1819,8 +1819,8 @@
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-convertir",
@@ -1834,17 +1834,17 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 98.08,
-      "fin": 125.23,
+      "debut": 100.88,
+      "fin": 129.44,
       "affiche": "offres-convertir.jpg",
-      "duree": "27 s",
+      "duree": "29 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-archiver",
@@ -1858,17 +1858,17 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 125.23,
-      "fin": 138.65,
+      "debut": 129.44,
+      "fin": 143.49,
       "affiche": "offres-archiver.jpg",
-      "duree": "13 s",
+      "duree": "14 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-supprimer",
@@ -1882,17 +1882,17 @@
         "offres"
       ],
       "fichier": "13-01-en-cours.mp4",
-      "debut": 138.65,
-      "fin": 163.11,
+      "debut": 143.49,
+      "fin": 169.14,
       "affiche": "offres-supprimer.jpg",
-      "duree": "24 s",
+      "duree": "26 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "panel/src/offres_client.php",
         "panel/public/dashboard/boite.js"
       ],
-      "tourne_sur": "a2585c76f901b183b014d6b3d7c4176d218b52de",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-converties",
@@ -2068,16 +2068,16 @@
       ],
       "fichier": "13-06-campagnes.mp4",
       "debut": 0,
-      "fin": 59.83,
+      "fin": 57.62,
       "affiche": "offres-nl-campagnes.jpg",
-      "duree": "1 min",
+      "duree": "58 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-envoyer",
@@ -2091,17 +2091,17 @@
         "offres"
       ],
       "fichier": "13-06-campagnes.mp4",
-      "debut": 59.83,
-      "fin": 91.18,
+      "debut": 57.62,
+      "fin": 87.38,
       "affiche": "offres-nl-envoyer.jpg",
-      "duree": "31 s",
+      "duree": "30 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-retirer",
@@ -2115,17 +2115,17 @@
         "offres"
       ],
       "fichier": "13-06-campagnes.mp4",
-      "debut": 91.18,
-      "fin": 120.47,
+      "debut": 87.38,
+      "fin": 114.5,
       "affiche": "offres-nl-retirer.jpg",
-      "duree": "29 s",
+      "duree": "27 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-retrospective",
@@ -2140,16 +2140,16 @@
       ],
       "fichier": "13-07-retrospective.mp4",
       "debut": 0,
-      "fin": 53.68,
+      "fin": 49.55,
       "affiche": "offres-nl-retrospective.jpg",
-      "duree": "54 s",
+      "duree": "50 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-test-ab",
@@ -2163,17 +2163,17 @@
         "offres"
       ],
       "fichier": "13-07-retrospective.mp4",
-      "debut": 53.68,
-      "fin": 103.81,
+      "debut": 49.55,
+      "fin": 92.91,
       "affiche": "offres-nl-test-ab.jpg",
-      "duree": "50 s",
+      "duree": "43 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-templates",
@@ -2188,16 +2188,16 @@
       ],
       "fichier": "13-08-templates.mp4",
       "debut": 0,
-      "fin": 59.12,
+      "fin": 59.59,
       "affiche": "offres-nl-templates.jpg",
-      "duree": "59 s",
+      "duree": "1 min",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-expediteur",
@@ -2212,16 +2212,16 @@
       ],
       "fichier": "13-09-expediteur.mp4",
       "debut": 0,
-      "fin": 46.23,
+      "fin": 45.35,
       "affiche": "offres-nl-expediteur.jpg",
-      "duree": "46 s",
+      "duree": "45 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-changer-expediteur",
@@ -2235,8 +2235,8 @@
         "offres"
       ],
       "fichier": "13-09-expediteur.mp4",
-      "debut": 46.23,
-      "fin": 80.5,
+      "debut": 45.35,
+      "fin": 79.59,
       "affiche": "offres-nl-changer-expediteur.jpg",
       "duree": "34 s",
       "sources": [
@@ -2244,8 +2244,8 @@
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-segment",
@@ -2260,16 +2260,16 @@
       ],
       "fichier": "13-10-segment.mp4",
       "debut": 0,
-      "fin": 70.91,
+      "fin": 67.25,
       "affiche": "offres-nl-segment.jpg",
-      "duree": "1 min 11",
+      "duree": "1 min 07",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-template",
@@ -2284,16 +2284,16 @@
       ],
       "fichier": "13-11-template.mp4",
       "debut": 0,
-      "fin": 67.46,
+      "fin": 62.9,
       "affiche": "offres-nl-template.jpg",
-      "duree": "1 min 07",
+      "duree": "1 min 03",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-texte",
@@ -2308,16 +2308,16 @@
       ],
       "fichier": "13-12-texte.mp4",
       "debut": 0,
-      "fin": 86.18,
+      "fin": 84.28,
       "affiche": "offres-nl-texte.jpg",
-      "duree": "1 min 26",
+      "duree": "1 min 24",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-envoi",
@@ -2332,16 +2332,16 @@
       ],
       "fichier": "13-13-envoi.mp4",
       "debut": 0,
-      "fin": 64.48,
+      "fin": 59.69,
       "affiche": "offres-nl-envoi.jpg",
-      "duree": "1 min 04",
+      "duree": "1 min",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-envoyer-test",
@@ -2355,17 +2355,17 @@
         "offres"
       ],
       "fichier": "13-13-envoi.mp4",
-      "debut": 64.48,
-      "fin": 97.57,
+      "debut": 59.69,
+      "fin": 91.05,
       "affiche": "offres-nl-envoyer-test.jpg",
-      "duree": "33 s",
+      "duree": "31 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "offres-nl-programmer",
@@ -2379,17 +2379,17 @@
         "offres"
       ],
       "fichier": "13-13-envoi.mp4",
-      "debut": 97.57,
-      "fin": 141.36,
+      "debut": 91.05,
+      "fin": 130.5,
       "affiche": "offres-nl-programmer.jpg",
-      "duree": "44 s",
+      "duree": "39 s",
       "sources": [
         "panel/public/dashboard/offres.js",
         "marketing/public/assets/js/newsletter.js",
         "panel/src/offres_newsletter.php"
       ],
-      "tourne_sur": "1fd01e0833a9e06b2411adb6b61f0a86d63d9ae3",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "653f60222f18ceb8fd772084e77c3287b47ff478",
+      "tourne_le": "2026-11-26"
     },
     {
       "id": "primes",
