@@ -58,6 +58,15 @@
   const chLire = shop => { try { const c = JSON.parse(sessionStorage.getItem(cleCh(shop)) || 'null'); return c && c.t + 300 > maintenant() ? c : null; } catch (e) { return null; } };
   const chEcrire = (shop, c) => { try { if (c) { sessionStorage.setItem(cleCh(shop), JSON.stringify(c)); } else { sessionStorage.removeItem(cleCh(shop)); } } catch (e) { /* stockage refusé */ } };
 
+  /** Le contrôle d'après connexion, dit en clair. */
+  function diagTexte(d) {
+    if (!d || d.error) { return 'Le contrôle n’a pas répondu' + (d && d.error ? ' : ' + d.error : '') + '.'; }
+    if (!d.recu) { return 'Connecté à TF Buddy, mais le serveur du cockpit ne reçoit pas le jeton (ni l’en-tête ni le cookie). Envoyez ce message et le détail ci-dessous.'; }
+    const t = d.tfbuddy || {};
+    if (t.code === 401) { return 'TF Buddy refuse le jeton qu’il vient de donner (HTTP 401' + (t.erreur ? ' : ' + t.erreur : '') + ').'; }
+    return 'TF Buddy refuse les bureaux de ce magasin à ce compte (HTTP ' + t.code + (t.erreur ? ' : ' + t.erreur : '') + ') : l’employé connecté est-il bien de ce magasin ?';
+  }
+
   /* ── La fenêtre de connexion ─────────────────────────────────────────────────────────────────────────────── */
   let fen = null;
   function fermer() { if (fen) { fen.remove(); fen = null; } }  // la minuterie de la fenêtre s'arrête d'elle-même (fen null)
@@ -68,6 +77,7 @@
       : { etape: 'tel', challenge: null, busy: false, err: null, info: null, tel: '', envoi: 0 };
     let minuterie = null;
     const resteSms = () => Math.max(0, (st.envoi || 0) + 60 - maintenant());
+    const renvoi = () => resteSms() ? `<span class="muted" style="font-size:12px">nouveau code possible dans ${resteSms()} s</span>` : '<button type="button" class="linklike" data-tfbm="sms">renvoyer le code</button>';
     // Chaque fenêtre a son élément et sa minuterie : une fenêtre fermée ne redessine jamais la suivante.
     const el = document.createElement('div');
     fen = el;
@@ -80,25 +90,40 @@
         ${st.etape === 'tel' ? `<label class="tfbm-champ">Téléphone<input id="tfbm-tel" type="tel" autocomplete="tel" placeholder="+32 4.. .. .. .." value="${esc(st.tel)}"></label>
           <label class="tfbm-champ">PIN<input id="tfbm-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8"></label>`
         : `<p style="font-size:13px">${esc(st.info || 'Un code a été envoyé par SMS.')}</p><label class="tfbm-champ">Code reçu par SMS<input id="tfbm-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8"></label>
-          <div style="display:flex;gap:14px;align-items:center;margin-top:6px">${resteSms() ? `<span class="muted" style="font-size:12px">nouveau code possible dans ${resteSms()} s</span>` : '<button type="button" class="linklike" data-tfbm="sms">renvoyer le code</button>'}
+          <div style="display:flex;gap:14px;align-items:center;margin-top:6px"><span class="tfbm-renvoi">${renvoi()}</span>
             <button type="button" class="linklike" data-tfbm="autre">autre téléphone</button></div>`}
+        ${st.etape === 'controle' ? `<p class="error">${esc(diagTexte(st.diag))}</p><p class="muted" style="font-size:12px">Détail : ${esc(JSON.stringify({ recu: st.diag.recu, par: st.diag.par, entete: st.diag.entete, cookie: st.diag.cookie, tfbuddy: st.diag.tfbuddy || null }))}</p>` : ''}
         ${st.err ? `<p class="error">${esc(st.err)}</p>` : ''}
         <div class="confirm__actions"><button type="button" class="btn btn--ghost" data-tfbm="fermer">Annuler</button>
-          <button type="button" class="btn btn--primary" data-tfbm="ok"${st.busy ? ' disabled' : ''}>${st.etape === 'tel' ? 'Recevoir le code' : 'Se connecter'}</button></div></div>`;
+          ${st.etape === 'controle' ? '<button type="button" class="btn btn--primary" data-tfbm="garder">Fermer</button>' : `<button type="button" class="btn btn--primary" data-tfbm="ok"${st.busy ? ' disabled' : ''}>${st.etape === 'tel' ? 'Recevoir le code' : 'Se connecter'}</button>`}</div></div>`;
       // Le focus : le PIN si le téléphone est déjà là (après un refus), sinon le premier champ.
       const i = (st.tel && el.querySelector('#tfbm-pin')) || el.querySelector('#tfbm-tel') || el.querySelector('#tfbm-code'); if (i) { i.focus(); }
     };
-    const fini = j => { ecrire(shop, j); chEcrire(shop, null); clearInterval(minuterie); fermer(); if (apres) { apres(); } };
+    const fermerOk = () => { chEcrire(shop, null); clearInterval(minuterie); fermer(); if (apres) { apres(); } };
+    /**
+     * La session reçue : gardée, puis contrôlée avant de fermer (GET /dashboard/tfb/etat) — le serveur reçoit-il le jeton,
+     * TF Buddy l'accepte-t-il pour ce magasin ? Sinon la fenêtre reste ouverte et dit pourquoi.
+     */
+    const fini = j => {
+      ecrire(shop, j);
+      if (!lire(shop)) { st.err = 'la session n’a pas pu être gardée dans ce navigateur (stockage local refusé ?)'; return null; }
+      st.info = 'Connecté. Vérification de l’accès au magasin…'; rendre();
+      return window.DashTfb.controler(shop, api).then(d => {
+        if (d && d.recu && d.tfbuddy && d.tfbuddy.code >= 200 && d.tfbuddy.code < 300) { fermerOk(); return; }
+        st.etape = 'controle'; st.diag = d || {}; rendre();
+      }).catch(() => { fermerOk(); });
+    };
     const versSms = (ch, info) => { st.etape = 'sms'; st.challenge = ch; st.info = info; st.envoi = maintenant(); chEcrire(shop, { challenge: ch, tel: st.tel, t: maintenant(), envoi: st.envoi }); };
     // Le compte à rebours du « renvoyer le code » (60 s, la règle de TF Buddy).
+    // Le compte à rebours (26/11/2026) : seul son texte change chaque seconde. Redessiner toute la fenêtre remplaçait le
+    // bouton « Se connecter » sous le doigt : un clic tombé pendant le redessin était perdu (« after code it does not connect »).
     minuterie = setInterval(() => {
       if (fen !== el) { clearInterval(minuterie); return; }
-      // Redessiner seulement pendant le compte à rebours (le code saisi est gardé).
-      if (st.etape === 'sms' && resteSms() > 0 && !st.busy) { const c = el.querySelector('#tfbm-code'), v = c ? c.value : ''; rendre(); const c2 = el.querySelector('#tfbm-code'); if (c2) { c2.value = v; c2.focus(); } }
-      else if (st.etape === 'sms' && resteSms() === 0 && !el.querySelector('[data-tfbm="sms"]') && !st.busy) { const c = el.querySelector('#tfbm-code'), v = c ? c.value : ''; rendre(); const c2 = el.querySelector('#tfbm-code'); if (c2) { c2.value = v; c2.focus(); } }
+      const r = el.querySelector('.tfbm-renvoi');
+      if (r && st.etape === 'sms') { const h = renvoi(); if (r.innerHTML !== h) { r.innerHTML = h; } }
     }, 1000);
     const ok = () => {
-      if (st.busy) { return; }
+      if (st.busy || st.etape === 'controle') { return; }
       st.busy = true; st.err = null;
       if (st.etape === 'tel') { st.tel = (el.querySelector('#tfbm-tel') || {}).value || ''; }
       const p = st.etape === 'tel'
@@ -120,11 +145,12 @@
       const a = ev.target.closest('[data-tfbm]'); if (!a) { return; }
       if (a.dataset.tfbm === 'fermer') { fermer(); }
       else if (a.dataset.tfbm === 'ok') { ok(); }
+      else if (a.dataset.tfbm === 'garder') { fermerOk(); }
       else if (a.dataset.tfbm === 'sms') { poster(api, '/dashboard/tfb/sms', { shop, challenge: st.challenge }).then(() => { st.info = 'Un nouveau code a été envoyé.'; st.err = null; st.envoi = maintenant(); const c = chLire(shop); if (c) { chEcrire(shop, Object.assign(c, { envoi: st.envoi })); } }).catch(e => { st.err = e.message; }).finally(rendre); }
       // « autre téléphone » : le code en cours reste gardé ; il se reprend si l'on redonne le même numéro avant 60 s.
       else if (a.dataset.tfbm === 'autre') { st.etape = 'tel'; st.challenge = null; st.err = null; st.info = null; rendre(); }
     });
-    el.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); ok(); } if (ev.key === 'Escape') { fermer(); } });
+    el.addEventListener('keydown', ev => { if (ev.key === 'Enter' && st.etape !== 'controle') { ev.preventDefault(); ok(); } if (ev.key === 'Escape') { fermer(); } });
     document.body.appendChild(el);
     rendre();
   }

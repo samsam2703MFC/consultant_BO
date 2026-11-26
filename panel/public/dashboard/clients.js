@@ -161,7 +161,8 @@
     const act = st.b.w && st.onglet === 'bur' ? '' : st.onglet === 'b2c' ? `<button type="button" class="btn btn--primary" data-act="p-ajouter">${SVG(ICO.plus)}Ajouter un client</button>`
       : st.onglet === 'b2b' ? `<button type="button" class="btn btn--primary" data-act="e-ajouter">${SVG(ICO.plus)}Ajouter une entreprise</button>`
       : st.onglet === 'bur' ? `<button type="button" class="btn btn--primary" data-act="w-ouvrir"${st.b.d && st.b.d.ok ? '' : ' disabled title="TF Buddy ne donne pas les bureaux au cockpit"'}>${SVG(ICO.plus)}Ajouter un bureau</button>` : '';
-    return `<div class="pcl-tete"><div><p class="pcl-kicker">${esc(st.nomShop || 'Magasin ' + st.shop)}</p><h1>Clients</h1></div><span class="pcl-sp"></span>${act}</div>
+    // Le titre : le dashboard met déjà le sien (le magasin, « Clients ») ; le module ne garde que son action (26/11/2026).
+    return `<div class="pcl-tete">${st.titre ? `<div><p class="pcl-kicker">${esc(st.nomShop || 'Magasin ' + st.shop)}</p><h1>Clients</h1></div>` : ''}<span class="pcl-sp"></span>${act}</div>
       <nav class="page-tabs pcl-tabs" aria-label="Clients">${ong.map(([k, l, c]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-act="onglet" data-v="${k}">${l}${c}</button>`).join('')}
       <span class="pcl-sp"></span>${window.DashTfb ? (tfbEtat().connecte ? `<span class="pcl-tfb" title="Les données du panel se lisent avec le compte TF Buddy du magasin, connecté sur cet appareil">TF Buddy : compte du magasin connecté${tfbDiagTexte() ? ' — <span class="pcl-tfb-ko">' + esc(tfbDiagTexte()) + '</span>' : ''} · <button type="button" class="linklike" data-act="tfb-deconnecter">déconnecter</button></span>` : `<button type="button" class="linklike" data-act="tfb-connecter">connecter TF Buddy</button>`) : ''}<button type="button" class="linklike" data-act="aller-offres">Les offres : Vendre › Offres</button></nav>`;
   }
@@ -631,7 +632,7 @@
   window.DashClients = {
     racine(shop, o) {
       o = o || {};
-      st.aller = o.aller || st.aller; st.nomShop = o.nomShop || st.nomShop; st.api = o.apiBase || st.api;
+      st.aller = o.aller || st.aller; st.nomShop = o.nomShop || st.nomShop; st.api = o.apiBase || st.api; st.titre = o.titre !== false;
       if (!st.el || st.shop !== String(shop)) {
         const auj = new Date();
         Object.assign(st, { shop: String(shop), mo: null });

@@ -7701,7 +7701,7 @@
     const p = document.getElementById(id);
     if (!p) { return; }
     if (!window.DashClients) { p.innerHTML = '<div class="db-err">Le module Clients n’a pas été chargé.</div>'; return; }
-    const el = window.DashClients.racine(S.shop, { apiBase: API, nomShop: nomShop(), aller: allerVers });
+    const el = window.DashClients.racine(S.shop, { apiBase: API, nomShop: nomShop(), aller: allerVers, titre: false });
     if (id === 'db-mod-mob') { p.appendChild(el); } else { p.replaceWith(el); }
   }
   function eqpMonter(id) {
