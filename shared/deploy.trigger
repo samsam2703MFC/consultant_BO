@@ -322,3 +322,4 @@
 2026-11-26T04:21:38Z SOP du dashboard magasin : article v1.11, SOP v1.8 (Primes dans Mon équipe ; Commandes et Clients au rail)
 2026-11-26T04:43:30Z Manuel opératoire : thèmes 1 à 10 publiés (codes 0.0.61 à 0.0.70 ; 0.0.66 et 0.0.67 en v1.1 ; nouveaux : 0.0.68 Clients, 0.0.69 Autocontrôle qualité, 0.0.70 Commandes)
 2026-11-26T05:25:37Z Clients : un refus dit l'état du compte TF Buddy du magasin (pas connecté, jeton non reçu, session périmée)
+2026-11-26T05:32:16Z Compte TF Buddy du magasin : le jeton doublé d'un cookie, contrôle après connexion
