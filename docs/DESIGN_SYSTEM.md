@@ -550,6 +550,7 @@ Décidé par Sam le 26/11/2026 (« adapte ce style à tout le dashboard ») à p
   `dashboard.js`) : sous 90 % `--stop` « en retard », 90–100 % `--prize` « proche », 100 % et plus `--green` « atteint », sur
   le pourcentage arrondi qu'on lit ; une période en cours se hachure (pas encore jugée), une case de calendrier prend le fond
   teinté de son état. Une intensité sans état (carte de chaleur) : une rampe d'une seule teinte (`--chart-real`, `--green`).
+- **Position face au marché** (Concurrence, 26/11/2026) : plus de 5 % au-dessus de la médiane des boulangeries `--prize` (texte `--prize-ink`) « au-dessus », plus de 5 % en dessous `--green` « en dessous », entre les deux sans couleur « au prix du marché » ; le chiffre de l'écart reste à l'encre (le mot est dans la colonne Verdict). L'évolution d'une catégorie (Produits) suit l'écart au N-1 : `--green` « se développe », `--prize-ink` « recule ».
 - **« Prête »** (Commandes) : bleu-gris `#4A6478` (5,5:1 sur son fond), distinct du bleu d'identification du Webshop.
 - **Petits textes sur fond teinté** : sur `--table-head` ou `--paper`, `--muted` ne fait que 4,45:1 (sous 4,5:1) ; un
   texte de 12 px ou moins y prend `--muted-2` (6,7:1).

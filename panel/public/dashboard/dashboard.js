@@ -4226,14 +4226,14 @@
     if (P && S.pmRelu !== k && !S.pmRelecture) { S.pmRelu = k; setTimeout(pmRelire, 0); }
     const relu = S.pmRelecture ? 'relecture du panel…'
       : (S.pmRelErr ? 'relecture du panel impossible : ' + esc(S.pmRelErr) : (P && P.lu ? 'relu au panel ' + (P.luJour && P.luJour !== AUJ ? 'le ' + esc(P.luJour.slice(8, 10) + '/' + P.luJour.slice(5, 7)) + ' ' : '') + 'à ' + esc(P.lu) : ''));
-    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div>
-      <div class="db-mini pm-relu">${relu}${S.pmRelecture ? '' : ` <button class="pm-lien" data-pmrelire="1">↻ relire le panel</button>`}</div></div><span style="flex:1"></span>
-      <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div></div>
-      <div class="pm-lecture">Le Coach Vente prépare vos bundles avec vos prix et vos coûts : vous validez, la promotion passe en caisse le lundi qui suit et l’équipe reçoit sa fiche. Les autres promotions se créent au cockpit (<b>Promotions › Édition</b>).</div>`;
+    // Le titre est celui de la barre (26/11/2026, comme Tâches et Temps morts) : le fil d'Ariane et la case « Magasin » (le nom
+    // du magasin, déjà en kicker) sont retirés ; ici, la relecture du panel et ce qu'on fait de la page.
+    let h = `<p class="db-sous pm-sous">${relu ? relu + (S.pmRelecture ? '' : ' · ') : ''}${S.pmRelecture ? '' : '<button class="pm-lien" data-pmrelire="1">↻ relire le panel</button>'} · Le Coach Vente prépare vos bundles avec vos prix et vos coûts : vous validez, la promotion passe en caisse le lundi qui suit et l’équipe reçoit sa fiche. Les autres promotions se créent au cockpit (Promotions › Édition).</p>`;
     if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
     if (S.pmBonV) { h += rendPmBonCodes(); }
     if (S.err[k]) { return h + `<div class="db-err">Promotions : ${esc(S.err[k])}</div>`; }
     if (!P) { return h + squelette(3); }
+    h += pmResume();
     h += rendPmCanaux();
     // Les bundles du Coach Vente (17/11/2026, Sam : « enlever le tableau, mettre là un assistant venant de l'Assistant IA
     // avec une promotion pré-encodée », puis « créer des bundles qui montent la marge » ; maquette docs/maquettes/promo-coach) :
@@ -4255,6 +4255,29 @@
    * commande webshop encaissée au magasin compte dans son canal). Une barre par promotion avec son coefficient de
    * marge (le bouton de la liste), et le jour par jour, comptoir en bas, webshop au-dessus. En nombre ou en remise €. */
   const PM_CAN = [['compt', 'Comptoir', 'c'], ['cc', 'Click & collect', 'w'], ['liv', 'Livraison', 'l']];
+  /** Les comptes de la carte des canaux (en nombre ou en remise €), partagés avec le résumé. */
+  function pmCanComptes() {
+    const M = S.pmCanM, v = c => M === 'r' ? +(c || {}).r || 0 : +(c || {}).n || 0;
+    const tot = p => v(p.compt) + v(p.cc) + v(p.liv), web = p => v(p.cc) + v(p.liv);
+    return { v, tot, web, fv: x => M === 'r' ? fU(x) : nf(x, 0), part: p => tot(p) ? Math.round(100 * web(p) / tot(p)) : 0 };
+  }
+  /** La ligne de la liste qui porte le coefficient d'une promotion reconnue : du magasin (son n° au panel) ou de la marque. */
+  const pmCanLigne = (p, L) => p.id === 'x' ? null : (L.find(o => o.src === 'mag' && o.d && +o.d.panelId === +p.id) || L.find(o => o.src === 'panel' && +o.id === +p.id));
+  /** Le coefficient affiché d'une ligne : celui d'aujourd'hui, sinon celui de l'enregistrement (pmCoefCellule). */
+  function pmCoefVal(l) { const K = pmCoefDe(l); return K && K.C.lot != null ? K.C.lot : (K ? null : l.coef); }
+  /** Le résumé de Promotions (26/11/2026, DESIGN_SYSTEM.md §7.13) : les utilisations de la période en chiffre clé (il quitte la
+   *  tête de la carte des canaux), puis « À corriger » : les promotions dont le coefficient du lot passe sous le repère ; le
+   *  bouton ouvre le détail du coefficient (data-pmcoef, le geste de la colonne). */
+  function pmResume() {
+    const D = S.aux[clePMC()], M = S.pmCanM, J = S.pmCanJ;
+    if (!D || S.err[clePMC()]) { return ''; }
+    const { tot, fv, part } = pmCanComptes(), P = D.promos || [], T = D.total || { compt: {}, cc: {}, liv: {} }, nT = tot(T);
+    const Rg = (S.aux[clePM()] || {}).regles || {}, min = Rg.coefMin || 2, Lg = pmLignes(), L = [];
+    P.forEach(p => { const l = pmCanLigne(p, Lg); if (!l || l.sorte !== 'xy') { return; } const c = pmCoefVal(l);
+      if (c != null && c < min) { L.push({ sig: 'stop', txt: `${esc(p.nom)} : coef. ${fX(c)}, sous le repère ${fXm(min)}`, attr: `data-pmcoef="${esc(l.src + ':' + l.id)}" title="le coefficient de marge en détail"` }); } });
+    return acBloc(L, !!pmProduits(), { v: M === 'r' ? fU(nT) : nf(nT, 0), q: M === 'r' ? `de remise accordée par les promotions en ${J} jours` : `utilisation${nT > 1 ? 's' : ''} de promotions en ${J} jours`,
+      s: nT ? `${part(T)} % sur le webshop · ${P.filter(p => p.id !== 'x').length} promotion${P.length > 1 ? 's' : ''} reconnue${P.length > 1 ? 's' : ''} dans les tickets · le détail par canal juste dessous` : 'aucune promotion reconnue dans les tickets' });
+  }
   function rendPmCanaux() {
     const k = clePMC(), D = S.aux[k], M = S.pmCanM, J = S.pmCanJ;
     let h = `<div class="db-card cn-card"><div class="ct"><span class="cn-h">Où les promotions sont utilisées</span>
@@ -4262,10 +4285,9 @@
       <span class="fi-seg">${[7, 30].map(v => `<button type="button" class="${J === v ? 'on' : ''}" data-pmcanj="${v}">${v} jours</button>`).join('')}</span>`;
     if (S.err[k]) { return h + `</div><div class="db-err" style="margin:12px 16px">Promotions par canal : ${esc(S.err[k])}</div></div>`; }
     if (!D) { return h + `</div><div style="padding:12px 16px">${squelette(2)}</div></div>`; }
-    const v = c => M === 'r' ? +c.r || 0 : +c.n || 0, tot = p => v(p.compt) + v(p.cc) + v(p.liv), web = p => v(p.cc) + v(p.liv);
-    const fv = x => M === 'r' ? fU(x) : nf(x, 0), part = p => tot(p) ? Math.round(100 * web(p) / tot(p)) : 0;
-    const P = D.promos || [], T = D.total || { compt: {}, cc: {}, liv: {} }, nT = tot(T);
-    h += `<span class="db-mini">${nT ? part(T) + ' % sur le webshop · ' + (M === 'r' ? fU(nT) + ' de remise' : nf(nT, 0) + ' utilisation' + (nT > 1 ? 's' : '')) : ''}</span></div>`;
+    // Le total et la part du webshop sont dans le résumé, au-dessus (26/11/2026 : un chiffre, une place).
+    const { v, tot, fv, part } = pmCanComptes(), P = D.promos || [];
+    h += `</div>`;
     const enL = (D.enLigne || {}).cc + (D.enLigne || {}).liv || 0, sans = (D.joursSans || []).length;
     const notes = [`<span class="cn-leg">${PM_CAN.map(c => `<span><i class="${c[2]}"></i>${c[1]}</span>`).join('')}</span>`,
       `<span class="cn-note">Une utilisation : une fois où une promotion s’applique sur un ticket. Le ticket d’une commande webshop encaissée au magasin compte dans son canal.${enL ? ` ${enL} commande${enL > 1 ? 's' : ''} webshop payée${enL > 1 ? 's' : ''} en ligne sur la période : leurs promotions ne se lisent pas encore.` : ''}${D.commandes === false ? ' Commandes du webshop illisibles : tout est compté au comptoir.' : ''}${sans ? ` ${sans} jour${sans > 1 ? 's' : ''} pas encore lu${sans > 1 ? 's' : ''}.` : ''}${D.erreur ? ' Panel : ' + esc(D.erreur) + '.' : ''}</span>`].join('');
@@ -4273,7 +4295,7 @@
     const max = Math.max(1, ...P.map(tot)), Rg = (S.aux[clePM()] || {}).regles || {}, min = Rg.coefMin || 2, L = pmLignes();
     const ligne = p => {
       // La ligne de la liste qui porte le coefficient : une promotion du magasin (son n° au panel) ou de la marque.
-      const l = p.id === 'x' ? null : (L.find(o => o.src === 'mag' && o.d && +o.d.panelId === +p.id) || L.find(o => o.src === 'panel' && +o.id === +p.id));
+      const l = pmCanLigne(p, L);
       const n = tot(p), w = Math.max(3, 100 * n / max);
       const seg = PM_CAN.map(([c, lib, cl]) => { const x = v(p[c]), pc = n ? 100 * x / n : 0; return x ? `<i class="${cl}" style="width:${pc}%" title="${lib} : ${fv(x)}"><em>${pc * w / 100 >= (M === 'r' ? 11 : 5) ? fv(x) : ''}</em></i>` : ''; }).join('');
       return `<div class="cn-r${p.id === 'x' ? ' mu' : ''}"><div class="cn-rn"><b>${esc(p.nom)}</b><span class="db-mini">${M === 'r' ? fU(n) + ' de remise' : nf(n, 0) + ' fois'} · ${part(p)} % web</span></div>
@@ -4311,9 +4333,10 @@
   /** La cellule « Coef. du lot » : le coefficient d'aujourd'hui (sinon celui de l'enregistrement), un bouton qui ouvre le détail. */
   function pmCoefCellule(l, min) {
     if (l.sorte !== 'xy') { return '<span class="mu">—</span>'; }
-    const K = pmCoefDe(l), v = K && K.C.lot != null ? K.C.lot : (K ? null : l.coef);
+    const K = pmCoefDe(l), v = pmCoefVal(l);
     if (!K && v == null) { return `<span class="mu" title="lecture des prix et coûts du magasin">${pmProduits() || S.err[clePMP()] ? '—' : '…'}</span>`; }
-    return `<button type="button" class="pm-coefb ${v == null ? 'mu' : (v >= min ? 'ok' : 'ko')}" data-pmcoef="${esc(l.src + ':' + l.id)}" title="le coefficient de marge en détail">${v == null ? 'non chiffré' : fX(v)} <span aria-hidden="true">ⓘ</span></button>`;
+    // Le statut se dit en mots sous le chiffre (26/11/2026) : la couleur seule ne suffit pas.
+    return `<button type="button" class="pm-coefb ${v == null ? 'mu' : (v >= min ? 'ok' : 'ko')}" data-pmcoef="${esc(l.src + ':' + l.id)}" title="le coefficient de marge en détail">${v == null ? 'non chiffré' : fX(v)} <span aria-hidden="true">ⓘ</span></button>${v != null && v < min ? `<span class="pm-cw">sous ${fXm(min)}</span>` : ''}`;
   }
   function pmCoefOuvrir(cle) { S.pmC = { cle, vue: 'lot', retour: document.activeElement }; pmCoefRendre(); }
   function pmCoefFermer() {
@@ -4357,10 +4380,10 @@
       corps = `<div class="pmc-hero"><div><div class="db-lab">Coefficient du lot · le cas le plus serré</div><div class="pmc-big ${ok(C.lot)}">${fX(C.lot)}</div><div class="db-mini">prix payé HT ÷ coût matière</div></div>
           <div class="pmc-cmp"><div class="db-lab">Sans la promotion</div><b>${fX(C.sans)}</b><div class="db-mini">−${nf(C.sans - C.lot, 2)} avec la promotion</div></div>
           <div class="pmc-cmp"><div class="db-lab">Écart au repère</div><b class="${ok(C.lot)}">${ecart >= 0 ? '+' : '−'}${nf(Math.abs(ecart), 2)}</b><div class="db-mini">${ecart >= 0 ? 'au-dessus de' : 'sous'} ${fXm(min)}</div></div></div>
-        <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(166,30,30,.22) 0 ${pc(min)}%,rgba(63, 122, 82, .18) ${pc(min)}% 100%)">
-          <i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:#A61E1E">min. ${fXm(min)}</span>
+        <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(163, 32, 20, 0.22) 0 ${pc(min)}%,rgba(63, 122, 82, .18) ${pc(min)}% 100%)">
+          <i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:var(--stop)">min. ${fXm(min)}</span>
           <i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut pmc-d" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>
-          <i class="lot ${ok(C.lot)}" style="left:${pc(C.lot)}%"></i><span class="haut pmc-g" style="left:${pc(C.lot)}%;color:${C.lot >= min ? '#3f7a52' : '#A61E1E'}">avec la promo ${fX(C.lot)}</span></div>
+          <i class="lot ${ok(C.lot)}" style="left:${pc(C.lot)}%"></i><span class="haut pmc-g" style="left:${pc(C.lot)}%;color:${C.lot >= min ? 'var(--green)' : 'var(--stop)'}">avec la promo ${fX(C.lot)}</span></div>
         <div class="pmc-cas"><div class="db-lab" style="margin-bottom:6px">Ce qui fixe le chiffre</div>
           <div class="pmc-phr">${x.q} × <b>${pmNomP(C.px, x)}</b> acheté${x.q > 1 ? 's' : ''} + ${y.q} × <b>${pmNomP(C.py, y)}</b> ${pmGainArt(y)}</div>
           <div class="pmc-l"><span>Payé par le client, HT</span><b>${fU(C.paye)}</b></div>
@@ -4401,7 +4424,7 @@
     const cedes = P.L.map(q => q.sans * q.cout - q.paye), sous = lignes.filter(r => r.lot < min).length;
     const nomC = (p, c) => pmNomP(p, c);
     const etat = v => v < min ? `<span class="pm-chip r">sous ${fXm(min)}</span>` : (v < min * 1.1 ? '<span class="pm-chip a">à surveiller</span>' : '<span class="pm-chip ok">ok</span>');
-    const barre = (n, v) => `<div class="pmc-bar" style="background:linear-gradient(90deg,rgba(166,30,30,.16) 0 ${pc(min)}%,rgba(63, 122, 82, .12) ${pc(min)}% 100%)"><i class="m" style="left:${pc(min)}%"></i><u style="left:${pc(v)}%;width:${Math.max(0, pc(n) - pc(v))}%"></u><i class="s" style="left:${pc(n)}%"></i><i class="l ${v >= min ? '' : 'ko'}" style="left:${pc(v)}%"></i></div>`;
+    const barre = (n, v) => `<div class="pmc-bar" style="background:linear-gradient(90deg,rgba(163, 32, 20, 0.16) 0 ${pc(min)}%,rgba(63, 122, 82, .12) ${pc(min)}% 100%)"><i class="m" style="left:${pc(min)}%"></i><u style="left:${pc(v)}%;width:${Math.max(0, pc(n) - pc(v))}%"></u><i class="s" style="left:${pc(n)}%"></i><i class="l ${v >= min ? '' : 'ko'}" style="left:${pc(v)}%"></i></div>`;
     const sortis = [...C.sansCout.map(n => n + ' (sans coût de recette)'), ...C.sansPrix.map(n => n + ' (sans prix)')];
     return `<div class="db-tuiles pmc-tuiles">
         <div class="db-tui ${C.lot >= min ? 'bon' : 'vif'}"><div class="k">Coef. le plus bas</div><div class="v">${fX(C.lot)}</div><div class="s">${pmNomP(C.px, x)}${+C.px.id === +C.py.id ? ', acheté et remisé' : ' + ' + pmNomP(C.py, y)}</div></div>
@@ -5603,29 +5626,37 @@
     if (!T || !S.aux[cleBM()]) { return squelette(3); }
     const prix = id => { const x = Pm.find(q => String(q.id) === String(id)); return x ? x.prixTtc : null; };
     let nAu = 0, nSous = 0, nSur = 0;
+    const ac = [], sansR = [];
     const lignes = T.map((p, i) => {
       const Rt = bmTopRelevés(p), pp = r => r.promo > 0 ? r.promo : r.prix;
       // Le verdict se lit face aux boulangeries (artisans, chaînes, stations) ; les supermarchés ont leur colonne.
       const R = Rt.filter(r => !bmEstGms(r)), v = R.map(pp), m = bmMed(v), nous = prix(p.pid), mg = bmMed(Rt.filter(bmEstGms).map(pp));
       const e = nous != null && m ? (nous - m) / m * 100 : null;
-      const verdict = e == null ? '<span class="mu">pas de relevé</span>' : (e > 5 ? '<span class="ko">au-dessus</span>' : (e < -5 ? '<span class="ok">en dessous</span>' : '<span class="mu">au prix du marché</span>'));
-      if (e != null) { if (e > 5) { nSur++; } else if (e < -5) { nSous++; } else { nAu++; } }
+      // Le verdict, un mot dans sa colonne (26/11/2026) : au-dessus en or (à regarder), en dessous en vert, l'écart sans couleur.
+      const verdict = e == null ? '<span class="bm-v mu">pas de relevé</span>' : (e > 5 ? '<span class="bm-v wa"><i class="ac-ic ac-prize" aria-hidden="true"></i>au-dessus</span>' : (e < -5 ? '<span class="bm-v ok"><i class="ac-ic ac-green" aria-hidden="true"></i>en dessous</span>' : '<span class="bm-v">au prix du marché</span>'));
+      if (e != null) { if (e > 5) { nSur++; ac.push({ sig: 'prize', txt: `${esc(p.nom)} : ${'+' + nf(e, 0)} % au-dessus du marché`, attr: `data-ac="bm-top-${esc(p.pid)}" title="la ligne du produit dans le tableau"` }); } else if (e < -5) { nSous++; } else { nAu++; } }
+      else { sansR.push({ sig: 'prize', txt: `${esc(p.nom)} : pas de relevé`, attr: `data-bmtop="${esc(p.pid)}" title="ouvrir le produit : ses relevés, + relevé terrain"` }); }
       const mi = v.length ? Math.min(...v) : null, ma = v.length ? Math.max(...v) : null;
       const W = 150, x = val => ma > mi ? 6 + (val - mi) / (ma - mi) * (W - 12) : W / 2;
       const bar = v.length && nous != null ? `<svg width="${W}" height="18" viewBox="0 0 ${W} 18"><line x1="6" x2="${W - 6}" y1="9" y2="9" stroke="#e6e0d8" stroke-width="4" stroke-linecap="round"/>${v.map(val => `<circle cx="${x(val).toFixed(1)}" cy="9" r="3" fill="#B8B2A8"/>`).join('')}<line x1="${Math.max(3, Math.min(W - 3, x(nous))).toFixed(1)}" x2="${Math.max(3, Math.min(W - 3, x(nous))).toFixed(1)}" y1="1" y2="17" stroke="var(--color-primary)" stroke-width="2.5"/></svg>` : '';
-      return `<tr data-bmtop="${p.pid}" class="bm-cl"><td class="n mu">${i + 1}</td><td>${esc(p.nom)}<div class="db-mini">${esc(p.cat || '')} · ${nf(p.total || 0, 0)} vendus · ${fE(p.ca)}</div></td>
-        <td class="n"><b>${fU(nous)}</b></td><td class="n">${fU(m)}</td><td class="n mu">${fU(mg)}</td><td class="n">${v.length ? fU(mi) + ' – ' + fU(ma) : '—'}</td><td>${bar}</td><td class="n">${v.length}${Rt.length > v.length ? ` <span class="mu">+ ${Rt.length - v.length}</span>` : ''}</td><td class="n">${e == null ? '—' : `<span class="${e > 5 ? 'ko' : (e < -5 ? 'ok' : 'mu')}">${(e > 0 ? '+' : e < 0 ? '−' : '') + nf(Math.abs(e), 0)} %</span>`}</td><td>${verdict}</td></tr>`;
+      return `<tr data-bmtop="${p.pid}" id="bm-top-${esc(p.pid)}" class="bm-cl"><td class="n mu">${i + 1}</td><td>${esc(p.nom)}<div class="db-mini">${esc(p.cat || '')} · ${nf(p.total || 0, 0)} vendus · ${fE(p.ca)}</div></td>
+        <td class="n">${fU(nous)}</td><td class="n">${fU(m)}</td><td class="n mu">${fU(mg)}</td><td class="n">${v.length ? fU(mi) + ' – ' + fU(ma) : '—'}</td><td>${bar}</td><td class="n">${v.length}${Rt.length > v.length ? ` <span class="mu">+ ${Rt.length - v.length}</span>` : ''}</td><td class="n">${e == null ? '—' : (e > 0 ? '+' : e < 0 ? '−' : '') + nf(Math.abs(e), 0) + ' %'}</td><td>${verdict}</td></tr>`;
     }).join('');
     const per = A.bornes && A.bornes.length ? fD(A.bornes[0][0]) + '/' + A.bornes[0][0].slice(2, 4) + ' → ' + fD(A.bornes[A.bornes.length - 1][1]) + '/' + A.bornes[A.bornes.length - 1][1].slice(2, 4) : '3 mois';
-    const tui = (k, v, s2, c) => `<div class="db-tui ${c || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s2}</div></div>`;
-    let h = `<div class="db-tuiles">${tui('Top 10 réseau', nf(T.reduce((a, p) => a + (p.total || 0), 0), 0), 'pièces vendues · 4 magasins · ' + per, 'vif')}${tui('Au prix du marché', String(nAu), 'à ± 5 % de la médiane des boulangeries')}${tui('Au-dessus', String(nSur), 'plus de 5 % au-dessus de la médiane', nSur ? '' : 'bon')}${tui('En dessous', String(nSous), 'plus de 5 % sous la médiane')}${tui('Relevés', String(T.reduce((a, p) => a + bmTopRelevés(p).length, 0)), 'prix concurrents de ce magasin dans TFBuddy')}${tui('Sans relevé', String(T.filter(p => !bmTopRelevés(p).length).length), 'produits à relever sur le terrain')}</div>`;
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Nos 10 produits les plus vendus face aux concurrents du magasin</span><span class="db-mini">prix à la pièce, promo comprise · position et verdict face aux boulangeries (artisans, chaînes, stations), hors supermarchés · relevés : boulangeries + supermarchés · cliquer une ligne pour le détail</span></div>
+    // Le résumé (26/11/2026, DESIGN_SYSTEM.md §7.13) remplace les six tuiles : la part du top 10 au prix du marché en chiffre
+    // clé, le reste en une ligne ; les pièces vendues du réseau passent dans la tête du tableau. « À corriger » : les produits
+    // au-dessus du marché (le bouton mène à leur ligne) et ceux sans relevé (le bouton ouvre le produit, où se pose un relevé).
+    const nRel = T.reduce((a, p) => a + bmTopRelevés(p).length, 0), nSans = sansR.length;
+    let h = acBloc(ac.concat(sansR), true, { v: `${nAu} sur ${T.length}`, q: `de nos produits les plus vendus au prix du marché (à ± 5 % de la médiane des boulangeries)`,
+      s: `${nSur} au-dessus · ${nSous} en dessous${nSans ? ' · ' + nSans + ' sans relevé' : ''} · ${nRel} prix relevés chez les concurrents du magasin (TFBuddy)` });
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Nos 10 produits les plus vendus face aux concurrents du magasin</span><span class="db-mini">${nf(T.reduce((a, p) => a + (p.total || 0), 0), 0)} pièces vendues · 4 magasins du réseau · ${per} · prix à la pièce, promo comprise · position et verdict face aux boulangeries (artisans, chaînes, stations), hors supermarchés · relevés : boulangeries + supermarchés · cliquer une ligne pour le détail</span></div>
       <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th class="n">#</th><th>Produit</th><th class="n">Nous</th><th class="n">Médiane boulangeries</th><th class="n">Médiane supermarchés</th><th class="n">Fourchette</th><th>Position</th><th class="n">Relevés</th><th class="n">Écart</th><th>Verdict</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
     return h;
   }
   function rendConcurrence() {
     const D = S.aux[cleBM()], k = cleBM();
-    let h = `<div class="db-sec">Concurrence<span class="db-ong bm-choix">${[['top', 'Top 10 réseau'], ['cougnou', 'Cougnou'], ['galette', 'Galette des rois']].map(o => `<button data-bmf="${o[0]}" class="${S.bmF === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}${S.bmF === 'produit' && S.bmP ? `<button class="on">${esc((bmProduits().find(x => String(x.id) === String(S.bmP)) || {}).nom || 'Produit')}</button>` : ''}</span>
+    // Le titre est celui de la barre (26/11/2026, comme Tâches et Temps morts) : ici, les sujets, la recherche, le relevé terrain.
+    let h = `<div class="db-sec bm-outils"><span class="db-ong bm-choix">${[['top', 'Top 10 réseau'], ['cougnou', 'Cougnou'], ['galette', 'Galette des rois']].map(o => `<button data-bmf="${o[0]}" class="${S.bmF === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}${S.bmF === 'produit' && S.bmP ? `<button class="on">${esc((bmProduits().find(x => String(x.id) === String(S.bmP)) || {}).nom || 'Produit')}</button>` : ''}</span>
       <span class="bm-cherche"><input type="search" placeholder="Aller chercher un produit…" data-bmq="1" value="${esc(S.bmQ || '')}" autocomplete="off"><span id="bm-res" class="bm-res"></span></span>
       <small>prix comparable, position et visibilité face aux concurrents du magasin</small><button class="db-btn" data-bmform="1">+ Relevé terrain</button></div>`;
     if (S.bmMsg) { h += `<div class="db-alerte bm-msg">${S.bmMsg}</div>`; }
@@ -5643,18 +5674,18 @@
     const GMS_RE = /delhaize|carrefour|colruyt|aldi|lidl|intermarch|\bmatch\b|\bspar\b|okay|cora|proxy|louis delhaize|bio-planet|ah |albert heijn|jumbo/i, CH_RE = /lukoil|total|shell|\bq8\b|esso|texaco|paul\b|pain quotidien|panos|exki|starbucks|pain d.antan|fleur du pain|louise/i;
     const typeDe = r => types.includes(r.type) ? r.type : (/gms|super|hyper/i.test(r.type) || GMS_RE.test(r.concurrent) ? 'GMS' : (/cha[iî]ne|station/i.test(r.type) || CH_RE.test(r.concurrent) ? 'Chaîne' : 'Artisan'));
     const pct = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v), 0) + ' %';
-    // Les tuiles
+    // Le résumé (26/11/2026, DESIGN_SYSTEM.md §7.13) remplace les six tuiles : notre prix en chiffre clé, les médianes, les relevés
+    // moins chers et la visibilité web en une ligne. « À corriger » : la taille à confirmer, les contrôles web qui manquent et les
+    // points « À faire » du benchmark ; chaque bouton mène à son bloc, encadré un instant.
     const nous0 = (X.nous.find(x => x.reference) || X.nous[0] || {});
-    const tui = (kk, v, s, c) => `<div class="db-tui ${c || ''}"><div class="k">${kk}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
-    let t = tui(X.cle === 'produit' ? 'Notre prix' : 'Notre ' + (X.cle === 'galette' ? 'galette' : 'cougnou'), fU(ref),
-      X.cle === 'produit' ? esc(X.titre) : `${fU(nous0.prix)} · ${X.mesure === 'diametre' ? 'Ø ' + X.tailleRef + ' cm' : '≈ ' + X.tailleRef + ' g' + (X.tailleConfirmee ? '' : ' <span class="wa">à confirmer</span>')} · ${esc(X.unite)}`, 'vif');
-    types.forEach(ty => { const v = comp.filter(r => typeDe(r) === ty).map(r => r.v), m = bmMed(v), e = ec(m);
-      t += tui('Médiane ' + lib[ty], m == null ? '—' : fU(m), v.length ? `${v.length} relevé${v.length > 1 ? 's' : ''} · nous <span class="${e > 0 ? 'ko' : 'ok'}">${pct(e)}</span>` : 'aucun relevé'); });
+    const meds = types.map(ty => { const v = comp.filter(r => typeDe(r) === ty).map(r => r.v), m = bmMed(v); return m == null ? lib[ty] + ' : aucun relevé' : `${lib[ty]} ${fU(m)} (nous ${pct(ec(m))})`; });
     const moins = ref != null ? comp.filter(r => r.v < ref).length : 0;
-    t += tui('Moins chers que nous', `${moins} <small class="mu">/ ${comp.length}</small>`, comp.length ? 'relevés dont la taille est connue' : 'rien à comparer');
-    t += X.web ? tui('Visibilité web', `${X.web.ok} <small class="mu">/ ${X.web.total}</small>`, 'contrôles atelierby.be passés', X.web.ok / X.web.total >= .5 ? 'bon' : '')
-      : tui('Relevés', String(L.length), X.source === 'api' ? 'dans TFBuddy' : 'relevé web du cockpit');
-    h += `<div class="db-tuiles">${t}</div>`;
+    const AC = [];
+    if (X.cle !== 'produit' && !X.tailleConfirmee) { AC.push({ sig: 'prize', txt: `Taille de référence à confirmer : ≈ ${X.tailleRef} g`, attr: 'data-ac="bm-rel" title="les relevés et leur taille"' }); }
+    if (X.web) { const n = X.web.total - X.web.ok; if (n > 0) { AC.push({ sig: 'prize', txt: `Visibilité web : ${n} contrôle${n > 1 ? 's' : ''} sur ${X.web.total} à faire`, attr: 'data-ac="bm-web" title="les contrôles atelierby.be"' }); } }
+    if (X.constats.length) { AC.push({ sig: 'prize', txt: `À faire : ${X.constats.length} point${X.constats.length > 1 ? 's' : ''} tiré${X.constats.length > 1 ? 's' : ''} du benchmark`, attr: 'data-ac="bm-afaire" title="la liste À faire"' }); }
+    h += acBloc(AC, true, { v: fU(ref), q: X.cle === 'produit' ? 'notre prix · ' + X.titre : `notre ${X.cle === 'galette' ? 'galette' : 'cougnou'}, ${X.unite} · ${fU(nous0.prix)} pour ${X.mesure === 'diametre' ? 'Ø ' + X.tailleRef + ' cm' : '≈ ' + X.tailleRef + ' g'}`,
+      s: `médianes : ${meds.join(' · ')} · ${comp.length ? moins + ' relevé' + (moins > 1 ? 's' : '') + ' sur ' + comp.length + ' moins cher' + (moins > 1 ? 's' : '') + ' que nous' : 'rien à comparer'}${X.web ? ' · visibilité web ' + X.web.ok + ' / ' + X.web.total : ' · ' + L.length + ' relevé' + (L.length > 1 ? 's' : '') + (X.source === 'api' ? ' dans TFBuddy' : ' du relevé web')}` });
     // L'échelle
     if (comp.length && ref != null) {
       const hi = Math.max(ref, ...comp.map(r => r.v)), max = hi > 10 ? Math.ceil(hi / 5) * 5 : Math.ceil(hi) || 1, W = 1180, x = v => 60 + v / max * (W - 80), ty = { GMS: 28, Artisan: 50, 'Chaîne': 72 };
@@ -5671,13 +5702,13 @@
     }
     // Les relevés
     const lignes = L.slice().sort((a, b) => (a.v ?? 1e9) - (b.v ?? 1e9)).map(r => {
-      const e = ec(r.v), pos = r.v == null ? `<span class="mu">${r.unite === 'g' && X.mesure === 'diametre' ? 'vendu au poids' : 'taille non publiée'}</span>` : (Math.abs(e) < .5 ? '<span class="mu">même prix</span>' : `<span class="${e > 0 ? 'ko' : 'ok'}">nous ${pct(e)}</span>`);
+      const e = ec(r.v), pos = r.v == null ? `<span class="mu">${r.unite === 'g' && X.mesure === 'diametre' ? 'vendu au poids' : 'taille non publiée'}</span>` : (Math.abs(e) < .5 ? '<span class="mu">même prix</span>' : `<span class="${e > 0 ? 'wa' : 'ok'}">nous ${pct(e)}</span>`);
       const lien = r.lien || ((r.notes || '').match(/https?:\/\/\S+/) || [])[0];
       return `<tr><td>${esc(r.concurrent)}<div class="db-mini">${esc(typeDe(r))}${r.cp ? ' · <span class="bm-cp">CP ' + esc(r.cp) + '</span>' : ''}${r.distance != null ? ' · ' + nf(r.distance, 0) + ' km' : ''} · ${r.source === 'api' ? 'TFBuddy' : 'relevé web'}${r.vuLe ? ' · ' + fD(r.vuLe) + '/' + r.vuLe.slice(2, 4) : ''}</div></td>
         <td>${esc(r.produit)}${r.monProduit ? '' : ' <span class="db-mini">non rattaché</span>'}</td><td class="n">${r.unite === 'piece' || !r.taille ? (r.unite === 'piece' ? '<span class="mu">à la pièce</span>' : '—') : nf(+r.taille, 0) + ' ' + esc(r.unite)}</td>
         <td class="n">${fU(r.prix)}${r.promo ? `<div class="db-mini">promo ${fU(r.promo)}</div>` : ''}</td><td class="n"><b>${r.v == null ? '—' : fU(r.v)}</b></td><td class="n">${pos}</td><td class="n">${lien ? `<a class="db-lien" href="${esc(lien)}" target="_blank" rel="noopener">source ↗</a>` : ''}</td></tr>`;
     }).join('');
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">${esc(X.titre)} — les concurrents du magasin</span><span class="db-mini">${L.length} relevé${L.length > 1 ? 's' : ''} · ${X.source === 'api' ? 'module Benchmark de TFBuddy' : (X.source === 'mixte' ? 'TFBuddy + relevé web du cockpit' : 'relevé web du cockpit (pas encore dans TFBuddy)')}${X.mot ? ' · rattachés à ce produit ou contenant « ' + esc(X.mot) + ' »' : ''}</span></div>
+    h += `<div class="db-card" id="bm-rel"><div class="ct"><span class="db-lab">${esc(X.titre)} — les concurrents du magasin</span><span class="db-mini">${L.length} relevé${L.length > 1 ? 's' : ''} · ${X.source === 'api' ? 'module Benchmark de TFBuddy' : (X.source === 'mixte' ? 'TFBuddy + relevé web du cockpit' : 'relevé web du cockpit (pas encore dans TFBuddy)')}${X.mot ? ' · rattachés à ce produit ou contenant « ' + esc(X.mot) + ' »' : ''}</span></div>
       ${L.length ? `<div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Produit</th><th class="n">${X.mesure === 'diametre' ? 'Ø' : 'Taille'}</th><th class="n">Prix</th><th class="n">${esc(X.unite)}</th><th class="n">Écart</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>`
         : `<div class="bm-vide">Aucun prix concurrent relevé pour ce produit. <button class="db-btn" data-bmform="1">+ Ajouter un relevé terrain</button></div>`}</div>`;
     if (X.proches && X.proches.length) {
@@ -5687,9 +5718,9 @@
     }
     // Visibilité web et à faire (familles)
     if (X.web || X.constats.length) {
-      const ctrl = X.web ? X.web.controles.map(c => `<div class="bm-l"><span class="${c.ok ? 'ok' : 'ko'} bm-st">${c.ok ? '✓ fait' : '✗ manque'}</span><span>${esc(c.libelle)}${c.detail && c.cle !== 'page' ? `<div class="db-mini">${esc(c.detail.slice(0, 90))}</div>` : ''}</span></div>`).join('') : '';
-      h += `<div class="bm-bas"><div class="db-card"><div class="ct"><span class="db-lab">Visibilité web — atelierby.be</span><span class="db-mini">${X.web ? 'lu le ' + esc(X.web.lu_le) : ''}</span></div>${ctrl}</div>
-        <div class="db-card"><div class="ct"><span class="db-lab">À faire</span><span class="db-mini">tiré du benchmark</span></div>${X.constats.map((c, i) => `<div class="bm-l"><span class="mu bm-st">${i + 1}</span><span>${esc(c)}</span></div>`).join('')}</div></div>`;
+      const ctrl = X.web ? X.web.controles.map(c => `<div class="bm-l"><span class="${c.ok ? 'ok' : 'wa'} bm-st">${c.ok ? '✓ fait' : '✗ manque'}</span><span>${esc(c.libelle)}${c.detail && c.cle !== 'page' ? `<div class="db-mini">${esc(c.detail.slice(0, 90))}</div>` : ''}</span></div>`).join('') : '';
+      h += `<div class="bm-bas"><div class="db-card" id="bm-web"><div class="ct"><span class="db-lab">Visibilité web — atelierby.be</span><span class="db-mini">${X.web ? 'lu le ' + esc(X.web.lu_le) : ''}</span></div>${ctrl}</div>
+        <div class="db-card" id="bm-afaire"><div class="ct"><span class="db-lab">À faire</span><span class="db-mini">tiré du benchmark</span></div>${X.constats.map((c, i) => `<div class="bm-l"><span class="mu bm-st">${i + 1}</span><span>${esc(c)}</span></div>`).join('')}</div></div>`;
     }
     h += bmParCp(D);
     h += `<div class="db-mini bm-pied">Lu le ${esc(D.lu || '')}${D.kpi ? ' · TFBuddy : ' + (D.kpi.comparisons_count || 0) + ' comparaison(s) rattachée(s) sur 90 jours' : ''}${D.erreur ? ' · <span class="ko">' + esc(D.erreur) + '</span>' : ''}</div>`;
@@ -5857,16 +5888,19 @@
     if (D.indispo || D.error) { return `<div class="db-alerte">Produits : ${esc(D.motif || D.error)}</div>`; }
     const T = D.total, e = T.evo, R = D.regle, bo = D.semaines.bornes, per = (a, b) => pdJour(bo[a][0]) + ' → ' + pdJour(bo[b][1]);
     const mot = { monte: 'se développe', baisse: 'recule', stable: 'est stable', nouveau: 'démarre', arrete: 'ne vend plus', peu: 'vend trop peu pour juger' }[e.verdict];
-    const k = PD_CL[e.verdict] || 'st';
-    let h = `<div class="pd-quand">Les 6 dernières semaines (${per(R.apres[0], R.apres[1])}) comparées aux 6 d’avant (${per(R.avant[0], R.avant[1])}).</div>`;
+    // Le résumé (26/11/2026, DESIGN_SYSTEM.md §7.13) : le chiffre clé du magasin (l'évolution, son mot) et les deux périodes
+    // comparées remplacent la ligne « Les 6 dernières semaines… » et la tête de la carte Le magasin (un chiffre, une place).
+    // « À corriger » : les catégories qui reculent ; un bouton ouvre la catégorie (data-pdg, la fenêtre de ses produits).
+    const motG = v => ({ monte: 'se développe', baisse: 'recule', stable: 'stable', nouveau: 'démarre', arrete: 'ne vend plus' }[v] || 'trop peu vendu pour juger');
+    const L = D.groupes.filter(g => g.evo.verdict === 'baisse' || g.evo.verdict === 'arrete')
+      .map(g => ({ sig: g.evo.verdict === 'arrete' ? 'stop' : 'prize', txt: `${esc(g.nom)} ${g.evo.verdict === 'arrete' ? 'ne vend plus' : 'recule : ' + pdSigne(g.evo.pct)} · ${fE(g.evo.apres)} par semaine`, attr: `data-pdg="${esc(g.nom)}" title="ouvrir la catégorie : ses semaines, ses produits"` }));
+    let h = acBloc(L, true, { v: pdGros(e), q: `de chiffre d’affaires par semaine : le magasin ${mot}`, s: `${fE(e.apres)} par semaine sur les 6 dernières semaines (${per(R.apres[0], R.apres[1])}), contre ${fE(e.avant)} sur les 6 d’avant (${per(R.avant[0], R.avant[1])})` });
     if (!D.semaines.complet) { h += `<div class="db-alerte">Le panel n’a pas rendu ${D.semaines.muettes.map(i => esc(D.semaines.tranches[i])).join(', ')} : les comparaisons sont partielles.</div>`; }
-    h += `<div class="pd-c"><div class="pd-hd"><h2>Le magasin</h2><span class="pd-aide">le chiffre de chaque semaine</span></div><div class="pd-in">
-      <div class="pd-rep"><span class="pd-gros ${k}">${pdGros(e)}</span><span class="pd-phr">Le magasin ${mot}.</span>
-      <span class="pd-sous">${fE(e.apres)} par semaine sur les 6 dernières semaines, contre ${fE(e.avant)} avant.</span></div>
+    h += `<div class="pd-c"><div class="pd-hd"><h2>Le magasin, semaine par semaine</h2><span class="pd-aide">le chiffre de chaque semaine</span></div><div class="pd-in">
       ${pdBarres(D, T.v, { w: 1350, h: 210 })}${pdLegende(D)}</div></div>`;
     h += `<div class="pd-c"><div class="pd-hd"><h2>Vos catégories</h2><span class="pd-aide">cliquez une catégorie pour voir ses produits</span></div><div class="pd-in"><div class="pd-tuiles">`
       + D.groupes.map(g => { const c = PD_CL[g.evo.verdict] || '';
-        return `<button type="button" class="pd-ti ${c}" data-pdg="${esc(g.nom)}"><span class="pd-go" aria-hidden="true">›</span><span class="n">${esc(g.nom)}</span><span class="big ${c || 'st'}">${pdGros(g.evo)}</span><span class="s">${fE(g.evo.apres)} par semaine · ${g.n} produit${g.n > 1 ? 's' : ''}</span>${pdMini(D, g.v, 270, 34)}</button>`; }).join('')
+        return `<button type="button" class="pd-ti ${c}" data-pdg="${esc(g.nom)}"><span class="pd-go" aria-hidden="true">›</span><span class="n">${esc(g.nom)}</span><span class="big ${c || 'st'}">${pdGros(g.evo)}</span><span class="s"><span class="pd-mt ${c || 'st'}">${motG(g.evo.verdict)}</span> · ${fE(g.evo.apres)} par semaine · ${g.n} produit${g.n > 1 ? 's' : ''}</span>${pdMini(D, g.v, 270, 34)}</button>`; }).join('')
       + '</div></div></div>';
     h += `<div class="pd-note">${esc(D.magasin || nomShop())} · ventes du panel, semaine par semaine. ▲ plus de ${nf(R.seuil, 0)} % de chiffre sur les 6 dernières semaines face aux 6 d’avant, ▼ ${nf(R.seuil, 0)} % de moins, = entre les deux.</div>`;
     return h;
@@ -7482,7 +7516,7 @@
     S.frMois = S.frMois || AUJ.slice(0, 7);
     const k = cleFR(), D = S.aux[k], ceMois = AUJ.slice(0, 7);
     const nav = `<div class="fx-nav"><span class="db-lab">Mois</span><button class="db-btn" data-frm="-1" aria-label="mois précédent">‹</button><span class="fx-mois">${esc(frMoisLib(S.frMois))}</span><button class="db-btn" data-frm="1" aria-label="mois suivant"${S.frMois >= ceMois ? ' disabled' : ''}>›</button>${S.frMois !== ceMois ? '<button class="db-btn" data-frm="0">Ce mois-ci</button>' : ''}</div>`;
-    let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi <b>contient la TVA</b> et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre. Un frais qui manque s’<b>ajoute au panel</b> plus bas, pour le mois ou toute l’année.</p>`;
+    let h = `<div class="fx">${nav}<p class="fx-intro">Les frais du magasin, tels qu’ils sont saisis au panel pour le mois. Pour chaque poste, indique si le montant saisi contient la TVA et à quel taux : le P&amp;L court retire cette TVA, il se lit hors TVA de bout en bout. Le choix se garde pour le poste, d’un mois à l’autre. Un frais qui manque s’ajoute au panel plus bas, pour le mois ou toute l’année.</p>`;
     // « Relire » dans l'onglet (22/11/2026) : la vignette Relire n'est plus que sur l'Opérationnel.
     const relire = '<button type="button" class="db-btn" data-frrelire="1">↻ Relire</button>';
     if (S.err[k]) { return h + `<div class="db-err">Frais : ${esc(S.err[k])} ${relire}</div></div>`; }
@@ -7494,7 +7528,7 @@
     const seg = (opts, on, attr) => `<span class="seg${on == null ? ' vide' : ''}">${opts.map(([v, l]) => `<button type="button" class="${v === on ? 'is-on' : ''}" ${attr(v)}>${l}</button>`).join('')}</span>`;
     const lignes = D.lignes.map((l, i) => {
       const ai = l.aIndiquer;
-      return `<tr class="${ai ? 'ai' : ''}${FR_EC[l.cle] ? ' enc' : ''}"><td>${esc(l.poste)}${l.type ? `<span class="sub">${esc(l.type)}</span>` : ''}</td>
+      return `<tr id="fx-l-${i}" class="${ai ? 'ai' : ''}${FR_EC[l.cle] ? ' enc' : ''}"><td>${esc(l.poste)}${l.type ? `<span class="sub">${esc(l.type)}</span>` : ''}</td>
         <td class="n">${fU(l.montant)}</td>
         <td>${seg([[true, 'Oui'], [false, 'Non']], l.tva, v => `data-frt="${i}" data-v="${v}" title="${v ? 'le montant saisi contient la TVA' : 'le montant est hors TVA, ou sans TVA'}"`)}</td>
         <td>${seg(TAUX.map(t => [+t, nf(+t, 0) + ' %']), l.taux == null ? null : +l.taux, v => `data-frx="${i}" data-v="${v}"`)}</td>
@@ -7502,12 +7536,12 @@
         <td class="n">${ai ? '<span class="tag-warn">à indiquer</span>' : (l.tvaMontant > 0.004 ? fU(l.tvaMontant) : '<span class="mu">—</span>')}</td></tr>`;
     }).join('');
     const ai = D.aIndiquer || 0;
-    h += `<div class="db-tuiles fx-tuiles">
-      ${tuile('Frais saisis au panel', fU(D.saisi), D.postes + ' poste' + (D.postes > 1 ? 's' : '') + ' · ' + esc(frMoisLib(S.frMois)))}
-      ${tuile('Frais hors TVA', fU(D.ht), 'ce que le P&amp;L compte' + (D.part != null ? ' · ' + fP(100 * D.part) + ' du saisi' : ''))}
-      ${tuile('TVA comprise dans les frais', fU(D.tva), 'récupérable : retirée des frais généraux')}
-      ${tuile('À indiquer', ai ? ai + ' poste' + (ai > 1 ? 's' : '') : 'aucun', ai ? fU(D.aIndiquerEur) + ' comptés tels que saisis, en attendant' : 'chaque poste est indiqué', ai ? 'fx-warn' : '')}
-    </div>`;
+    // Le résumé (26/11/2026, DESIGN_SYSTEM.md §7.13) remplace les quatre tuiles : « Frais saisis », « Hors TVA » et « TVA »
+    // répétaient la ligne « Total du mois » ; le chiffre clé est ce que le P&L compte. « À indiquer : N postes » devient
+    // « À corriger » : un bouton par poste, qui mène à sa ligne (data-ac, encadrée un instant) où se choisissent Oui / Non et le taux.
+    const AC = D.lignes.map((l, i) => l.aIndiquer ? { sig: 'prize', txt: `${esc(l.poste)} : TVA à indiquer · ${fU(l.montant)}`, attr: `data-ac="fx-l-${i}" title="compté tel que saisi, en attendant : la ligne du poste"` } : null).filter(Boolean);
+    h += acBloc(AC, true, { v: fU(D.ht), q: `de frais hors TVA en ${frMoisLib(S.frMois)} : ce que le P&L court compte`,
+      s: `${D.part != null ? fP(100 * D.part) + ' du saisi au panel' : 'les montants saisis au panel, TVA retirée'}${ai ? ' · ' + fU(D.aIndiquerEur) + ' comptés tels que saisis, en attendant' : ''}` });
     if (S.err.frEcr) { h += `<div class="db-err">Enregistrement : ${esc(S.err.frEcr)}</div>`; }
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Les frais du mois</span><span class="db-mini">source : le panel, frais du magasin · ${D.postes} poste${D.postes > 1 ? 's' : ''}${D.luLe ? ' · lus à ' + esc(D.luLe.slice(11, 16)) : ''}</span></div>
       <div class="table-scroll"><table class="fx-t"><thead><tr><th>Poste</th><th class="n">Saisi au panel</th><th>TVA comprise ?</th><th>Taux de TVA</th><th class="n">Hors TVA</th><th class="n">TVA</th></tr></thead>
@@ -7518,21 +7552,23 @@
     // Ce que ça change dans le P&L court : les frais du jour (le panel les alloue à aujourd'hui), ceux du mois, et leur
     // part dans le CA du jour si le Résultat d'aujourd'hui est lu (le rail le lit).
     const JM = S.frMois === ceMois && S.date === AUJ ? magasin(S.aux['jourM|' + AUJ]) : null;
+    // « Frais généraux du mois » est retiré (26/11/2026) : c'est la ligne « Total du mois » du tableau, au-dessus.
     const L = (lib, a, b, sous) => `<div class="fx-l"><span>${lib}${sous ? `<span class="sub">${sous}</span>` : ''}</span><span class="n">${a}</span><span class="n">${b}</span></div>`;
     h += `<div class="fx-g2"><div class="db-card"><div class="ct"><span class="db-lab">Ce que ça change dans le P&amp;L court</span></div>
         <div class="fx-l th"><span></span><span class="n">saisi</span><span class="n">hors TVA</span></div>
         ${D.jour ? L('Frais généraux du jour', fE(D.jour.saisi), fE(D.jour.ht), 'les frais du mois que le panel alloue à aujourd’hui') : ''}
-        ${L('Frais généraux du mois', fE(D.saisi), fE(D.ht))}
         ${JM && JM.caHt != null && JM.overheadSaisi != null && JM.ca ? L('Part des frais dans le CA du jour', fP(100 * JM.overheadSaisi / JM.ca) + '<span class="sub">sur le CA TTC</span>', fP(JM.overheadPct) + '<span class="sub">sur le CA hors TVA</span>', (S.aux['jourM|' + AUJ].seuils || {}).overhead != null ? 'seuil du réseau ' + fP(S.aux['jourM|' + AUJ].seuils.overhead) : '') : ''}
       </div>
       <div class="db-card"><div class="ct"><span class="db-lab">Comment remplir</span></div><div class="fx-leg">
         <p><b>Oui</b> : le montant saisi au panel est celui de la facture, TVA comprise. Le P&amp;L en retire la TVA au taux indiqué (21 % l’énergie et les services, 6 % l’eau).</p>
         <p><b>Non</b> : le montant est déjà hors TVA (un contrat saisi hors TVA), ou le frais n’en a pas — loyer non soumis, assurances, frais bancaires : taux 0 %.</p>
-        <p style="margin:0">Un poste pas encore indiqué compte tel que saisi et reste en orange, ici et sous la ligne « Frais généraux » du P&amp;L. Recliquer le choix le remet à indiquer.</p>
+        <p style="margin:0">Un poste pas encore indiqué compte tel que saisi et reste marqué « à indiquer », ici et sous la ligne « Frais généraux » du P&amp;L. Recliquer le choix le remet à indiquer.</p>
       </div></div></div></div>`;
     return h;
   }
   function frBrancher() {
+    // « À corriger » (26/11/2026) : l'onglet est dessiné par le module de trésorerie, après le branchement de la page.
+    $.querySelectorAll('.fx [data-ac]').forEach(b => { b.onclick = () => acAller(b.dataset.ac, b.dataset.acg); });
     $.querySelectorAll('[data-frrelire]').forEach(b => b.addEventListener('click', () => { delete S.err[cleFR()]; lireAux(cleFR(), cheminFR(), true); }));
     $.querySelectorAll('[data-frm]').forEach(b => b.addEventListener('click', () => {
       const n = +b.dataset.frm, ce = AUJ.slice(0, 7);
@@ -8105,7 +8141,8 @@
     // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
     // Les primes (24/11/2026) : un onglet de Mon équipe, sous son titre, comme Responsabilités et Planning.
     // Tâches et Temps morts reprennent la barre de titre (26/11/2026) : le magasin en kicker, le titre de l'onglet, la date.
-    const propre = ['annee', 'concurrence', 'promos', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
+    // Puis Année, Promotions et Concurrence (26/11/2026, le groupe Vendre au même style) : leur titre maison devient une ligne.
+    const propre = ['tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
     // Les vignettes (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles, sous le
     // titre, six vignettes égales sur toute la largeur ; le titre et la date au-dessus, s'il y en a.
     const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();
@@ -11513,7 +11550,8 @@
     let h = '';
     if (S.err[clePerf()]) { h += `<div class="db-err">Mois : ${esc(S.err[clePerf()])}</div>`; }
     if (S.err[kP]) { h += `<div class="db-err">Objectif : ${esc(S.err[kP])}</div>`; }
-    h += `<div class="db-sec">L’année ${Y}<small>l’objectif, les quatre trimestres, les douze mois — un clic sur un trimestre l’ouvre</small></div>`;
+    // Le titre est celui de la barre (26/11/2026, comme Tâches et Temps morts) : ici, l'année et ce qu'on y lit.
+    h += `<p class="db-sous">L’année ${Y} · l’objectif, les quatre trimestres, les douze mois — un clic sur un trimestre l’ouvre</p>`;
     if (!plan && !S.err[kP]) { h += squelette(3); }
     else if (plan && plan.annee) { h += anResume(plan, Y) + anTrimestres(plan, Y, cells) + anDetail(plan, Y, cells); }
     else if (plan) { h += `<div class="db-alerte">${esc(plan.error || 'Pas de plan pour ce magasin.')}</div>`; }
