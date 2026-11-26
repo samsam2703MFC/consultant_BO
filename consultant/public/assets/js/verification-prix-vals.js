@@ -6,6 +6,7 @@
 import { readOne, write } from './api.js';
 import { ouvrirFiche } from './verification-fichemat-vals.js';
 import { valsTableau } from './verification-tableau-vals.js';
+import { valsRefs } from './verification-refs-vals.js';
 
 const nf = (n, d) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/[  ]/g, ' ');
 const num = s => { const t = String(s == null ? '' : s).trim().replace(/\s/g, '').replace(',', '.'); if (t === '') { return null; } const n = Number(t); return isFinite(n) ? n : NaN; };
@@ -74,8 +75,14 @@ const sousOption = o => {
   return (c ? 'colis de ' + nf(c.taille || 1, 0) + ' ' + (c.unite || '') + (c.parColis > 1 ? ' × ' + nf(c.parColis, 0) : '') + ' à ' + nf(c.prix, 2) + ' € HT' : '') + d + (o.centrale ? ' · centrale' : '');
 };
 
+const AFFICHAGES = [['tableau', 'Par fournisseur ou catégorie'], ['liste', 'Toutes les matières, prix de référence au choix'], ['refs', 'Références et pertes (réseau)']];
+
 export function valsMatieres(app){
   const S = app.state;
+  // Références et pertes (26/11/2026) : sa propre lecture, sans attendre la table des prix.
+  if (S.vmAff === 'refs') {
+    return { affichages: AFFICHAGES.map(([id, nom]) => ({ nom, on: id === 'refs', choisir: () => app.setState({ vmAff: id }) })), refs: valsRefs(app) };
+  }
   charger(app, false);
   const M = S.vmData || {};
   const d = M.d && !M.d.error && !M.d.indispo ? M.d : null;
@@ -84,7 +91,7 @@ export function valsMatieres(app){
   if (!d) { return v; }
   // Deux lectures (14/11/2026) : par fournisseur ou par catégorie, avec le formulaire du prix ; ou la liste de toutes les matières.
   const aff = S.vmAff === 'liste' ? 'liste' : 'tableau';
-  v.affichages = [['tableau', 'Par fournisseur ou catégorie'], ['liste', 'Toutes les matières, prix de référence au choix']].map(([id, nom]) => ({ nom, on: aff === id, choisir: () => app.setState({ vmAff: id }) }));
+  v.affichages = AFFICHAGES.map(([id, nom]) => ({ nom, on: aff === id, choisir: () => app.setState({ vmAff: id }) }));
   v.lu = d.cache && d.cache.le ? 'calculé à ' + d.cache.le.slice(11, 16) : (d.lu ? 'calculé à ' + String(d.lu).slice(11, 16) : '');
   if (aff === 'tableau') { v.tableau = valsTableau(app, d); v.source = d.source || ''; return v; }
   const ch = S.vmChoix || {};
