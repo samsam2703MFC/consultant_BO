@@ -63,7 +63,8 @@ const PLANS = [
   { nom: 'dash-heatmap', vue: 'annee', cibles: ['.db-card:has(.db-an-12)'] },
   { nom: 'dash-promos', vue: 'promos', cibles: ['.db-card >> nth=0'], top: true },
   // La ligne du franchisé (07/11/2026) : dans le tableau, en gris, « franchisé · hors primes ».
-  { nom: 'dash-primes', vue: 'primes', cibles: ['tr:has(.pr-fr)'], avecAvant: true },
+  // Primes (24/11/2026) : un onglet de Mon équipe ; la rangée d'onglets entourée, et la ligne du franchisé quand elle y est.
+  { nom: 'dash-primes', vue: 'primes', cibles: ['nav.db-eqp-tabs', 'tr:has(.pr-fr)'], top: true },
   // Le cockpit, Budget › Paramètres › Répartition des charges (07/11/2026) : % réseau du CRM, % validé, écart.
   { nom: 'dash-charges', cockpit: '#/budget/parametres', cibles: ['[data-screen="budgetparam"] > div:has(:text-is("Répartition des charges"))'], defile: true },
   // L'onglet Tâches (08/11/2026) : la semaine et les quatre tuiles, la structure des codes, les checklists du jour, les retours.
