@@ -6507,6 +6507,705 @@
       ],
       "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
       "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "commandes",
+      "genre": "tuto",
+      "titre": "Les commandes du magasin",
+      "resume": "Les commandes du jour par canal, les tournées et leurs arrêts, placer une commande dans une tournée, la semaine et le mois.",
+      "vues": [
+        "commandes"
+      ],
+      "fichier": "25-commandes.mp4",
+      "affiche": "25-commandes.jpg",
+      "duree": "2 min 49",
+      "depuis": "2026-11-26",
+      "sources": [
+        "panel/public/dashboard/commandes.js",
+        "panel/public/dashboard/commandes.css",
+        "panel/src/commandes_tournees.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "commandes-liste",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "commandes",
+      "titre": "La liste des commandes",
+      "resume": "Les commandes du jour par canal, la liste qui suit l’heure, une commande ouverte, les filtres, les tournées du jour et demain ; la semaine et le mois.",
+      "vues": [
+        "commandes"
+      ],
+      "fichier": "25-01-liste.mp4",
+      "debut": 0,
+      "fin": 88.06,
+      "affiche": "commandes-liste.jpg",
+      "duree": "1 min 28",
+      "sources": [
+        "panel/public/dashboard/commandes.js",
+        "panel/src/commandes_tournees.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "commandes-placer",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "commandes-liste",
+      "titre": "Placer une commande dans une tournée",
+      "resume": "Une livraison qui n’est dans aucune tournée : on l’ouvre, on choisit sa tournée, ou le retrait au magasin.",
+      "vues": [
+        "commandes"
+      ],
+      "fichier": "25-01-liste.mp4",
+      "debut": 88.06,
+      "fin": 123.13,
+      "affiche": "commandes-placer.jpg",
+      "duree": "35 s",
+      "sources": [
+        "panel/public/dashboard/commandes.js",
+        "panel/src/commandes_tournees.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "commandes-tournees",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "commandes",
+      "titre": "Les tournées",
+      "resume": "La journée en frise, une colonne par tournée avec ses arrêts et ses bureaux sans commande, le retrait au magasin ; la semaine et le mois par tournée et par bureau.",
+      "vues": [
+        "commandes"
+      ],
+      "fichier": "25-02-tournees.mp4",
+      "debut": 0,
+      "fin": 74.19,
+      "affiche": "commandes-tournees.jpg",
+      "duree": "1 min 14",
+      "sources": [
+        "panel/public/dashboard/commandes.js",
+        "panel/src/commandes_tournees.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "commandes-creer-tournee",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "commandes-tournees",
+      "titre": "Créer une tournée",
+      "resume": "Un nom, le départ et le retour, le livreur, le véhicule, les jours, puis les bureaux dans l’ordre de passage.",
+      "vues": [
+        "commandes"
+      ],
+      "fichier": "25-02-tournees.mp4",
+      "debut": 74.19,
+      "fin": 123.72,
+      "affiche": "commandes-creer-tournee.jpg",
+      "duree": "50 s",
+      "sources": [
+        "panel/public/dashboard/commandes.js",
+        "panel/src/commandes_tournees.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "commandes-modifier-tournee",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "commandes-tournees",
+      "titre": "Modifier une tournée",
+      "resume": "Changer l’horaire, les jours, l’ordre de passage ou la consigne d’un bureau, puis enregistrer.",
+      "vues": [
+        "commandes"
+      ],
+      "fichier": "25-02-tournees.mp4",
+      "debut": 123.72,
+      "fin": 160.6,
+      "affiche": "commandes-modifier-tournee.jpg",
+      "duree": "37 s",
+      "sources": [
+        "panel/public/dashboard/commandes.js",
+        "panel/src/commandes_tournees.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "commandes-retirer-tournee",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "commandes-tournees",
+      "titre": "Retirer une tournée",
+      "resume": "La tournée et ses bureaux disparaissent ; leurs commandes ne sont plus rangées dans une tournée.",
+      "vues": [
+        "commandes"
+      ],
+      "fichier": "25-02-tournees.mp4",
+      "debut": 160.6,
+      "fin": 185.98,
+      "affiche": "commandes-retirer-tournee.jpg",
+      "duree": "25 s",
+      "sources": [
+        "panel/public/dashboard/commandes.js",
+        "panel/src/commandes_tournees.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients",
+      "genre": "tuto",
+      "titre": "Les clients du magasin",
+      "resume": "Les particuliers, les entreprises B2B et leur crédit, les bureaux livrés et les bureaux en développement, l’analyse B2B ; le compte TF Buddy du magasin.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-clients.mp4",
+      "affiche": "26-clients.jpg",
+      "duree": "2 min 58",
+      "depuis": "2026-11-26",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/clients.css",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-particuliers",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "clients",
+      "titre": "Les particuliers",
+      "resume": "Les particuliers du magasin dans TF Buddy : la recherche par nom, téléphone ou e-mail, le filtre des remises, la fiche et ses gestes.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-01-particuliers.mp4",
+      "debut": 0,
+      "fin": 46.74,
+      "affiche": "clients-particuliers.jpg",
+      "duree": "47 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-ajouter-particulier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-particuliers",
+      "titre": "Ajouter un client",
+      "resume": "Un nouveau particulier dans TF Buddy : son nom et son téléphone, obligatoires, puis ce que l’on sait.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-01-particuliers.mp4",
+      "debut": 46.74,
+      "fin": 80.51,
+      "affiche": "clients-ajouter-particulier.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-modifier-particulier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-particuliers",
+      "titre": "Modifier un client",
+      "resume": "Les coordonnées et la note d’un client, changées dans TF Buddy depuis sa fiche.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-01-particuliers.mp4",
+      "debut": 80.51,
+      "fin": 109.08,
+      "affiche": "clients-modifier-particulier.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-passer-entreprise",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-particuliers",
+      "titre": "Passer un client en entreprise",
+      "resume": "Un client devient une entreprise : la TVA se vérifie dans TF Buddy puis VIES et remplit la société ; la fiche passe dans Entreprises B2B.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-01-particuliers.mp4",
+      "debut": 109.08,
+      "fin": 158.44,
+      "affiche": "clients-passer-entreprise.jpg",
+      "duree": "49 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-supprimer-particulier",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-particuliers",
+      "titre": "Supprimer un client",
+      "resume": "Une fiche créée dans ce magasin, en double par exemple, supprimée de TF Buddy ; ses tickets et ses commandes restent.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-01-particuliers.mp4",
+      "debut": 158.44,
+      "fin": 191.34,
+      "affiche": "clients-supprimer-particulier.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-preparer-offre",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-particuliers",
+      "titre": "Préparer une offre pour un client",
+      "resume": "« Préparer une offre » ouvre la page Offres sur ce client : on y ajoute les produits, puis on crée l’offre dans TF Buddy.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-01-particuliers.mp4",
+      "debut": 191.34,
+      "fin": 215.53,
+      "affiche": "clients-preparer-offre.jpg",
+      "duree": "24 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php",
+        "panel/public/dashboard/offres.js"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-entreprises",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "clients",
+      "titre": "Les entreprises B2B",
+      "resume": "Les entreprises du magasin : celles à compléter, les filtres par score, chiffre et commandes, la fiche avec le crédit, les bureaux et les factures.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-02-entreprises.mp4",
+      "debut": 0,
+      "fin": 56.77,
+      "affiche": "clients-entreprises.jpg",
+      "duree": "57 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-ajouter-entreprise",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-entreprises",
+      "titre": "Ajouter une entreprise",
+      "resume": "Par son numéro de TVA : TF Buddy complète la société depuis VIES ; une entreprise déjà cliente d’un autre magasin est rattachée à celui-ci.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-02-entreprises.mp4",
+      "debut": 56.77,
+      "fin": 88.79,
+      "affiche": "clients-ajouter-entreprise.jpg",
+      "duree": "32 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-donnees-base",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-entreprises",
+      "titre": "Compléter les données de base",
+      "resume": "Société, TVA, identifiant Peppol, adresse, téléphone, e-mail : ce qui manque à une entreprise pour que ses factures partent.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-02-entreprises.mp4",
+      "debut": 88.79,
+      "fin": 122.12,
+      "affiche": "clients-donnees-base.jpg",
+      "duree": "33 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-profil-commercial",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-entreprises",
+      "titre": "Régler le profil commercial",
+      "resume": "Le score, le type de client, le mode de service et le crédit accordé d’une entreprise, écrits dans TF Buddy.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-02-entreprises.mp4",
+      "debut": 122.12,
+      "fin": 153.94,
+      "affiche": "clients-profil-commercial.jpg",
+      "duree": "32 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-bureaux",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "clients",
+      "titre": "Les bureaux",
+      "resume": "Les bureaux en développement à valider, puis les bureaux livrés : statut, catalogue, offres, sites ; la fiche d’un bureau dans un tiroir.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 0,
+      "fin": 68.7,
+      "affiche": "clients-bureaux.jpg",
+      "duree": "1 min 09",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-connecter-tfb",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Connecter le compte TF Buddy du magasin",
+      "resume": "Les bureaux ne s’ouvrent qu’au compte TF Buddy du magasin : téléphone, PIN, puis le code reçu par SMS. La session dure 12 heures sur l’appareil.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 68.7,
+      "fin": 113.25,
+      "affiche": "clients-connecter-tfb.jpg",
+      "duree": "45 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-questionnaire",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Régler le questionnaire du magasin",
+      "resume": "Le lien et le QR du questionnaire du magasin, son titre, son message d’accueil et le bon de bienvenue que reçoit chaque réponse.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 113.25,
+      "fin": 147.43,
+      "affiche": "clients-questionnaire.jpg",
+      "duree": "34 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-bureau-dev",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Saisir un bureau en développement",
+      "resume": "Une personne et son futur bureau, saisis au magasin : la personne, la société et le bon se créent tout de suite dans TF Buddy ; le bureau, à la validation.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 147.43,
+      "fin": 193.05,
+      "affiche": "clients-bureau-dev.jpg",
+      "duree": "46 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-valider-demande",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Valider une demande",
+      "resume": "Valider crée le bureau dans TF Buddy avec le compte du magasin : son nom, sa société, sa tournée, actif ou en attente.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 193.05,
+      "fin": 223.22,
+      "affiche": "clients-valider-demande.jpg",
+      "duree": "30 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-refuser-demande",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Refuser une demande",
+      "resume": "Une demande sans suite : la personne et la société restent dans TF Buddy ; le bureau ne sera pas créé.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 223.22,
+      "fin": 242.61,
+      "affiche": "clients-refuser-demande.jpg",
+      "duree": "19 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-ajouter-bureau",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Ajouter un bureau",
+      "resume": "L’assistant du panel en sept étapes : société, contact, sites, départements, webshop, personnes, récapitulatif ; tout part d’un coup vers TF Buddy.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 242.61,
+      "fin": 303.38,
+      "affiche": "clients-ajouter-bureau.jpg",
+      "duree": "1 min 01",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-modifier-livraison",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Modifier la livraison d’un bureau",
+      "resume": "La tournée qui livre le bureau, le créneau, l’heure limite des commandes et le temps de remise sur place : ce que lisent la page Commandes et l’appli du livreur.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 303.38,
+      "fin": 333.29,
+      "affiche": "clients-modifier-livraison.jpg",
+      "duree": "30 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-ajouter-site",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Ajouter un site de livraison",
+      "resume": "Un bureau sans site ne peut être livré par aucune tournée : son adresse, proposée par TF Buddy, et la tournée qui le livre.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 333.29,
+      "fin": 370.68,
+      "affiche": "clients-ajouter-site.jpg",
+      "duree": "37 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-inviter",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "fonction",
+      "parent": "clients-bureaux",
+      "titre": "Inviter des personnes",
+      "resume": "Une invitation par e-mail à une personne du bureau ; le lien d’invitation se crée ou se retire au même endroit.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-03-bureaux.mp4",
+      "debut": 370.68,
+      "fin": 399.9,
+      "affiche": "clients-inviter.jpg",
+      "duree": "29 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/public/dashboard/tfb-magasin.js",
+        "panel/src/clients_panel.php",
+        "panel/src/bureaux_dev.php",
+        "panel/src/tfb_magasin.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
+    },
+    {
+      "id": "clients-analyse",
+      "genre": "tuto",
+      "depuis": "2026-11-26",
+      "niveau": "onglet",
+      "parent": "clients",
+      "titre": "L’analyse B2B",
+      "resume": "Un mois de ventes aux clients pro : six chiffres face au mois d’avant et à l’an dernier, l’année mois par mois, la part B2B du chiffre.",
+      "vues": [
+        "clients"
+      ],
+      "fichier": "26-04-analyse.mp4",
+      "debut": 0,
+      "fin": 55.23,
+      "affiche": "clients-analyse.jpg",
+      "duree": "55 s",
+      "sources": [
+        "panel/public/dashboard/clients.js",
+        "panel/src/clients_panel.php"
+      ],
+      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_le": "2026-11-26"
     }
   ]
 }
