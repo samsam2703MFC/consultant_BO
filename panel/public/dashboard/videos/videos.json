@@ -2577,15 +2577,15 @@
       ],
       "fichier": "10-03-famille.mp4",
       "debut": 0,
-      "fin": 86.54,
+      "fin": 85.14,
       "affiche": "analyse-famille.jpg",
-      "duree": "1 min 27",
+      "duree": "1 min 25",
       "sources": [
         "panel/public/dashboard/analyse.js",
         "panel/public/dashboard/analyse.css",
         "panel/src/dashboard_analyse.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "a0d64ecd7897c5a511a49b2a3e506c66ffa1e686",
       "tourne_le": "2026-11-26"
     },
     {
@@ -2607,7 +2607,7 @@
         "panel/src/prix_produit.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
+      "tourne_sur": "a0d64ecd7897c5a511a49b2a3e506c66ffa1e686",
       "tourne_le": "2026-11-26"
     },
     {
@@ -2623,7 +2623,7 @@
       ],
       "fichier": "11-01-categorie.mp4",
       "debut": 0,
-      "fin": 76.43,
+      "fin": 75.77,
       "affiche": "produits-categorie.jpg",
       "duree": "1 min 16",
       "sources": [
@@ -2631,7 +2631,7 @@
         "panel/public/dashboard/dashboard.css",
         "consultant/src/analyse_produits.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
+      "tourne_sur": "a0d64ecd7897c5a511a49b2a3e506c66ffa1e686",
       "tourne_le": "2026-11-26"
     },
     {
