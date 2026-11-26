@@ -17,6 +17,14 @@
  * `window.DashCommandes.racine(shop, {apiBase, date, onCompte})` rend l'élément du module, gardé d'un rendu à l'autre (`date` :
  * le jour du dashboard, à la première ouverture) ;
  * `relire()` relit la journée. `onCompte(n)` reçoit les commandes à préparer aujourd'hui (le compteur du rail).
+ *
+ * Refonte du 26/11/2026 (les quatre règles de Sam, style de panel/docs/maquettes/equipe-gestion/semaine-avant-apres/) :
+ *   - en tête de chaque vue, un résumé en deux lignes : le chiffre clé, le montant, la répartition par canal (le seul
+ *     endroit des nombres et montants par canal), ce qui reste à préparer ; puis « À corriger », un bouton par souci,
+ *     qui mène au geste existant (la commande dans la liste, « Placer », la tournée, les bureaux de demain, le jour) ;
+ *   - un chiffre, une seule place : plus de compteurs dans les filtres ni sur « Liste », plus de ligne de total quand
+ *     elle redit le résumé ;
+ *   - la tête des tableaux reste collée en haut au-dessus de 1366 px (commandes.css).
  */
 (function () {
   'use strict';
@@ -44,7 +52,9 @@
   const JL = [['1', 'L'], ['2', 'M'], ['3', 'M'], ['4', 'J'], ['5', 'V'], ['6', 'S'], ['7', 'D']];
 
   const st = { shop: null, api: '../api/cockpit', el: null, onCompte: null, date: null, vue: 'liste', canal: '', mode: '', q: '',
-    periode: 'jour', D: null, P: null, err: null, lecture: false, mo: null, ed: null, minuterie: null };
+    periode: 'jour', D: null, P: null, err: null, lecture: false, mo: null, ed: null, minuterie: null, vise: null };
+  /* Le défilement doux, seulement si le système ne demande pas moins de mouvement. */
+  const doux = () => (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
   /* La période (24/11/2026, « faire une vue semaine et mois (en plus) ») : le jour, la semaine du lundi au dimanche, le mois. */
   const lundiDe = s => { const d = dt(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ymd(d); };
   const moisDe = s => s.slice(0, 8) + '01';
@@ -111,10 +121,11 @@
   const rond = c => `<span class="pco-rond${c.statut === 'fait' ? ' is-fait' : c.statut === 'prete' ? ' is-pret' : c.statut === 'prep' ? ' is-prep' : ''}">${c.arret}</span>`;
   const somme = L => L.reduce((a, c) => a + c.montant, 0);
 
+  // « Liste » ne porte plus de compteur : le nombre de commandes est le chiffre clé du résumé, juste dessous.
   function bascule() {
-    const J = st.periode === 'jour', D = J ? st.D : st.P, nT = D ? D.tournees.length : 0, nC = D ? (J ? D.commandes.length : D.totaux.total.n) : 0;
+    const J = st.periode === 'jour', D = J ? st.D : st.P, nT = D ? D.tournees.length : 0;
     return `<div class="pco-bascule" role="tablist" aria-label="Vue des commandes">
-      <button type="button" role="tab" aria-selected="${st.vue === 'liste'}" class="${st.vue === 'liste' ? 'is-on' : ''}" data-act="vue" data-v="liste">${SVG(ICO.liste)}Liste${D ? ` <em>${nC}</em>` : ''}</button>
+      <button type="button" role="tab" aria-selected="${st.vue === 'liste'}" class="${st.vue === 'liste' ? 'is-on' : ''}" data-act="vue" data-v="liste">${SVG(ICO.liste)}Liste</button>
       <button type="button" role="tab" aria-selected="${st.vue === 'tournees'}" class="${st.vue === 'tournees' ? 'is-on' : ''}" data-act="vue" data-v="tournees">${SVG(ICO.camion)}Tournées${D ? ` <em>${nT}</em>` : ''}</button></div>`;
   }
   function barre() {
@@ -134,17 +145,67 @@
       <button type="button" class="btn btn--sm" data-act="gerer">Gérer les tournées</button>${bascule()}</div>`;
   }
 
+  /* ── Le résumé et « À corriger » (26/11/2026) ───────────────────────────────────────────────────────────── */
+  const K3 = ['webshop', 'comptoir', 'bureau'];
+  const pl = (n, s, p) => n > 1 ? (p || s + 's') : s;
+  /** La barre de répartition et sa légende : le seul endroit des nombres et montants par canal. `plus(k)` : une précision. */
+  function repartition(T, plus) {
+    const tot = T.total.ca || 0;
+    return `<div class="pco-res-rep">${tot > 0 ? `<div class="pco-part" aria-hidden="true">${K3.filter(k => T[k].ca > 0).map(k => `<i style="width:${(100 * T[k].ca / tot).toFixed(1)}%;background:${CANAUX[k][1]}"></i>`).join('')}</div>` : ''}
+      <div class="pco-res-leg">${K3.map(k => `<span><span class="pco-res-c"><i class="pco-pt" style="background:${CANAUX[k][1]}"></i>${CANAUX[k][0]} <em>${T[k].n}</em></span>
+        <span class="pco-res-m">${fE(T[k].ca)}${tot > 0 ? ` · ${Math.round(100 * T[k].ca / tot)} %` : ''}${plus ? plus(k) : ''}</span></span>`).join('')}</div></div>`;
+  }
+  /** « À corriger » : des boutons .btn--sm (un point d'état ou un carré hachuré, suivi de mots), ou une phrase verte. */
+  function corriger(L, ok, reste) {
+    const ic = s => s.ic === 'pt' ? '<i class="pco-ic"></i>' : s.ic === 'trou' ? '<i class="pco-ic-trou"></i>' : '';
+    return L.length ? `<div class="pco-corr"><span class="pco-corr-t">À corriger</span>${L.map(b => `<button type="button" class="btn btn--sm pco-corr-b" ${b.attrs} title="${esc(b.titre)}">
+        ${b.lead ? `<span class="pco-corr-j">${b.lead}</span>` : ''}${b.segs.map(s => `<span class="pco-corr-s">${ic(s)}${s.txt}</span>`).join('')}</button>`).join('')}${reste ? `<span class="pco-compte">${reste}</span>` : ''}</div>`
+      : `<p class="pco-ok">${ok}</p>`;
+  }
+  /** Ce que la journée affiche déjà comme souci : rien de calculé en plus. */
+  function aCorrigerJour() {
+    const D = st.D, now = maintenant(), L = [];
+    // « Pas encore remise » (l'heure est passée) et « Pas retirée » : les mêmes mots que la colonne Statut.
+    const retard = c => c.sansTournee ? '' : c.statut === 'nonretiree' ? 'pas retirée'
+      : (['fait', 'prete', 'prep'].includes(c.statut) ? '' : (D.date < AUJ() || (now && c.heure < now)) ? 'pas encore remise' : '');
+    const R = D.commandes.filter(retard);
+    if (R.length > 2) { const m = retard(R[0]); L.push({ attrs: `data-act="corr-cmd" data-id="${R[0].id}"`, titre: 'Voir la première dans la liste', lead: `${R.length} commandes`, segs: [{ ic: 'pt', txt: R.every(c => retard(c) === m) ? m + 's' : 'pas encore remises ou pas retirées' }] }); }
+    else { R.forEach(c => L.push({ attrs: `data-act="corr-cmd" data-id="${c.id}"`, titre: 'Voir la commande dans la liste', lead: `${c.heure} · ${esc(c.client.nom)}`, segs: [{ ic: 'pt', txt: retard(c) }] })); }
+    // Une livraison dans aucune tournée : le bouton fait ce que fait « Placer ».
+    const S = D.commandes.filter(c => c.sansTournee);
+    if (S.length > 2) { L.push({ attrs: `data-act="cmd" data-id="${S[0].id}"`, titre: 'Placer la première', lead: `${S.length} livraisons`, segs: [{ ic: 'pt', txt: 'dans aucune tournée' }, { txt: 'à placer' }] }); }
+    else { S.forEach(c => L.push({ attrs: `data-act="cmd" data-id="${c.id}"`, titre: 'Placer la commande dans une tournée', lead: `${c.heure} · ${esc(c.client.nom)}`, segs: [{ ic: 'pt', txt: c.mode === 'hors' ? 'hors de ses tournées' : 'livraison sans tournée' }, { txt: 'à placer' }] })); }
+    // Une tournée qui n'est pas encore partie aujourd'hui et dont toutes les commandes ne sont pas prêtes.
+    if (D.date === AUJ() && now) {
+      D.tournees.forEach(t => {
+        if (['terminee', 'route', 'vide'].includes(t.etat)) { return; }
+        const dans = mn(t.depart) - mn(now), C = t.commandes.map(cmdDe).filter(Boolean), pretes = C.filter(c => c.statut === 'prete').length;
+        if (dans < 0 || !C.some(c => c.statut !== 'prete' && c.statut !== 'fait')) { return; }
+        L.push({ attrs: `data-act="corr-tournee" data-id="${t.id}"`, titre: 'Ouvrir la tournée', lead: esc(t.nom), segs: [{ txt: 'départ dans ' + duree(dans) }, { ic: 'pt', txt: `${pretes} ${pl(pretes, 'prête')} sur ${C.length}` }] });
+      });
+    }
+    // Demain : les bureaux qui n'ont pas encore commandé, tant que les commandes sont ouvertes.
+    const M = D.demain;
+    if (M && M.tournees.length && M.ouvert) {
+      const non = M.tournees.flatMap(t => t.bureaux).filter(b => !b.commande).length;
+      if (non) { L.push({ attrs: 'data-act="corr-demain"', titre: 'Voir les bureaux qui n’ont pas encore commandé', lead: 'Demain', segs: [{ ic: 'trou', txt: `${non} ${pl(non, 'bureau', 'bureaux')} n’${non > 1 ? 'ont' : 'a'} pas encore commandé` }, { txt: `commandes jusqu’à ${M.coupure}` }] }); }
+    }
+    return L;
+  }
+  function resumeJour() {
+    const D = st.D, T = D.totaux;
+    return `<div class="card pco-res"><div class="pco-res-l1">
+        <div class="pco-res-v"><span class="pco-res-n">${T.total.n}</span><span class="pco-res-lib">${pl(T.total.n, 'commande')} du jour</span></div>
+        <div class="pco-res-quoi">${fE(T.total.ca)}<span class="pco-res-sous">montant des commandes</span></div>
+        ${repartition(T)}
+        <div class="pco-res-prep">${D.date >= AUJ() ? `<span>${T.aPreparer} à préparer</span><span class="pco-res-sous">${T.livrer.n} à livrer · ${T.retirer.n} à retirer</span>`
+          : `<span>${T.livrer.n} ${pl(T.livrer.n, 'livrée')}</span><span class="pco-res-sous">${T.retirer.n} ${pl(T.retirer.n, 'retirée')} au magasin</span>`}</div></div>
+      <div class="pco-res-l2">${corriger(aCorrigerJour(), 'Rien à corriger ce jour.')}</div></div>`;
+  }
+
   /* ── La vue Liste (A) ───────────────────────────────────────────────────────────────────────────────────── */
   function vueListe() {
-    const D = st.D, T = D.totaux, tot = T.total.ca || 0;
-    const kpi = (k, val, lib, note, coul) => `<div class="kpi"${coul ? ` style="border-left-color:${coul}"` : ''}><div class="kpi__value">${val}</div><div class="kpi__label">${lib}</div><div class="kpi__note">${note}</div></div>`;
-    const bandeau = `<div class="card pco-kpis"><div class="kpi-row">
-      ${kpi('', T.total.n, 'Commandes du jour', fE(T.total.ca))}
-      ${['webshop', 'comptoir', 'bureau'].map(k => kpi(k, T[k].n, CANAUX[k][0], fE(T[k].ca), CANAUX[k][1])).join('')}
-      ${D.date >= AUJ() ? kpi('', T.aPreparer, 'À préparer', T.livrer.n + ' à livrer · ' + T.retirer.n + ' à retirer') : kpi('', T.livrer.n, 'Livrées', T.retirer.n + ' retirées au magasin')}</div>
-      ${tot > 0 ? `<div class="pco-part">${['webshop', 'comptoir', 'bureau'].filter(k => T[k].ca > 0).map(k => `<i style="width:${(100 * T[k].ca / tot).toFixed(1)}%;background:${CANAUX[k][1]}"></i>`).join('')}</div>
-      <div class="pco-part-leg">${['webshop', 'comptoir', 'bureau'].map(k => `<span>${CANAUX[k][0]} ${Math.round(100 * T[k].ca / tot)} %</span>`).join('')}<span class="pco-sp"></span><span>part du montant des commandes</span></div>` : ''}</div>`;
-
+    const D = st.D;
     const q = st.q.trim().toLowerCase();
     const L = D.commandes.filter(c => (!st.canal || c.canal === st.canal)
       && (!st.mode || (st.mode === 'livrer' ? (c.tournee || c.sansTournee) : !(c.tournee || c.sansTournee)))
@@ -153,20 +214,22 @@
     let lignes = '', avant = true;
     for (const c of L) {
       if (now && avant && c.heure > now) { lignes += `<tr class="pco-now"><td colspan="6"><div>Maintenant · ${now}</div></td></tr>`; avant = false; }
-      lignes += `<tr class="pco-ligne${c.statut === 'fait' ? ' is-passe' : ''}${c.sansTournee ? ' is-alerte' : ''}" data-act="cmd" data-id="${c.id}">
+      lignes += `<tr class="pco-ligne${c.statut === 'fait' ? ' is-passe' : ''}${c.sansTournee ? ' is-alerte' : ''}${st.vise === c.id ? ' is-vise' : ''}" data-act="cmd" data-id="${c.id}">
         <td>${c.heure}</td><td>${canal(c.canal)}<span class="sub">n° ${c.id}</span></td>
         <td><span class="pco-nom">${esc(c.client.nom)}</span>${c.note ? `<span class="sub pco-note" title="${esc(c.note)}">${esc(c.note)}</span>` : ''}</td>
         <td>${livraison(c)}</td><td class="num">${fE(c.montant)}<span class="sub">${esc(c.paiement.lib)}</span></td><td>${statut(c)}</td></tr>`;
     }
     if (!L.length) { lignes = `<tr><td colspan="6" class="pco-vide">${D.commandes.length ? 'Aucune commande ne correspond à ces filtres.' : 'Aucune commande au panel pour ce jour.'}</td></tr>`; }
-    else { lignes += `<tr class="pco-total"><td></td><td colspan="3">${L.length} commande${L.length > 1 ? 's' : ''}</td><td class="num">${fE(somme(L))}</td><td></td></tr>`; }
-    const seg = (act, v, lib, n, coul) => `<button type="button" class="${(act === 'canal' ? st.canal : st.mode) === v ? 'is-on' : ''}" data-act="${act}" data-v="${v}">${coul ? `<i class="pco-pt" style="background:${coul}"></i>` : ''}${lib}${n != null ? ` <em>${n}</em>` : ''}</button>`;
+    // La ligne de total : seulement quand la liste est filtrée (sinon elle redit le chiffre clé du résumé).
+    else if (L.length !== D.commandes.length) { lignes += `<tr class="pco-total"><td></td><td colspan="3">${L.length} ${pl(L.length, 'commande')}</td><td class="num">${fE(somme(L))}</td><td></td></tr>`; }
+    // Les filtres sans compteur : les nombres par canal, à livrer et à retirer sont dans le résumé.
+    const seg = (act, v, lib, coul) => `<button type="button" class="${(act === 'canal' ? st.canal : st.mode) === v ? 'is-on' : ''}" data-act="${act}" data-v="${v}">${coul ? `<i class="pco-pt" style="background:${coul}"></i>` : ''}${lib}</button>`;
     const table = `<section class="card pco-tab"><div class="toolbar pco-outils">
-        <span class="seg">${seg('canal', '', 'Toutes', D.commandes.length)}${['webshop', 'comptoir', 'bureau'].map(k => seg('canal', k, CANAUX[k][0], T[k].n, CANAUX[k][1])).join('')}</span>
-        <span class="seg">${seg('mode', '', 'Tout')}${seg('mode', 'livrer', 'À livrer', T.livrer.n)}${seg('mode', 'retirer', 'À retirer', T.retirer.n)}</span>
+        <span class="seg">${seg('canal', '', 'Toutes')}${K3.map(k => seg('canal', k, CANAUX[k][0], CANAUX[k][1])).join('')}</span>
+        <span class="seg">${seg('mode', '', 'Tout')}${seg('mode', 'livrer', 'À livrer')}${seg('mode', 'retirer', 'À retirer')}</span>
         <input type="search" id="pco-q" placeholder="Chercher un client, un bureau, un n°" value="${esc(st.q)}"></div>
       <div class="pco-scroll"><table class="pco-table"><thead><tr><th>Heure</th><th>Canal</th><th>Client ou bureau</th><th>Livraison</th><th class="num">Montant</th><th>Statut</th></tr></thead><tbody>${lignes}</tbody></table></div></section>`;
-    return bandeau + `<div class="pco-grille">${table}<aside class="pco-volet">${voletTournees()}${carteDemain()}</aside></div>`;
+    return resumeJour() + `<div class="pco-grille">${table}<aside class="pco-volet">${voletTournees()}${carteDemain()}</aside></div>`;
   }
   function voletTournees() {
     const D = st.D;
@@ -214,10 +277,10 @@
         ${piste('Retrait au magasin', retraits.map(pt).join(''))}${sans.length ? piste('Sans tournée', sans.map(pt).join('')) : ''}
         ${now && mn(now) >= H0 * 60 && mn(now) <= H1 * 60 ? `<div class="pco-fnow" style="left:calc(var(--pco-lib) + (100% - var(--pco-lib)) * ${((mn(now) - H0 * 60) / ((H1 - H0) * 60)).toFixed(4)})"><span>${now}</span></div>` : ''}</div>
       <div class="pco-fleg">${Object.keys(CANAUX).map(k => `<span><i class="pco-pt" style="background:${CANAUX[k][1]}"></i>${CANAUX[k][0]}</span>`).join('')}<span><i class="pco-pt pco-pt-fait"></i>Terminée</span><span><i class="pco-pt pco-pt-prep"></i>En préparation, en route</span></div></div>`;
-    const alerte = sans.map(c => `<div class="pco-alerte">${SVG(ICO.camion)}<div class="txt">${c.mode === 'hors' ? 'Un bureau commande hors de ses tournées' : 'Une livraison n’est dans aucune tournée'} : n° ${c.id} · ${CANAUX[c.canal][0]} · ${c.heure} · ${esc(c.client.nom)} · ${fE(c.montant)}${c.note ? ` <span class="muted">· ${esc(c.note)}</span>` : ''}</div><button type="button" class="btn btn--sm" data-act="cmd" data-id="${c.id}">Placer</button></div>`).join('');
+    // L'ancienne alerte « Une livraison n’est dans aucune tournée » est un bouton d'« À corriger », dans le résumé.
 
     const carte = c => { const t = tourneeDe(c.tournee), b = t && t.bureaux.find(x => x.client === c.client.id);
-      return `<div class="pco-arret${c.statut === 'fait' ? ' is-passe' : ''}" data-act="cmd" data-id="${c.id}" role="button" tabindex="0">
+      return `<div class="pco-arret${c.statut === 'fait' ? ' is-passe' : ''}${st.vise === c.id ? ' is-vise' : ''}" data-act="cmd" data-id="${c.id}" role="button" tabindex="0">
         <div class="pco-a1">${rond(c)}<span class="pco-anom">${esc(c.client.nom)}</span><span class="pco-ah">${c.heure}</span></div>
         ${b && b.consigne ? `<div class="pco-alieu">${esc(b.consigne)}</div>` : ''}
         <div class="pco-a2">${canal(c.canal)}<span class="pco-am">${fE(c.montant)}</span></div>
@@ -234,14 +297,14 @@
     };
     const colRetrait = `<div class="card pco-col"><div class="pco-coltete"><div class="pco-colnom"><span>Retrait au magasin</span><span class="chip pco-st-neutre">${retraits.filter(c => c.statut !== 'fait').length} à venir</span></div>
       <div class="pco-colmeta">${SVG(ICO.magasin)}<span>${['comptoir', 'webshop', 'bureau'].map(k => CANAUX[k][0] + ' ' + retraits.filter(c => c.canal === k).length).join(' · ')}</span></div>${retraits.length ? progres(retraits) : ''}</div>
-      <div class="pco-colcorps">${retraits.map(c => `<div class="pco-arret${c.statut === 'fait' ? ' is-passe' : ''}" data-act="cmd" data-id="${c.id}" role="button" tabindex="0">
+      <div class="pco-colcorps">${retraits.map(c => `<div class="pco-arret${c.statut === 'fait' ? ' is-passe' : ''}${st.vise === c.id ? ' is-vise' : ''}" data-act="cmd" data-id="${c.id}" role="button" tabindex="0">
         <div class="pco-a1">${canal(c.canal)}<span class="pco-ah">${c.heure}</span></div><div class="pco-anom pco-anom-r">${esc(c.client.nom)}</div>
         ${c.note ? `<div class="pco-anote">${esc(c.note)}</div>` : ''}<div class="pco-a2 pco-a2-r"><span class="pco-compte">${esc(c.paiement.lib)}</span><span class="pco-am">${fE(c.montant)}</span></div>
         <div class="pco-a3 pco-a2-r">${statut(c)}</div></div>`).join('') || '<div class="pco-aide">Aucun retrait au magasin ce jour.</div>'}</div>
       <div class="pco-colpied"><span>${retraits.length} commande${retraits.length > 1 ? 's' : ''} · ${fE(somme(retraits))}</span></div></div>`;
     const vide = !D.toutes.length ? `<div class="card pco-vide-t"><div class="pco-tnom">Pas encore de tournée</div><p class="pco-aide">Une tournée regroupe les bureaux livrés ensemble : un départ, un retour, un livreur, un véhicule, les jours où elle roule et ses bureaux dans l’ordre de passage. Le panel n’en a pas : elles se tiennent ici, et les commandes de leurs bureaux s’y rangent d’elles-mêmes.</p><button type="button" class="btn btn--primary" data-act="t-nouvelle">${SVG(ICO.plus)}Créer une tournée</button></div>`
       : !D.tournees.length ? `<div class="card pco-vide-t"><div class="pco-tnom">Aucune tournée ne roule le ${JOURS[dt(D.date).getDay()]}</div><p class="pco-aide">Les jours d’une tournée se règlent dans « Gérer les tournées ».</p></div>` : '';
-    return frise + alerte + vide + `<div class="pco-colonnes">${D.tournees.map(colonne).join('')}${colRetrait}</div>`;
+    return resumeJour() + frise + vide + `<div class="pco-colonnes">${D.tournees.map(colonne).join('')}${colRetrait}</div>`;
   }
 
   /* ── La semaine et le mois ───────────────────────────────────────────────────────────────────────────────── */
@@ -251,15 +314,19 @@
     const p = Math.round(100 * (c - a) / a);
     return `<span class="${p > 0 ? 'pco-up' : p < 0 ? 'pco-down' : 'pco-compte'}">${p > 0 ? '▲ +' : p < 0 ? '▼ ' : '= '}${p} %</span> <span class="pco-compte">${lib}</span>`;
   }
-  function bandeauPeriode() {
-    const P = st.P, T = P.totaux, A = P.avant, tot = T.total.ca || 0, lib = st.periode === 'semaine' ? 'face à la semaine d’avant' : 'face au mois d’avant';
-    const kpi = (val, l, note, coul) => `<div class="kpi"${coul ? ` style="border-left-color:${coul}"` : ''}><div class="kpi__value">${val}</div><div class="kpi__label">${l}</div><div class="kpi__note">${note}</div></div>`;
-    return `<div class="card pco-kpis"><div class="kpi-row">
-      ${kpi(T.total.n, 'Commandes', fE(T.total.ca) + '<br>' + ecart(T.total.ca, A.total.ca, lib))}
-      ${['webshop', 'comptoir', 'bureau'].map(k => kpi(T[k].n, CANAUX[k][0], fE(T[k].ca) + '<br>' + ecart(T[k].ca, A[k].ca, ''), CANAUX[k][1])).join('')}
-      ${kpi(T.livrer.n, 'Livraisons', fE(T.livrer.ca) + '<br><span class="pco-compte">' + T.retirer.n + ' retrait' + (T.retirer.n > 1 ? 's' : '') + ' au magasin</span>')}</div>
-      ${tot > 0 ? `<div class="pco-part">${['webshop', 'comptoir', 'bureau'].filter(k => T[k].ca > 0).map(k => `<i style="width:${(100 * T[k].ca / tot).toFixed(1)}%;background:${CANAUX[k][1]}"></i>`).join('')}</div>
-      <div class="pco-part-leg">${['webshop', 'comptoir', 'bureau'].map(k => `<span>${CANAUX[k][0]} ${Math.round(100 * T[k].ca / tot)} %</span>`).join('')}<span class="pco-sp"></span><span>part du montant des commandes</span></div>` : ''}</div>`;
+  /** Le résumé de la semaine ou du mois : le chiffre clé et son écart, la répartition, les livraisons ; « À corriger » :
+   * les jours qui ont une livraison à placer (le même signe que le tableau et le calendrier), qui ouvrent le jour. */
+  function resumePeriode() {
+    const P = st.P, T = P.totaux, A = P.avant, S = st.periode === 'semaine', lib = S ? 'face à la semaine d’avant' : 'face au mois d’avant';
+    const J = P.jours.filter(j => j.sansTournee), MAX = 6;
+    const L = J.slice(0, MAX).map(j => ({ attrs: `data-act="aller-jour" data-d="${j.date}"`, titre: 'Ouvrir ce jour', lead: court(j.date).replace(/^./, c => c.toUpperCase()),
+      segs: [{ ic: 'pt', txt: `${j.sansTournee} ${pl(j.sansTournee, 'livraison')} à placer` }] }));
+    return `<div class="card pco-res"><div class="pco-res-l1">
+        <div class="pco-res-v"><span class="pco-res-n">${T.total.n}</span><span class="pco-res-lib">${pl(T.total.n, 'commande')} ${S ? 'de la semaine' : 'du mois'}</span></div>
+        <div class="pco-res-quoi">${fE(T.total.ca)}<span class="pco-res-sous">${ecart(T.total.ca, A.total.ca, lib) || 'montant des commandes'}</span></div>
+        ${repartition(T, k => A[k].ca ? `<span class="pco-res-e">${ecart(T[k].ca, A[k].ca, '')}</span>` : '')}
+        <div class="pco-res-prep"><span>${T.livrer.n} ${pl(T.livrer.n, 'livraison')} · ${fE(T.livrer.ca)}</span><span class="pco-res-sous">${T.retirer.n} ${pl(T.retirer.n, 'retrait')} au magasin</span></div></div>
+      <div class="pco-res-l2">${corriger(L, `Aucune livraison à placer ${S ? 'cette semaine' : 'ce mois-ci'}.`, J.length > MAX ? `et ${J.length - MAX} autres jours, signalés ${S ? 'dans le tableau' : 'dans le calendrier'}` : '')}</div></div>`;
   }
   const nca = (x, vide) => x && x.n ? `${x.n}<span class="sub">${fE(x.ca)}</span>` : `<span class="pco-tiret">${vide || '—'}</span>`;
   const barreCanaux = j => { const t = j.total.ca || 0; return t ? `<span class="pco-mini">${['webshop', 'comptoir', 'bureau'].filter(k => j[k].ca > 0).map(k => `<i style="width:${(100 * j[k].ca / t).toFixed(1)}%;background:${CANAUX[k][1]}"></i>`).join('')}</span>` : ''; };
@@ -269,10 +336,10 @@
       <td>${court(j.date).replace(/^./, c => c.toUpperCase())}${j.date === A ? '<span class="sub">aujourd’hui</span>' : ''}</td>
       <td class="num">${nca(j.total)}</td>${['webshop', 'comptoir', 'bureau'].map(k => `<td class="num">${nca(j[k])}</td>`).join('')}
       <td class="num">${nca(j.livrer)}${j.sansTournee ? `<span class="tag-warn">${j.sansTournee} à placer</span>` : ''}</td><td class="num">${nca(j.retirer)}</td><td>${barreCanaux(j)}</td></tr>`).join('');
-    const T = P.totaux;
-    return bandeauPeriode() + `<section class="card pco-tab"><div class="pco-scroll"><table class="pco-table pco-per-table"><thead><tr><th>Jour</th><th class="num">Commandes</th>
+    // Pas de ligne « La semaine » : ses totaux sont ceux du résumé, juste au-dessus.
+    return resumePeriode() + `<section class="card pco-tab"><div class="pco-scroll"><table class="pco-table pco-per-table"><thead><tr><th>Jour</th><th class="num">Commandes</th>
       ${['webshop', 'comptoir', 'bureau'].map(k => `<th class="num"><i class="pco-pt" style="background:${CANAUX[k][1]}"></i> ${CANAUX[k][0]}</th>`).join('')}<th class="num">Livraisons</th><th class="num">Au magasin</th><th>Canaux</th></tr></thead>
-      <tbody>${lignes}<tr class="pco-total"><td>La semaine</td><td class="num">${nca(T.total)}</td>${['webshop', 'comptoir', 'bureau'].map(k => `<td class="num">${nca(T[k])}</td>`).join('')}<td class="num">${nca(T.livrer)}</td><td class="num">${nca(T.retirer)}</td><td>${barreCanaux(T)}</td></tr></tbody></table></div>
+      <tbody>${lignes}</tbody></table></div>
       <p class="pco-aide pco-pied-aide">Un clic sur un jour ouvre ses commandes.</p></section>`;
   }
   function vueMoisListe() {
@@ -290,7 +357,7 @@
         <span class="pco-mini" style="width:${Math.max(12, Math.round(100 * j.total.ca / max))}%">${['webshop', 'comptoir', 'bureau'].filter(k => j[k].ca > 0).map(k => `<i style="width:${(100 * j[k].ca / j.total.ca).toFixed(1)}%;background:${CANAUX[k][1]}"></i>`).join('')}</span>` : '<div class="pco-cal-n pco-tiret">—</div>'}</td>`;
     };
     const totSem = L => { const J = L.map(d => parD[d]).filter(Boolean); const n = J.reduce((a, j) => a + j.total.n, 0), ca = J.reduce((a, j) => a + j.total.ca, 0); return `<td class="pco-cal-s"><div class="pco-cal-t"><span>S${isoSem(L[0])}</span></div>${n ? `<div class="pco-cal-n">${n} cde${n > 1 ? 's' : ''}</div><div class="pco-cal-ca">${fE(ca)}</div>` : '<div class="pco-cal-n pco-tiret">—</div>'}</td>`; };
-    return bandeauPeriode() + `<section class="card pco-cal"><table><thead><tr>${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(x => `<th>${x}</th>`).join('')}<th>Semaine</th></tr></thead>
+    return resumePeriode() + `<section class="card pco-cal"><table><thead><tr>${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(x => `<th>${x}</th>`).join('')}<th>Semaine</th></tr></thead>
       <tbody>${sem.map(L => `<tr>${L.map(cellule).join('')}${totSem(L)}</tr>`).join('')}</tbody></table>
       <p class="pco-aide pco-pied-aide">Un clic sur un jour ouvre ses commandes. La barre : le montant du jour face au plus gros du mois, partagé par canal.</p></section>`;
   }
@@ -333,7 +400,7 @@
     const tabB = P.bureaux.length ? `<section class="card pco-tab" style="margin-top:14px"><div class="pco-tete-tab"><h2 class="pco-h2">Les bureaux à livrer<small>${P.bureaux.filter(b => b.total.n).length} sur ${P.bureaux.length} ont commandé</small></h2>
       <div class="pco-bleg"><span><i class="is-oui">2</i>commandes</span><span><i class="is-non"></i>sa tournée roule, pas de commande</span><span><i class="is-hors"></i>pas de tournée</span></div></div>
       <div class="pco-scroll"><table class="pco-table pco-per-table"><thead><tr><th>Bureau</th>${C.map(c => `<th class="pco-bc${c.auj ? ' is-auj' : ''}">${c.lib}</th>`).join('')}<th class="num">Commandes</th><th>Dernière</th></tr></thead><tbody>${pB}</tbody></table></div></section>` : '';
-    return bandeauPeriode() + tabT + tabB;
+    return resumePeriode() + tabT + tabB;
   }
 
   /* ── Les fenêtres : une commande, la liste des tournées, une tournée ─────────────────────────────────────── */
@@ -456,15 +523,27 @@
     const act = a.dataset.act, id = a.dataset.id ? +a.dataset.id : null;
     if (act === 'fermer-fond') { if (ev.target === a) { st.mo = null; st.ed = null; rendre(); } return; }
     ev.preventDefault();
+    if (act !== 'corr-cmd') { st.vise = null; }
     if (act === 'fermer') { st.mo = null; st.ed = null; rendre(); }
     else if (act === 'pas') { const n = +a.dataset.pas; st.date = st.periode === 'jour' ? plus(st.date, n) : st.periode === 'semaine' ? plus(st.date, 7 * n) : moisPlus(st.date, n); st.D = null; charger(); }
     else if (act === 'auj') { st.date = AUJ(); st.D = null; charger(); }
     else if (act === 'per') { st.periode = a.dataset.v; try { localStorage.setItem('pco-per:' + st.shop, st.periode); } catch (e) { /* sans mémoire */ } charger(); }
     else if (act === 'aller-jour') { st.date = a.dataset.d; st.periode = 'jour'; st.D = null; try { localStorage.setItem('pco-per:' + st.shop, 'jour'); } catch (e) { /* sans mémoire */ } charger(); window.scrollTo(0, 0); }
-    else if (act === 'vue') { st.vue = a.dataset.v; try { localStorage.setItem('pco-vue:' + st.shop, st.vue); } catch (e) { /* sans mémoire */ } rendre(); if (a.closest('.pco-tcarte')) { window.scrollTo(0, 0); } }
+    else if (act === 'vue') { vue(a.dataset.v); rendre(); if (a.closest('.pco-tcarte')) { window.scrollTo(0, 0); } }
     else if (act === 'canal') { st.canal = a.dataset.v; rendre(); }
     else if (act === 'mode') { st.mode = a.dataset.v; rendre(); }
-    else if (act === 'col') { const c = st.el.querySelector('#pco-col-' + id); if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }
+    else if (act === 'col') { const c = st.el.querySelector('#pco-col-' + id); if (c) { c.scrollIntoView({ behavior: doux(), block: 'start' }); } }
+    /* « À corriger » : chaque bouton mène au geste existant. */
+    else if (act === 'corr-cmd') {
+      // La commande, dans la vue ouverte (ligne de la liste ou carte d'un arrêt) ; masquée par un filtre : la liste entière.
+      const sel = `.pco-ligne[data-id="${id}"], .pco-arret[data-id="${id}"]`;
+      st.vise = id; rendre();
+      let el = st.el.querySelector(sel);
+      if (!el) { vue('liste'); st.canal = ''; st.mode = ''; st.q = ''; rendre(); el = st.el.querySelector(sel); }
+      if (el) { el.scrollIntoView({ behavior: doux(), block: 'center' }); }
+    }
+    else if (act === 'corr-tournee') { vue('tournees'); rendre(); const c = st.el.querySelector('#pco-col-' + id); if (c) { c.scrollIntoView({ behavior: doux(), block: 'start' }); } }
+    else if (act === 'corr-demain') { vue('liste'); rendre(); const c = st.el.querySelector('.pco-demain'); if (c) { c.scrollIntoView({ behavior: doux(), block: 'center' }); } }
     else if (act === 'cmd') { st.mo = { type: 'cmd', id }; rendre(); }
     else if (act === 'aff-ok') {
       const c = cmdDe(st.mo.id), v = st.el.querySelector('#pco-aff').value;
@@ -488,6 +567,7 @@
         .catch(err => { e.busy = false; e.err = err.message; rendre(); });
     }
   }
+  function vue(v) { st.vue = v; try { localStorage.setItem('pco-vue:' + st.shop, st.vue); } catch (e) { /* sans mémoire */ } }
   function saisie(ev) {
     const t = ev.target;
     if (t.id === 'pco-q') { st.q = t.value; rendre(); return; }
