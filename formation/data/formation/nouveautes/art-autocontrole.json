@@ -1,0 +1,268 @@
+{
+  "aConfirmer": [
+    "Les grilles en ligne sont les grilles d'exemple : l'écran le dit (« Grilles d'exemple : critères et corrections à valider par la production avant usage en magasin. »). Tant que le siège n'a rien publié, les critères, les causes et les corrections ne sont pas validés : l'article décrit le geste, pas les valeurs.",
+    "Comment l'équipe ouvre la page : aucun lien du dashboard ni de la tablette du Manuel n'y mène dans le code en ligne. Le bouton de la fiche produit de l'app Cuisine (lien avec &produit=) « reste à poser dans son dépôt » (formation/docs/formation.md, 24/11). L'article donne l'adresse /consulant_bo/autocontrole/?shop=… : à remplacer par le vrai chemin quand il existe.",
+    "La page demande une session (code du magasin, console franchisé ou siège, garde.js). Les captures ont été prises en lecture seule, en mode essai (&essai=1), toute écriture bloquée.",
+    "« Prévenir le responsable » et « Réclamation à la production centrale » sont enregistrés avec le contrôle (et « responsable prévenu » est écrit au journal) ; aucun SMS ni message n'est envoyé par le code en ligne. Qui prévient le responsable, et comment la réclamation part-elle chez la production centrale ?",
+    "« Jeter » dit « à encoder en pertes » : l'autocontrôle n'encode pas la perte lui-même. Où l'encoder (caisse, panel) : à préciser.",
+    "Sans pièces saisies, le bilan affiche « Que fait-on de le lot ? » (faute de l'écran, signalée ici, non corrigée).",
+    "147 produits du catalogue de Halle n'ont pas de grille (« Sans grille : critères communs ») : seuls les critères de la Présentation s'y posent.",
+    "Classement : sous-catégorie D8.2 (Contrôle qualité) ; formations FO-12 (Cuisson & gestion four) et FO-07 (Boulangerie technique) ; compétences C-PROD.Cuisson, C-PROD.Pain, C-STOCK.Casse, C-VENTE.Vitrine. Poste « cuisson ». Durée (« 15 min ») estimée."
+  ],
+  "id": "art-autocontrole",
+  "code": "",
+  "type": "Article",
+  "dossier": "04",
+  "version": "1.0",
+  "statut": "a_valider",
+  "langue_origine": "FR",
+  "poste": "cuisson",
+  "moment": null,
+  "acces": "tous",
+  "duree": "15 min de lecture, avec la tablette de l'autocontrôle ouverte en mode essai",
+  "titre": {
+    "fr": "L'autocontrôle qualité d'un produit, sur la tablette",
+    "nl": "De zelfcontrole van de kwaliteit van een product, op de tablet"
+  },
+  "objectif": {
+    "fr": "Contrôler une fournée en une minute, en quatre étapes (cuisson, structure, organoleptique, présentation) : répondre à chaque critère, lire la correction quand une réponse est hors cible, décider du lot au bilan et noter ce qui change à la prochaine fournée.",
+    "nl": "Een baksel in één minuut controleren, in vier stappen (cuisson, structure, organoleptique, présentation): elk criterium beantwoorden, de correctie lezen als een antwoord buiten de norm valt, bij de balans over de partij beslissen en noteren wat er bij het volgende baksel verandert."
+  },
+  "pour": {
+    "fr": "L'équipe en cuisson et en vente (P1, P3), les chefs de section (P4, P5), le manager et l'adjoint (P7, P8) : celui qui sort la fournée ou la met en vitrine.",
+    "nl": "Het team aan de oven en in de verkoop (P1, P3), de sectiechefs (P4, P5), de manager en de adjunct (P7, P8): wie het baksel uit de oven haalt of in de vitrine zet."
+  },
+  "classement": {
+    "souscat": "D8.2",
+    "phases": ["operationnel", "formation"],
+    "postes": ["P1", "P3", "P4", "P5", "P7", "P8"],
+    "competences": ["C-PROD.Cuisson", "C-PROD.Pain", "C-STOCK.Casse", "C-VENTE.Vitrine"],
+    "formations": ["FO-12", "FO-07"],
+    "checklists": []
+  },
+  "sections": [
+    {
+      "titre": { "fr": "Avant de commencer", "nl": "Voor je begint" },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": { "fr": "Pourquoi un autocontrôle", "nl": "Waarom een zelfcontrole" },
+          "texte": {
+            "fr": "Le magasin vérifie lui-même chaque produit qu'il cuit ou met en vitrine.\nUne fournée, un contrôle : « 1 min par produit ».\nChaque réponse hors cible dit sa cause probable, ce qu'on fait du lot maintenant et ce qu'on change à la prochaine fournée.\nLe contrôle enregistré compte dans l'historique du produit et dans les résultats que le siège lit.",
+            "nl": "De winkel controleert zelf elk product dat hij bakt of in de vitrine zet.\nEén baksel, één controle: « 1 min par produit ».\nElk antwoord buiten de norm geeft de waarschijnlijke oorzaak, wat er nu met de partij gebeurt en wat er bij het volgende baksel verandert.\nEen bewaarde controle telt mee in de historiek van het product en in de resultaten die de hoofdzetel leest."
+          },
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": { "fr": "Où ça se trouve", "nl": "Waar het staat" },
+          "texte": {
+            "fr": "Une page de la tablette du magasin : /consulant_bo/autocontrole/?shop= suivi du numéro du magasin.\nElle demande une session du magasin (son code) ; un franchisé n'ouvre que ses magasins.\n&produit= ouvre directement un produit (le lien prévu sur la fiche produit de l'app Cuisine).\n&essai=1 : le mode essai, pour apprendre.",
+            "nl": "Een pagina van de tablet van de winkel: /consulant_bo/autocontrole/?shop= gevolgd door het nummer van de winkel.\nZe vraagt een sessie van de winkel (zijn code); een franchisenemer opent alleen zijn eigen winkels.\n&produit= opent meteen een product (de link die op de productfiche van de app Cuisine voorzien is).\n&essai=1: de testmodus, om te leren."
+          },
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": { "fr": "Les deux bandeaux", "nl": "De twee banners" },
+          "texte": {
+            "fr": "Mode essai : « le contrôle est enregistré à part, il ne compte ni dans l'historique ni dans les résultats du réseau ».\nGrilles d'exemple : « critères et corrections à valider par la production avant usage en magasin ». Le bandeau disparaît quand le siège a publié ses grilles.",
+            "nl": "Testmodus: « le contrôle est enregistré à part, il ne compte ni dans l'historique ni dans les résultats du réseau » (de controle wordt apart bewaard en telt niet mee).\nVoorbeeldroosters: « critères et corrections à valider par la production avant usage en magasin ». De banner verdwijnt wanneer de hoofdzetel zijn roosters gepubliceerd heeft."
+          },
+          "critique": true,
+          "photo": "art-autocontrole-liste.jpg"
+        }
+      ]
+    },
+    {
+      "titre": { "fr": "Choisir le produit", "nl": "Het product kiezen" },
+      "etapes": [
+        {
+          "numero": "4",
+          "titre": { "fr": "La liste du catalogue", "nl": "De lijst van de catalogus" },
+          "texte": {
+            "fr": "En tête : « Quel produit contrôlez-vous ? ».\nLes produits du catalogue du magasin, rangés par grille : « Brioches & cougnous », « Pains », « Viennoiseries », « Pâtisseries & tartes », « Traiteur chaud & snacking ».\nUn produit sans grille est sous « Sans grille : critères communs » : seule la Présentation s'y pose.\nLa recherche trouve un produit, une catégorie ou une grille.\nUn produit déjà contrôlé aujourd'hui porte son état et l'heure (« Conforme à … », « À surveiller à … », « Non conforme à … »).",
+            "nl": "Bovenaan: « Quel produit contrôlez-vous ? ».\nDe producten van de catalogus van de winkel, gerangschikt per rooster: « Brioches & cougnous », « Pains », « Viennoiseries », « Pâtisseries & tartes », « Traiteur chaud & snacking ».\nEen product zonder rooster staat onder « Sans grille : critères communs »: alleen de Présentation wordt gevraagd.\nHet zoekveld vindt een product, een categorie of een rooster.\nEen product dat vandaag al gecontroleerd is, toont zijn toestand en het uur (« Conforme à … », « À surveiller à … », « Non conforme à … »)."
+          },
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": { "fr": "Le parcours en quatre étapes", "nl": "Het parcours in vier stappen" },
+      "etapes": [
+        {
+          "numero": "5",
+          "titre": { "fr": "Les étapes et la fournée", "nl": "De stappen en het baksel" },
+          "texte": {
+            "fr": "En haut : « 1 Cuisson », « 2 Structure », « 3 Organoleptique », « 4 Présentation », puis « Bilan ».\nChaque étape dit combien de critères sont répondus (« 0/3 ») ; une étape faite prend une coche, ou « ! » s'il y a un écart.\nUne étape sans critère pour ce produit n'est pas montrée.\nDessous : « Fournée sortie à » (préremplie 20 minutes avant l'heure, à corriger), le nombre de « pièces », « Votre prénom ».",
+            "nl": "Bovenaan: « 1 Cuisson », « 2 Structure », « 3 Organoleptique », « 4 Présentation », daarna « Bilan ».\nElke stap toont hoeveel criteria beantwoord zijn (« 0/3 »); een afgewerkte stap krijgt een vinkje, of « ! » bij een afwijking.\nEen stap zonder criterium voor dit product wordt niet getoond.\nEronder: « Fournée sortie à » (vooraf ingevuld 20 minuten voor het uur, aan te passen), het aantal « pièces », « Votre prénom »."
+          },
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": { "fr": "La photo de l'étape", "nl": "De foto van de stap" },
+          "texte": {
+            "fr": "À l'étape Cuisson, la photo de référence du catalogue est à gauche, le bouton « Prendre la photo » à côté.\nChaque étape dit sa règle : « Photo obligatoire » ou « Photo facultative ».\nTant qu'une photo obligatoire manque, le bouton du bas dit « Photo obligatoire » et ne passe pas à la suite.\nLa photo est prise avec l'appareil de la tablette.",
+            "nl": "Bij de stap Cuisson staat de referentiefoto van de catalogus links, de knop « Prendre la photo » ernaast.\nElke stap geeft zijn regel: « Photo obligatoire » of « Photo facultative ».\nZolang een verplichte foto ontbreekt, zegt de knop onderaan « Photo obligatoire » en gaat hij niet verder.\nDe foto wordt met de camera van de tablet genomen."
+          },
+          "critique": true,
+          "photo": "art-autocontrole-cuisson.jpg"
+        },
+        {
+          "numero": "7",
+          "titre": { "fr": "Répondre à un critère", "nl": "Een criterium beantwoorden" },
+          "texte": {
+            "fr": "Un critère, un toucher : une échelle (« Pâle », « Doré », « Trop foncé »…), un « Oui » / « Non », ou une mesure (un poids, avec sa plage).\nLa cible est marquée : une coche sur le bon bouton et « Attendu : … » à droite.\nUne réponse à la cible fait défiler au critère suivant.\n« Le reste est conforme » répond à la cible pour tout ce qui reste dans l'étape.\nLe bouton du bas dit « Encore n critères », puis « Suivant : … ».",
+            "nl": "Eén criterium, één aanraking: een schaal (« Pâle », « Doré », « Trop foncé »…), een « Oui » / « Non », of een meting (een gewicht, met zijn marge).\nDe norm is aangeduid: een vinkje op de juiste knop en « Attendu : … » rechts.\nEen antwoord volgens de norm scrolt naar het volgende criterium.\n« Le reste est conforme » beantwoordt alles wat in de stap overblijft volgens de norm.\nDe knop onderaan zegt « Encore n critères », daarna « Suivant : … »."
+          },
+          "photo": null
+        },
+        {
+          "numero": "8",
+          "titre": { "fr": "Un écart ouvre sa correction", "nl": "Een afwijking opent haar correctie" },
+          "texte": {
+            "fr": "Une réponse hors cible prend son état : « À surveiller » ou « Non conforme ».\nLa « Correction » s'ouvre sous le critère, en trois lignes : « Cause probable », « Maintenant » (le lot), « Prochaine fournée » (le réglage).\nSelon la grille : « Revoir le geste : … » (la SOP à relire) et « Proposé en réclamation au bilan » (un défaut du produit cru).",
+            "nl": "Een antwoord buiten de norm krijgt zijn toestand: « À surveiller » of « Non conforme ».\nDe « Correction » opent onder het criterium, in drie lijnen: « Cause probable », « Maintenant » (de partij), « Prochaine fournée » (de instelling).\nVolgens het rooster: « Revoir le geste : … » (de SOP om te herlezen) en « Proposé en réclamation au bilan » (een fout van het rauwe product)."
+          },
+          "critique": true,
+          "photo": "art-autocontrole-correction.jpg"
+        },
+        {
+          "numero": "9",
+          "titre": { "fr": "La Présentation : la photo et le planogramme", "nl": "De Présentation: de foto en het planogram" },
+          "texte": {
+            "fr": "Deux critères pour tous les produits.\n« Semblable à la photo de référence » : la photo du catalogue à côté de celle du produit ; « Identique », « Proche, un détail diffère » ou « Différent ».\n« À sa place dans la vitrine (planogramme) » : la section du planogramme du magasin, étage par étage, la case du produit liserée de bordeaux, le nombre de « pièces en façade ».\nProduit absent du planogramme du jour : l'écran demande de vérifier qu'il est en vitrine, à la place prévue par le responsable.\n« Photo de la vitrine » : facultative ou obligatoire selon la grille.",
+            "nl": "Twee criteria voor alle producten.\n« Semblable à la photo de référence »: de foto van de catalogus naast die van het product; « Identique », « Proche, un détail diffère » of « Différent ».\n« À sa place dans la vitrine (planogramme) »: de sectie van het planogram van de winkel, verdieping per verdieping, het vak van het product met een bordeaux rand, het aantal « pièces en façade ».\nProduct niet in het planogram van de dag: het scherm vraagt na te gaan of het in de vitrine staat, op de plaats die de verantwoordelijke voorzien heeft.\n« Photo de la vitrine »: facultatief of verplicht volgens het rooster."
+          },
+          "photo": "art-autocontrole-presentation.jpg"
+        }
+      ]
+    },
+    {
+      "titre": { "fr": "Le bilan et la décision", "nl": "De balans en de beslissing" },
+      "etapes": [
+        {
+          "numero": "10",
+          "titre": { "fr": "Ce que dit le bilan", "nl": "Wat de balans zegt" },
+          "texte": {
+            "fr": "Le titre : « Conforme, en vente », « Vendable, à corriger », « Déclasser ce lot » ou « Ne pas vendre ce lot ».\nTrois chiffres : « conformes », « à surveiller », « non conformes ».\n« Pour la prochaine fournée » : les réglages à faire, chacun avec les critères qui le demandent.\n« Les écarts » : chaque réponse hors cible et sa cause.",
+            "nl": "De titel: « Conforme, en vente », « Vendable, à corriger », « Déclasser ce lot » of « Ne pas vendre ce lot ».\nDrie cijfers: « conformes », « à surveiller », « non conformes ».\n« Pour la prochaine fournée »: de instellingen om te doen, elk met de criteria die erom vragen.\n« Les écarts »: elk antwoord buiten de norm en zijn oorzaak."
+          },
+          "photo": null
+        },
+        {
+          "numero": "11",
+          "titre": { "fr": "Décider du lot", "nl": "Over de partij beslissen" },
+          "texte": {
+            "fr": "« Que fait-on de … ? » : « Mettre en vente » (en vitrine), « Déclasser » (vente du jour, prix réduit), « Jeter » (à encoder en pertes).\nLa décision la plus sévère des écarts porte l'étiquette « Suggéré » ; on peut en choisir une autre.\n« Prévenir le responsable » : allumé d'office s'il y a une non-conformité.\n« Réclamation à la production centrale » : allumé d'office pour un défaut du produit cru, pas pour un défaut de cuisson.",
+            "nl": "« Que fait-on de … ? »: « Mettre en vente » (in de vitrine), « Déclasser » (verkoop van de dag, verlaagde prijs), « Jeter » (als verlies in te geven).\nDe strengste beslissing van de afwijkingen krijgt het label « Suggéré »; je kan een andere kiezen.\n« Prévenir le responsable »: staat vanzelf aan bij een non-conformiteit.\n« Réclamation à la production centrale »: staat vanzelf aan bij een fout van het rauwe product, niet bij een bakfout."
+          },
+          "critique": true,
+          "photo": "art-autocontrole-bilan.jpg"
+        },
+        {
+          "numero": "12",
+          "titre": { "fr": "Valider", "nl": "Bevestigen" },
+          "texte": {
+            "fr": "« Valider l'autocontrôle » enregistre ; le bouton dit avant « Encore n critères » ou « Photo obligatoire manquante » tant qu'il manque quelque chose.\nLe serveur recalcule le bilan : c'est lui qui fait foi.\nPas enregistré (réseau) : les réponses sont gardées, on réessaie.\n« Modifier » revient aux étapes.",
+            "nl": "« Valider l'autocontrôle » bewaart; daarvoor zegt de knop « Encore n critères » of « Photo obligatoire manquante » zolang er iets ontbreekt.\nDe server berekent de balans opnieuw: die is bepalend.\nNiet bewaard (netwerk): de antwoorden blijven bewaard, opnieuw proberen.\n« Modifier » gaat terug naar de stappen."
+          },
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": { "fr": "Après l'enregistrement", "nl": "Na het bewaren" },
+      "etapes": [
+        {
+          "numero": "13",
+          "titre": { "fr": "L'écran de fin", "nl": "Het eindscherm" },
+          "texte": {
+            "fr": "« Autocontrôle enregistré » (« (essai) » en mode essai) : le produit, ce qui est fait du lot, le nombre d'écarts, « le responsable est prévenu » si c'est coché.\nRappel des réglages « Pour la prochaine fournée ».\nLe nombre de contrôles du produit sur 7 jours, et « défaut qui revient » quand un même écart revient 3 fois ou plus.\n« Recontrôler ce produit » ou « Contrôler un autre produit ».",
+            "nl": "« Autocontrôle enregistré » (« (essai) » in testmodus): het product, wat er met de partij gebeurt, het aantal afwijkingen, « le responsable est prévenu » als dat aangevinkt is.\nHerinnering aan de instellingen « Pour la prochaine fournée ».\nHet aantal controles van het product over 7 dagen, en « défaut qui revient » wanneer dezelfde afwijking 3 keer of meer terugkomt.\n« Recontrôler ce produit » of « Contrôler un autre produit »."
+          },
+          "photo": null
+        },
+        {
+          "numero": "14",
+          "titre": { "fr": "Ce que voit le siège", "nl": "Wat de hoofdzetel ziet" },
+          "texte": {
+            "fr": "Un contrôle enregistré (hors essai) est écrit au journal du réseau : produit, fournée, décision, nombre d'écarts.\nLe siège lit les résultats et règle les grilles (une par catégorie, des critères communs, des surcharges par produit) sur sa page à lui.\nLes grilles se changent au siège, pas au magasin.",
+            "nl": "Een bewaarde controle (buiten testmodus) wordt in het journaal van het netwerk geschreven: product, baksel, beslissing, aantal afwijkingen.\nDe hoofdzetel leest de resultaten en stelt de roosters in (één per categorie, gemeenschappelijke criteria, aanpassingen per product) op zijn eigen pagina.\nDe roosters worden in de hoofdzetel gewijzigd, niet in de winkel."
+          },
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Une fournée, un contrôle, au moment de la sortie du four ou de la mise en vitrine : la fournée et le nombre de pièces se corrigent avant de valider.",
+      "nl": "Eén baksel, één controle, bij het uit de oven halen of het in de vitrine zetten: het baksel en het aantal stuks worden verbeterd voor het bevestigen."
+    },
+    {
+      "fr": "Une photo obligatoire manquante bloque la suite et la validation.",
+      "nl": "Een ontbrekende verplichte foto blokkeert het vervolg en de bevestiging."
+    },
+    {
+      "fr": "« Le reste est conforme » ne sert qu'après avoir regardé : il répond « à la cible » pour tout ce qui reste.",
+      "nl": "« Le reste est conforme » dient pas nadat je gekeken hebt: het antwoordt « volgens de norm » voor alles wat overblijft."
+    },
+    {
+      "fr": "La décision « Suggéré » est la plus sévère des écarts. « Jeter » ne s'encode pas tout seul : la perte est à encoder.",
+      "nl": "De beslissing « Suggéré » is de strengste van de afwijkingen. « Jeter » wordt niet vanzelf ingegeven: het verlies moet ingegeven worden."
+    },
+    {
+      "fr": "Le mode essai (&essai=1) sert à apprendre : il ne compte ni dans l'historique ni dans les résultats du réseau.",
+      "nl": "De testmodus (&essai=1) dient om te leren: hij telt niet mee in de historiek en niet in de resultaten van het netwerk."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Une réponse est hors cible. Que montre l'écran sous le critère ?",
+        "nl": "Een antwoord valt buiten de norm. Wat toont het scherm onder het criterium?"
+      },
+      "choix": {
+        "fr": ["Rien : on le voit seulement au bilan", "La correction : cause probable, maintenant, prochaine fournée", "Un message au responsable"],
+        "nl": ["Niets: je ziet het pas bij de balans", "De correctie: waarschijnlijke oorzaak, nu, volgend baksel", "Een bericht aan de verantwoordelijke"]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Que fait le bouton « Le reste est conforme » ?",
+        "nl": "Wat doet de knop « Le reste est conforme »?"
+      },
+      "choix": {
+        "fr": ["Il répond à la cible pour tous les critères qui restent dans l'étape", "Il valide l'autocontrôle", "Il passe la photo obligatoire"],
+        "nl": ["Hij antwoordt volgens de norm voor alle criteria die in de stap overblijven", "Hij bevestigt de zelfcontrole", "Hij slaat de verplichte foto over"]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Au bilan, quelle décision porte l'étiquette « Suggéré » ?",
+        "nl": "Welke beslissing krijgt bij de balans het label « Suggéré »?"
+      },
+      "choix": {
+        "fr": ["Toujours « Mettre en vente »", "Celle du dernier contrôle du produit", "La plus sévère des écarts"],
+        "nl": ["Altijd « Mettre en vente »", "Die van de laatste controle van het product", "De strengste van de afwijkingen"]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {
+        "fr": "Un contrôle fait en mode essai (&essai=1) compte-t-il dans l'historique du produit ?",
+        "nl": "Telt een controle in testmodus (&essai=1) mee in de historiek van het product?"
+      },
+      "choix": {
+        "fr": ["Oui, comme un autre", "Non : il est enregistré à part", "Oui, mais seulement le jour même"],
+        "nl": ["Ja, zoals een andere", "Nee: hij wordt apart bewaard", "Ja, maar alleen dezelfde dag"]
+      },
+      "bonne": 1
+    }
+  ]
+}
