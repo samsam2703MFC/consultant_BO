@@ -337,3 +337,4 @@
 2026-11-26T13:52:08Z Vidéos d'instruction : le chapitre « Connecter le compte TF Buddy » retiré de Clients › Bureaux
 2026-11-26T14:14:21Z Formation : la médiathèque des vidéos (sections du rail, pages, onglets, titres ; recherche avec synonymes, début de mot et faute de frappe)
 2026-11-26T14:21:26Z Bureaux : formulaire d'inscription en six étapes, générateur de liens par magasin
+2026-11-26T14:52:57Z Formation : la médiathèque en collections (Utilisation du dashboard, Production, Vente et comptoir, Hygiène et sécurité, Ouverture et fermeture), les vidéos filmées ajoutées dans le portail (rail › Médiathèque : fichier ou lien), « Voir dans la médiathèque » dans le lecteur du dashboard

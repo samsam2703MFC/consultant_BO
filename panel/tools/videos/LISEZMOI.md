@@ -109,6 +109,11 @@ l'**onglet**, le **titre**. La recherche ignore accents et majuscules, connaît 
 résumé ; « / » y va, Entrée ouvre le premier résultat. Une nouvelle page du rail : l'ajouter à `VSECTIONS`
 (`php panel/bin/tests_videos.php` le vérifie).
 
+Ces vidéos forment la collection « Utilisation du dashboard » ; les autres collections (Production, Vente et comptoir,
+Hygiène et sécurité, Ouverture et fermeture) sont des vidéos filmées, ajoutées dans le portail de formation (rail ›
+Médiathèque, `formation/src/mediatheque.php`). Le lecteur du dashboard porte « Voir dans la médiathèque ↗ »
+(`#/videos/v/<id>`).
+
 ## La routine : adapter et faire les nouvelles vidéos
 
 ```bash

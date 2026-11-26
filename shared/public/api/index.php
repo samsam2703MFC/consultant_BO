@@ -164,6 +164,7 @@ require __DIR__ . '/../../../formation/src/formation_postes.php';
 // La formation continue (22/11/2026) : un type de formation, ses dossiers par boutique, la validation du consultant.
 require __DIR__ . '/../../../formation/src/formation_continue.php';
 require __DIR__ . '/../../../formation/src/examens.php';   // les examens théoriques des candidats franchisés (26/11/2026)
+require __DIR__ . '/../../../formation/src/mediatheque.php';   // la médiathèque : les vidéos filmées (26/11/2026)
 // La recherche de la formation (22/11/2026) : l'index de tout le catalogue pour la méga-barre de « Formations et suivi ».
 require __DIR__ . '/../../../formation/src/formation_recherche.php';
 require __DIR__ . '/../../../consultant/src/benchmark.php';
@@ -462,6 +463,11 @@ function route(string $method, string $path): mixed
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
+    // --- Formation › Médiathèque (26/11/2026, src/mediatheque.php) : les vidéos filmées ; /liste est lue par le catalogue.
+    if ($path === '/formation/mediatheque' || str_starts_with($path, '/formation/mediatheque/')) {
+        $f = mtRoute($method, $path);
         if ($f !== null) { return $f; }
     }
     // --- Formation › Examens théoriques des candidats franchisés (26/11/2026, src/examens.php) ; /banque est lue par le Recrutement.

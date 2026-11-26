@@ -181,11 +181,17 @@
         .then(function (j) { S.videosDossier = essais[i]; return j; }, function () { return essayer(i + 1); });
     }
     S.videosLecture = essayer(0).then(function (j) { S.videos = (j && j.videos || []).filter(function (v) { return v && v.id && v.fichier; }); },
-      function (e) { S.videos = []; S.videosErreur = e.message; }).then(function () { S.videosLecture = null; });
+      function (e) { S.videos = []; S.videosErreur = e.message; }).then(chargerFilmees).then(function () { S.videosLecture = null; });
     return S.videosLecture;
   }
+  /** Les vidéos filmées (Production, Vente et comptoir…) : l'API du module (formation/src/mediatheque.php), publiées seulement. */
+  function chargerFilmees() {
+    return fetch(API + '/formation/mediatheque/liste', { credentials: 'same-origin', cache: 'no-cache', headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) { S.filmees = (j && j.videos) || []; }, function () { S.filmees = []; });
+  }
   function carteVideotheque() {
-    var n = S.videos ? S.videos.length : null;
+    var n = S.videos ? S.videos.length + (S.filmees || []).length : null;
     var nf = S.videos ? S.videos.filter(function (v) { return v.genre === 'formation'; }).length : 0;
     return '<div class="ct-carte">' +
       '<a class="ct-couv ct-couv-vid" href="#/videos" style="text-decoration:none">' +
@@ -216,6 +222,18 @@
     { s: { fr: 'Se former', nl: 'Leren' }, p: [['formation', 'Formations et suivi']] },
     { s: { fr: 'En bas du rail', nl: 'Onderaan' }, p: [['coffre', 'Mon coffre-fort'], ['mails', 'Paramètres']] },
   ];
+  /* Les COLLECTIONS (26/11/2026, Sam : « vidéo d'utilisation du dashboard, vidéo de production… ») : le dashboard (le
+     registre ci-dessus, rangé par section, page, onglet) et les vidéos filmées, rangées par catégorie (texte libre),
+     ajoutées dans le portail de formation (Médiathèque › Gérer les vidéos). #/videos/c/<collection>[/<catégorie>] ;
+     #/videos/v/<id> ouvre une vidéo (le lien du lecteur du dashboard). */
+  var VCOLS = [['dashboard', { fr: 'Utilisation du dashboard', nl: 'Gebruik van het dashboard' }], ['production', { fr: 'Production', nl: 'Productie' }],
+    ['vente', { fr: 'Vente et comptoir', nl: 'Verkoop en toonbank' }], ['hygiene', { fr: 'Hygiène et sécurité', nl: 'Hygiëne en veiligheid' }],
+    ['ouverture', { fr: 'Ouverture et fermeture', nl: 'Opening en sluiting' }]];
+  function vNb(n) { return n + ' ' + T(n > 1 ? 'vidéos' : 'vidéo', n > 1 ? 'video’s' : 'video'); }
+  function vColNom(k) { var c = VCOLS.filter(function (x) { return x[0] === k; })[0]; return c ? L(c[1]) : k; }
+  function vSlug(s) { return vNorm(s).replace(/ /g, '-') || 'autres'; }
+  var RACINE_SITE = new URL('../../', location.href).href;   // le site : le catalogue vit sous formation/catalogue/
+  VNIV.video = { fr: 'Vidéo', nl: 'Video' };
   var VALIAS = { jour: 'ops', trimestre: 'annee', frais: 'tresorerie', reclamation: 'ops' };
   var VTYPES = [['tout', { fr: 'Tout', nl: 'Alles' }], ['page', { fr: 'Pages', nl: 'Pagina’s' }], ['onglet', { fr: 'Onglets', nl: 'Tabbladen' }],
     ['fonction', { fr: 'Fonctions', nl: 'Functies' }], ['formation', { fr: 'Formations', nl: 'Opleidingen' }], ['nouveau', { fr: 'Nouveautés', nl: 'Nieuw' }]];
@@ -243,7 +261,7 @@
   }
   /** L'index : chaque vidéo avec sa section, sa page, son onglet, et les mots où chercher (refait à chaque lecture du registre). */
   function vIndex() {
-    if (S.vidx && S.vidxDe === S.videos && S.vidxL === S.langue) return S.vidx;
+    if (S.vidx && S.vidxDe === S.videos && S.vidxF === S.filmees && S.vidxL === S.langue) return S.vidx;
     var par = {}; (S.videos || []).forEach(function (v) { par[v.id] = v; });
     S.vidx = (S.videos || []).map(function (v, ordre) {
       var p = v, o = null, g = 0;
@@ -251,10 +269,20 @@
       if (v.niveau === 'onglet') { o = v; }
       var c = vCat(((p && p.vues) || v.vues || ['?'])[0]);
       var sec = VSECTIONS[c.si] ? L(VSECTIONS[c.si].s) : '';
-      return { v: v, ordre: ordre, niv: v.niveau || 'page', page: p, onglet: o, cat: c, sec: sec,
-        mTitre: vMots(v.titre), mLieu: vMots(c.nom + ' ' + (o && o !== v ? o.titre : '') + ' ' + (p && p !== v ? p.titre : '')), mSec: vMots(sec), mRes: vMots(v.resume) };
+      return { v: v, ordre: ordre, col: 'dashboard', niv: v.niveau || 'page', page: p, onglet: o, cat: c, sec: sec,
+        mTitre: vMots(v.titre), mLieu: vMots(c.nom + ' ' + (o && o !== v ? o.titre : '') + ' ' + (p && p !== v ? p.titre : '')), mSec: vMots(sec + ' dashboard'), mRes: vMots(v.resume) };
     });
-    S.vidxDe = S.videos; S.vidxL = S.langue;
+    // Les vidéos filmées : la collection tient lieu de section, la catégorie de page.
+    var n0 = S.vidx.length, nl = S.langue === 'nl';
+    (S.filmees || []).forEach(function (f, i) {
+      var v = { id: 'm' + f.id, titre: (nl && f.titreNl) || f.titre, resume: (nl && f.resumeNl) || f.resume || '', duree: f.duree, filme: f,
+        afficheUrl: f.affiche ? RACINE_SITE + f.affiche : (f.lien && f.lien.type === 'youtube' ? 'https://i.ytimg.com/vi/' + f.lien.id + '/hqdefault.jpg' : '') };
+      var cn = vColNom(f.collection), nom = f.categorie || T('Autres vidéos', 'Overige video’s');
+      S.vidx.push({ v: v, ordre: n0 + i, col: f.collection, niv: 'video', page: null, onglet: null, sec: cn,
+        cat: { cle: 'f:' + f.collection + ':' + vSlug(f.categorie || ''), slug: vSlug(f.categorie || ''), nom: nom, si: -1, pi: 0 },
+        mTitre: vMots(f.titre + ' ' + (f.titreNl || '')), mLieu: vMots(nom), mSec: vMots(cn), mRes: vMots(v.resume) });
+    });
+    S.vidxDe = S.videos; S.vidxF = S.filmees; S.vidxL = S.langue;
     return S.vidx;
   }
   function vDist1(a, b) {   // vrai si a et b diffèrent d'au plus une lettre (ajout, retrait, remplacement, inversion)
@@ -323,13 +351,14 @@
     var g = e.v.genre || 'tuto';
     if (g === 'formation') return T('Formation', 'Opleiding');
     if (g === 'nouveau' && e.niv === 'page') return T('Nouveauté', 'Nieuw');
+    if (e.niv === 'video') return e.sec;
     return L(VNIV[e.niv] || VNIV.page);
   }
   /** Une carte : l'affiche, la durée, le type, le titre (mots trouvés en évidence), où elle se range, le résumé. */
   function carteV(dos, e, formes, cheminSans) {
     var v = e.v;
     return '<button type="button" class="ct-vt ct-mt-' + e.niv + '" data-video="' + esc(v.id) + '">' +
-      '<span class="ct-vt-aff">' + (v.affiche ? '<img src="' + esc(dos + v.affiche) + '" alt="" loading="lazy">' : '') + '<span class="ct-vt-lire" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 7 9 5-9 5z"/></svg></span>' + (v.duree ? '<span class="ct-vt-d">' + esc(v.duree) + '</span>' : '') + '</span>' +
+      '<span class="ct-vt-aff">' + (v.afficheUrl || v.affiche ? '<img src="' + esc(v.afficheUrl || dos + v.affiche) + '" alt="" loading="lazy">' : '') + '<span class="ct-vt-lire" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 7 9 5-9 5z"/></svg></span>' + (v.duree ? '<span class="ct-vt-d">' + esc(v.duree) + '</span>' : '') + '</span>' +
       '<span class="ct-vt-k">' + esc(vKicker(e)) + '</span><span class="ct-vt-t">' + vSurligne(v.titre, formes) + '</span>' +
       '<span class="ct-mt-ch">' + vChemin(e, cheminSans) + '</span>' + (v.resume ? '<span class="ct-vt-r">' + esc(v.resume) + '</span>' : '') + '</button>';
   }
@@ -338,7 +367,7 @@
     var c = vCat(cle), P = E.filter(function (e) { return e.niv === 'page'; }), aff = (P[0] || E[0]).v.affiche;
     var no = E.filter(function (e) { return e.niv === 'onglet'; }).length, nf = E.filter(function (e) { return e.niv === 'fonction'; }).length;
     return '<a class="ct-mt-cat" href="#/videos/' + encodeURIComponent(c.cle) + '"><span class="ct-vt-aff">' + (aff ? '<img src="' + esc(dos + aff) + '" alt="" loading="lazy">' : '') + '</span>' +
-      '<span class="ct-vt-t">' + esc(c.nom) + '</span><span class="ct-mt-n">' + E.length + ' ' + T('vidéos', 'video’s') +
+      '<span class="ct-vt-t">' + esc(c.nom) + '</span><span class="ct-mt-n">' + vNb(E.length) +
       (no ? ' · ' + no + ' ' + T('onglet' + (no > 1 ? 's' : ''), 'tabblad' + (no > 1 ? 'en' : '')) : '') + (nf ? ' · ' + nf + ' ' + T('fonction' + (nf > 1 ? 's' : ''), 'functie' + (nf > 1 ? 's' : '')) : '') + '</span></a>';
   }
   /** Les vidéos rangées par section puis par page (une liste filtrée par type, sans recherche). */
@@ -372,79 +401,155 @@
       (corps ? '<h2 class="ct-mt-sec">' + T('Onglet par onglet', 'Per tabblad') + '</h2>' + corps : '') +
       (seules.length ? '<div class="ct-vt-grille">' + seules.map(function (e) { return carteV(dos, e, null, c.nom); }).join('') + '</div>' : '');
   }
-  function vSommaire(cle, E) {
-    return '<nav class="ct-mt-nav" aria-label="' + T('Sections', 'Secties') + '"><a href="#/videos" class="' + (!cle ? 'on' : '') + '">' + T('Toute la médiathèque', 'De hele mediatheek') + ' <i>' + E.length + '</i></a>' +
-      VSECTIONS.map(function (S1, si) {
-        var P = S1.p.filter(function (pp) { return E.some(function (e) { return e.cat.cle === pp[0]; }); }); if (!P.length) return '';
-        return '<div class="ct-mt-ns">' + esc(L(S1.s)) + '</div>' + P.map(function (pp) {
-          var n = E.filter(function (e) { return e.cat.cle === pp[0]; }).length;
-          return '<a href="#/videos/' + pp[0] + '" class="' + (cle === pp[0] ? 'on' : '') + '">' + esc(pp[1]) + ' <i>' + n + '</i></a>';
+  /** Le sommaire : les collections ; sous celle qui est ouverte, ses sections et pages (dashboard) ou ses catégories. */
+  function vSommaire(col, cle, catS, E) {
+    return '<nav class="ct-mt-nav" aria-label="' + T('Collections', 'Collecties') + '"><a href="#/videos" class="' + (!col ? 'on' : '') + '">' + T('Toute la médiathèque', 'De hele mediatheek') + ' <i>' + E.length + '</i></a>' +
+      VCOLS.map(function (c) {
+        var Ec = E.filter(function (e) { return e.col === c[0]; });
+        var h = '<a href="#/videos/c/' + c[0] + '" class="ct-mt-coln ' + (col === c[0] && !cle && !catS ? 'on' : '') + '">' + esc(L(c[1])) + ' <i>' + Ec.length + '</i></a>';
+        if (col !== c[0]) return h;
+        if (c[0] === 'dashboard') {
+          return h + VSECTIONS.map(function (S1) {
+            var P = S1.p.filter(function (pp) { return Ec.some(function (e) { return e.cat.cle === pp[0]; }); }); if (!P.length) return '';
+            return '<div class="ct-mt-ns">' + esc(L(S1.s)) + '</div>' + P.map(function (pp) {
+              return '<a href="#/videos/' + pp[0] + '" class="ct-mt-sous ' + (cle === pp[0] ? 'on' : '') + '">' + esc(pp[1]) + ' <i>' + Ec.filter(function (e) { return e.cat.cle === pp[0]; }).length + '</i></a>';
+            }).join('');
+          }).join('');
+        }
+        return h + vCatsF(Ec).map(function (k) {
+          return '<a href="#/videos/c/' + c[0] + '/' + k.slug + '" class="ct-mt-sous ' + (catS === k.slug ? 'on' : '') + '">' + esc(k.nom) + ' <i>' + k.E.length + '</i></a>';
         }).join('');
       }).join('') + '</nav>';
   }
+  /** Les catégories d'une collection filmée, dans l'ordre alphabétique (« Autres vidéos » en dernier). */
+  function vCatsF(Ec) {
+    var vus = {}, K = [];
+    Ec.forEach(function (e) { if (!vus[e.cat.slug]) { vus[e.cat.slug] = { slug: e.cat.slug, nom: e.cat.nom, vide: !e.v.filme.categorie, E: [] }; K.push(vus[e.cat.slug]); } vus[e.cat.slug].E.push(e); });
+    return K.sort(function (a, b) { return (a.vide - b.vide) || a.nom.localeCompare(b.nom, 'fr'); });
+  }
+  /** La carte d'une catégorie filmée. */
+  function carteCatF(col, k) {
+    var aff = (k.E.filter(function (e) { return e.v.afficheUrl; })[0] || { v: {} }).v.afficheUrl;
+    return '<a class="ct-mt-cat" href="#/videos/c/' + col + '/' + k.slug + '"><span class="ct-vt-aff">' + (aff ? '<img src="' + esc(aff) + '" alt="" loading="lazy">' : '') + '</span>' +
+      '<span class="ct-vt-t">' + esc(k.nom) + '</span><span class="ct-mt-n">' + k.E.length + ' ' + T('vidéo' + (k.E.length > 1 ? 's' : ''), 'video' + (k.E.length > 1 ? '’s' : '')) + '</span></a>';
+  }
+  /** Une collection filmée : chaque catégorie et ses vidéos (ou une seule catégorie). */
+  function vColFilmee(dos, col, catS, E) {
+    var K = vCatsF(E.filter(function (e) { return e.col === col; })).filter(function (k) { return !catS || k.slug === catS; });
+    if (!K.length) return '<p class="ct-msg">' + T('Pas encore de vidéo dans cette collection. Elles s’ajoutent dans le portail de formation : Médiathèque › Gérer les vidéos.', 'Nog geen video in deze collectie.') + '</p>';
+    return K.map(function (k) {
+      return (catS ? '' : '<h3 class="ct-vt-h"><a href="#/videos/c/' + col + '/' + k.slug + '">' + esc(k.nom) + '</a> <span class="ct-chip">' + k.E.length + '</span></h3>') +
+        '<div class="ct-vt-grille">' + k.E.map(function (e) { return carteV(dos, e, null, e.sec); }).join('') + '</div>';
+    }).join('');
+  }
+  /** La collection du dashboard : les modules de formation, les nouveautés, puis chaque section et ses pages. */
+  function vColDashboard(dos, E) {
+    var Fo = E.filter(function (e) { return (e.v.genre || 'tuto') === 'formation'; }), Nv = E.filter(function (e) { return (e.v.genre || 'tuto') === 'nouveau'; });
+    return (Fo.length ? '<h2 class="ct-mt-sec">' + T('Modules de formation', 'Opleidingsmodules') + '</h2><div class="ct-vt-grille">' + Fo.map(function (e) { return carteV(dos, e); }).join('') + '</div>' : '') +
+      (Nv.length ? '<h2 class="ct-mt-sec">' + T('Nouvelles fonctions', 'Nieuwe functies') + '</h2><div class="ct-vt-grille">' + Nv.map(function (e) { return carteV(dos, e); }).join('') + '</div>' : '') +
+      VSECTIONS.map(function (S1) {
+        var P = S1.p.filter(function (pp) { return E.some(function (e) { return e.cat.cle === pp[0]; }); }); if (!P.length) return '';
+        return '<h2 class="ct-mt-sec">' + esc(L(S1.s)) + '</h2><div class="ct-mt-cats">' + P.map(function (pp) { return carteCat(dos, pp[0], E.filter(function (e) { return e.cat.cle === pp[0]; })); }).join('') + '</div>';
+      }).join('');
+  }
+  /** L'accueil : chaque collection, ses pages (dashboard) ou ses catégories. */
+  function vAccueil(dos, E) {
+    return VCOLS.map(function (c) {
+      var Ec = E.filter(function (e) { return e.col === c[0]; });
+      var h = '<h2 class="ct-mt-sec ct-mt-colh"><a href="#/videos/c/' + c[0] + '">' + esc(L(c[1])) + '</a> <span class="ct-chip">' + Ec.length + '</span></h2>';
+      if (!Ec.length) return h + '<p class="ct-mt-note">' + T('Pas encore de vidéo.', 'Nog geen video.') + '</p>';
+      if (c[0] === 'dashboard') {
+        var P = []; VSECTIONS.forEach(function (S1) { S1.p.forEach(function (pp) { if (Ec.some(function (e) { return e.cat.cle === pp[0]; })) P.push(pp[0]); }); });
+        // Les dix premières pages, puis le lien vers toute la collection : les autres collections restent en vue.
+        return h + '<div class="ct-mt-cats">' + P.slice(0, 10).map(function (k) { return carteCat(dos, k, Ec.filter(function (e) { return e.cat.cle === k; })); }).join('') + '</div>' +
+          (P.length > 10 ? '<p><a class="ct-vt-plus" href="#/videos/c/dashboard">' + T('Les ' + P.length + ' pages du dashboard →', 'De ' + P.length + ' pagina’s van het dashboard →') + '</a></p>' : '');
+      }
+      var K = vCatsF(Ec);
+      return h + (K.length > 1 || !K[0].vide ? '<div class="ct-mt-cats">' + K.map(function (k) { return carteCatF(c[0], k); }).join('') + '</div>'
+        : '<div class="ct-vt-grille">' + Ec.map(function (e) { return carteV(dos, e, null, e.sec); }).join('') + '</div>');
+    }).join('');
+  }
   function rendreVideotheque() {
-    var V = S.videos || [], dos = S.videosDossier || dossierVideos();
-    var brut = route().cle ? decodeURIComponent(route().cle) : '';
-    // L'ancienne adresse #/videos/<id d'une vidéo de page> mène à sa page.
-    var pv = brut ? V.filter(function (v) { return v.id === brut && estPageV(v); })[0] : null;
-    var cle = brut ? (pv ? vCat((pv.vues || [''])[0]).cle : vCat(brut).cle) : '';
-    if (cle && vCat(cle).si >= VSECTIONS.length) cle = '';   // une clé inconnue : l'accueil
-    var E = V.length ? vIndex() : [], q = S.vq || '', type = S.vtype || 'tout', corps, compte = '';
+    var V = S.videos || [], dos = S.videosDossier || dossierVideos(), r = route();
+    var E = S.videos != null ? vIndex() : [], q = S.vq || '', type = S.vtype || 'tout', corps, compte = '';
+    // L'adresse : #/videos/c/<collection>[/<catégorie>], #/videos/v/<id> (une vidéo), #/videos/<page du dashboard>.
+    var col = '', cle = '', catS = '', vid = '';
+    if (r.cle === 'c') { col = VCOLS.some(function (c) { return c[0] === r.action; }) ? r.action : ''; catS = col && col !== 'dashboard' ? (r.id || '') : ''; }
+    else if (r.cle === 'v') { vid = decodeURIComponent(r.action || ''); }
+    else if (r.cle) {
+      var brut = decodeURIComponent(r.cle);
+      // L'ancienne adresse #/videos/<id d'une vidéo de page> mène à sa page.
+      var pv = V.filter(function (v) { return v.id === brut && estPageV(v); })[0];
+      cle = pv ? vCat((pv.vues || [''])[0]).cle : vCat(brut).cle;
+      if (vCat(cle).si >= VSECTIONS.length) cle = '';   // une clé inconnue : l'accueil
+    }
+    if (vid) {
+      var ev = E.filter(function (x) { return x.v.id === vid; })[0];
+      if (ev && ev.col === 'dashboard') { cle = ev.cat.cle; } else if (ev) { col = ev.col; catS = ev.cat.slug; }
+      if (ev && S.vLu !== vid) { S.vLu = vid; setTimeout(function () { if (!document.querySelector('.ct-voile')) lireVideo(vid); }, 0); }
+    } else { S.vLu = null; }
+    if (cle) col = 'dashboard';
+    var dash = col === 'dashboard';
+    // La portée de la recherche et des puces : la page, la catégorie, la collection, ou (à l'accueil) la puce choisie.
+    var colf = col || S.vcolf || '';
+    var dans = function (e) { return (!colf || e.col === colf) && (!cle || e.cat.cle === cle) && (!catS || e.cat.slug === catS); };
+    var ici = cle ? vCat(cle).nom : catS ? (E.filter(function (e) { return e.col === col && e.cat.slug === catS; })[0] || { cat: { nom: catS } }).cat.nom : col ? vColNom(col) : '';
     if (S.videos == null) { corps = '<p class="ct-msg">' + T('Lecture des vidéos…', 'Video’s lezen…') + '</p>'; }
-    else if (!V.length) { corps = '<p class="ct-msg">' + esc(S.videosErreur ? T('Lecture impossible : ', 'Lezen onmogelijk: ') + S.videosErreur : T('Aucune vidéo pour le moment.', 'Nog geen video’s.')) + '</p>'; }
+    else if (!E.length) { corps = '<p class="ct-msg">' + esc(S.videosErreur ? T('Lecture impossible : ', 'Lezen onmogelijk: ') + S.videosErreur : T('Aucune vidéo pour le moment.', 'Nog geen video’s.')) + '</p>'; }
     else if (q.trim()) {
-      var Rr = vChercher(q, type), R = cle ? Rr.liste.filter(function (e) { return e.cat.cle === cle; }) : Rr.liste, n = S.vplus ? R.length : Math.min(R.length, 48);
-      compte = R.length + ' ' + T('résultat' + (R.length > 1 ? 's' : ''), 'resulta' + (R.length > 1 ? 'ten' : 'at')) + (cle ? ' · ' + esc(vCat(cle).nom) : '');
-      corps = !R.length ? '<p class="ct-msg">' + T('Aucune vidéo pour « ', 'Geen video voor « ') + esc(q) + ' ». ' + T('Essayez un autre mot, ou parcourez les sections.', 'Probeer een ander woord, of blader door de secties.') + '</p>'
+      var Rr = vChercher(q, dash ? type : 'tout'), R = Rr.liste.filter(dans), n = S.vplus ? R.length : Math.min(R.length, 48);
+      compte = R.length + ' ' + T('résultat' + (R.length > 1 ? 's' : ''), 'resulta' + (R.length > 1 ? 'ten' : 'at')) + (ici ? ' · ' + esc(ici) : '');
+      corps = !R.length ? '<p class="ct-msg">' + T('Aucune vidéo pour « ', 'Geen video voor « ') + esc(q) + ' ». ' + T('Essayez un autre mot, ou parcourez les collections.', 'Probeer een ander woord, of blader door de collecties.') + '</p>'
         : (Rr.proches ? '<p class="ct-mt-note">' + T('Aucune vidéo ne contient tous ces mots : voici les plus proches.', 'Geen video bevat al deze woorden: dit zijn de dichtstbijzijnde.') + '</p>' : '') +
           '<div class="ct-vt-grille">' + R.slice(0, n).map(function (e) { return carteV(dos, e, Rr.mots); }).join('') + '</div>' +
           (R.length > n ? '<p><button type="button" class="btn" data-vplus="1">' + T('Voir les ' + (R.length - n) + ' autres', 'De ' + (R.length - n) + ' andere tonen') + '</button></p>' : '');
     } else if (cle) {
-      var Ef = E.filter(function (e) { return vType(e, type); });
-      compte = Ef.filter(function (e) { return e.cat.cle === cle; }).length + ' ' + T('vidéos', 'video’s');
+      var Ef = E.filter(function (e) { return e.col === 'dashboard' && vType(e, type); });
+      compte = vNb(Ef.filter(function (e) { return e.cat.cle === cle; }).length);
       corps = vCategorie(dos, cle, Ef) || '<p class="ct-msg">' + T('Aucune vidéo de ce type sur cette page.', 'Geen video van dit type op deze pagina.') + '</p>';
-    } else if (type !== 'tout') {
-      var Et = E.filter(function (e) { return vType(e, type); });
-      compte = Et.length + ' ' + T('vidéos', 'video’s');
-      corps = vRangees(dos, Et);
+    } else if (dash) {
+      var Ed = E.filter(function (e) { return e.col === 'dashboard' && vType(e, type); });
+      compte = vNb(Ed.length);
+      corps = type !== 'tout' ? vRangees(dos, Ed) : vColDashboard(dos, Ed);
+    } else if (col) {
+      compte = vNb(E.filter(dans).length);
+      corps = vColFilmee(dos, col, catS, E);
     } else {
-      var Fo = E.filter(function (e) { return (e.v.genre || 'tuto') === 'formation'; }), Nv = E.filter(function (e) { return (e.v.genre || 'tuto') === 'nouveau'; });
-      compte = E.length + ' ' + T('vidéos', 'video’s');
-      corps = (Fo.length ? '<h2 class="ct-mt-sec">' + T('Modules de formation', 'Opleidingsmodules') + '</h2><div class="ct-vt-grille">' + Fo.map(function (e) { return carteV(dos, e); }).join('') + '</div>' : '') +
-        (Nv.length ? '<h2 class="ct-mt-sec">' + T('Nouvelles fonctions', 'Nieuwe functies') + '</h2><div class="ct-vt-grille">' + Nv.map(function (e) { return carteV(dos, e); }).join('') + '</div>' : '') +
-        VSECTIONS.map(function (S1, si) {
-          var P = S1.p.filter(function (pp) { return E.some(function (e) { return e.cat.cle === pp[0]; }); }); if (!P.length) return '';
-          return '<h2 class="ct-mt-sec">' + esc(L(S1.s)) + '</h2><div class="ct-mt-cats">' + P.map(function (pp) { return carteCat(dos, pp[0], E.filter(function (e) { return e.cat.cle === pp[0]; })); }).join('') + '</div>';
-        }).join('');
+      compte = vNb(E.length);
+      corps = vAccueil(dos, E);
     }
-    var titre = cle ? esc(vCat(cle).nom) : T('Médiathèque', 'Mediatheek');
+    // Les puces : les types de vidéo du dashboard dans sa collection ; à l'accueil, les collections (pour la recherche).
+    var puces = dash ? VTYPES.map(function (t) { return '<button type="button" data-vtype="' + t[0] + '" class="' + (type === t[0] ? 'on' : '') + '">' + esc(L(t[1])) + '</button>'; }).join('')
+      : !col && q.trim() ? [['', { fr: 'Toutes les collections', nl: 'Alle collecties' }]].concat(VCOLS).map(function (c) { return '<button type="button" data-vcolf="' + c[0] + '" class="' + ((S.vcolf || '') === c[0] ? 'on' : '') + '">' + esc(L(c[1])) + '</button>'; }).join('') : '';
+    var titre = ici ? esc(ici) : T('Médiathèque', 'Mediatheek');
+    var kicker = cle ? vColNom('dashboard') + (VSECTIONS[vCat(cle).si] ? ' · ' + L(VSECTIONS[vCat(cle).si].s) : '') : catS ? vColNom(col) : col ? T('Collection', 'Collectie') : T('Formation · Vidéos', 'Opleiding · Video’s');
+    var retour = cle ? '<a class="ct-vt-plus" href="#/videos/c/dashboard">← ' + esc(vColNom('dashboard')) + '</a>' : catS ? '<a class="ct-vt-plus" href="#/videos/c/' + col + '">← ' + esc(vColNom(col)) + '</a>'
+      : col ? '<a class="ct-vt-plus" href="#/videos">← ' + T('Toute la médiathèque', 'De hele mediatheek') + '</a>' : '';
     root.innerHTML = '<header class="ct-barre"><img src="../img/logo.png" alt="L’Atelier By"><div><div class="ct-titre">' + T('Médiathèque', 'Mediatheek') + '</div>' +
       '<div class="ct-sous">' + T('Catalogue · Formation', 'Catalogus · Opleiding') + '</div></div><span class="ct-esp"></span>' + segLangue() +
       '<a class="btn" href="#/">' + T('Catalogue des manuels', 'Catalogus van de handboeken') + '</a></header>' +
-      '<div class="ct-corps ct-mt">' + (V.length ? vSommaire(cle, E) : '') + '<div class="ct-mt-main">' +
-      '<div class="ct-kicker">' + (cle ? esc(VSECTIONS[vCat(cle).si] ? L(VSECTIONS[vCat(cle).si].s) : '') : T('Formation · Vidéos du dashboard', 'Opleiding · Video’s van het dashboard')) + '</div>' +
-      '<h1 class="ct-h1">' + titre + '</h1>' +
-      (cle ? '' : '<p class="ct-lead">' + T('Toutes les vidéos du dashboard magasin : chaque page, chaque onglet et chaque fonction. Cherchez un geste (« créer une offre », « tournée », « TVA »), ou parcourez les sections. Les écrans sont ceux du dashboard ; les chiffres et les noms sont fictifs.', 'Alle video’s van het winkeldashboard: elke pagina, elk tabblad en elke functie. Zoek een handeling, of blader door de secties. De schermen zijn die van het dashboard; cijfers en namen zijn fictief. De video’s zijn in het Frans.') + '</p>') +
+      '<div class="ct-corps ct-mt">' + (E.length ? vSommaire(col, cle, catS, E) : '') + '<div class="ct-mt-main">' +
+      '<div class="ct-kicker">' + esc(kicker) + '</div><h1 class="ct-h1">' + titre + '</h1>' +
+      (col ? '' : '<p class="ct-lead">' + T('Toutes les vidéos du réseau : l’utilisation du dashboard (chaque page, chaque onglet, chaque fonction), la production, la vente et le comptoir, l’hygiène et la sécurité, l’ouverture et la fermeture. Cherchez un geste (« créer une offre », « croissant », « TVA »), ou parcourez les collections.', 'Alle video’s van het netwerk: het gebruik van het dashboard, de productie, verkoop en toonbank, hygiëne en veiligheid, opening en sluiting. Zoek een handeling, of blader door de collecties.') + '</p>') +
       '<div class="ct-mt-cherche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
-        '<input id="ct-vq" type="search" autocomplete="off" value="' + esc(q) + '" placeholder="' + (cle ? T('Chercher dans ', 'Zoeken in ') + esc(vCat(cle).nom) + '…' : T('Chercher une vidéo : « créer une offre », « horaires », « TVA »…', 'Een video zoeken…')) + '" aria-label="' + T('Chercher une vidéo', 'Een video zoeken') + '"><kbd>/</kbd></div>' +
-      '<div class="ct-mt-types" role="group">' + VTYPES.map(function (t) { return '<button type="button" data-vtype="' + t[0] + '" class="' + (type === t[0] ? 'on' : '') + '">' + esc(L(t[1])) + '</button>'; }).join('') +
-        (compte ? '<span class="ct-mt-compte">' + compte + '</span>' : '') + '</div>' +
-      (cle && !q.trim() ? '<p><a class="ct-vt-plus" href="#/videos">← ' + T('Toute la médiathèque', 'De hele mediatheek') + '</a></p>' : '') +
+        '<input id="ct-vq" type="search" autocomplete="off" value="' + esc(q) + '" placeholder="' + (ici ? T('Chercher dans ', 'Zoeken in ') + esc(ici) + '…' : T('Chercher une vidéo : « créer une offre », « horaires », « croissant »…', 'Een video zoeken…')) + '" aria-label="' + T('Chercher une vidéo', 'Een video zoeken') + '"><kbd>/</kbd></div>' +
+      (puces || compte ? '<div class="ct-mt-types" role="group">' + puces + (compte ? '<span class="ct-mt-compte">' + compte + '</span>' : '') + '</div>' : '') +
+      (retour && !q.trim() ? '<p>' + retour + '</p>' : '') +
       corps + '</div></div>';
   }
   /** Le lecteur : la vidéo (ou son passage), où elle se range, et la suite dans le même onglet. */
   function lireVideo(id) {
     var E = vIndex(), e = E.filter(function (x) { return x.v.id === id; })[0]; if (!e) return;
-    var v = e.v, dos = S.videosDossier || dossierVideos();
-    var meme = e.onglet ? E.filter(function (x) { return x.v !== v && (x.v === e.onglet.id || x.onglet === e.onglet || x.v === e.onglet); }) :
+    var v = e.v, dos = S.videosDossier || dossierVideos(), f = v.filme;
+    var meme = f ? E.filter(function (x) { return x.v !== v && x.col === e.col && x.cat.slug === e.cat.slug; }) :
+      e.onglet ? E.filter(function (x) { return x.v !== v && (x.v === e.onglet.id || x.onglet === e.onglet || x.v === e.onglet); }) :
       E.filter(function (x) { return x.v !== v && x.cat.cle === e.cat.cle && x.niv === 'onglet'; });
     var o = document.createElement('div');
     o.className = 'ct-voile';
-    o.innerHTML = '<div class="ct-fenetre ct-vt-fen" role="dialog" aria-label="' + esc(v.titre) + '"><div class="ct-vt-fh"><div><div class="ct-kicker">' + esc(vKicker(e)) + (v.duree ? ' · ' + esc(v.duree) : '') + ' · ' + vChemin(e) + '</div><h3>' + esc(v.titre) + '</h3></div>' +
-      '<button type="button" class="btn" data-fermer="1">' + T('Fermer', 'Sluiten') + '</button></div>' +
-      '<video src="' + esc(srcV(dos, v)) + '"' + (v.affiche ? ' poster="' + esc(dos + v.affiche) + '"' : '') + ' controls autoplay playsinline preload="metadata"></video>' +
+    o.innerHTML = '<div class="ct-fenetre ct-vt-fen" role="dialog" aria-label="' + esc(v.titre) + '"><div class="ct-vt-fh"><div><div class="ct-kicker">' + esc(vKicker(e)) + (v.duree ? ' · ' + esc(v.duree) : '') + ' · ' + vChemin(e, f ? e.sec : '') + '</div><h3>' + esc(v.titre) + '</h3></div>' +
+      '<button type="button" class="btn" data-fermer="1">' + T('Fermer', 'Sluiten') + '</button></div>' + vMedia(dos, v) +
       (v.resume ? '<p>' + esc(v.resume) + '</p>' : '') +
-      (meme.length ? '<div class="ct-mt-suite"><div class="ct-kicker">' + (e.onglet ? T('Dans le même onglet', 'In hetzelfde tabblad') : T('Ses onglets', 'De tabbladen')) + '</div>' +
+      (meme.length ? '<div class="ct-mt-suite"><div class="ct-kicker">' + (f ? T('Dans la même catégorie', 'In dezelfde categorie') : e.onglet ? T('Dans le même onglet', 'In hetzelfde tabblad') : T('Ses onglets', 'De tabbladen')) + '</div>' +
         meme.map(function (x) { return '<button type="button" data-video="' + esc(x.v.id) + '"><span>' + esc(L(VNIV[x.niv])) + '</span>' + esc(x.v.titre) + (x.v.duree ? '<small>' + esc(x.v.duree) + '</small>' : '') + '</button>'; }).join('') + '</div>' : '') + '</div>';
     o.addEventListener('click', function (ev) {
       if (ev.target === o || ev.target.closest('[data-fermer]')) { var vd0 = o.querySelector('video'); if (vd0) try { vd0.pause(); } catch (x) { /* */ } o.remove(); return; }
@@ -458,6 +563,20 @@
       vd.addEventListener('loadedmetadata', function () { if (v.debut != null && vd.currentTime < +v.debut) vd.currentTime = +v.debut; });
     }
     document.body.appendChild(o);
+  }
+  /** Ce que joue le lecteur : le MP4 du dashboard, le fichier envoyé, ou le lecteur de YouTube, Vimeo, Google Drive —
+   *  construit depuis l'identifiant que l'API a reconnu, jamais depuis l'adresse brute. */
+  function vMedia(dos, v) {
+    var f = v.filme, l = f && f.lien, poster = v.afficheUrl || (v.affiche ? dos + v.affiche : '');
+    var tag = function (src) { return '<video src="' + esc(src) + '"' + (poster ? ' poster="' + esc(poster) + '"' : '') + ' controls autoplay playsinline preload="metadata"></video>'; };
+    if (!f) return tag(srcV(dos, v));
+    if (f.source === 'fichier') return tag(RACINE_SITE + f.fichier);
+    if (!l) return '<p class="ct-msg">' + T('Lien illisible.', 'Link onleesbaar.') + '</p>';
+    if (l.type === 'fichier') return tag(f.url);
+    var src = l.type === 'youtube' ? 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(l.id) + '?autoplay=1&rel=0'
+      : l.type === 'vimeo' ? 'https://player.vimeo.com/video/' + l.id.split('/').map(encodeURIComponent).join('?h=') + (l.id.indexOf('/') >= 0 ? '&' : '?') + 'autoplay=1'
+      : 'https://drive.google.com/file/d/' + encodeURIComponent(l.id) + '/preview';
+    return '<iframe class="ct-vt-cadre" src="' + esc(src) + '" title="' + esc(v.titre) + '" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
   }
   // La recherche se redessine en gardant le curseur ; « / » y va, Entrée ouvre le premier résultat, Échap l'efface.
   var vMinut = null;
@@ -477,6 +596,7 @@
   });
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-vtype]'); if (t) { S.vtype = t.getAttribute('data-vtype'); S.vplus = false; rendreVideotheque(); return; }
+    var c = e.target.closest('[data-vcolf]'); if (c) { S.vcolf = c.getAttribute('data-vcolf'); S.vplus = false; rendreVideotheque(); return; }
     if (e.target.closest('[data-vplus]')) { S.vplus = true; rendreVideotheque(); }
   });
 

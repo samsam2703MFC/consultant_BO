@@ -169,7 +169,7 @@
     const autres = T.videos.filter(x => estPage(x) && x.id !== page.id);
     const k = (NIVEAUX[v.niveau] ? NIVEAUX[v.niveau] + ' · ' + esc(chemin(v)) : GENRES[v.genre] || GENRES.tuto) + (v.duree ? ' · ' + esc(v.duree) : '');
     o.innerHTML = `<div class="tu-fen" role="dialog" aria-modal="true" aria-label="${esc(v.titre)}">
-      <div class="tu-f-h"><div><div class="tu-k">${k}</div><h3>${esc(v.titre)}</h3></div><button type="button" class="tu-x" data-tuf="x" aria-label="Fermer">${ICO_X}</button></div>
+      <div class="tu-f-h"><div><div class="tu-k">${k}</div><h3>${esc(v.titre)}</h3></div><a class="tu-mt" href="../formation/catalogue/#/videos/v/${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Voir dans la médiathèque ↗</a><button type="button" class="tu-x" data-tuf="x" aria-label="Fermer">${ICO_X}</button></div>
       <video class="tu-video" src="${src(v)}"${v.affiche ? ` poster="videos/${esc(v.affiche)}"` : ''} controls autoplay playsinline preload="metadata"></video>
       ${v.resume ? `<p class="tu-res">${esc(v.resume)}</p>` : ''}
       ${page.id !== v.id ? `<div class="tu-autres tu-retour">${item(page, false)}</div>` : ''}
