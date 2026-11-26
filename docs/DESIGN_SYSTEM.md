@@ -546,6 +546,10 @@ Décidé par Sam le 26/11/2026 (« adapte ce style à tout le dashboard ») à p
   jetons d'état, avec leurs mots dans la légende. Marge brute (catégorie, produit, taux, offres) : sous 40 % `--stop`
   « faible », 40–60 % `--prize`, 60 % et plus `--green` « bonne ». Marge nette (jour, heure) et écart à la référence :
   une perte `--stop`, 0–20 % `--prize`, 20 % et plus `--green`. Plus d'orange vif ni d'or « excellent » à part.
+  Atteinte de l'objectif (réalisé ÷ objectif, ou ÷ attendu à ce jour ; Semaine, Mois, Année, la frise, `ATTEINTE` dans
+  `dashboard.js`) : sous 90 % `--stop` « en retard », 90–100 % `--prize` « proche », 100 % et plus `--green` « atteint », sur
+  le pourcentage arrondi qu'on lit ; une période en cours se hachure (pas encore jugée), une case de calendrier prend le fond
+  teinté de son état. Une intensité sans état (carte de chaleur) : une rampe d'une seule teinte (`--chart-real`, `--green`).
 - **« Prête »** (Commandes) : bleu-gris `#4A6478` (5,5:1 sur son fond), distinct du bleu d'identification du Webshop.
 - **Petits textes sur fond teinté** : sur `--table-head` ou `--paper`, `--muted` ne fait que 4,45:1 (sous 4,5:1) ; un
   texte de 12 px ou moins y prend `--muted-2` (6,7:1).

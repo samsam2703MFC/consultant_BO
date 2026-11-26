@@ -3542,23 +3542,10 @@ body.db-vue-social{overflow:hidden}
 @media (max-width:900px){.fx-tuiles{grid-template-columns:1fr 1fr}.fx-g2{grid-template-columns:1fr}.fx-aj-r1,.fx-aj-r2{grid-template-columns:1fr}}
 
 /* Semaine et Mois en quatre blocs (16/11/2026, maquette A : docs/maquettes/semaine-mois/). Préfixe qb-. */
-.qb-heros{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr);gap:12px;align-items:stretch;margin-bottom:12px}
-.qb-heros>.db-card{margin:0}
-.qb-jauge{padding:16px 18px}
-.qb-jauge .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
-.qb-jauge .v{font-size:34px;line-height:1.15;margin-top:4px}
-.qb-jauge .v small{font-size:14px;color:var(--color-text-muted);margin-left:8px}
+/* Le chiffre (.qb-heros, .qb-jauge, .qb-tui) : remplacé par le résumé .chr le 26/11/2026. */
 .qb-barre{position:relative;height:12px;border-radius:6px;background:var(--color-background-secondary);margin:12px 0 6px}
 .qb-barre i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
 .qb-barre b{position:absolute;top:-4px;width:2px;height:20px;background:var(--color-text);margin-left:-1px}
-.qb-l{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--color-text-muted);margin-top:2px}
-.qb-l .ok{color:#2e7d32}.qb-l .ko{color:#A32014}
-.qb-tuiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.qb-tui{display:flex;flex-direction:column;gap:3px;padding:13px 14px;border:1px solid var(--color-border-tertiary);border-radius:11px;background:var(--color-surface);min-width:0}
-.qb-tui .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.qb-tui .v{font-size:24px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.qb-tui .v.ok{color:#2e7d32}.qb-tui .v.ko{color:#A32014}
-.qb-tui .s{font-size:11.5px;line-height:16px;height:32px;overflow:hidden;color:var(--color-text-muted)}
 .qb-jours-c{margin-bottom:12px}
 .qb-jours{display:grid;gap:6px;align-items:end;height:210px;padding:16px 16px 0}
 .qb-jours .c{position:relative;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
@@ -3589,7 +3576,7 @@ body.db-vue-social{overflow:hidden}
 .qb-puce span{font-size:10px;color:var(--color-text-muted)}
 .qb-puce.on{border-color:var(--color-primary);color:var(--color-primary)}
 .qb-sec{margin-top:8px}
-@media (max-width:1150px){.qb-heros,.qb-g2{grid-template-columns:1fr}.qb-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1150px){.qb-g2{grid-template-columns:1fr}}
 .qb-douze{margin-top:12px}
 
 /* L'assistant IA (17/11/2026) : les tableaux et graphiques qu'il propose, les documents du manuel lus, Mes modèles.
@@ -3731,3 +3718,59 @@ body.db-vue-social{overflow:hidden}
 .ac-cle .q small{display:block;margin-top:2px;font-size:12px;color:var(--muted-2)}
 .ac.ac-av .ac-ok{flex:0 0 100%}
 .ac.ac-av .ac-l{flex:1 1 0}
+
+/* ── Les chiffres, refonte du 26/11/2026 (Semaine, Mois, Année) ─────────────────────────────────────────────────────────
+ * Les mêmes quatre règles que La journée : le résumé (la forme de Mon équipe, .eqp-rs) et « À corriger » en haut ; un chiffre,
+ * une seule place ; la tête collée ; la lisibilité. Une échelle par mesure (DESIGN_SYSTEM.md §7.13) : l'atteinte de l'objectif
+ * (ATTEINTE), la marge nette (PALIERS), sur --stop, --prize, --green, avec leurs mots. */
+.chr{padding:16px 20px 14px;margin-bottom:12px}
+.chr-l1{display:grid;grid-template-columns:auto minmax(190px,1fr) minmax(220px,1.1fr) minmax(220px,.9fr);gap:24px;align-items:center}
+.chr-v{display:flex;flex-direction:column;gap:4px}
+.chr-kv{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chr-et{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted-2);white-space:nowrap}
+.chr-q{font-size:13px;color:var(--ink);line-height:1.35}
+.chr-q>span{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.chr-g .qb-barre{margin:4px 0 6px}
+.chr-meta{margin:0;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chr-lev{display:flex;flex-direction:column;gap:3px;padding-left:18px;border-left:1px solid var(--line)}
+.chr-lh{font-size:13px;color:var(--ink)}
+.chr-lev span+span{font-size:12px;color:var(--muted);line-height:1.4}
+.chr-l2{display:flex;align-items:flex-start;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.chr-l2 .ac-l{flex:1 1 0}
+.ac-ic.ac-green{background:var(--green)}
+/* La jauge : le repère (attendu à ce jour ou objectif), la projection hachurée en gris chaud. */
+.qb-barre{height:8px;border-radius:4px}.qb-barre i{border-radius:4px}
+.qb-barre b{top:-5px;height:18px}
+.qb-barre s{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,#c9c1b4 0 3px,transparent 3px 7px)}
+.qb-ctx{margin-top:0}
+@media (max-width:1365px){
+  .chr-l1{grid-template-columns:auto minmax(170px,1fr) minmax(200px,1fr)}
+  .chr-lev{grid-column:1 / -1;flex-direction:row;flex-wrap:wrap;gap:4px 10px;padding:10px 0 0;border-left:0;border-top:1px solid var(--line)}
+}
+@media (max-width:760px){.chr-l1{grid-template-columns:1fr;gap:12px}.chr-l2{flex-direction:column;gap:8px}}
+
+/* Pas de pilule (coins de 4 à 8 px, et 4 px pour une étiquette de 14 px de haut) ; pas de gras dans le texte. */
+.qb-puce{border-radius:8px}
+.fr-chiffres .fr-c .n em,.cal-a .db-cal .d .n em,.db-per .c em,.db-s6ch .ch em,.db-act .st,.db-pill{border-radius:4px}
+.db-s6ch .ch b,.qb-res .db-cl b{font-weight:400}
+/* Petits textes sur fond teinté : --muted-2 (--muted n'y fait que 4,45:1). */
+.fr-chiffres .fr-c .n,.fr-chiffres .fr-c small,.db-s6ch .ch>span>span,.db-s6t .db-tui .k,.db-s6t .db-tui .s,.db-an-12 .d,.db-an-12 .tq>.db-lab{color:var(--muted-2)}
+.fr-chiffres .fr-c.on .n{color:var(--color-primary)}
+/* L'atteinte d'un trimestre : une étiquette teintée, son chiffre et son mot. */
+.an-att{margin-left:auto;padding:2px 7px;border-radius:4px;font-size:11px;white-space:nowrap}
+/* Le calendrier : chaque jour sur le fond teinté de son état, la jauge à sa couleur, les petits textes en --muted-2. */
+.cal-a .db-cal .d.clair .cal-jg{background:rgba(28,26,23,.1)}
+.cal-a .db-cal .d.clair .cal-jg i{background:var(--jg,#1d1d1b)}
+.cal-a .db-cal .d.clair .n,.cal-a .db-cal .d.clair small{color:var(--muted-2);opacity:1}
+/* Le détail des mois (Année) : la tête collée au-dessus de 1366 px ; en dessous, le pli défile de côté sans tête collée. */
+@media (min-width:1366px){
+  .db-an-pli>.in{overflow:visible}
+  .db-t.an-mois thead th{position:sticky;top:0;z-index:2;background:var(--table-head);border-bottom:0;box-shadow:0 1px 0 var(--line);color:var(--muted-2)}
+}
+/* Une période en cours n'est pas une alerte : l'étiquette « en cours » reste neutre (l'or dit « proche de l'objectif »). */
+.db-an-qc .db-tg.enc{background:var(--chip);color:var(--muted-2)}
+/* La frise des mois : « en cours » en minuscules tient dans la case. */
+.fr-chiffres:not(.sept) .fr-c .n em{text-transform:none;letter-spacing:0;padding:1px 4px}
+.db-t.an-mois td .sub{display:block;font-size:10.5px}
+/* Un écart négatif face au N-1 : --stop, pas le bordeaux de la marque (§3 : bordeaux ≠ rouge d'arrêt). */
+.db-s6t .db-tui.vif .v{color:var(--stop)}

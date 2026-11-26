@@ -3841,6 +3841,7 @@
     if (k === 'vit') { const O = S.vitOuv || (S.vitOuv = {}); v.split(',').filter(Boolean).forEach(x => { O[x] = true; }); }
     else if (k === 'cq') { S.cqFiltre = v; S.cqRaz = true; }
     else if (k === 'stock') { S.stockOuvert = true; }
+    else if (k === 'anq') { S.anQ = +v; }
     else if (k === 'tjcl') { S.tjOuv[v] = true; const c = tjChecklists(S.aux[cleTJ(S.date)]).find(x => x.cle === v); if (c && S.tjF !== 'tout' && S.tjF !== c.etat) { S.tjF = 'tout'; } }
     if (k) { rendre(); }
     acMontrer(document.getElementById(id));
@@ -8321,7 +8322,8 @@
     const ht = m.caHt != null;
     const base = ht ? m.caHt : ca;
     const feu = (v, s) => v == null || s == null ? 'var(--color-text-muted)' : (v <= s ? '#3f7a52' : (v <= s * 1.3 ? '#B0792A' : '#A32014'));
-    const feuRes = p => p == null ? 'var(--color-text-muted)' : (p >= 15 ? '#3f7a52' : (p >= 5 ? '#B0792A' : '#A32014'));
+    // Le résultat en % des ventes : la marge nette, l'échelle PALIERS (26/11/2026 ; avant : 15 % et 5 %, une perte et 0–5 % en rouge).
+    const feuRes = p => p == null ? 'var(--color-text-muted)' : palier(p).c;
     const mbPct = m.margeBrutePct != null ? m.margeBrutePct : (base ? 100 * m.margeBrute / base : null);
     const barre = p => Math.min(Math.abs(p || 0), 100).toFixed(1);
     const ligne = (lib, sous, v, pct, coul, w, fort, note, attr) => `<div class="db-cl${fort ? ' fort' : ''}${attr ? ' clic' : ''}"${attr || ''}><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
@@ -8802,6 +8804,17 @@
    *  (× 1,67 et × 2,5) — faible sous 40 %, à surveiller de 40 à 60 %, bonne à partir de 60 %. */
   const MARGES = [{ s: -Infinity, c: '#A32014', l: '< 40 % : faible' }, { s: 40, c: '#B0792A', l: '40 – 60 %' }, { s: 60, c: '#3f7a52', l: '≥ 60 % : bonne' }];
   function palier(pct) { let r = PALIERS[0]; for (const p of PALIERS) { if (pct >= p.s) { r = p; } } return r; }
+  /** L'atteinte de l'objectif (réalisé ÷ objectif ou ÷ attendu à ce jour, 26/11/2026) : sous 90 % « en retard », de 90 à 100 %
+   *  « proche », 100 % et plus « atteint ». Remplace les cinq paliers d'avant (110 / 100 / 90 / 75 %, verts, sable, orange) des
+   *  vues Semaine, Mois et Année, et la frise. c : la couleur d'une marque (barre, point) ; t : celle d'un texte (l'or y prend
+   *  --prize-ink, 6:1, l'or seul ne fait que 3,2:1) ; f : le fond teinté d'une case ; m : le mot. */
+  const ATTEINTE = [{ s: -Infinity, sig: 'stop', c: '#A32014', t: '#A32014', f: '#F7E0DC', l: '< 90 % : en retard', m: 'en retard' },
+    { s: 90, sig: 'prize', c: '#B0792A', t: '#7A5207', f: '#F6E7CE', l: '90 – 100 % : proche', m: 'proche' },
+    { s: 100, sig: 'green', c: '#3f7a52', t: '#3f7a52', f: 'rgba(63, 122, 82, 0.14)', l: '≥ 100 % : atteint', m: 'atteint' }];
+  // Sur le pourcentage arrondi, celui qu'on lit : « 100 % » ne se colore pas comme « 99 % ».
+  function atteinte(p) { const q = Math.round(p); let r = ATTEINTE[0]; for (const x of ATTEINTE) { if (q >= x.s) { r = x; } } return r; }
+  /** La légende d'une échelle (un carré de 10 px, puis le mot). */
+  const legEchelle = (E, cls) => E.map(x => `<span><i${cls ? ` class="${cls}"` : ''} style="background:${x.c}"></i>${x.l}</span>`).join('');
 
   /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
   function confettis(n) {
@@ -9644,39 +9657,83 @@
    * « Plus lisible, moins de données » : le chiffre (une jauge et quatre tuiles), les jours, le résultat, les heures et
    * ce qui rapporte — chaque chiffre une seule fois. Le reste se replie sous la page (qbPlus) : il ne se dessine qu'ouvert.
    * Bureau seulement : le téléphone garde sa vue (rendMobile). */
-  const QB_PAL = [[110, '#3f7a52'], [100, '#6aa84f'], [90, '#d8c79f'], [75, '#F5B26B'], [-Infinity, '#F08A2C']];
-  const qbTeinte = p => (QB_PAL.find(x => p >= x[0]) || QB_PAL[4])[1];
-  function qbChiffre(m, d) {
-    const sem = S.vue === 'semaine', se = (d && d.seuils) || {}, R = (d && d.reseau) || {};
+  /* Le résumé d'une vue des chiffres (26/11/2026, DESIGN_SYSTEM.md §7.13, la forme de Mon équipe) : il remplace la carte du
+   * chiffre et ses quatre tuiles (clients, panier, marge brute, résultat : chacune déjà dans le résultat dessous). Ligne 1 : la
+   * valeur clé (700, le seul gras) et son état en mots derrière un point ; ce qu'elle mesure ; la jauge ; ce qu'il faut faire.
+   * Ligne 2, sous un filet : « À corriger » — les boutons du système (ac-b) qui mènent au bloc (acAller) — ou, pour une période
+   * passée, « Cette semaine-là » avec les seuls constats. o : { aria, v, et: { sig, mot }, q, q2, jauge, meta, lev, L, titre, ok }. */
+  function chrResume(o) {
+    const L = o.L || [];
+    const l2 = L.length
+      ? `<div class="chr-l2" role="region" aria-label="${esc(o.titre || 'À corriger')}"><span class="ac-t">${esc(o.titre || 'À corriger')}</span><span class="ac-l">${L.map(x => `<button type="button" class="btn btn--sm ac-b" ${x.attr}><i class="ac-ic ac-${x.sig}" aria-hidden="true"></i>${x.txt}</button>`).join('')}</span></div>`
+      : (o.ok ? `<div class="chr-l2"><p class="ac-ok">${esc(o.ok)}</p></div>` : '');
+    return `<section class="db-card chr" aria-label="${esc(o.aria)}"><div class="chr-l1">
+        <div class="chr-v"><span class="chr-kv">${o.v}</span>${o.et ? `<span class="chr-et"><i class="ac-ic ac-${o.et.sig}" aria-hidden="true"></i>${esc(o.et.mot)}</span>` : ''}</div>
+        <div class="chr-q">${esc(o.q)}${o.q2 ? `<span>${o.q2}</span>` : ''}</div>
+        <div class="chr-g">${o.jauge || ''}${o.meta ? `<p class="chr-meta">${o.meta}</p>` : ''}</div>
+        ${o.lev ? `<div class="chr-lev">${o.lev}</div>` : ''}</div>${l2}</section>`;
+  }
+  /** L'état d'une atteinte en mots : une période en cours se juge sur l'attendu à ce jour, une période close sur l'objectif. */
+  const CHR_MOTS = { cours: { stop: 'en retard sur l’attendu', prize: 'un peu sous l’attendu', green: 'en avance sur l’attendu' },
+    clos: { stop: 'objectif manqué', prize: 'proche de l’objectif', green: 'objectif atteint' } };
+  /** La jauge : le réalisé (couleur de l'atteinte), le repère (l'attendu à ce jour ou l'objectif), la projection hachurée. */
+  function chrJauge(real, obj, repere, A, titreRep, proj) {
+    const base = Math.max(real || 0, obj || 0, proj || 0, 1), pR = Math.min(100, 100 * (real || 0) / base), pP = proj != null ? Math.min(100, 100 * proj / base) : null;
+    return `<div class="qb-barre"><i style="width:${pR.toFixed(1)}%;background:${A ? A.c : '#B8B2A8'}"></i>${pP != null && pP > pR ? `<s style="left:${pR.toFixed(1)}%;width:${(pP - pR).toFixed(1)}%"></s>` : ''}${repere != null ? `<b style="left:${Math.min(100, 100 * repere / base).toFixed(1)}%" title="${esc(titreRep)}"></b>` : ''}</div>`;
+  }
+  /** Le résumé de la semaine ou du mois. « À corriger » (période en cours) : le retard sur l'attendu (les jours), les lignes du
+   *  résultat au-dessus de leur seuil (les couleurs de la cascade : au-dessus or, au-delà de 1,3 × le seuil rouge), les invendus
+   *  au-delà de 5 %, un résultat négatif (le résultat), les heures à perte ou sous 20 % de marge nette (les heures). */
+  function qbResume(m, d, st) {
+    const sem = S.vue === 'semaine', se = (d && d.seuils) || {};
     const jours = Array.isArray(m.jours) ? m.jours : [];
-    const passes = jours.filter(j => j.passe && j.ca), nJ = Math.max(1, passes.length);
     const restants = jours.filter(j => !j.passe && !j.ferme && !j.aujourdhui);
     const sansO = m.objectif == null, enCours = !sansO && m.attendu != null && m.attendu < m.objectif - 0.5;
+    const passee = bornes()[1] < AUJ;
     const att = sansO || !m.attendu ? null : 100 * m.realise / m.attendu;
     const proj = sansO || !m.attendu ? null : m.realise / m.attendu * m.objectif;
-    const base = Math.max(m.realise || 0, m.objectif || 0, 1);
-    const repere = enCours ? m.attendu : m.objectif;
-    const jauge = sansO ? '<p class="qb-l mu">Pas de budget pour cette période : pas d’objectif.</p>'
-      : `<div class="qb-barre"><i style="width:${Math.min(100, 100 * m.realise / base).toFixed(1)}%;background:${qbTeinte(att)}"></i><b style="left:${Math.min(100, 100 * repere / base).toFixed(1)}%" title="${enCours ? 'attendu à ce jour' : 'objectif'}"></b></div>
-        <div class="qb-l"><span>${enCours ? 'attendu à ce jour ' + fE(m.attendu) + ' · objectif ' + fE(m.objectif) : 'objectif ' + fE(m.objectif)}</span><span class="${m.realise >= repere ? 'ok' : 'ko'}">${fS(m.realise - repere)}</span></div>
-        ${enCours && proj != null ? `<div class="qb-l mu"><span>au rythme actuel : ${fK(proj)} en fin de ${sem ? 'semaine' : 'mois'}</span><span>${restants.length ? 'reste ' + fE(Math.max(0, m.reste)) + ' en ' + restants.length + ' jour' + (restants.length > 1 ? 's' : '') : ''}</span></div>` : ''}`;
-    const P = panDe(m);
-    const t = (k, v, sous, cl) => `<div class="qb-tui"><span class="k">${k}</span><span class="v${cl ? ' ' + cl : ''}">${v}</span><span class="s">${sous}</span></div>`;
-    return `<div class="qb-heros">
-      <div class="db-card qb-jauge"><span class="k">Chiffre d’affaires · ${esc(libPeriode())}</span>
-        <div class="v">${fE(m.realise)}${att != null ? `<small>${fN(att)} % de l’objectif${enCours ? ' à ce jour' : ''}</small>` : ''}</div>${jauge}</div>
-      <div class="qb-tuiles">
-        ${t('Clients', fN(m.tickets), fN(m.tickets / nJ) + ' par jour ouvert')}
-        ${t('Panier moyen', P.v == null ? '—' : fU(P.v), [panSous(P.base), R.panier != null ? 'réseau ' + fU(R.panier) : ''].filter(Boolean).join(' · '), R.panier != null && P.v != null && P.v < R.panier ? 'ko' : '')}
-        ${t('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + (se.food != null ? ' (seuil ' + fP(se.food) + ')' : ''))}
-        ${t(m.caHt != null ? 'Résultat hors TVA' : 'Résultat', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes' + (R.netPct != null ? ' · réseau ' + fP(R.netPct) : ''), m.net == null ? '' : (m.net >= 0 ? 'ok' : 'ko'))}
-      </div></div>`;
+    const repere = enCours ? m.attendu : m.objectif, A = att == null ? null : atteinte(att);
+    const srcO = m.objectifSource === 'budget' ? 'budget validé' : (m.objectifSource === 'theorique' ? 'CA théorique de l’étude' : esc(m.objectifSource || ''));
+    const per = sem ? 'semaine' : 'mois';
+    const L = [], va = id => `data-ac="${id}"`;
+    if (enCours && A && A.sig !== 'green') { L.push({ sig: A.sig, txt: `En retard de ${fE(m.attendu - m.realise)} sur l’attendu`, attr: va('qb-jours') + ' title="les jours face à leur objectif"' }); }
+    const seuil = (lib, v, s) => { if (v != null && s != null && v > s) { L.push({ sig: v > s * 1.3 ? 'stop' : 'prize', txt: `${lib} ${fP(v)} · seuil ${fP(s)}`, attr: va('qb-res') + ' title="le résultat, ligne par ligne"' }); } };
+    seuil('Coût matière', m.coutMatierePct, se.food);
+    seuil('Main-d’œuvre', m.labourPct, se.labour);
+    seuil('Frais généraux', m.overheadPct, se.overhead);
+    if (m.invendus != null && m.invendusPct > 5) { L.push({ sig: 'stop', txt: `Invendus ${fP(m.invendusPct)} des ventes`, attr: va('qb-res') }); }
+    if (m.net != null && m.net < 0) { L.push({ sig: 'stop', txt: `Résultat ${fSK(m.net)}`, attr: va('qb-res') }); }
+    const H = st && Array.isArray(st.heures) ? st.heures.filter(l => l.ca > 0 && l.moy && l.moy.ca > 0) : [];
+    const hs = T => T.map(l => l.h + ' h').join(', '), hT = T => T.map(l => l.h + '–' + (l.h + 1) + ' h').join(', ');
+    const hP = H.filter(l => l.moy.res < 0), hB = H.filter(l => l.moy.res >= 0 && 100 * l.moy.res / l.moy.ca < 20);
+    if (hP.length) { L.push({ sig: 'stop', txt: `${hs(hP)} : à perte`, attr: va('qb-heures') + ` title="${esc(hT(hP))} : la marge nette de l’heure est négative"` }); }
+    if (hB.length) { L.push({ sig: 'prize', txt: `${hs(hB)} : marge nette sous 20 %`, attr: va('qb-heures') + ` title="${esc(hT(hB))}"` }); }
+    const lev = sansO || !enCours ? '' : (m.reste > 0 && restants.length
+      ? `<span class="chr-lh">Reste ${fE(m.reste)} en ${restants.length} jour${restants.length > 1 ? 's' : ''}</span><span>soit ${fE(m.reste / restants.length)} par jour pour l’objectif${proj != null ? ' · au rythme actuel : ' + fK(proj) + ' en fin de ' + per : ''}</span>`
+      : `<span class="chr-lh">Objectif ${m.reste > 0 ? 'à finir aujourd’hui' : 'déjà atteint'}</span><span>${proj != null ? 'au rythme actuel : ' + fK(proj) + ' en fin de ' + per : ''}</span>`);
+    return chrResume({
+      aria: 'Résumé ' + (sem ? 'de la semaine' : 'du mois'), v: fE(m.realise),
+      et: A ? { sig: A.sig, mot: CHR_MOTS[enCours ? 'cours' : 'clos'][A.sig] } : null,
+      q: sem ? 'de chiffre d’affaires du ' + fD(bornes()[0]) + ' au ' + fD(bornes()[1]) : 'de chiffre d’affaires en ' + libPeriode(),
+      q2: sansO ? 'pas de budget pour cette période : pas d’objectif' : `${fN(att)} % ${enCours ? 'de l’attendu à ce jour' : 'de l’objectif'} · objectif ${fE(m.objectif)} (${srcO})`,
+      jauge: sansO ? '' : chrJauge(m.realise, m.objectif, repere, A, enCours ? 'attendu à ce jour' : 'objectif'),
+      meta: sansO ? '' : `${enCours ? 'attendu à ce jour ' + fE(m.attendu) : 'objectif ' + fE(m.objectif)} · <span class="${m.realise >= repere ? 'ok' : 'ko'}">${fS(m.realise - repere)}</span>`,
+      lev, L: passee ? L.filter(x => !/^En retard/.test(x.txt)) : L, titre: passee ? (sem ? 'Cette semaine-là' : 'Ce mois-là') : 'À corriger',
+      ok: passee || !st ? '' : (sem ? 'Rien à corriger cette semaine.' : 'Rien à corriger ce mois-ci.')
+    });
+  }
+  /** Sous le résultat : ce que disaient encore les tuiles retirées — les clients par jour ouvert, le panier et le résultat du réseau. */
+  function qbContexte(m, d) {
+    const R = (d && d.reseau) || {}, J = Array.isArray(m.jours) ? m.jours : [], nJ = Math.max(1, J.filter(j => j.passe && j.ca).length);
+    const res = [R.panier != null ? 'panier ' + fU(R.panier) : '', R.netPct != null ? 'résultat ' + fP(R.netPct) + ' des ventes' : ''].filter(Boolean);
+    const L = [m.tickets != null ? fN(m.tickets / nJ) + ' clients par jour ouvert' : '', res.length ? 'réseau : ' + res.join(', ') : ''].filter(Boolean);
+    return L.length ? `<p class="qb-note qb-ctx">${L.join(' · ')}</p>` : '';
   }
   /** Les jours : la barre du CA, le trait de l'objectif du jour, la couleur de l'atteinte ; la journée en cours hachurée. */
   function qbJours(m) {
     const J = Array.isArray(m.jours) ? m.jours : [];
     // Une première réponse rapide peut arriver sans le détail des jours : la place est gardée, le graphique suit.
-    if (!J.length) { return `<div class="db-card qb-jours-c"><div class="ct"><span class="db-lab">Les jours — le CA face à l’objectif</span><span class="db-mini">lecture des jours…</span></div><div class="db-sk" style="height:200px;margin:14px 16px"></div></div>`; }
+    if (!J.length) { return `<div class="db-card qb-jours-c" id="qb-jours"><div class="ct"><span class="db-lab">Les jours — le CA face à l’objectif</span><span class="db-mini">lecture des jours…</span></div><div class="db-sk" style="height:200px;margin:14px 16px"></div></div>`; }
     const peu = J.length <= 7;
     const mx = Math.max(1, ...J.map(j => Math.max(j.ca || 0, j.objectif || 0))) * 1.1;
     const pj = j => j.objectif ? 100 * (j.ca || 0) / j.objectif : null;
@@ -9687,27 +9744,27 @@
       const ob = j.objectif ? `<b style="bottom:${(100 * j.objectif / mx).toFixed(1)}%"></b>` : '';
       if (j.ferme) { return `<div class="c ferme" title="${esc(j.court)} : fermé"><span class="v">fermé</span></div>`; }
       if (!j.passe && !j.aujourdhui) { return `<div class="c fut" title="${esc(j.court)} : objectif ${fE(j.objectif)}">${j.objectif ? `<i class="obj" style="height:${(100 * j.objectif / mx).toFixed(1)}%"></i>` : ''}</div>`; }
-      const p = pj(j), coul = j.aujourdhui ? 'repeating-linear-gradient(135deg,#c9c1b4 0 5px,#e8e1d6 5px 10px)' : (p == null ? '#c9c4bc' : qbTeinte(p));
+      const p = pj(j), coul = j.aujourdhui ? 'repeating-linear-gradient(135deg,#c9c1b4 0 5px,#e8e1d6 5px 10px)' : (p == null ? '#c9c4bc' : atteinte(p).c);
       return `<div class="c" title="${esc(j.court)} : ${fE(j.ca)}${j.objectif ? ' · ' + fN(p) + ' % de ' + fE(j.objectif) : ''} · ${fN(j.tickets || 0)} clients">${peu ? `<span class="v">${fN(j.ca || 0)}</span>` : ''}<i style="height:${(100 * (j.ca || 0) / mx).toFixed(1)}%;background:${coul}"></i>${ob}</div>`;
     }).join('');
     const libs = J.map(j => `<span>${esc(peu ? j.court : String(+j.date.slice(8, 10)))}${peu ? `<small>${j.ferme ? '' : (j.passe || j.aujourdhui ? fN(j.tickets || 0) + ' clients' + (pj(j) != null && !j.aujourdhui ? ' · ' + fN(pj(j)) + ' %' : ' · en cours') : 'objectif ' + fK(j.objectif))}</small>` : ''}</span>`).join('');
     const mini = fort && faible && fort !== faible ? esc(fort.court) + ' au plus haut (' + fN(pj(fort)) + ' %) · ' + esc(faible.court) + ' au plus bas (' + fN(pj(faible)) + ' %)' : '';
-    const leg = QB_PAL.map((x, i) => `<span><i style="background:${x[1]}"></i>${i === 0 ? '≥ 110 %' : (i === 4 ? '< 75 %' : x[0] + ' – ' + QB_PAL[i - 1][0] + ' %')}</span>`).join('');
-    return `<div class="db-card qb-jours-c"><div class="ct"><span class="db-lab">Les jours — le CA face à l’objectif</span><span class="db-mini">${mini}</span></div>
+    const leg = legEchelle(ATTEINTE);
+    return `<div class="db-card qb-jours-c" id="qb-jours"><div class="ct"><span class="db-lab">Les jours — le CA face à l’objectif</span><span class="db-mini">${mini}</span></div>
       <div class="qb-jours" style="${cols}">${barres}</div><div class="qb-jl" style="${cols}">${libs}</div>
-      <div class="qb-leg">${leg}<span><i class="tr"></i>objectif du jour</span><span><i class="hach"></i>en cours</span></div></div>`;
+      <div class="qb-leg">${leg}<span><i class="tr"></i>objectif du jour</span>${J.some(j => j.aujourdhui) ? '<span><i class="hach"></i>en cours</span>' : ''}</div></div>`;
   }
   /** Les heures : une bande — la couleur dit la marge nette de l'heure, le chiffre ses ventes (moyenne par jour ouvert). */
   function qbHeures(st, ks) {
     const tete = `<div class="ct"><span class="db-lab">Les heures — une journée type</span>`;
-    if (S.err[ks]) { return `<div class="db-card">${tete}</div><div class="db-err" style="margin:12px">Heures : ${esc(S.err[ks])}</div></div>`; }
-    if (!st) { return `<div class="db-card">${tete}</div><div class="db-sk" style="height:110px;margin:14px"></div></div>`; }
+    if (S.err[ks]) { return `<div class="db-card" id="qb-heures">${tete}</div><div class="db-err" style="margin:12px">Heures : ${esc(S.err[ks])}</div></div>`; }
+    if (!st) { return `<div class="db-card" id="qb-heures">${tete}</div><div class="db-sk" style="height:110px;margin:14px"></div></div>`; }
     const L = (st.heures || []).filter(l => l.ca > 0);
-    if (!L.length) { return `<div class="db-card">${tete}</div><p class="db-note" style="padding:14px 16px">Aucune heure vendue sur cette période.</p></div>`; }
+    if (!L.length) { return `<div class="db-card" id="qb-heures">${tete}</div><p class="db-note" style="padding:14px 16px">Aucune heure vendue sur cette période.</p></div>`; }
     const teinte = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#A32014' : (pct < 20 ? '#B0792A' : '#3f7a52'));
     const best = L.reduce((a, b) => b.moy.res > a.moy.res ? b : a), worst = L.reduce((a, b) => b.moy.res < a.moy.res ? b : a);
     const cols = `grid-template-columns:repeat(${L.length},minmax(0,1fr))`;
-    return `<div class="db-card">${tete}<span class="db-mini">${best.h}–${best.h + 1} h rapporte le plus (${fS(best.moy.res)} par jour) · ${worst.h}–${worst.h + 1} h ${worst.moy.res < 0 ? 'perd' : 'rapporte le moins'} (${fS(worst.moy.res)})</span></div>
+    return `<div class="db-card" id="qb-heures">${tete}<span class="db-mini">${best.h}–${best.h + 1} h rapporte le plus (${fS(best.moy.res)} par jour) · ${worst.h}–${worst.h + 1} h ${worst.moy.res < 0 ? 'perd' : 'rapporte le moins'} (${fS(worst.moy.res)})</span></div>
       <div class="qb-h" style="${cols}">${L.map(l => { const pct = l.moy.ca > 0 ? 100 * l.moy.res / l.moy.ca : null;
         return `<div style="background:${teinte(pct)}" title="${l.h} – ${l.h + 1} h · ventes ${fE(l.moy.ca)} · marge nette ${fS(l.moy.res)} par jour ouvert">${fN(l.moy.ca)} €<small>${fS(l.moy.res).replace(' €', '')}</small></div>`; }).join('')}</div>
       <div class="qb-hl" style="${cols}">${L.map(l => `<span>${l.h} h</span>`).join('')}</div>
@@ -9745,8 +9802,8 @@
   }
   /** La page Semaine ou Mois du bureau, en quatre blocs. */
   function qbPage(m, d, st, ks) {
-    return `${qbChiffre(m, d)}${qbJours(m)}
-      <div class="qb-g2"><div class="db-card qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}</div>
+    return `${qbResume(m, d, st)}${qbJours(m)}
+      <div class="qb-g2"><div class="db-card qb-res" id="qb-res"><div class="ct"><span class="db-lab">Le résultat — du chiffre d’affaires au résultat</span>${m.caHt != null ? `<span class="db-mini">hors TVA · TVA ${fP(m.tvaPart)} retirée ticket par ticket</span>` : ''}</div>${cascade(m, d)}${qbContexte(m, d)}</div>
         <div class="qb-pile">${qbHeures(st, ks)}</div></div>
       <div class="qb-douze">${rendSemaines()}</div>
       ${qbPlus(m, d, st)}`;
@@ -9764,7 +9821,7 @@
       const mx = Math.max(1, ...profil.map(p => Math.max(p.ca, p.o)));
       const pire = profil.filter(p => p.o).sort((a, b) => pc(a.ca, a.o) - pc(b.ca, b.o))[0];
       return `<div class="db-card"><div class="ct"><span class="db-lab">Le profil des jours</span><span class="db-mini">moyenne par jour de la semaine · le trait noir = objectif du jour${pire ? ' · le ' + pire.nom.toLowerCase() + ' est le point faible du mois' : ''}</span></div>
-        <div style="padding:10px 16px 12px">${profil.map(p => `<div class="db-prof"><span class="l">${p.nom}</span><span class="b"><i style="width:${Math.round(p.ca / mx * 100)}%;background:${p.o && p.ca >= p.o ? '#8D1D2C' : '#B8B2A8'}"></i>${p.o ? `<em style="left:${Math.round(p.o / mx * 100)}%"></em>` : ''}</span><span class="v">${fE(p.ca)}</span><span class="c" style="color:${!p.o ? 'var(--color-text-muted)' : (p.ca >= p.o ? '#3f7a52' : '#A32014')}">${p.o ? Math.round(pc(p.ca, p.o)) + ' %' : ''}</span></div>`).join('')}</div></div>`;
+        <div style="padding:10px 16px 12px">${profil.map(p => `<div class="db-prof"><span class="l">${p.nom}</span><span class="b"><i style="width:${Math.round(p.ca / mx * 100)}%;background:${p.o ? atteinte(pc(p.ca, p.o)).c : '#B8B2A8'}"></i>${p.o ? `<em style="left:${Math.round(p.o / mx * 100)}%"></em>` : ''}</span><span class="v">${fE(p.ca)}</span><span class="c" style="color:${!p.o ? 'var(--color-text-muted)' : atteinte(pc(p.ca, p.o)).t}">${p.o ? Math.round(pc(p.ca, p.o)) + ' %' : ''}</span></div>`).join('')}</div><div class="qb-leg">${legEchelle(ATTEINTE)}</div></div>`;
     }
   }
   /** Le calendrier de la période (maquette A du 10/10/2026) : sorti de rendPeriode le 16/11/2026 pour la mise en page
@@ -9797,8 +9854,7 @@
           v: j => [fN(j.tickets), 'clients'], l: j => objCli(j) ? 'objectif ' + fN(objCli(j)) + ' · ' + sg(j.tickets - objCli(j)) : 'pas d’objectif', f: j => objCli(j) ? 'objectif ' + fN(objCli(j)) + ' clients' : '', leg: 'les clients face à l’objectif clients du jour' }
       };
       const X = MODE[cv];
-      const PAL = [[110, '#3f7a52', false], [100, '#6aa84f', false], [90, '#F6E7CE', true], [75, '#F5B26B', true], [-Infinity, '#F08A2C', false]];
-      const tein = p => PAL.find(x => p >= x[0]);
+      // L'atteinte (26/11/2026) : l'échelle ATTEINTE, en fond teinté (le texte reste à l'encre) et la jauge à la couleur de l'état.
       // La jauge : de 0 à 120 % de l'objectif, le trait à 100 %.
       const jauge = p => `<span class="cal-jg"><i style="width:${Math.max(2, Math.min(100, p / 1.2)).toFixed(1)}%"></i><s></s></span>`;
       let cases = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(n => `<div class="h">${n}</div>`).join('');
@@ -9811,12 +9867,12 @@
         if (!fini(j)) { cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>—</b><small>${X.f(j)}</small></div>`; return; }
         const p = X.p(j), v = X.v(j);
         if (p == null) { cases += `<div class="d nul"><span class="n">${esc(j.court)}${rec}</span><b>${v[0]}<u>${v[1]}</u></b><small>${X.l(j)}</small></div>`; return; }
-        const t = tein(p);
-        cases += `<div class="d${t[2] ? ' clair' : ''}" style="background:${t[1]}"><span class="n">${esc(j.court)}${rec}</span><b>${v[0]}<u>${v[1]}</u></b>${jauge(p)}<small>${X.l(j)}</small></div>`;
+        const t = atteinte(p);
+        cases += `<div class="d clair" style="background:${t.f};--jg:${t.c}" title="${esc(t.m)}"><span class="n">${esc(j.court)}${rec}</span><b>${v[0]}<u>${v[1]}</u></b>${jauge(p)}<small>${X.l(j)}</small></div>`;
       });
       const totA = m.attendu ? 100 * m.realise / m.attendu : null;
       const SEG = [['ca', 'CA', fE(m.realise), m.attendu ? 'sur ' + fE(m.attendu) + ' attendus' : 'pas d’objectif'], ['att', 'Atteinte', totA != null ? fN(totA) + ' %' : '—', 'de l’objectif à date'], ['cli', 'Clients', fN(m.tickets), totObjCli ? 'sur ' + fN(totObjCli) + ' attendus' : '']];
-      const leg = PAL.map((x, i) => `<span><i style="background:${x[1]}"></i>${i === 0 ? '≥ 110 %' : (i === 4 ? '< 75 %' : x[0] + ' – ' + PAL[i - 1][0] + ' %')}</span>`).join('');
+      const leg = legEchelle(ATTEINTE);
       return `<div class="db-card cal-a"><div class="cal-hd"><div class="cal-t">${X.t}<small>${X.s}</small></div>
         <div class="cal-seg" title="ce que montre le calendrier">${SEG.map(o => `<button data-calval="${o[0]}" class="${cv === o[0] ? 'on' : ''}"><span>${o[1]}</span><b>${o[2]}</b><small>${o[3]}</small></button>`).join('')}</div></div>
         <div class="db-cal cal-a-g">${cases}</div>
@@ -9913,8 +9969,8 @@
     W.forEach((w, i) => {
       const n = v(w), n1 = v1(w), up = n1 == null || n == null || n >= n1;
       if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Y(n1)}" r="3.5" fill="#fff" stroke="#B8B2A8" stroke-width="2"/><text x="${X(i)}" y="${(+Y(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#7a736a" style="${ft}">${M.f(n1)}</text>`; }
-      if (n != null) { svg += `<circle cx="${X(i)}" cy="${Y(n)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`; }
-      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1c1a17" style="${ft}">${esc(axe(w, i))}</text>`;
+      if (n != null) { svg += `<circle cx="${X(i)}" cy="${Y(n)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`; }
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" text-anchor="middle" fill="#5c5852" style="${ft}">${esc(axe(w, i))}</text>`;
     });
     svg += '</svg>';
     const chips = W.map(w => {
@@ -9970,17 +10026,19 @@
   function rendRentab() {
     if (S.date.slice(0, 7) !== AUJ.slice(0, 7)) { return `<div class="db-note" style="padding:0 0 12px">La heatmap de rentabilité ne se lit que sur le mois en cours (P&amp;L quotidien du panel).</div>`; }
     const r = S.aux['rentab'];
-    const teinte = p => p == null ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
-      : p < 0 ? 'background:var(--accent);color:#fff' : p < 5 ? 'background:#D98A0B;color:#fff'
-      : p < 10 ? 'background:#A8B545;color:#fff' : p < 15 ? 'background:#7CB342;color:#fff'
-      : p < 25 ? 'background:#3D8B44;color:#fff' : 'background:var(--prize);color:#fff';
+    // La marge nette du jour (26/11/2026) : l'échelle PALIERS (une perte, 0–20 %, 20 % et plus), en fond teinté et texte de l'état.
+    // Avant : rouge, orange, trois verts (#A8B545, #7CB342, #3D8B44) et un doré au-delà de 25 %.
+    const teinte = p => p == null ? 'background:var(--table-head);color:var(--muted-2)'
+      : p < 0 ? 'background:var(--stop-soft);color:var(--stop)' : p < 20 ? 'background:var(--prize-soft);color:var(--prize-ink)'
+      : 'background:rgba(63, 122, 82, 0.14);color:var(--green)';
     let h = `<div class="db-card"><div class="ct"><span class="db-lab">Rentabilité — le résultat net, jour par jour</span><span class="db-mini">${r && r.du ? 'mois en cours · ' + fD(r.du) + ' → ' + fD(r.au) : ''}</span></div>`;
     if (S.err['rentab']) { h += `<div class="db-note" style="padding-top:10px">Lecture impossible : ${esc(S.err['rentab'])}</div></div>`; return h; }
     if (!r) { h += `<div style="padding:14px 16px"><div class="db-sk"></div></div></div>`; return h; }
     const mg = (r.magasins || []).find(x => String(x.id) === String(S.shop));
     if (!mg || mg.indispo) { h += `<div class="db-note" style="padding-top:10px">${esc((mg && mg.motif) || r.motif || 'pas de résultat net jour par jour pour ce magasin')}</div></div>`; return h; }
-    h += `<div style="display:flex;gap:4px;flex-wrap:wrap;padding:12px 16px 6px">${(mg.jours || []).map(j => `<div title="${esc(j.date)}${j.ouvert && j.net != null ? ' — net ' + fE(j.net) + ' · ' + fP(j.netPct) : ''}" style="${teinte(j.ouvert ? j.netPct : null)};border-radius:6px;min-width:44px;padding:5px 4px;text-align:center;font-size:10.5px;line-height:1.25"><b>${+j.date.slice(8, 10)}</b><br>${j.ouvert ? (j.netPct == null ? '' : Math.round(j.netPct) + ' %') : '·'}</div>`).join('')}</div>
-      <div class="db-note">${mg.total && mg.total.netPct != null ? '<b>' + fP(mg.total.netPct) + ' · ' + fE(mg.total.net) + '</b> sur le mois · ' : ''}palette : rouge &lt; 0 % · orange 0–5 · verts 5–25 · doré &gt; 25 % · ${esc(mg.sourceJour || '')}${mg.labourMois != null ? ' · personnel du mois ' + fE(mg.labourMois) + ', frais généraux ' + fE(mg.overheadMois) + ', répartis par jour ouvert' : ''}</div></div>`;
+    h += `<div style="display:flex;gap:4px;flex-wrap:wrap;padding:12px 16px 6px">${(mg.jours || []).map(j => `<div title="${esc(j.date)}${j.ouvert && j.net != null ? ' — net ' + fE(j.net) + ' · ' + fP(j.netPct) : ''}" style="${teinte(j.ouvert ? j.netPct : null)};border-radius:6px;min-width:44px;padding:5px 4px;text-align:center;font-size:10.5px;line-height:1.25">${+j.date.slice(8, 10)}<br>${j.ouvert ? (j.netPct == null ? '' : Math.round(j.netPct) + ' %') : '·'}</div>`).join('')}</div>
+      <div class="qb-leg" style="padding:4px 16px 8px">${legEchelle(PALIERS)}</div>
+      <div class="db-note">${mg.total && mg.total.netPct != null ? fP(mg.total.netPct) + ' · ' + fE(mg.total.net) + ' sur le mois · ' : ''}la case : la marge nette du jour, en % des ventes · ${esc(mg.sourceJour || '')}${mg.labourMois != null ? ' · personnel du mois ' + fE(mg.labourMois) + ', frais généraux ' + fE(mg.overheadMois) + ', répartis par jour ouvert' : ''}</div></div>`;
     return h;
   }
 
@@ -10009,7 +10067,8 @@
   function friseHtml() {
     if (EMBED || !['ops', 'semaine', 'mois'].includes(S.vue)) { return ''; }
     const fdC = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
-    const col = p => p == null ? '#cfc6ba' : (p >= 100 ? '#3f7a52' : (p >= 90 ? '#F6E7CE' : (p >= 75 ? '#F5B26B' : '#F08A2C')));
+    // L'atteinte de l'objectif (26/11/2026) : l'échelle ATTEINTE, la même que les jours, le calendrier et l'année.
+    const col = p => p == null ? '#cfc6ba' : atteinte(p).c;
     const fl = n => S.vue === 'ops' || S.vue === 'semaine'
       ? `<button type="button" class="fr-fl" data-frsem="${n}" aria-label="${n < 0 ? 'semaine précédente' : 'semaine suivante'}"${n > 0 && friseJours()[6] >= AUJ ? ' disabled' : ''}>${n < 0 ? '‹' : '›'}</button>`
       : `<button type="button" class="fr-fl" data-pas="${n}" aria-label="${n < 0 ? 'période précédente' : 'période suivante'}">${n < 0 ? '‹' : '›'}</button>`;
@@ -10025,8 +10084,8 @@
         const mg = (P.magasins || []).find(x => String(x.shopId) === String(S.shop));
         ((mg && mg.jours) || []).forEach(j => { lus[j.date] = j; });
       });
-      const totS = J.reduce((t, d) => t + (lus[d] && lus[d].ca != null && d <= AUJ ? +lus[d].ca : 0), 0);
-      tete = 'semaine du ' + fdC(J[0]) + ' au ' + fdC(J[6]) + (totS ? ' · ' + fE(totS) : '');
+      // Le CA de la semaine n'est plus répété ici (26/11/2026) : il est dans sa case et dans le résumé.
+      tete = 'semaine du ' + fdC(J[0]) + ' au ' + fdC(J[6]);
       chips = attente && !Object.keys(lus).length ? sk(7) : W.map(w => {
         const vus = w.filter(d => d <= AUJ && lus[d] && lus[d].ca != null), cours = w[0] <= AUJ && AUJ <= w[6], on = w[0] === J[0];
         const lib = 'S' + semIso(w[0]);
@@ -10067,11 +10126,11 @@
         const ca = x.ca != null ? +x.ca : null, bud = x.caBudget != null ? +x.caBudget : null, p = ca != null && bud ? 100 * ca / bud : null;
         if (ym > AUJ.slice(0, 7)) { return `<div class="fr-c fut"><span class="n">${MOIS_C[i]}</span><b>—</b><small>${bud ? 'objectif ' + fK(bud) : 'à venir'}</small></div>`; }
         if (ca == null) { return `<div class="fr-c fut"><span class="n">${MOIS_C[i]}</span><b>—</b><small>pas de vente</small></div>`; }
-        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${finMois(ym)}"><span class="n">${MOIS_C[i]}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % de l’objectif' : 'sans objectif'}</small></button>`;
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${finMois(ym)}"><span class="n">${MOIS_C[i]}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : (cours ? '#B8B2A8' : col(p))}"></em></i><small title="${p != null ? fN(p) + ' % de l’objectif du mois' + (cours ? ', mois en cours' : '') : ''}">${p != null ? fN(p) + ' % obj.' : 'sans objectif'}</small></button>`;
       }).join('');
     }
     const annuel = S.vue === 'mois';
-    return `<div class="db-frise${S.vue === 'ops' || S.vue === 'semaine' ? ' sept' : ''}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
+    return `<div class="db-frise${S.vue === 'ops' || S.vue === 'semaine' ? ' sept' : ''}${S.vue === 'ops' ? '' : ' fr-chiffres'}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
   }
 
   function rendBench(m, d) {
@@ -11305,10 +11364,12 @@
   const nomVoix = (plan, v) => (plan && plan.voix && plan.voix[v[0]]) || v[1];
   const actionsDe = (plan, q) => (plan && Array.isArray(plan.actions) ? plan.actions : []).filter(a => +a.trimestre === q);
   const stAct = a => a.statut === 'fait' || a.statut === 'faite' || a.statut === 'termine' ? 'ok' : (a.statut === 'en_cours' || a.statut === 'encours' || a.statut === 'lancee' ? 'enc' : '');
-  const libAct = a => stAct(a) === 'ok' ? 'fait' : (stAct(a) === 'enc' ? 'en cours' : (a.statut ? String(a.statut).replace(/_/g, ' ') : 'à faire'));
+  const libAct = a => stAct(a) === 'ok' ? 'fait' : (stAct(a) === 'enc' ? 'en cours' : (/^a_?lancer$/.test(a.statut || '') ? 'à lancer' : (a.statut ? String(a.statut).replace(/_/g, ' ') : 'à faire')));
   const MO3 = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
-  // L'atteinte : rouge < 80 %, orange 80–95, vert 95–105, doré > 105 (orange ≠ doré, 13/11/2026).
-  const colAtt = p => p == null ? '#B9B2A8' : p < 80 ? '#8D1D2C' : p < 95 ? '#D98A0B' : p < 105 ? '#7CB342' : '#B0792A';
+  // L'atteinte (26/11/2026) : l'échelle ATTEINTE, la même qu'en Semaine et Mois (avant : bordeaux < 80 %, orange 80–95, vert
+  // 95–105, doré > 105). Le mois ou le trimestre en cours se hachure : il n'est pas encore jugé (l'or y disait « en cours »).
+  const colAtt = p => p == null ? '#B9B2A8' : atteinte(p).c;
+  const AN_HACH = 'repeating-linear-gradient(135deg,#c9c1b4 0 3px,#e8e1d6 3px 6px)';
   /** Le trimestre ouvert : celui qu'on a cliqué, sinon celui de la date regardée (le trimestre en cours, aujourd'hui). */
   function anQ() { return S.anQ || trimestre(); }
   /** Les mois du magasin (/stores/perf, deux années), ou null tant qu'ils ne sont pas lus. */
@@ -11329,21 +11390,35 @@
       <div class="db-rit">Rituel du trimestre : ${[1, 2, 3, 4, 5].map(i => `<i class="${i <= et ? 'on' : ''}"></i>`).join('')} étape ${et} / 5${t.revue && t.revue.valideLe ? ' · validé le ' + fD(String(t.revue.valideLe).slice(0, 10)) + (t.revue.validePar ? ' par ' + esc(t.revue.validePar) : '') : ' · non validé'}</div>`;
   }
 
-  /** L'objectif de l'année en une carte : la barre (réalisé, projection hachurée, repère de l'attendu) et trois chiffres. */
-  function anObjectif(plan, Y) {
+  /** Le résumé de l'année (26/11/2026, DESIGN_SYSTEM.md §7.13) : il remplace la carte de l'objectif et ses trois cases (réalisé,
+   *  écart, projection) — chaque chiffre y est une fois. « À corriger » (l'année en cours) : le trimestre en cours sous l'attendu,
+   *  ses actions pas encore lancées ; un bouton ouvre le trimestre (anq) et montre son détail. Une année passée : « Cette
+   *  année-là », les trimestres en retard. */
+  function anResume(plan, Y) {
     const A = plan.annee || {}, src = A.objectifSource === 'rampe' ? 'rampe de l’étude, à engager' : 'engagement du franchisé';
-    const pc = v => A.objectif && v != null ? Math.max(0, Math.min(100, 100 * v / A.objectif)) : null;
-    const pR = pc(A.realise || 0), pA = pc(A.attendu), pP = pc(A.projection);
-    const barre = A.objectif ? `<div class="db-an-barre" title="${esc('réalisé ' + fK(A.realise) + (A.attendu != null ? ' · attendu à ce jour ' + fK(A.attendu) : '') + (A.projection != null ? ' · projection ' + fK(A.projection) : ''))}"><i style="width:${pR.toFixed(1)}%"></i>${pP != null && pP > pR ? `<s style="left:${pR.toFixed(1)}%;width:${(pP - pR).toFixed(1)}%"></s>` : ''}${pA != null ? `<b class="${pA > 88 ? 'fin' : (pA < 12 ? 'deb' : '')}" style="left:${pA.toFixed(1)}%"><em>attendu à ce jour</em></b>` : ''}</div>` : '';
-    const proj = A.projection != null && A.objectif ? (A.projection >= A.objectif ? 'bon' : 'vif') : '';
-    return `<div class="db-card db-an-obj">
-      <div class="hd"><div><span class="db-lab">Objectif ${Y} · ${src}</span><div class="v">${fK(A.objectif)}</div></div>${A.partEcoulee != null ? `<span class="db-mini">${fP0(A.partEcoulee)} de l’année écoulée</span>` : ''}</div>
-      ${barre}
-      <div class="db-an-3">
-        <div><span class="db-lab">Réalisé</span><div class="v">${fK(A.realise)}</div><span class="s">${pR != null ? fP0(100 * (A.realise || 0) / A.objectif) + ' de l’objectif' : ''}</span></div>
-        <div class="${A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif')}"><span class="db-lab">Écart à ce jour</span><div class="v">${fSK(A.ecart)}</div><span class="s">${A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’attendu (' + fK(A.attendu) + ')'}</span></div>
-        <div class="${proj}"><span class="db-lab">Projection fin d’année</span><div class="v">${fK(A.projection)}</div><span class="s">${A.projection != null && A.objectif ? fSK(A.projection - A.objectif) + ' sur l’objectif' : 'au rythme actuel'}</span></div>
-      </div></div>`;
+    const cours = Y === +AUJ.slice(0, 4), passee = Y < +AUJ.slice(0, 4);
+    const enCours = cours && A.attendu != null && A.objectif != null && A.attendu < A.objectif - 0.5;
+    const att = A.attendu ? 100 * (A.realise || 0) / A.attendu : null, At = att == null ? null : atteinte(att);
+    const T = Array.isArray(plan.trimestres) ? plan.trimestres : [], L = [];
+    const tAtt = t => t.attendu ? 100 * (t.realise || 0) / t.attendu : null;
+    const ligneT = (t, X) => ({ sig: X.sig, txt: `T${t.t} : ${fP0(tAtt(t))} de l’attendu${t.ecart != null ? ', ' + fSK(t.ecart) : ''}`, attr: `data-ac="an-det" data-acg="anq:${t.t}" title="ouvrir le trimestre"` });
+    if (cours) {
+      T.filter(t => t.enCours && tAtt(t) != null).forEach(t => { const X = atteinte(tAtt(t)); if (X.sig !== 'green') { L.push(ligneT(t, X)); } });
+      const q = (T.find(t => t.enCours) || {}).t;
+      if (q) { actionsDe(plan, q).filter(a => !stAct(a)).forEach(a => { const l = libAct(a); L.push({ sig: 'prize', txt: `${esc(l.charAt(0).toUpperCase() + l.slice(1))} : ${esc(a.libelle)}`, attr: `data-ac="an-det" data-acg="anq:${q}" title="le trimestre T${q} : ses actions"` }); }); }
+    } else if (passee) {
+      T.filter(t => !t.futur && tAtt(t) != null).forEach(t => { const X = atteinte(tAtt(t)); if (X.sig === 'stop') { L.push(ligneT(t, X)); } });
+    }
+    return chrResume({
+      aria: 'Résumé de l’année ' + Y, v: fK(A.realise),
+      et: At ? { sig: At.sig, mot: CHR_MOTS[enCours ? 'cours' : 'clos'][At.sig] } : null,
+      q: 'de chiffre d’affaires en ' + Y,
+      q2: A.objectif ? `${fP0(100 * (A.realise || 0) / A.objectif)} de l’objectif de ${fK(A.objectif)} · ${src}` : 'pas d’objectif pour cette année',
+      jauge: A.objectif ? chrJauge(A.realise, A.objectif, enCours ? A.attendu : A.objectif, At, enCours ? 'attendu à ce jour' : 'objectif', enCours ? A.projection : null) : '',
+      meta: A.objectif ? `${enCours ? 'attendu à ce jour ' + fK(A.attendu) : 'objectif ' + fK(A.objectif)}${A.ecart != null ? ` · <span class="${A.ecart >= 0 ? 'ok' : 'ko'}">${fSK(A.ecart)}</span>` : ''}${enCours && A.partEcoulee != null ? ' · ' + fP0(A.partEcoulee) + ' de l’année écoulée' : ''}` : '',
+      lev: enCours && A.projection != null ? `<span class="chr-lh">Au rythme actuel : ${fK(A.projection)} en fin d’année</span><span>${fSK(A.projection - A.objectif)} sur l’objectif · la projection, hachurée sur la jauge</span>` : '',
+      L, titre: passee ? 'Cette année-là' : 'À corriger', ok: cours ? 'Rien à corriger cette année.' : ''
+    });
   }
 
   /** Les quatre trimestres côte à côte : un clic ouvre le détail. La pastille compare le réalisé à l'attendu à ce jour. */
@@ -11356,10 +11431,10 @@
       const ms = t.mois.map(m => { const c = anCel(cells, Y, m); return { m, b: anBud(c), ca: c && c.ca ? +c.ca : 0 }; });
       const mx = Math.max(...ms.map(x => Math.max(x.b, x.ca)), 1);
       return `<button type="button" class="db-an-qc${on ? ' on' : ''}" data-anq="${t.t}" aria-pressed="${on}">
-        <span class="hd"><span class="t">T${t.t}</span>${anTag(t)}${att != null && !t.futur ? `<span class="db-pill" style="background:${colAtt(att)}" title="réalisé face à l’attendu à ce jour">${fP0(att)}</span>` : ''}</span>
+        <span class="hd"><span class="t">T${t.t}</span>${anTag(t)}${att != null && !t.futur ? `<span class="an-att" style="background:${atteinte(att).f};color:${atteinte(att).t}" title="réalisé face à l’attendu à ce jour">${fP0(att)} · ${atteinte(att).m}</span>` : ''}</span>
         <span class="v">${t.futur ? '—' : fK(t.realise)}<small> / ${fK(t.objectif)}</small></span>
-        <span class="mi">${ms.map(x => `<span><span class="bb"><i class="b" style="height:${(44 * x.b / mx).toFixed(0)}px"></i>${anFutur(Y, x.m) ? '' : `<i style="height:${(44 * x.ca / mx).toFixed(0)}px;background:${anEnCours(Y, x.m) ? 'var(--prize)' : colAtt(x.b ? 100 * x.ca / x.b : null)}"></i>`}</span>${MO3[x.m - 1]}</span>`).join('')}</span>
-        <span class="s">${t.ecart == null ? (t.futur ? 'trimestre à venir' : '') : `<span style="color:${t.ecart >= 0 ? 'var(--green)' : 'var(--color-primary)'}">${fSK(t.ecart)}</span> sur l’attendu`}${t.netPct != null && !t.futur ? ' · marge nette ' + fP0(t.netPct) : ''}</span>
+        <span class="mi">${ms.map(x => `<span><span class="bb"><i class="b" style="height:${(44 * x.b / mx).toFixed(0)}px"></i>${anFutur(Y, x.m) ? '' : `<i style="height:${(44 * x.ca / mx).toFixed(0)}px;background:${anEnCours(Y, x.m) ? AN_HACH : colAtt(x.b ? 100 * x.ca / x.b : null)}"></i>`}</span>${MO3[x.m - 1]}</span>`).join('')}</span>
+        <span class="s">${t.ecart == null ? (t.futur ? 'trimestre à venir' : '') : `<span style="color:${t.ecart >= 0 ? 'var(--green)' : 'var(--stop)'}">${fSK(t.ecart)}</span> sur l’attendu`}${t.netPct != null && !t.futur ? ' · marge nette ' + fP0(t.netPct) : ''}</span>
       </button>`; }).join('')}</div>`;
   }
 
@@ -11368,23 +11443,20 @@
     const T = Array.isArray(plan.trimestres) ? plan.trimestres : [];
     const t = T.find(x => +x.t === anQ()) || T.find(x => x.enCours) || T[0];
     if (!t) { return ''; }
-    const att = t.attendu ? 100 * (t.realise || 0) / t.attendu : null;
+    // Objectif, réalisé, écart et marge nette sont sur la carte du trimestre, juste au-dessus (26/11/2026 : un chiffre, une place).
     const M = t.mois.map(m => anCel(cells, Y, m) || { mois: m });
     const mx = Math.max(...M.map(x => Math.max(anBud(x), +x.ca || 0)), 1);
     const mois = cells == null ? squelette(1) : `<div class="db-mo">${M.map(x => { const bud = anBud(x), ca = +x.ca || 0, pct = bud ? 100 * ca / bud : null, enc = anEnCours(Y, +x.mois), fut = anFutur(Y, +x.mois);
-      return `<div><div class="bars"><i class="b" style="height:${(140 * bud / mx).toFixed(0)}px" title="budget ${fE(bud)}"></i>${fut ? '' : `<i class="r ${enc ? 'enc' : (pct != null && pct >= 95 ? 'ok' : '')}" style="height:${(140 * ca / mx).toFixed(0)}px" title="réalisé ${fE(ca)}"></i>`}</div><div class="n">${MO3[x.mois - 1]} · ${fut || x.ca == null ? '—' : fK(ca)}</div><div class="d">budget ${fK(bud)}${pct != null && !fut && x.ca != null ? ' · ' + fP0(pct) : ''}${enc ? ' · en cours' : ''}${x.tickets ? ' · ' + fN(x.tickets) + ' clients' : ''}</div></div>`; }).join('')}</div>`;
+      return `<div><div class="bars"><i class="b" style="height:${(140 * bud / mx).toFixed(0)}px" title="budget ${fE(bud)}"></i>${fut ? '' : `<i class="r" style="height:${(140 * ca / mx).toFixed(0)}px;background:${enc ? AN_HACH : colAtt(pct)}" title="réalisé ${fE(ca)}${pct != null && !enc ? ' · ' + atteinte(pct).m : ''}"></i>`}</div><div class="n">${MO3[x.mois - 1]} · ${fut || x.ca == null ? '—' : fK(ca)}</div><div class="d">budget ${fK(bud)}${pct != null && !fut && x.ca != null ? ' · ' + fP0(pct) : ''}${enc ? ' · en cours' : ''}${x.tickets ? ' · ' + fN(x.tickets) + ' clients' : ''}</div></div>`; }).join('')}</div>`;
     const cli = t.clients == null ? '—' : (t.clients > 0 ? fN(t.clients) : 'aucun');
     const cliS = (t.clients != null && t.clients < 0 ? fN(-t.clients) + ' clients d’avance · ' : '') + (t.panier ? 'au panier moyen ' + fU(t.panier) : '');
-    return `<div class="db-card db-an-det"><div class="ct"><span class="db-lab">Le trimestre ${esc(t.label || 'T' + t.t + ' ' + Y)} — ${t.enCours ? 'en cours' : (t.clos ? 'clos' : 'à venir')}</span><span class="db-mini">${t.mois.map(m => MO3[m - 1]).join(' · ')} · objectif du plan de développement, attendu au rythme des budgets mensuels</span></div>
+    return `<div class="db-card db-an-det" id="an-det"><div class="ct"><span class="db-lab">Le trimestre ${esc(t.label || 'T' + t.t + ' ' + Y)} — ${t.enCours ? 'en cours' : (t.clos ? 'clos' : 'à venir')}</span><span class="db-mini">${t.mois.map(m => MO3[m - 1]).join(' · ')} · objectif du plan de développement, attendu au rythme des budgets mensuels</span></div>
       <div class="g">
         ${mois}
         <dl class="kv">
-          <div><dt>Objectif</dt><dd>${fK(t.objectif)}</dd></div>
-          <div><dt>Réalisé</dt><dd>${fK(t.realise)}<small>${att != null && !t.futur ? fP0(att) + ' de l’attendu · ' : ''}${t.moisRealises || 0} mois lu(s)</small></dd></div>
-          <div><dt>Attendu à ce jour</dt><dd>${fK(t.attendu)}</dd></div>
-          <div><dt>Écart</dt><dd style="color:${t.ecart == null ? 'inherit' : (t.ecart >= 0 ? 'var(--green)' : 'var(--color-primary)')}">${t.ecart == null ? '—' : fSK(t.ecart)}${t.ecartPct != null ? `<small>${fP(t.ecartPct)}</small>` : ''}</dd></div>
+          <div><dt>Attendu à ce jour</dt><dd>${fK(t.attendu)}<small>${t.ecartPct != null ? 'écart ' + fP(t.ecartPct) + ' · ' : ''}${t.moisRealises || 0} mois lu(s)</small></dd></div>
           <div><dt>Clients manquants</dt><dd>${cli}${cliS ? `<small>${cliS}</small>` : ''}</dd></div>
-          <div><dt>Marge nette</dt><dd>${fP(t.netPct)}<small>${t.food != null ? 'food ' + fP(t.food) : ''}${t.labour != null ? ' · labour ' + fP(t.labour) : ''}</small></dd></div>
+          ${t.food != null || t.labour != null ? `<div><dt>Coûts</dt><dd>${t.food != null ? 'food ' + fP(t.food) : ''}<small>${t.labour != null ? 'labour ' + fP(t.labour) : ''}</small></dd></div>` : ''}
         </dl>
         <div class="an">${blocNotes(plan, t)}</div>
       </div></div>`;
@@ -11400,14 +11472,15 @@
     const m1 = cells.filter(c => +c.annee === Y && c.ca).map(c => +c.mois).sort((a, b) => a - b)[0];
     const mx = Math.max(...cells.filter(c => +c.annee >= Y - 1).map(c => Math.max(+c.ca || 0, anBud(c))), 1);
     const q0 = anQ();
-    const leg = `barre : CA ${Y}, couleur = atteinte du budget · or : mois en cours · ${aN1 ? 'trait gris : ' + (Y - 1) + ', même mois' : 'pas de ' + (Y - 1) + (m1 ? ' : premier mois vendu en ' + MO3[m1 - 1] + ' ' + Y : '')}`;
+    const leg = `barre : CA ${Y}, couleur = atteinte du budget · ${aN1 ? 'trait gris : ' + (Y - 1) + ', même mois' : 'pas de ' + (Y - 1) + (m1 ? ' : premier mois vendu en ' + MO3[m1 - 1] + ' ' + Y : '')}`;
     return tete(leg) + `<div class="db-an-12">${[1, 2, 3, 4].map(q => `<div class="tq${q === q0 ? ' on' : ''}"><span class="db-lab">T${q}</span><div class="ms">${[0, 1, 2].map(k => {
       const m = (q - 1) * 3 + k + 1, c = anCel(cells, Y, m), p = anCel(cells, Y - 1, m), b = anBud(c), fut = anFutur(Y, m), enc = anEnCours(Y, m);
       const lu = !fut && c && c.ca != null, ca = lu ? +c.ca : 0, pct = lu && b ? 100 * ca / b : null, pca = p && p.ca ? +p.ca : null;
       const evo = pca && lu && !enc ? `${ca >= pca ? '+' : '−'} ${nf(Math.abs(Math.round(100 * (ca / pca - 1))), 0)} % sur ${Y - 1}` : (pca && enc ? 'mois en cours' : '');
       const tit = MOIS[m - 1] + ' ' + Y + (lu ? ' · CA ' + fE(ca) : '') + (b ? ' · budget ' + fE(b) : '') + (pct != null ? ' · ' + fP(pct) : '') + (lu && c.tickets ? ' · ' + fN(c.tickets) + ' clients' : '') + (pca ? ' · ' + (Y - 1) + ' : ' + fE(pca) : '');
-      return `<div class="m" title="${esc(tit)}"><div class="bb">${pca ? `<u style="bottom:${(100 * pca / mx).toFixed(1)}%"></u>` : ''}${lu ? `<i style="height:${(100 * ca / mx).toFixed(1)}%;background:${enc ? 'var(--prize)' : colAtt(pct)}"></i>` : ''}</div>
-        <div class="n">${MO3[m - 1]}</div><div class="d">${fut ? '' : (lu ? fK(ca) : '—')}</div><div class="d">${pct == null ? '' : `<span style="color:${enc ? 'var(--prize-ink)' : colAtt(pct)}">${fP0(pct)}</span>`}</div><div class="d">${evo}</div></div>`; }).join('')}</div></div>`).join('')}</div></div>`;
+      return `<div class="m" title="${esc(tit)}"><div class="bb">${pca ? `<u style="bottom:${(100 * pca / mx).toFixed(1)}%"></u>` : ''}${lu ? `<i style="height:${(100 * ca / mx).toFixed(1)}%;background:${enc ? AN_HACH : colAtt(pct)}"></i>` : ''}</div>
+        <div class="n">${MO3[m - 1]}</div><div class="d">${fut ? '' : (lu ? fK(ca) : '—')}</div><div class="d">${pct == null ? '' : `<span style="color:${enc ? 'var(--muted-2)' : atteinte(pct).t}">${fP0(pct)}</span>`}</div><div class="d">${evo}</div></div>`; }).join('')}</div></div>`).join('')}</div>
+      <div class="qb-leg">${legEchelle(ATTEINTE)}<span><i class="hach"></i>mois en cours, pas encore jugé</span></div></div>`;
   }
 
   /** La rampe à 5 ans de l'étude de marché, et les engagements du franchisé. */
@@ -11426,9 +11499,9 @@
     const an = cells.filter(c => +c.annee === Y && c.ca).sort((a, b) => a.mois - b.mois);
     if (!an.length) { return ''; }
     return `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, mois par mois</span></div>
-      <table class="db-t"><tr><th>Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th>Marge nette</th></tr>
+      <table class="db-t an-mois"><thead><tr><th>Mois</th><th>CA</th><th>Budget</th><th title="${esc(ATTEINTE.map(x => x.l).join(' · '))}">Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th title="${esc(PALIERS.map(x => x.l).join(' · '))}">Marge nette</th></tr></thead><tbody>
       ${an.map(c => { const bud = c.caBudget || c.caTheorique; const pct = bud ? 100 * c.ca / bud : null;
-        return `<tr><td>${MO3[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}</td><td>${fN(c.tickets)}</td>${panTd(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen }))}<td>${fP(c.foodCostPct)}</td><td>${c.coutsManque ? '<span class="mu" title="le P&L mensuel du panel ne répond pas pour ce mois">…</span>' : fP(c.labourCostPct)}${c.sansPlanning ? ` <b class="ko" title="${c.sansPlanning} jour${c.sansPlanning > 1 ? 's' : ''} vendu${c.sansPlanning > 1 ? 's' : ''} sans planning au panel : la main-d’œuvre du mois est incomplète">!</b>` : ''}</td><td>${c.coutsManque ? '<span class="mu">…</span>' : fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.15 ? 'ok' : (c.margePct >= 0.05 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</table></div>`;
+        return `<tr><td>${MO3[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null || anEnCours(Y, +c.mois) ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}${anEnCours(Y, +c.mois) ? '<span class="sub">en cours</span>' : ''}</td><td>${fN(c.tickets)}</td>${panTd(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen }))}<td>${fP(c.foodCostPct)}</td><td>${c.coutsManque ? '<span class="mu" title="le P&L mensuel du panel ne répond pas pour ce mois">…</span>' : fP(c.labourCostPct)}${c.sansPlanning ? ` <b class="ko" title="${c.sansPlanning} jour${c.sansPlanning > 1 ? 's' : ''} vendu${c.sansPlanning > 1 ? 's' : ''} sans planning au panel : la main-d’œuvre du mois est incomplète">!</b>` : ''}</td><td>${c.coutsManque ? '<span class="mu">…</span>' : fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.2 ? 'ok' : (c.margePct >= 0 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</tbody></table></div>`;
   }
 
   /** Un pli : fermé par défaut, il se souvient d'être ouvert d'un rendu à l'autre (S.anPli). */
@@ -11442,7 +11515,7 @@
     if (S.err[kP]) { h += `<div class="db-err">Objectif : ${esc(S.err[kP])}</div>`; }
     h += `<div class="db-sec">L’année ${Y}<small>l’objectif, les quatre trimestres, les douze mois — un clic sur un trimestre l’ouvre</small></div>`;
     if (!plan && !S.err[kP]) { h += squelette(3); }
-    else if (plan && plan.annee) { h += anObjectif(plan, Y) + anTrimestres(plan, Y, cells) + anDetail(plan, Y, cells); }
+    else if (plan && plan.annee) { h += anResume(plan, Y) + anTrimestres(plan, Y, cells) + anDetail(plan, Y, cells); }
     else if (plan) { h += `<div class="db-alerte">${esc(plan.error || 'Pas de plan pour ce magasin.')}</div>`; }
     if (cells || !S.err[clePerf()]) { h += anBande(Y, cells); }
     // Le trafic de l'année face à l'an passé (24/10/2026) : il reste visible (14/11/2026, Sam).
@@ -11499,7 +11572,7 @@
         <div class="axe"></div><div></div>${heures}
         <div class="lab">Marge nette<br><span>marge brute − rémunération</span></div>${cases}
       </div>
-      <div class="db-axe" style="padding-top:8px"><span><i class="c" style="background:#e5c9a0"></i>coût matière &nbsp; <i class="c" style="background:var(--prize)"></i>rémunération &nbsp; <i class="c" style="background:var(--green)"></i>marge nette de l’heure &nbsp; <i class="c" style="background:var(--stop)"></i>perte</span><span>hauteur de la barre = ventes · case : rouge &lt; 0 · orange &lt; 20 % des ventes · vert clair &lt; 40 % · vert ≥ 40 %</span></div></div>`;
+      <div class="db-axe" style="padding-top:8px"><span><i class="c" style="background:#e5c9a0"></i>coût matière &nbsp; <i class="c" style="background:var(--prize)"></i>rémunération &nbsp; <i class="c" style="background:var(--green)"></i>marge nette de l’heure &nbsp; <i class="c" style="background:var(--stop)"></i>perte</span><span>hauteur de la barre = ventes · case, la marge nette en % des ventes : ${PALIERS.map(x => x.l).join(' · ')}</span></div></div>`;
     // La semaine par périodes — matin, midi, après-midi — sous la journée type.
     if ((S.vue === 'semaine' || S.vue === 'mois') && st.periodes && st.periodes.jours) { h += rendPeriodes(st); }
     // Tableau + panneau.
@@ -11555,10 +11628,13 @@
     const LAB = { 1: '1er', 2: '2e', 3: '3e' };
     // L'échelle : cinq paliers de la meilleure case de la semaine, sur le chiffre choisi.
     const mx = Math.max(1e-9, ...dates.flatMap(d => B.map(b => (PJ[d][b.cle] || {})[col] || 0)));
+    // Une rampe d'une seule teinte (26/11/2026, DESIGN_SYSTEM.md §7.13 : une intensité, pas un état) : le réalisé (--chart-real)
+    // pour le CA et les clients, le vert (--green) pour la marge nette ; une perte en --stop-soft. Avant : bordeaux, rouge, orange
+    // vif, sable, et pour la marge deux verts pareils. Dès le deuxième palier, le texte passe à l'encre (5,8:1 au moins).
     const ECH = col === 'res'
-      ? [['#3f7a52', '≥ 80 % de la meilleure marge'], ['#3f7a52', '55 – 80 %'], ['#6aa84f', '35 – 55 %'], ['#c9e0b8', '18 – 35 %'], ['#EDE7DE', '< 18 %']]
-      : [['#8D1D2C', '≥ 80 % de la meilleure case'], ['#A32014', '55 – 80 %'], ['#F08A2C', '35 – 55 %'], ['#F6E7CE', '18 – 35 %'], ['#EDE7DE', '< 18 %']];
-    const teinte = v => { const p = v / mx; if (col === 'res' && v < 0) { return ['#F6ECED', true]; } if (p >= .8) { return [ECH[0][0], false]; } if (p >= .55) { return [ECH[1][0], false]; } if (p >= .35) { return [ECH[2][0], false]; } if (p >= .18) { return [ECH[3][0], true]; } return [ECH[4][0], true]; };
+      ? [['#3f7a52', '≥ 80 % de la meilleure marge'], ['#88AD94', '55 – 80 %'], ['#AEC7B6', '35 – 55 %'], ['#D1DFD5', '18 – 35 %'], ['#ECF2EE', '< 18 %']]
+      : [['#B03048', '≥ 80 % de la meilleure case'], ['#CE7F8E', '55 – 80 %'], ['#DEA8B2', '35 – 55 %'], ['#ECCDD3', '18 – 35 %'], ['#F7EAED', '< 18 %']];
+    const teinte = v => { const p = v / mx; if (col === 'res' && v < 0) { return ['#F7E0DC', true]; } if (p >= .8) { return [ECH[0][0], false]; } if (p >= .55) { return [ECH[1][0], true]; } if (p >= .35) { return [ECH[2][0], true]; } if (p >= .18) { return [ECH[3][0], true]; } return [ECH[4][0], true]; };
     const net = (v, clair) => `<span class="${clair ? (v.res >= 0 ? 'ok' : 'ko') : ''}">${fSK(v.res)}</span>`;
     const kv = (v, clair) => `<div class="kv"><span>marge nette</span><span>${net(v, clair)} <span class="pc">${v.ca > 0 ? fN(100 * v.res / v.ca) + ' %' : '—'}</span></span><span>clients</span><span>${fN(v.tickets)}</span></div>`;
     const cell = (v, rg) => {
@@ -11581,7 +11657,7 @@
       <span class="db-cdr" style="padding:0;margin-left:8px">${S.perOuvert ? 'replier ▴' : 'voir les périodes ▾'}</span></div>
       ${S.perOuvert ? `<div class="ct" style="border-top:none;padding-top:10px;padding-bottom:0"><span class="db-lab">Colorer par</span><div class="db-ong" style="margin-left:8px">${['ca', 'res', 'tickets'].map(k => `<button data-percol="${k}" class="${col === k ? 'on' : ''}">${NOM[k]}</button>`).join('')}</div><span class="db-mini">le rang dans la case : la place de la période dans ${mois ? 'sa semaine' : 'sa journée'}, au CA</span></div>
       <div class="db-per" style="grid-template-columns:104px repeat(${dates.length},minmax(0,1fr)) 150px">${g}</div>
-      <div class="db-perleg">${ECH.map(e => `<span><i style="background:${e[0]}"></i>${e[1]}</span>`).join('')}${col === 'res' ? '<span><i style="background:rgba(141, 29, 44, 0.08)"></i>perte</span>' : ''}<span>· les ventes d’avant 6 h comptent dans le matin, celles d’après 19 h dans l’après-midi</span></div>` : ''}</div>`;
+      <div class="db-perleg">${ECH.map(e => `<span><i style="background:${e[0]}"></i>${e[1]}</span>`).join('')}${col === 'res' ? '<span><i style="background:#F7E0DC"></i>perte</span>' : ''}<span>· les ventes d’avant 6 h comptent dans le matin, celles d’après 19 h dans l’après-midi</span></div>` : ''}</div>`;
   }
   function rendPanneau(st, l, moy, nJ) {
     const V = moy ? l.moy.ca : l.ca, M = moy ? l.moy.mat : l.mat, MB = V - M, T = moy ? l.moy.trav : l.trav, R = MB - T;
