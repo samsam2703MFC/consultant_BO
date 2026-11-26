@@ -1,0 +1,373 @@
+{
+  "aConfirmer": [
+    "Bureaux : à Halle (26/11/2026), les comptes consultant et admin du cockpit n’y ont pas accès (« Réponse : HTTP 404 : ORDER_NOT_FOUND · consultant (404) puis admin (404) »). La liste, la fiche d’un bureau et l’assistant « Ajouter un bureau » sont décrits d’après le code en ligne, sans capture (ils demandent la connexion du compte TF Buddy du magasin, que la routine ne fait pas).",
+    "Le compte TF Buddy du magasin : le code dit « la connexion du panel TF Buddy : votre téléphone, votre PIN » (un employé du magasin connecté au panel). Quel téléphone et quel PIN utiliser en magasin (le franchisé, le responsable, un compte du magasin) n’est dit nulle part : à préciser.",
+    "Limite des connexions : TF Buddy limite les essais par téléphone et par adresse IP (PANEL_AUTH_LIMIT) ; l’IP est celle du serveur du cockpit, commune à tous les magasins (commit de55c488 : question posée à TF Buddy). Un magasin peut donc être bloqué quelques minutes par les essais d’un autre : à confirmer avec TF Buddy.",
+    "Les gestes qui écrivent dans TF Buddy (ajouter, modifier, supprimer un client, passer en entreprise, profil commercial, créer un bureau, inviter) ne sont pas essayés : la routine ne capture qu’en lecture. Les libellés viennent du code en ligne.",
+    "À Halle, les colonnes Score et « Type · mode » et le crédit sont vides (« — ») : le profil commercial n’est pas encore rempli. Ce que veut dire chaque score (A à D) n’est pas écrit à l’écran : une règle du réseau à donner ?",
+    "Données personnelles (noms, téléphones, e-mails des clients) : l’article est classé « responsable » (bouton Franchisé). Qui dans l’équipe peut ouvrir Clients sur le dashboard, et la règle RGPD du réseau, ne sont pas dits ici (sous-catégorie D8.6 « Conformité RGPD / Données client » possible en plus).",
+    "Classement : sous-catégorie D4.3 (Fidélisation : « suivi client récurrent ») ; compétences C-VENTE.B2B et C-PILOTAGE.Vente ; formations FO-15 et FO-05. Durée (« 20 min ») estimée."
+  ],
+  "id": "art-dash-clients",
+  "code": "",
+  "type": "Article",
+  "dossier": "05",
+  "version": "1.0",
+  "statut": "a_valider",
+  "langue_origine": "FR",
+  "poste": "vente",
+  "moment": null,
+  "acces": "responsable",
+  "duree": "20 min de lecture, avec Vendre › Clients ouvert sur son magasin",
+  "titre": {
+    "fr": "Le dashboard : Vendre › Clients (particuliers, entreprises B2B, bureaux)",
+    "nl": "Het dashboard: Vendre › Clients (particulieren, B2B-bedrijven, kantoren)"
+  },
+  "objectif": {
+    "fr": "Retrouver un client du magasin et sa fiche, tenir à jour les entreprises B2B (TVA, adresse, contact) pour que leurs factures et leurs offres puissent partir, gérer les bureaux livrés par une tournée, et lire chaque mois la part B2B du chiffre d’affaires.",
+    "nl": "Een klant van de winkel en zijn fiche terugvinden, de B2B-bedrijven bijwerken (btw, adres, contact) zodat hun facturen en offertes kunnen vertrekken, de kantoren beheren die door een ronde beleverd worden, en elke maand het B2B-aandeel van de omzet lezen."
+  },
+  "pour": {
+    "fr": "Franchisé, locataire gérant, manager et adjoint manager (P7 à P12), et le responsable des clients pro (P4). À lire après « Comprendre le dashboard magasin » (0.0.15), avec Vendre › Clients ouvert sur son magasin.",
+    "nl": "Franchisenemer, locataire-gérant, manager en adjunct-manager (P7 tot P12), en de verantwoordelijke voor de pro-klanten (P4). Te lezen na « Het winkeldashboard begrijpen » (0.0.15), met Vendre › Clients open op de eigen winkel."
+  },
+  "classement": {
+    "souscat": "D4.3",
+    "phases": [
+      "operationnel"
+    ],
+    "postes": [
+      "P4",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12"
+    ],
+    "competences": [
+      "C-VENTE.B2B",
+      "C-PILOTAGE.Vente"
+    ],
+    "formations": [
+      "FO-15",
+      "FO-05"
+    ],
+    "checklists": []
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Avant de commencer",
+        "nl": "Voor je begint"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Où se trouve Clients",
+            "nl": "Waar Clients staat"
+          },
+          "texte": {
+            "fr": "Dans le rail du dashboard : « Vendre » › « Clients ».\nL’écran « Clients » a quatre onglets : « Particuliers », « Entreprises B2B », « Bureaux », « Analyse B2B ».\nIl s’ouvre sur « Entreprises B2B ».\nTout se lit et s’écrit dans TF Buddy, le panel du magasin : ce qui change ici change dans TF Buddy.\nCe que TF Buddy refuse se dit à l’écran.\nÀ droite des onglets : « connecter TF Buddy » (le compte du magasin, partie 5) et « Les offres : Vendre › Offres ».",
+            "nl": "In de rail van het dashboard: « Vendre » › « Clients ».\nHet scherm « Clients » heeft vier tabbladen: « Particuliers », « Entreprises B2B », « Bureaux », « Analyse B2B ».\nHet opent op « Entreprises B2B ».\nAlles wordt gelezen en geschreven in TF Buddy, het panel van de winkel: wat hier verandert, verandert in TF Buddy.\nWat TF Buddy weigert, staat op het scherm.\nRechts van de tabbladen: « connecter TF Buddy » (de winkelaccount, deel 5) en « Les offres : Vendre › Offres »."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Particuliers",
+        "nl": "Particulieren"
+      },
+      "etapes": [
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Chercher un client",
+            "nl": "Een klant zoeken"
+          },
+          "texte": {
+            "fr": "La recherche d’abord : « Nom, téléphone, e-mail ».\nLe filtre « Avec » : « Tous » ou « Une remise ».\nLe compte : « … particuliers · lus à » l’heure de la lecture ; « relire » relit.\nLe tableau : « Client » (avec le code postal et la ville), « Téléphone », « Remise », et le bouton « Offre ».\nSans recherche, les derniers créés d’abord.\nTrop de résultats : seuls les premiers sont montrés, « précisez la recherche ».",
+            "nl": "Eerst zoeken: « Nom, téléphone, e-mail ».\nDe filter « Avec »: « Tous » of « Une remise ».\nDe telling: « … particuliers · lus à » het uur van de lezing; « relire » leest opnieuw.\nDe tabel: « Client » (met postcode en gemeente), « Téléphone », « Remise », en de knop « Offre ».\nZonder zoekopdracht eerst de laatst aangemaakte.\nTe veel resultaten: alleen de eerste worden getoond, « précisez la recherche »."
+          },
+          "critique": false,
+          "photo": "art-dash-clients-particuliers.jpg",
+          "video": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "La fiche d’un client",
+            "nl": "De fiche van een klant"
+          },
+          "texte": {
+            "fr": "Un clic sur une ligne ouvre la fiche à côté de la liste.\nEn haut : « client depuis » la date de création ; « créé par un autre magasin » si c’est le cas.\nTrois chiffres : « Remise », « Paiement différé » (oui ou non), « Ville ».\n« Coordonnées » : téléphone, e-mail, adresse, note.\nLes boutons : « Préparer une offre » (ouvre Vendre › Offres sur ce client), « Modifier », « Passer en entreprise », « Supprimer ».\n« Supprimer » n’apparaît que pour un client créé par ce magasin : il est supprimé de TF Buddy, ses tickets et ses commandes restent.\n« Ajouter un client » (en haut à droite) : le nom et le téléphone sont obligatoires.",
+            "nl": "Een klik op een lijn opent de fiche naast de lijst.\nBovenaan: « client depuis » de aanmaakdatum; « créé par un autre magasin » als dat zo is.\nDrie cijfers: « Remise », « Paiement différé » (ja of nee), « Ville ».\n« Coordonnées »: telefoon, e-mail, adres, notitie.\nDe knoppen: « Préparer une offre » (opent Vendre › Offres op deze klant), « Modifier », « Passer en entreprise », « Supprimer ».\n« Supprimer » verschijnt alleen voor een klant die door deze winkel is aangemaakt: hij wordt uit TF Buddy verwijderd, zijn tickets en bestellingen blijven.\n« Ajouter un client » (rechtsboven): naam en telefoon zijn verplicht."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Passer en entreprise",
+            "nl": "Omzetten naar bedrijf"
+          },
+          "texte": {
+            "fr": "Un particulier qui achète pour sa société devient une entreprise.\nLe numéro de TVA se vérifie (« Vérifier ») dans TF Buddy puis dans VIES, et remplit la société et l’adresse.\nOn règle aussi « Paiement différé », « Délai de paiement (jours) », « Remise personnelle (%) ».\nLa fiche passe dans « Entreprises B2B » ; le nom de la personne s’efface au profit de la société.",
+            "nl": "Een particulier die voor zijn bedrijf koopt, wordt een bedrijf.\nHet btw-nummer wordt gecontroleerd (« Vérifier ») in TF Buddy en daarna in VIES, en vult de vennootschap en het adres in.\nMen stelt ook « Paiement différé », « Délai de paiement (jours) », « Remise personnelle (%) » in.\nDe fiche gaat naar « Entreprises B2B »; de naam van de persoon verdwijnt ten gunste van de vennootschap."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Entreprises B2B",
+        "nl": "B2B-bedrijven"
+      },
+      "etapes": [
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Les entreprises à compléter, en tête",
+            "nl": "De bedrijven om aan te vullen, bovenaan"
+          },
+          "texte": {
+            "fr": "En tête, quand il y en a : « … entreprises ont des données incomplètes (TVA, adresse, ou ni e-mail ni téléphone) : leurs factures et leurs offres ne peuvent pas partir. »\n« Les afficher » ne garde qu’elles ; chacune porte l’étiquette « à compléter » (le survol dit ce qui manque).\nLa recherche : « Société, TVA, ville ».\nLes filtres : « Score » (A, B, C, D), « CA 12M » (< 1 k, 1–5 k, > 5 k), « Commandes » sur 12 mois (1–5, 6–19, 20 +).\nLe tableau : « Société », « Score », « Type · mode », « Commandes 12M » (avec la date de la dernière), « CA 12M », « Crédit », et « Offre ».",
+            "nl": "Bovenaan, als er zijn: « … entreprises ont des données incomplètes (TVA, adresse, ou ni e-mail ni téléphone) : leurs factures et leurs offres ne peuvent pas partir. »\n« Les afficher » houdt alleen die over; elk draagt het label « à compléter » (bij aanwijzen staat wat ontbreekt).\nZoeken: « Société, TVA, ville ».\nDe filters: « Score » (A, B, C, D), « CA 12M » (< 1 k, 1–5 k, > 5 k), « Commandes » over 12 maanden (1–5, 6–19, 20 +).\nDe tabel: « Société », « Score », « Type · mode », « Commandes 12M » (met de datum van de laatste), « CA 12M », « Crédit », en « Offre »."
+          },
+          "critique": true,
+          "photo": "art-dash-clients-entreprises.jpg",
+          "video": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "La fiche d’une entreprise",
+            "nl": "De fiche van een bedrijf"
+          },
+          "texte": {
+            "fr": "En haut : la TVA, « client depuis », comptant ou « paiement différé » avec son délai, la remise.\nSix chiffres : « Commandes 12M », « CA 12M », « Cycle d’achat » (en jours), « Type », « Mode », « Crédit utilisé ».\n« Crédit » : les impayés sur la limite, en barre.\n« Ses bureaux », « Dernières commandes », « Factures » (« payée » ou « due » à sa date).\nLes boutons : « Préparer une offre », « Données de base » (société, TVA, identifiant Peppol, adresse, téléphone, e-mail, note), « Profil commercial » (score, type de client, mode de service, crédit accordé, limite de crédit).\n« Ajouter une entreprise » part du numéro de TVA : TF Buddy complète la société depuis VIES ; une entreprise déjà cliente d’un autre magasin est rattachée à celui-ci.",
+            "nl": "Bovenaan: het btw-nummer, « client depuis », contant of « paiement différé » met zijn termijn, de korting.\nZes cijfers: « Commandes 12M », « CA 12M », « Cycle d’achat » (in dagen), « Type », « Mode », « Crédit utilisé ».\n« Crédit »: de onbetaalde bedragen op de limiet, als balk.\n« Ses bureaux », « Dernières commandes », « Factures » (« payée » of « due » op haar datum).\nDe knoppen: « Préparer une offre », « Données de base » (vennootschap, btw, Peppol-id, adres, telefoon, e-mail, notitie), « Profil commercial » (score, klanttype, servicewijze, toegekend krediet, kredietlimiet).\n« Ajouter une entreprise » vertrekt van het btw-nummer: TF Buddy vult de vennootschap aan via VIES; een bedrijf dat al klant is van een andere winkel wordt aan deze gekoppeld."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Bureaux et Analyse B2B",
+        "nl": "Kantoren en B2B-analyse"
+      },
+      "etapes": [
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "Les bureaux d’une entreprise",
+            "nl": "De kantoren van een bedrijf"
+          },
+          "texte": {
+            "fr": "Un bureau : un lieu d’une entreprise B2B, livré par une tournée, où des personnes commandent.\nL’onglet demande le compte TF Buddy du magasin : sans lui, « Les bureaux du magasin ne se lisent pas » et le bouton « Connecter le compte TF Buddy du magasin ».\nConnecté : une ligne par bureau (« Statut », « Catalogue », « Offres », « Départements », « Livraison »), le filtre « Statut » (actifs, en attente).\n« Un bureau sans site ne peut être livré par aucune tournée tant qu’il n’a pas de point de livraison. »\nLa fiche en onglets : « Livraison » (tournée, créneau, « Commandes jusqu’à », remise sur place, jours), « Catalogue », « Offres », « Personnes » (inviter, lien d’invitation), « Documents » (« Affiche A2 », « Cartes de bienvenue », « Brochure »).\nLa livraison réglée ici est celle que lisent la page Commandes et l’appli du livreur.",
+            "nl": "Een kantoor: een plaats van een B2B-bedrijf, beleverd door een ronde, waar mensen bestellen.\nHet tabblad vraagt de TF Buddy-account van de winkel: zonder die « Les bureaux du magasin ne se lisent pas » en de knop « Connecter le compte TF Buddy du magasin ».\nVerbonden: één lijn per kantoor (« Statut », « Catalogue », « Offres », « Départements », « Livraison »), de filter « Statut » (actief, in afwachting).\n« Un bureau sans site ne peut être livré par aucune tournée tant qu’il n’a pas de point de livraison. »\nDe fiche in tabbladen: « Livraison » (ronde, tijdvenster, « Commandes jusqu’à », afgifte ter plaatse, dagen), « Catalogue », « Offres », « Personnes » (uitnodigen, uitnodigingslink), « Documents » (« Affiche A2 », « Cartes de bienvenue », « Brochure »).\nDe levering die hier ingesteld wordt, is die welke de pagina Commandes en de app van de chauffeur lezen."
+          },
+          "critique": false,
+          "photo": "art-dash-clients-bureaux.jpg",
+          "video": null
+        },
+        {
+          "numero": "8",
+          "titre": {
+            "fr": "Ajouter un bureau, en sept étapes",
+            "nl": "Een kantoor toevoegen, in zeven stappen"
+          },
+          "texte": {
+            "fr": "« Ajouter un bureau » : « Société », « Contacts », « Sites », « Départements », « Webshop », « Personnes », « Récapitulatif ».\nLa société doit déjà être dans « Entreprises B2B » : l’ajouter d’abord si elle n’y est pas.\nObligatoires : la société, le nom du bureau et la TVA ; le responsable et son e-mail ; au moins un site avec une adresse, pour pouvoir livrer.\nDépartements et personnes sont facultatifs : les personnes peuvent aussi s’inscrire par le lien d’invitation.\nÀ droite, « Ce que l’on crée » : la chaîne société › bureau › site › tournée.\nCe qui est saisi se garde si l’on revient en arrière ; « Créer le bureau » envoie tout d’un coup à TF Buddy.",
+            "nl": "« Ajouter un bureau »: « Société », « Contacts », « Sites », « Départements », « Webshop », « Personnes », « Récapitulatif ».\nDe vennootschap moet al in « Entreprises B2B » staan: eerst toevoegen als ze er niet staat.\nVerplicht: de vennootschap, de naam van het kantoor en het btw-nummer; de verantwoordelijke en zijn e-mail; minstens één site met een adres, om te kunnen leveren.\nAfdelingen en personen zijn facultatief: personen kunnen zich ook inschrijven via de uitnodigingslink.\nRechts, « Ce que l’on crée »: de keten vennootschap › kantoor › site › ronde.\nWat ingevuld is, blijft bewaard als men teruggaat; « Créer le bureau » stuurt alles in één keer naar TF Buddy."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "9",
+          "titre": {
+            "fr": "L’analyse B2B du mois",
+            "nl": "De B2B-analyse van de maand"
+          },
+          "texte": {
+            "fr": "Un mois à la fois, avec les flèches ; le mois en cours se lit « jusqu’au » jour d’aujourd’hui.\nSix cartes : « Ventes B2B », « Tickets B2B », « Panier moyen B2B », « Clients B2B uniques », « Part B2B du CA », « Factures B2B ».\nChacune face au mois d’avant et au même mois l’an dernier (▲ ou ▼) ; le mois en cours se compare aux mêmes premiers jours.\nEn dessous : « Ventes B2B, mois par mois » (Ventes, Tickets, Clients, Part du CA), l’année face à la précédente, et « Part B2B du chiffre ».\nLa règle de l’écran : « Un pro = une fiche avec une TVA valide, comme la jauge B2B de l’Opérationnel. »",
+            "nl": "Eén maand tegelijk, met de pijlen; de lopende maand wordt gelezen « jusqu’au » vandaag.\nZes kaarten: « Ventes B2B », « Tickets B2B », « Panier moyen B2B », « Clients B2B uniques », « Part B2B du CA », « Factures B2B ».\nElk tegenover de vorige maand en dezelfde maand vorig jaar (▲ of ▼); de lopende maand wordt vergeleken met dezelfde eerste dagen.\nDaaronder: « Ventes B2B, mois par mois » (Ventes, Tickets, Clients, Part du CA), het jaar tegenover het vorige, en « Part B2B du chiffre ».\nDe regel van het scherm: « Un pro = une fiche avec une TVA valide, comme la jauge B2B de l’Opérationnel. »"
+          },
+          "critique": false,
+          "photo": "art-dash-clients-analyse.jpg",
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Le compte TF Buddy du magasin",
+        "nl": "De TF Buddy-account van de winkel"
+      },
+      "etapes": [
+        {
+          "numero": "10",
+          "titre": {
+            "fr": "Connecter le compte du magasin",
+            "nl": "De winkelaccount verbinden"
+          },
+          "texte": {
+            "fr": "Pourquoi : certaines données du panel (les bureaux, une partie des entreprises B2B et de l’analyse) ne répondent qu’à un employé du magasin connecté à TF Buddy.\nOù : « connecter TF Buddy » à droite des onglets, ou le bouton « Connecter le compte TF Buddy du magasin » dans un refus.\nLe geste : le téléphone (avec l’indicatif, +32…) et le PIN, « Recevoir le code », puis le code reçu par SMS, « Se connecter ».\nLa session dure 12 heures sur cet appareil ; le cockpit ne garde ni le PIN ni la session.\nConnecté, la barre dit « TF Buddy : compte du magasin connecté · déconnecter ».\nLe même compte sert à la page Commandes.",
+            "nl": "Waarom: sommige gegevens van het panel (de kantoren, een deel van de B2B-bedrijven en van de analyse) antwoorden alleen aan een medewerker van de winkel die in TF Buddy aangemeld is.\nWaar: « connecter TF Buddy » rechts van de tabbladen, of de knop « Connecter le compte TF Buddy du magasin » in een weigering.\nDe handeling: de telefoon (met landcode, +32…) en de pincode, « Recevoir le code », daarna de code ontvangen per sms, « Se connecter ».\nDe sessie duurt 12 uur op dit toestel; de cockpit bewaart noch de pincode noch de sessie.\nVerbonden toont de balk « TF Buddy : compte du magasin connecté · déconnecter ».\nDezelfde account dient voor de pagina Commandes."
+          },
+          "critique": false,
+          "photo": "art-dash-clients-connexion.jpg",
+          "video": null
+        },
+        {
+          "numero": "11",
+          "titre": {
+            "fr": "Le code SMS et les limites de TF Buddy",
+            "nl": "De sms-code en de limieten van TF Buddy"
+          },
+          "texte": {
+            "fr": "Le code SMS vaut 5 minutes et 5 essais.\nUn nouveau code n’est possible qu’après 60 secondes : la fenêtre compte les secondes (« nouveau code possible dans … s »), puis propose « renvoyer le code ».\nFenêtre fermée puis rouverte dans les 5 minutes : le code déjà envoyé se reprend, sans nouveau SMS.\nTrop d’essais : « TF Buddy bloque les connexions pour quelques minutes (trop d’essais pour ce téléphone ou depuis le serveur du cockpit) : c’est une limite de TF Buddy, pas du dashboard ». On attend, on ne recommence pas en boucle.\nSession finie : « Reconnecter le compte TF Buddy du magasin ».",
+            "nl": "De sms-code is 5 minuten en 5 pogingen geldig.\nEen nieuwe code is pas mogelijk na 60 seconden: het venster telt de seconden af (« nouveau code possible dans … s »), en biedt daarna « renvoyer le code » aan.\nVenster gesloten en binnen 5 minuten opnieuw geopend: de reeds verzonden code wordt hernomen, zonder nieuwe sms.\nTe veel pogingen: « TF Buddy bloque les connexions pour quelques minutes (trop d’essais pour ce téléphone ou depuis le serveur du cockpit) : c’est une limite de TF Buddy, pas du dashboard ». Men wacht, men probeert niet aan één stuk opnieuw.\nSessie afgelopen: « Reconnecter le compte TF Buddy du magasin »."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Ce qui s’enregistre dans Clients change la vraie fiche dans TF Buddy : la caisse, le webshop et les autres magasins la voient. « Supprimer » retire le client de TF Buddy.",
+      "nl": "Wat in Clients bewaard wordt, verandert de echte fiche in TF Buddy: de kassa, de webshop en de andere winkels zien ze. « Supprimer » verwijdert de klant uit TF Buddy."
+    },
+    {
+      "fr": "Une entreprise « à compléter » (TVA, adresse, ou ni e-mail ni téléphone) ne peut recevoir ni facture ni offre : la compléter avant de lui vendre.",
+      "nl": "Een bedrijf « à compléter » (btw, adres, of noch e-mail noch telefoon) kan geen factuur of offerte ontvangen: eerst aanvullen voor men eraan verkoopt."
+    },
+    {
+      "fr": "Un bureau sans site n’est livré par aucune tournée.",
+      "nl": "Een kantoor zonder site wordt door geen enkele ronde beleverd."
+    },
+    {
+      "fr": "Le PIN et le code SMS ne se donnent à personne ; la connexion dure 12 heures sur l’appareil : « déconnecter » sur une tablette partagée.",
+      "nl": "De pincode en de sms-code geeft men aan niemand; de verbinding duurt 12 uur op het toestel: « déconnecter » op een gedeelde tablet."
+    },
+    {
+      "fr": "60 secondes entre deux SMS, 5 minutes et 5 essais par code : les essais répétés bloquent la connexion quelques minutes.",
+      "nl": "60 seconden tussen twee sms’en, 5 minuten en 5 pogingen per code: herhaalde pogingen blokkeren de verbinding enkele minuten."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Une entreprise porte l’étiquette « à compléter ». Que se passe-t-il ?",
+        "nl": "Een bedrijf draagt het label « à compléter ». Wat gebeurt er?"
+      },
+      "choix": {
+        "fr": [
+          "Ses factures et ses offres ne peuvent pas partir",
+          "Elle est supprimée de TF Buddy après 12 mois",
+          "Son crédit est bloqué par le dashboard"
+        ],
+        "nl": [
+          "Haar facturen en offertes kunnen niet vertrekken",
+          "Ze wordt na 12 maanden uit TF Buddy verwijderd",
+          "Haar krediet wordt door het dashboard geblokkeerd"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Après « Recevoir le code », combien de temps faut-il attendre pour demander un nouveau code SMS ?",
+        "nl": "Hoe lang moet men na « Recevoir le code » wachten om een nieuwe sms-code te vragen?"
+      },
+      "choix": {
+        "fr": [
+          "5 minutes",
+          "60 secondes",
+          "12 heures"
+        ],
+        "nl": [
+          "5 minuten",
+          "60 seconden",
+          "12 uur"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Pour ajouter un bureau, que faut-il d’abord ?",
+        "nl": "Wat is eerst nodig om een kantoor toe te voegen?"
+      },
+      "choix": {
+        "fr": [
+          "Une offre acceptée dans Vendre › Offres",
+          "Une tournée créée dans Commandes",
+          "La société dans « Entreprises B2B »"
+        ],
+        "nl": [
+          "Een aanvaarde offerte in Vendre › Offres",
+          "Een ronde aangemaakt in Commandes",
+          "De vennootschap in « Entreprises B2B »"
+        ]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {
+        "fr": "Dans l’analyse B2B, qu’est-ce qu’un pro ?",
+        "nl": "Wat is een pro in de B2B-analyse?"
+      },
+      "choix": {
+        "fr": [
+          "Un client qui a acheté plus de 1 000 € en 12 mois",
+          "Une fiche avec une TVA valide",
+          "Un client qui a un bureau"
+        ],
+        "nl": [
+          "Een klant die meer dan 1 000 € gekocht heeft in 12 maanden",
+          "Een fiche met een geldig btw-nummer",
+          "Een klant die een kantoor heeft"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Quand le bouton « Supprimer » apparaît-il sur la fiche d’un particulier ?",
+        "nl": "Wanneer is de knop « Supprimer » zichtbaar op de fiche van een particulier?"
+      },
+      "choix": {
+        "fr": [
+          "Seulement le consultant",
+          "Pour tout client du réseau",
+          "Seulement pour un client créé par ce magasin"
+        ],
+        "nl": [
+          "Alleen voor de consultant",
+          "Voor elke klant van het netwerk",
+          "Alleen voor een klant die door deze winkel is aangemaakt"
+        ]
+      },
+      "bonne": 2
+    }
+  ]
+}
