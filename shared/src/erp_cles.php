@@ -89,7 +89,8 @@ function erpRouteIntegration(string $method, string $path): bool
 {
     if ($method !== 'GET') { return false; }
     return in_array($path, ['/stores', '/stores/perf', '/exploitation/pro', '/marketing/avis', '/formation/ref',
-        '/formation/v25', '/formation/referentiel', '/formation/procedure', '/fidelite/programme'], true);
+        '/formation/v25', '/formation/referentiel', '/formation/procedure', '/fidelite/programme', '/formation/examens/banque',
+        '/formation/examens/releve-auto'], true);
 }
 
 /**
