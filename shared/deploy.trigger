@@ -318,3 +318,4 @@
 2026-11-25T21:03:21Z Production : Różnice kursowe ouvertes au Kierownik operacyjny (lecture et calcul, montants)
 2026-11-25T21:04:21Z Fidélité : GET /fidelite/programme (règles et saisons du programme, sans client), lisible par le Recrutement avec le jeton de service — l'annexe 2 du Guide pré-ouverture le reprend
 2026-11-25T21:04:35Z Dashboard : défauts du premier lot de vidéos corrigés (Fidélité sans profil, Concurrence, conversion d'une offre, anneau des primes de l'année, fiche produit, panier du mois) ; plus de ville dans les exemples de la newsletter
+2026-11-26T03:59:24Z Manuels du 26/11 : bon de commande de Mon catalogue, limites de connexion TF Buddy du magasin, GET /fidelite/programme, anneau des primes de l'année (documentation seulement)
