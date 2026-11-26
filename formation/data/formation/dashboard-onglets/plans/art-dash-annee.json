@@ -1,0 +1,8 @@
+[
+ {"nom": "do-annee-objectif", "vue": "annee", "date": "2026-11-13", "cibles": ["div.db-tuiles", ".db-card:has(.db-bar)"], "attendre": ".db-bar", "cadre": "haut", "mobile": false, "pause": 9000},
+ {"nom": "do-annee-rampe", "vue": "annee", "date": "2026-11-13", "cibles": [".db-card:has(.db-jours)"], "attendre": ".db-jours", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-annee-trimestres", "vue": "annee", "date": "2026-11-13", "cibles": [".db-card:has(.db-tq)"], "attendre": ".db-tq", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-annee-trafic", "vue": "annee", "date": "2026-11-13", "cibles": [".db-card:has(.db-s6)"], "attendre": ".db-s6", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-annee-heatmap", "vue": "annee", "date": "2026-11-13", "cibles": [".db-card:has([data-hm])"], "attendre": "[data-hm]", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-annee-mois", "vue": "annee", "date": "2026-11-13", "cibles": [".db-card:has(table.db-t:not(.db-tq))"], "attendre": "table.db-t", "cadre": "ecran", "mobile": false, "pause": 9000}
+]

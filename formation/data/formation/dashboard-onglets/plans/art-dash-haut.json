@@ -1,0 +1,78 @@
+[
+ {
+  "nom": "do-haut-logo",
+  "vue": "ops",
+  "cibles": [
+   ".db-hd img",
+   ".db-titre"
+  ],
+  "cadre": "haut",
+  "mobile": false
+ },
+ {
+  "nom": "do-haut-onglets",
+  "vue": "ops",
+  "cibles": [
+   ".db-nav > .db-ong"
+  ],
+  "cadre": "haut",
+  "mobile": false
+ },
+ {
+  "nom": "do-haut-date",
+  "vue": "taches",
+  "date": "2026-11-12",
+  "cibles": [
+   "[data-pas=\"-1\"]",
+   "#db-date",
+   "[data-pas=\"1\"]",
+   "[data-auj]"
+  ],
+  "cadre": "haut",
+  "mobile": false
+ },
+ {
+  "nom": "do-haut-relire",
+  "vue": "ops",
+  "cibles": [
+   ".db-hd [data-recharger]"
+  ],
+  "cadre": "haut",
+  "mobile": false
+ },
+ {
+  "nom": "do-haut-valeur",
+  "vue": "semaine",
+  "clics": [
+   ".db-valoc[data-vdrop]"
+  ],
+  "attendre": ".db-frise button.fr-c b .eu",
+  "cibles": [
+   ".db-valoc",
+   ".db-vdl"
+  ],
+  "cadre": "haut",
+  "mobile": false,
+  "pause": 9000
+ },
+ {
+  "nom": "do-haut-frise",
+  "vue": "ops",
+  "attendre": ".db-frise button.fr-c:not(.on) b .eu",
+  "cibles": [
+   ".db-frise"
+  ],
+  "cadre": "haut",
+  "mobile": false,
+  "pause": 9000
+ },
+ {
+  "nom": "do-haut-cockpit",
+  "vue": "ops",
+  "cibles": [
+   ".db-hd .db-lien"
+  ],
+  "cadre": "haut",
+  "mobile": false
+ }
+]
