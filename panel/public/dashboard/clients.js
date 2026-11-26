@@ -437,6 +437,8 @@
     return '';
   }
   const lienQuestionnaire = j => new URL(st.api.replace(/api\/cockpit\/?$/, '') + 'bureau/?j=' + j, location.href).href;
+  /** Le lien court du magasin (« …/bureau/?m=corbais ») : se devine, plafonné à quelques dizaines de réponses par jour. */
+  const lienCourt = m => new URL(st.api.replace(/api\/cockpit\/?$/, '') + 'bureau/?m=' + encodeURIComponent(m), location.href).href;
 
   /** Le nom de la société d'un bureau : celui de la liste, sinon celui de l'entreprise B2B du même numéro. */
   function societeDe(b) {
@@ -667,14 +669,15 @@
         ${champ('mode', 'Mode de service', { choix: [['', '—'], ...MODES] })}<span></span>${champ('creditActif', 'Crédit accordé', { type: 'case' })}${champ('creditLimite', 'Limite de crédit (€)', { type: 'number' })}</div>`, pied('Enregistrer', 'e-profil-ok'));
     }
     if (m.type === 'dev-questionnaire') {
-      const D = st.b.dev, lien = lienQuestionnaire(D.questionnaire.jeton);
+      const D = st.b.dev, prive = lienQuestionnaire(D.questionnaire.jeton), lien = D.lienCourt ? lienCourt(D.lienCourt) : prive;
       const P = [['', 'Aucun bon'], ...D.promos.map(p => [p.id, p.nom + (p.enCaisse ? '' : ' (pas encore en caisse)')])];
       return fenetre('Le questionnaire du magasin', `<div class="pcl-q-lien"><div class="pcl-q-qr">${qrSvg(lien)}</div><div style="flex:1;min-width:0">
           <label class="pcl-champ"><span>Le lien à partager (e-mail, affiche, réseaux)</span><input id="pcl-q-url" value="${esc(lien)}" readonly></label>
           <div class="pcl-acts" style="margin-top:8px"><button type="button" class="btn btn--sm" data-act="dev-copier">Copier le lien</button><a class="btn btn--sm" href="${esc(lien)}" target="_blank" rel="noopener">Ouvrir</a></div>
-          ${m.copie ? '<p class="pcl-ok">Lien copié.</p>' : ''}</div></div>
+          ${m.copie ? '<p class="pcl-ok">Lien copié.</p>' : ''}
+          ${D.lienCourt ? `<p class="pcl-aide" style="margin-top:8px">Le lien court porte le nom du magasin : facile à écrire, il se devine (au plus 40 réponses par jour). Le lien privé, lui, ne se devine pas : <a href="${esc(prive)}" target="_blank" rel="noopener">${esc(prive)}</a></p>` : ''}</div></div>
         <div class="pcl-form2">${champ('actif', 'Questionnaire ouvert', { type: 'case', plein: true })}${champ('titre', 'Titre', { plein: true })}${champ('message', 'Message d’accueil', { type: 'zone', plein: true, lignes: 3 })}
-          ${champ('promo', 'Bon de bienvenue (une promotion du magasin avec un bon)', { plein: true, choix: P })}${champ('regenerer', 'Changer le lien (l’ancien ne marchera plus)', { type: 'case', plein: true })}</div>
+          ${champ('promo', 'Bon de bienvenue (une promotion du magasin avec un bon)', { plein: true, choix: P })}${champ('regenerer', D.lienCourt ? 'Changer le lien privé (l’ancien ne marchera plus ; le lien court reste, il se ferme avec le questionnaire)' : 'Changer le lien (l’ancien ne marchera plus)', { type: 'case', plein: true })}</div>
         <p class="pcl-aide">${D.promos.length ? 'Un bon avec un code commun : chacun reçoit ce code. Un bon à codes personnels : chaque réponse reçoit son code, d’une utilisation, à son nom.' : 'Aucune promotion du magasin n’a de bon : créez-en une dans Vendre › Promotions (avec un bon), elle apparaîtra ici.'}</p>`, pied('Enregistrer', 'dev-questionnaire-ok'), true);
     }
     if (m.type === 'dev-nouveau') {

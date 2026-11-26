@@ -330,3 +330,4 @@
 2026-11-26T06:59:41Z Clients › Bureaux : bureaux en développement, questionnaire du magasin qui crée la personne et son bon
 2026-11-26T07:16:24Z Vidéos d'instruction : lot 2 (Opérationnel, barre du haut, Assistant IA, Formations et suivi, Tâches, Coffre-fort, Paramètres : 53 onglets, 42 fonctions), 25 vidéos retournées après les correctifs ; défauts relevés au tournage corrigés (Opérationnel, Assistant, Coffre-fort, Paramètres)
 2026-11-26T07:20:01Z Formation : examens théoriques des candidats franchisés (banque, relecture mensuelle)
+2026-11-26T08:03:33Z Questionnaire bureau : le lien court par le nom du magasin (…/bureau/?m=corbais)
