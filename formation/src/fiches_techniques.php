@@ -10,6 +10,9 @@
  * compétences et ses photos. La liste des produits et leur gamme (standard, saison) viennent du catalogue du cockpit
  * (ep_prod_catalogue, shared/src/endpoints.php).
  *
+ * Le standard qualité de chaque produit (26/11/2026) vient des grilles d'autocontrôle du cockpit (aqStandardProduit,
+ * consultant/src/autocontrole.php) : les critères par étape, la réponse attendue, ce qui est à surveiller ou pas bon.
+ *
  * Routes (branchées par rfRoute, src/referentiel.php) :
  *   GET /formation/ref/fiches               — les fiches, catégorie par catégorie ; ?rafraichir=1 relit le panel
  *   GET /formation/ref/fiches/photo/{id}    — la photo d'un produit : redirige vers l'adresse signée du panel
@@ -199,7 +202,9 @@ function ep_ft_fiches(bool $rafraichir = false): array
     foreach ($prods as $p) {
         $c = $cache['fiches'][(string) $p['id']] ?? null;
         if ($c === null || ($c['fiche'] ?? null) === null) { $manquent += empty($c['erreur']) ? 1 : 0; }
-        $out[] = $p + ['fiche' => $c['fiche'] ?? null];
+        // Le standard qualité (26/11/2026) : ce qui est regardé, ce qui est bon, ce qui ne l'est pas, selon les grilles
+        // d'autocontrôle publiées du cockpit (consultant/src/autocontrole.php) ; calculé à chaque lecture, jamais gardé.
+        $out[] = $p + ['fiche' => $c['fiche'] ?? null, 'qualite' => function_exists('aqStandardProduit') ? aqStandardProduit($p) : null];
     }
     usort($out, static fn ($a, $b) => ftOrdre($a) <=> ftOrdre($b));
     return ['produits' => $out, 'total' => count($out), 'manquent' => $manquent, 'erreurs' => $erreurs,

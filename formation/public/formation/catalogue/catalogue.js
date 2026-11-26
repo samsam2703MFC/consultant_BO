@@ -800,6 +800,27 @@
     var emb = (f.emballage ? [f.emballage.nom].concat(f.emballage.materiaux || []) : []).concat((f.ingredients || []).filter(function (i) { return i.emballage; }).map(function (i) { return i.nom; }));
     B.push({ html: '<h3>' + T('L’emballage', 'De verpakking') + '</h3><p>' + (emb.length ? esc(emb.join(' · ')) : vide) + '</p>' });
     if ((f.competences || []).length) B.push({ html: '<p class="ft-comp"><b>' + T('Compétences', 'Competenties') + ' :</b> ' + esc(f.competences.join(', ')) + '</p>' });
+    // Le contrôle qualité (26/11/2026, Sam : « ce qui est regardé, ce qui est bon, ce qui est pas bon ») : les grilles
+    // d'autocontrôle du cockpit (aqStandardProduit, consultant/src/autocontrole.php), un critère par ligne, par étape.
+    var q = p.qualite;
+    if (q && (q.etapes || []).length) {
+      var ETQ = { cuisson: ['Cuisson', 'Bakken'], structure: ['Structure', 'Structuur'], organoleptique: ['Organoleptique', 'Organoleptisch'], presentation: ['Présentation', 'Presentatie'] };
+      var puce = function (cls, t) { return '<span class="ft-q-' + cls + '">' + esc(t) + '</span>'; };
+      var tQ = '<h3>' + T('Le contrôle qualité', 'De kwaliteitscontrole') + ' <small>· ' + esc(q.grille) + '</small></h3>' +
+        '<p class="ft-q-leg">' + puce('ok', T('bon', 'goed')) + puce('mi', T('à surveiller', 'op te volgen')) + puce('ko', T('pas bon', 'niet goed')) +
+        (q.aValider ? ' <small>' + T('grille d’exemple, à valider par la production', 'voorbeeldraster, door de productie te valideren') + '</small>' : '') + '</p>';
+      var premier = true;
+      q.etapes.forEach(function (e) {
+        var et = ETQ[e.etape] ? T(ETQ[e.etape][0], ETQ[e.etape][1]) : e.titre;
+        e.criteres.forEach(function (c, k) {
+          var html = (k === 0 ? '<div class="ft-q-et">' + esc(et) + (e.photo === 'obligatoire' ? ' <small>· ' + T('photo obligatoire', 'foto verplicht') + '</small>' : '') + '</div>' : '') +
+            '<div class="ft-q"><span>' + esc(c.libelle) + '</span><span>' + c.bon.map(function (t) { return puce('ok', t); }).join('') +
+            c.surveiller.map(function (t) { return puce('mi', t); }).join('') + c.pasBon.map(function (t) { return puce('ko', t); }).join('') + '</span></div>';
+          B.push({ html: (premier ? tQ : '') + html });
+          premier = false;
+        });
+      });
+    }
     var mq = ftManques(p);
     if (mq.length) B.push({ html: '<p class="ft-manque">' + T('À compléter dans TF Buddy : ', 'Aan te vullen in TF Buddy: ') + esc(mq.map(function (x) { return L(MANQUES[x]); }).join(', ')) + '.</p>' });
     return B;
