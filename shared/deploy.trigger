@@ -332,3 +332,7 @@
 2026-11-26T07:20:01Z Formation : examens théoriques des candidats franchisés (banque, relecture mensuelle)
 2026-11-26T08:03:33Z Questionnaire bureau : le lien court par le nom du magasin (…/bureau/?m=corbais)
 2026-11-26T08:19:23Z Questionnaire bureau : le lien court par le numéro du magasin (…/bureau/?m=2)
+2026-11-26T09:06:38Z Production : Różnice kursowe — lecture des relevés ING du compte EUR (totaux contrôlés)
+2026-11-26T09:45:55Z Vidéos d'instruction : lot 3 (Semaine, Mois, Année, Analyse, Produits, Primes, Concurrence, Fidélité, Commandes, Clients, Mon équipe › Primes et fiche) et vidéos retournées ; défauts relevés au tournage corrigés (fin du mois, Analyse, Concurrence, Clients, fiche d'une personne, coffre)
+2026-11-26T13:52:08Z Vidéos d'instruction : le chapitre « Connecter le compte TF Buddy » retiré de Clients › Bureaux
+2026-11-26T14:14:21Z Formation : la médiathèque des vidéos (sections du rail, pages, onglets, titres ; recherche avec synonymes, début de mot et faute de frappe)

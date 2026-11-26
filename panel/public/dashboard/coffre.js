@@ -153,7 +153,7 @@
   }
   /** Relire un document déjà rangé avec l'assistant : la même fenêtre, sans l'envoi. */
   function relever(x) {
-    st.depot = { etape: 'lu', fichier: null, piece: x.piece && piece(x.piece) && piece(x.piece).onglet === 'legal' ? x.piece : '', pieceDeposee: x.piece || '', titre: x.titre, date: x.date || '', echeance: x.echeance || '', note: '', doc: x, as: null, relecture: true };
+    st.depot = { etape: 'lu', fichier: null, piece: x.piece || '', pieceDeposee: x.piece || '', titre: x.titre, date: x.date || '', echeance: x.echeance || '', note: '', doc: x, as: null, relecture: true };
     st.sel = null; lancerAssistant(x.id);
   }
   function rangerDepot() {
@@ -357,7 +357,11 @@
     const D = st.depot; if (!D) { return ''; }
     const legal = pieces().filter(p => p.onglet === 'legal'), aFournir = p => p.etat === 'manquante' || p.etat === 'renouveler' || p.etat === 'expiree';
     const ordre = legal.filter(aFournir).concat(legal.filter(p => !aFournir(p)));
-    const chips = ordre.map(p => `<button type="button" class="${D.piece === p.cle ? 'on' : ''}" data-cf-piece="${p.cle}">${esc(p.nom)}${p.etat === 'renouveler' || p.etat === 'expiree' ? ' (nouvelle)' : p.doc ? ' ✓' : ''}</button>`).join('')
+    // Relire un document du consultant (une pièce d'un autre dossier) : sa pièce paraît, choisie (26/11/2026 : « Autre
+    // document » était surligné, faute de la proposer).
+    const propre = D.pieceDeposee && piece(D.pieceDeposee) && piece(D.pieceDeposee).onglet !== 'legal' ? piece(D.pieceDeposee) : null;
+    const chips = (propre ? `<button type="button" class="${D.piece === propre.cle ? 'on' : ''}" data-cf-piece="${propre.cle}">${esc(propre.nom)} ✓</button>` : '')
+      + ordre.map(p => `<button type="button" class="${D.piece === p.cle ? 'on' : ''}" data-cf-piece="${p.cle}">${esc(p.nom)}${p.etat === 'renouveler' || p.etat === 'expiree' ? ' (nouvelle)' : p.doc ? ' ✓' : ''}</button>`).join('')
       + `<button type="button" class="${!D.piece ? 'on' : ''}" data-cf-piece="">Autre document</button>`;
     const ext2 = ((st.d.depot || {}).extensions || []).map(e => '.' + e).join(',');
     const A = D.as;

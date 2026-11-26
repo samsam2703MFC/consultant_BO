@@ -174,7 +174,7 @@
       ${v.resume ? `<p class="tu-res">${esc(v.resume)}</p>` : ''}
       ${page.id !== v.id ? `<div class="tu-autres tu-retour">${item(page, false)}</div>` : ''}
       ${arbre(page, v)}
-      ${autres.length ? `<div class="tu-autres"><div class="tu-k tu-k-l"><span>Les autres pages</span><a href="../formation/catalogue/#/videos" target="_blank" rel="noopener">Toute la vidéothèque ↗</a></div><div class="tu-liste">${autres.map(x => item(x, false)).join('')}</div></div>` : ''}
+      ${autres.length ? `<div class="tu-autres"><div class="tu-k tu-k-l"><span>Les autres pages</span><a href="../formation/catalogue/#/videos/${encodeURIComponent(((page.vues || []).filter(x => x !== '*')[0]) || T.vue)}" target="_blank" rel="noopener">La médiathèque ↗</a></div><div class="tu-liste">${autres.map(x => item(x, false)).join('')}</div></div>` : ''}
     </div>`;
     // Un passage (onglet ou fonction) s'arrête à sa fin, une fois : on peut ensuite avancer à la main dans le fichier.
     const vid = o.querySelector('video');
