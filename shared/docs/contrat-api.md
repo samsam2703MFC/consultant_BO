@@ -6367,3 +6367,42 @@ catalogue ; le dossier de formation (formation continue) reste à un clic. `form
 est dans `ACCES_FRANCHISE`. La page cherche dans le navigateur (sans accents ni capitales : titres, codes, objectifs,
 étapes) ; un document s'ouvre en tiroir par la route publique de la tablette (`GET /formation/sop/tablette/sop/{id}`).
 Tests : `php formation/bin/tests_formation_recherche.php`.
+
+## Formation · Examens théoriques (26/11/2026, formation/src/examens.php, tables `for_exam_*`)
+
+Client : « créer les examens théoriques concernant la marque et les autres thèmes de ce que le franchisé doit savoir avant
+d'ouvrir ; en faire une routine, car ça va évoluer » ; maquette validée (CRM, `docs/maquettes/examens-theoriques/`). Les
+questions s'écrivent ICI (Portail de formation › Examens théoriques, `#/rfexamens`) ; l'examen se passe dans l'application
+du candidat franchisé (CRM, onglet Compétences › Examen théorique) ; le résultat reste dans le dossier du CRM. Candidats
+franchisés seulement (pour le moment).
+
+Tables : `for_exam_theme` (code, nom FR / NL, ordre, questions tirées, seuil %, actif) · `for_exam_question` (code
+`Q-<thème>-NNN`, thème, type qcm · vf · multi · situation, énoncé / explication FR + NL, choix JSON `[{fr, nl, bon}]`,
+bloquante, source type · ref · lib, empreinte et extrait de la source au jour de la validation, statut brouillon · validee
+· a_revoir · ecartee, version, avant / après d'une source changée) · `for_exam_releve` (chaque relecture). Dix thèmes
+semés une fois (MAR, CON, HYG, PRO, VEN, FID, GES, PER, OUV, OUT ; 10 questions, 80 %) et la première banque reprise une
+fois de `formation/data/formation/examens/questions.json` (189 questions, en BROUILLON, français seulement).
+
+| Route | Accès | Corps | Réponse |
+|---|---|---|---|
+| `GET /formation/examens` | siège | — | thèmes et compteurs, questions, dernière relecture, réglages, statistiques du CRM |
+| `PUT /formation/examens/themes/{code}` | siège | `{nom:{fr, nl}, tirees (1-40), seuil (50-100), actif}` | `{ok}` |
+| `POST /formation/examens/questions` · `PUT …/{id}` | siège | la question | la question (une question validée modifiée reste validée, version + 1 ; source changée = empreinte reposée) |
+| `DELETE /formation/examens/questions/{id}` | siège | — | 409 si elle a été validée (l'écarter) |
+| `POST /formation/examens/questions/{id}/statut` · `POST /formation/examens/valider` | siège | `{statut}` · `{ids}` | valider pose l'empreinte de la source |
+| `PUT /formation/examens/reglages` | siège | `{rapportA}` | adresses du rapport mensuel (`examensRapportA`) |
+| `POST /formation/examens/releve` | siège | `{proposer}` | « Relire maintenant » |
+| `GET /formation/examens/banque` | jeton de service | — | `{themes:[{code, nom:{fr,nl}, tirees, seuil, ordre}], questions:[{code, version, theme, type, enonce:{fr,nl}, choix:[{fr,nl,bon}], explication:{fr,nl}, bloquante, source:{type,ref,lib}}]}` — thèmes actifs qui ont au moins une question validée (un thème vide n'est pas servi : il bloquerait l'examen), questions VALIDÉES (avec les bonnes réponses : le CRM corrige côté serveur) |
+| `GET /formation/examens/releve-auto` | jeton de service | — | la relecture mensuelle, seulement si aucune n'a eu lieu ce mois-ci (`{fait:false, raison}` sinon) |
+
+**La routine** : une question validée porte l'empreinte (sha1 du texte normalisé) de sa source — `contrat` = l'article
+du contrat de franchise lu au Recrutement avec les conditions du réseau (`GET /v1/integration/recrutement/sources-examen`
+du CRM : `{articles:{"8.2":{titre, texte}, "4.5.2":…, "annexe 17":…, "annexe 18":…}}`), `sop` = la version en vigueur
+d'un standard, `fidelite` = les règles du programme (sans les saisons) ; `guide` / `autre` : pas d'empreinte. La
+relecture (`exReleve`) : source changée → la question passe « à revoir » (avant / après gardés) et quitte la banque
+jusqu'à sa revalidation ; le modèle (`Anthropic::json`) propose jusqu'à deux questions nouvelles par source changée (huit
+sources au plus), en BROUILLON ; le rapport part par e-mail aux adresses réglées (Sam et Pierre). Déclenchée chaque jour
+à 06:20 par `/etc/cron.d/cockpit-rapports` → `formation/bin/examens_cron.sh` (jeton de service lu en base), qui ne relit
+qu'une fois par mois ; aussi « Relire maintenant » et l'ouverture de l'écran si la dernière relecture a plus de 35 jours.
+Statistiques du CRM (`GET /v1/integration/recrutement/examens-stats`) : par question posée et réussie (entraînements et
+examen final), dossiers ouverts et réussis.
