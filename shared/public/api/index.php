@@ -1083,7 +1083,7 @@ function route(string $method, string $path): mixed
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).
     // Un compte ADMINISTRATEUR du panel (14/11/2026) : connecté par la personne dans le formulaire du prix ou dans le cadre
     // des tâches (POST /task/connexion), son jeton voyage dans l'en-tête X-Panel-Jeton, le temps de la requête — jamais gardé.
-    if ($method === 'POST' && in_array($path, ['/verification/recettes/corriger', '/verification/recettes/matiere', '/verification/recettes/references', '/produits/parametrage', '/verification/recettes/reception'], true)) {
+    if ($method === 'POST' && in_array($path, ['/verification/recettes/corriger', '/verification/recettes/matiere', '/verification/recettes/references', '/verification/recettes/pertes-lignes', '/produits/parametrage', '/verification/recettes/reception'], true)) {
         $jAdmin = trim((string) ($_SERVER['HTTP_X_PANEL_JETON'] ?? ''));
         if ($jAdmin !== '' && preg_match('/^[\w.\-]{20,4000}$/', $jAdmin)) { PanelApi::$jetonImpose = $jAdmin; }
         // Ou le compte administrateur du cockpit lui-même (Paramètres › ERP, src/erp_api.php) : {compte: "admin"}.
@@ -1098,6 +1098,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/verification/recettes/annuler') { return wr_verification_annuler(); }
     if ($method === 'POST' && $path === '/verification/recettes/matiere') { return wr_verification_matiere(); }
     if ($method === 'POST' && $path === '/verification/recettes/references') { return wr_verification_references(); }
+    if ($method === 'POST' && $path === '/verification/recettes/pertes-lignes') { return wr_verification_pertes_lignes(); }
     if ($method === 'POST' && $path === '/produits/parametrage') { return wr_produits_parametrage(); }
     if ($method === 'POST' && $path === '/helpdesk/magasin') { return wr_helpdesk_magasin(); }
     if ($method === 'PUT' && $path === '/helpdesk/sms') { return wr_helpdesk_sms(); }
