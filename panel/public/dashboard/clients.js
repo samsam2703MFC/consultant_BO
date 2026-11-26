@@ -53,7 +53,24 @@
   const tfbEtat = () => window.DashTfb ? window.DashTfb.etat(st.shop) : { connecte: false };
   const tfbBouton = (lib) => window.DashTfb ? `<button type="button" class="btn btn--sm btn--primary" data-act="tfb-connecter">${lib || 'Connecter le compte TF Buddy du magasin'}</button>` : '';
   /** Après une connexion ou une déconnexion : tout se relit avec les nouveaux droits. */
-  function toutRelire() { st.p.d = null; st.e.d = null; st.e.fiche = null; st.b.d = null; st.b.det = {}; st.b.options = null; st.a.d = null; charger(true); }
+  function toutRelire() {
+    st.p.d = null; st.e.d = null; st.e.fiche = null; st.b.d = null; st.b.det = {}; st.b.options = null; st.a.d = null; st.tfbDiag = null;
+    charger(true);
+    // Juste après la connexion : le serveur reçoit-il le jeton, et TF Buddy l'accepte-t-il pour ce magasin ? (26/11/2026)
+    if (window.DashTfb && tfbEtat().connecte && window.DashTfb.controler) { window.DashTfb.controler(st.shop, st.api).then(d => { st.tfbDiag = d; rendre(); }).catch(() => null); }
+  }
+  /** Le résultat du contrôle, dit au magasin (rien quand tout va bien). */
+  function tfbDiagTexte() {
+    const d = st.tfbDiag;
+    if (!d || !tfbEtat().connecte) { return ''; }
+    if (d.error) { return 'contrôle impossible : ' + d.error; }
+    if (!d.recu) { return 'le serveur du cockpit ne reçoit pas le jeton (ni en-tête ni cookie) : rechargez la page ; si cela continue, dites-le'; }
+    const t = d.tfbuddy;
+    if (!t) { return ''; }
+    if (t.code >= 200 && t.code < 300) { return ''; }
+    if (t.code === 401) { return 'TF Buddy refuse le jeton (session terminée) : reconnectez le compte'; }
+    return 'TF Buddy refuse ce magasin à ce compte (HTTP ' + t.code + (t.erreur ? ' : ' + t.erreur : '') + ') : connectez un employé de ce magasin';
+  }
   const memo = (k, v) => { try { if (v === undefined) { return localStorage.getItem(k); } localStorage.setItem(k, v); } catch (e) { /* sans mémoire */ } return null; };
 
   /* ── Les lectures ─────────────────────────────────────────────────────────────────────────────────────────── */
@@ -146,7 +163,7 @@
       : st.onglet === 'bur' ? `<button type="button" class="btn btn--primary" data-act="w-ouvrir"${st.b.d && st.b.d.ok ? '' : ' disabled title="TF Buddy ne donne pas les bureaux au cockpit"'}>${SVG(ICO.plus)}Ajouter un bureau</button>` : '';
     return `<div class="pcl-tete"><div><p class="pcl-kicker">${esc(st.nomShop || 'Magasin ' + st.shop)}</p><h1>Clients</h1></div><span class="pcl-sp"></span>${act}</div>
       <nav class="page-tabs pcl-tabs" aria-label="Clients">${ong.map(([k, l, c]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-act="onglet" data-v="${k}">${l}${c}</button>`).join('')}
-      <span class="pcl-sp"></span>${window.DashTfb ? (tfbEtat().connecte ? `<span class="pcl-tfb" title="Les données du panel se lisent avec le compte TF Buddy du magasin, connecté sur cet appareil">TF Buddy : compte du magasin connecté · <button type="button" class="linklike" data-act="tfb-deconnecter">déconnecter</button></span>` : `<button type="button" class="linklike" data-act="tfb-connecter">connecter TF Buddy</button>`) : ''}<button type="button" class="linklike" data-act="aller-offres">Les offres : Vendre › Offres</button></nav>`;
+      <span class="pcl-sp"></span>${window.DashTfb ? (tfbEtat().connecte ? `<span class="pcl-tfb" title="Les données du panel se lisent avec le compte TF Buddy du magasin, connecté sur cet appareil">TF Buddy : compte du magasin connecté${tfbDiagTexte() ? ' — <span class="pcl-tfb-ko">' + esc(tfbDiagTexte()) + '</span>' : ''} · <button type="button" class="linklike" data-act="tfb-deconnecter">déconnecter</button></span>` : `<button type="button" class="linklike" data-act="tfb-connecter">connecter TF Buddy</button>`) : ''}<button type="button" class="linklike" data-act="aller-offres">Les offres : Vendre › Offres</button></nav>`;
   }
 
   /* ── Particuliers ─────────────────────────────────────────────────────────────────────────────────────────── */

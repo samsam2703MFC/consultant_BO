@@ -3449,8 +3449,11 @@ navigateur, le cockpit ne garde ni le PIN ni les jetons et ne les journalise pas
     POST /dashboard/tfb/sms         {shop, challenge}             → {ok}   (POST /panel/auth/resend)
     POST /dashboard/tfb/renouveler  {shop, renouvellement}        → {ok, jetons} | 401 {error, expire}   (POST /panel/auth/refresh)
     POST /dashboard/tfb/deconnexion {shop, renouvellement}        → {ok}   (POST /panel/auth/logout)
+    GET  /dashboard/tfb/etat?shop=                                → {recu, par: entete|cookie|null, entete, cookie, expire, tfbuddy: {code, erreur}}
+                                                                    le contrôle d'après connexion : le jeton arrive-t-il, TF Buddy l'accepte-t-il (liste des bureaux) ?
 
-Le jeton d'accès part dans l'en-tête **`X-TFB-Jeton`** des appels de Clients (`/dashboard/clients/*`) et de Commandes
+Le jeton d'accès part dans l'en-tête **`X-TFB-Jeton`**, doublé d'un cookie court `tfb_jeton_{shop}` (5 min, SameSite=Strict,
+Secure ; 26/11/2026 : le jeton n'arrivait pas au serveur après la connexion), des appels de Clients (`/dashboard/clients/*`) et de Commandes
 (`/dashboard/commandes/*`) ; le navigateur le renouvelle 45 s avant son échéance (un seul renouvellement à la fois : TF
 Buddy fait tourner le jeton de renouvellement). Le serveur l'impose à PanelApi le temps d'un appel
 (`PanelApi::$jetonImpose`). L'ordre des comptes : pour une route `/panel/…`, le magasin, puis le consultant, puis
