@@ -27,6 +27,13 @@
   const poster = (api, p, corps) => fetch(api + p, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(corps) })
     .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok) { const e = new Error(j.error || ('erreur ' + r.status)); e.code = r.status; e.expire = !!j.expire; e.tfb = j.code || null; e.attente = !!j.attente; throw e; } return j; }));
   const enCours = {};
+  /** Le cookie du jeton (tfb_jeton_{shop}) : 5 minutes, même site seulement, HTTPS ; effacé sans jeton. */
+  function cuire(shop, j) {
+    try {
+      const sec = location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = 'tfb_jeton_' + shop + '=' + (j ? encodeURIComponent(j) : '') + '; path=/; SameSite=Strict' + sec + (j ? '; max-age=300' : '; max-age=0');
+    } catch (e) { /* cookies refusés : l'en-tête reste */ }
+  }
 
   /** Un jeton d'accès valable (renouvelé s'il expire dans moins de 45 s), ou null : pas de session, ou session finie. */
   function jeton(shop, api) {
@@ -123,14 +130,20 @@
   }
 
   window.DashTfb = {
-    entetes(shop, api) { return jeton(String(shop), api).then(j => j ? { 'X-TFB-Jeton': j } : {}); },
+    /** L'en-tête du jeton, et le même jeton dans un cookie court (5 min) : il passe même si l'en-tête se perd en route. */
+    entetes(shop, api) { return jeton(String(shop), api).then(j => { cuire(String(shop), j); return j ? { 'X-TFB-Jeton': j } : {}; }); },
+    /** Le contrôle d'après connexion (GET /dashboard/tfb/etat) : le serveur reçoit-il le jeton, que répond TF Buddy avec lui ? */
+    controler(shop, api) {
+      return this.entetes(shop, api).then(h => fetch(api + '/dashboard/tfb/etat?shop=' + encodeURIComponent(shop), { credentials: 'same-origin', headers: Object.assign({ Accept: 'application/json' }, h) }))
+        .then(r => r.json().catch(() => ({ error: 'réponse illisible' })));
+    },
     etat(shop) { const s = lire(String(shop)); return { connecte: !!s, expireSession: s ? s.expireSession || null : null }; },
     ouvrir(shop, api, apres) { ouvrir(String(shop), api, apres); },
     deconnecter(shop, api) {
-      const s = lire(String(shop)); ecrire(String(shop), null);
+      const s = lire(String(shop)); ecrire(String(shop), null); cuire(String(shop), null);
       return s && s.renouvellement ? poster(api, '/dashboard/tfb/deconnexion', { shop: String(shop), renouvellement: s.renouvellement }).catch(() => null) : Promise.resolve(null);
     },
     /** Une réponse du serveur dit la session du magasin périmée : on l'oublie. */
-    oublier(shop) { ecrire(String(shop), null); },
+    oublier(shop) { ecrire(String(shop), null); cuire(String(shop), null); },
   };
 })();
