@@ -1,0 +1,5456 @@
+[
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Depuis quelle année le magasin mère de Corbais exploite-t-il le concept L’Atelier By ?",
+  "choix": [
+   [
+    "1995",
+    false
+   ],
+   [
+    "2002",
+    true
+   ],
+   [
+    "2006",
+    false
+   ],
+   [
+    "2022",
+    false
+   ]
+  ],
+  "expl": "Le magasin mère du concept, à Corbais, exploite le savoir-faire depuis 2002 (DIP, chapitre I, B.2).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre I, B.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Depuis quand le franchiseur développe-t-il la formule L’Atelier By en franchise ?",
+  "choix": [
+   [
+    "Depuis 2002",
+    false
+   ],
+   [
+    "Depuis 2015",
+    false
+   ],
+   [
+    "Depuis 2022",
+    true
+   ],
+   [
+    "Depuis 2025",
+    false
+   ]
+  ],
+  "expl": "La formule est exploitée depuis 2002 au magasin mère de Corbais et développée en franchise depuis 2022 (DIP, chapitre I, III).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre I, III"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Quelle société est le franchiseur du réseau L’Atelier By ?",
+  "choix": [
+   [
+    "Une société anonyme de droit belge",
+    false
+   ],
+   [
+    "Asima sp. z o.o., société à responsabilité limitée de droit polonais",
+    true
+   ],
+   [
+    "Une SRL de droit luxembourgeois",
+    false
+   ],
+   [
+    "Une société de droit français",
+    false
+   ]
+  ],
+  "expl": "Le franchiseur est Asima sp. z o.o., société à responsabilité limitée de droit polonais, inscrite au registre KRS (DIP, chapitre I, A.1).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre I, A.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "vf",
+  "q": "Le savoir-faire du réseau doit s’apprécier globalement, comme un ensemble, et non élément par élément.",
+  "choix": [
+   [
+    "Vrai",
+    true
+   ],
+   [
+    "Faux",
+    false
+   ]
+  ],
+  "expl": "Vrai : le DIP précise que le savoir-faire du franchiseur doit être apprécié seulement globalement, et non élément par élément (DIP, chapitre I, B.3).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre I, B.3"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "multi",
+  "q": "À quels domaines le savoir-faire du réseau s’applique-t-il notamment ? (plusieurs réponses)",
+  "choix": [
+   [
+    "La sélection des ingrédients et des produits",
+    true
+   ],
+   [
+    "Le merchandising des produits et services",
+    true
+   ],
+   [
+    "L’agencement du point de vente",
+    true
+   ],
+   [
+    "La tenue de la comptabilité fiscale du franchisé",
+    false
+   ]
+  ],
+  "expl": "Le savoir-faire couvre notamment la sélection des ingrédients et produits, le merchandising et l’agencement du point de vente ; la comptabilité fiscale reste l’affaire du franchisé (DIP, chapitre I, B.3).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre I, B.3"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Qui peut modifier la liste des Produits proposés en boutique ?",
+  "choix": [
+   [
+    "Le franchisé, librement",
+    false
+   ],
+   [
+    "Le franchiseur, unilatéralement",
+    true
+   ],
+   [
+    "Le franchisé et le franchiseur d’un commun accord",
+    false
+   ],
+   [
+    "L’assemblée des franchisés",
+    false
+   ]
+  ],
+  "expl": "Le franchiseur peut modifier unilatéralement la liste des Produits, l’augmenter ou retirer certains Produits ; le franchisé l’accepte (DIP, chapitre I, B.4).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre I, B.4"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Pendant la période de réflexion du DIP, combien de jours le candidat s’engage-t-il à travailler dans la maison mère de Corbais ?",
+  "choix": [
+   [
+    "1 journée",
+    false
+   ],
+   [
+    "3 jours complets consécutifs",
+    true
+   ],
+   [
+    "5 jours répartis sur un mois",
+    false
+   ],
+   [
+    "2 semaines",
+    false
+   ]
+  ],
+  "expl": "Avant la signature, le candidat s’engage à travailler 3 jours complets consécutifs dans la maison mère de Corbais pour découvrir le métier (DIP, chapitre II, III.2).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre II, III.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Une décision de justice impose un changement d’enseigne. Qui paie le remplacement de l’enseigne extérieure et de la signalétique ?",
+  "choix": [
+   [
+    "Le franchisé",
+    false
+   ],
+   [
+    "Le franchiseur",
+    true
+   ],
+   [
+    "Le franchisé et le franchiseur à parts égales",
+    false
+   ],
+   [
+    "Le bailleur du local",
+    false
+   ]
+  ],
+  "expl": "Le franchiseur garantit ses droits sur la Marque et prend en charge les frais de remplacement de l’enseigne extérieure et de la signalétique si un changement est imposé par la justice (contrat, art. 3.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "3.1",
+   "lib": "Contrat, art. 3.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Le franchiseur vous notifie une évolution de l’enseigne. De combien de temps disposez-vous au minimum pour faire les modifications ?",
+  "choix": [
+   [
+    "15 jours",
+    false
+   ],
+   [
+    "1 mois",
+    false
+   ],
+   [
+    "3 mois",
+    false
+   ],
+   [
+    "6 mois",
+    true
+   ]
+  ],
+  "expl": "Le franchisé dispose d’au moins six mois à dater de la notification de l’évolution de l’enseigne pour procéder aux modifications (contrat, art. 3.2.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "3.2.1",
+   "lib": "Contrat, art. 3.2.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "situation",
+  "q": "Vous créez votre société pour exploiter le magasin et souhaitez l’appeler « L’Atelier By » suivi du nom de votre ville. Que dit le contrat ?",
+  "choix": [
+   [
+    "C’est permis si le franchiseur est prévenu",
+    false
+   ],
+   [
+    "C’est interdit : la Marque ne peut pas figurer dans votre dénomination sociale",
+    true
+   ],
+   [
+    "C’est permis si la société n’a qu’un seul associé",
+    false
+   ],
+   [
+    "C’est obligatoire pour être reconnu comme franchisé",
+    false
+   ]
+  ],
+  "expl": "La Marque ne peut en aucun cas figurer dans la dénomination sociale du franchisé ; il agit toujours sous sa propre dénomination (contrat, art. 3.2.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "3.2.2",
+   "lib": "Contrat, art. 3.2.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Comment le contrat qualifie-t-il un dénigrement de la Marque ou du réseau par le franchisé ?",
+  "choix": [
+   [
+    "Une simple maladresse sans conséquence",
+    false
+   ],
+   [
+    "Un manquement grave, constitutif d’une tentative de déstabilisation du réseau",
+    true
+   ],
+   [
+    "Une liberté d’expression protégée par le contrat",
+    false
+   ],
+   [
+    "Un fait qui ne compte qu’après la fin du contrat",
+    false
+   ]
+  ],
+  "expl": "Tout propos diffamatoire ou dénigrement constitue un manquement grave, constitutif d’une tentative de déstabilisation du réseau, qui peut justifier la résiliation (contrat, art. 3.2.3).",
+  "src": {
+   "type": "contrat",
+   "ref": "3.2.3",
+   "lib": "Contrat, art. 3.2.3"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "situation",
+  "q": "Vous remarquez qu’un commerce voisin utilise un nom qui ressemble fortement à « L’Atelier By ». Que devez-vous faire ?",
+  "choix": [
+   [
+    "Lui envoyer vous-même une mise en demeure",
+    false
+   ],
+   [
+    "Informer le franchiseur sans délai et lui donner les informations dont vous disposez",
+    true
+   ],
+   [
+    "Attendre la prochaine visite du consultant",
+    false
+   ],
+   [
+    "Ne rien faire : cela ne vous concerne pas",
+    false
+   ]
+  ],
+  "expl": "Le franchisé informe le franchiseur sans aucun délai de toute atteinte à la Marque ; le titulaire de la Marque décide seul d’une action en contrefaçon (contrat, art. 3.2.4).",
+  "src": {
+   "type": "contrat",
+   "ref": "3.2.4",
+   "lib": "Contrat, art. 3.2.4"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Vous faites imprimer des flyers chez un imprimeur de votre choix. Le franchiseur ne répond pas au bon à tirer envoyé. Au bout de combien de jours est-il réputé agréé ?",
+  "choix": [
+   [
+    "8 jours",
+    false
+   ],
+   [
+    "15 jours",
+    true
+   ],
+   [
+    "30 jours",
+    false
+   ],
+   [
+    "Jamais : un accord écrit est toujours nécessaire",
+    false
+   ]
+  ],
+  "expl": "Les bons à tirer et tirages sont réputés agréés en l’absence de réponse du franchiseur dans les quinze jours (contrat, art. 3.2.6).",
+  "src": {
+   "type": "contrat",
+   "ref": "3.2.6",
+   "lib": "Contrat, art. 3.2.6"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "vf",
+  "q": "Vous devez apposer, dans le point de vente et à l’extérieur, une affiche ou une plaque mentionnant votre statut de franchisé indépendant.",
+  "choix": [
+   [
+    "Vrai",
+    true
+   ],
+   [
+    "Faux",
+    false
+   ]
+  ],
+  "expl": "Vrai : le franchisé appose visiblement, dans et à l’extérieur du point de vente, une affiche ou plaque mentionnant son statut de franchisé indépendant (contrat, art. 3.2.7).",
+  "src": {
+   "type": "contrat",
+   "ref": "3.2.7",
+   "lib": "Contrat, art. 3.2.7"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Pour préserver l’image de la Marque, que doit respecter scrupuleusement le franchisé ?",
+  "choix": [
+   [
+    "Les conseils de ses fournisseurs",
+    false
+   ],
+   [
+    "Le Manuel Opératoire",
+    true
+   ],
+   [
+    "Les usages de la boulangerie de son quartier",
+    false
+   ],
+   [
+    "Ses propres recettes, s’il les juge meilleures",
+    false
+   ]
+  ],
+  "expl": "Le franchisé reconnaît la nécessité de respecter scrupuleusement le Manuel Opératoire pour préserver l’image de la Marque (contrat, art. 5.1.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.1.1",
+   "lib": "Contrat, art. 5.1.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Comment fixez-vous vos prix de vente en boutique ?",
+  "choix": [
+   [
+    "Je dois appliquer exactement les prix imposés par le franchiseur",
+    false
+   ],
+   [
+    "Librement, sans aucune limite",
+    false
+   ],
+   [
+    "Librement, mais sans dépasser les prix de revente maximaux conseillés : je ne peux que baisser",
+    true
+   ],
+   [
+    "Librement, mais sans descendre sous un prix minimum fixé par le réseau",
+    false
+   ]
+  ],
+  "expl": "Le franchisé fixe librement ses prix, mais doit respecter les prix de revente maximaux conseillés et ne peut fixer ses prix qu’à la baisse (contrat, art. 5.1.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.1.2",
+   "lib": "Contrat, art. 5.1.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Le point de vente diffuse les playlists musicales fournies par le réseau. Qui fait la déclaration auprès de la SABAM et paie les redevances éventuelles ?",
+  "choix": [
+   [
+    "Le franchiseur, pour tout le réseau",
+    false
+   ],
+   [
+    "Le franchisé",
+    true
+   ],
+   [
+    "Le prestataire musical",
+    false
+   ],
+   [
+    "Personne : les playlists du réseau en sont dispensées",
+    false
+   ]
+  ],
+  "expl": "Le franchisé diffuse les programmes musicaux du réseau et doit faire la déclaration auprès de la SABAM ou des organismes compétents et verser les redevances dues (contrat, art. 5.1.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.1.2",
+   "lib": "Contrat, art. 5.1.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Selon le Manuel du réseau, quelles sont les deux choses, moins visibles que le logo, qui font la valeur d’une franchise ?",
+  "choix": [
+   [
+    "La façade et la vitrine",
+    false
+   ],
+   [
+    "Un système de gestion unique et des procédures identiques partout",
+    true
+   ],
+   [
+    "Le nombre de magasins et la publicité nationale",
+    false
+   ],
+   [
+    "Le loyer et la surface du local",
+    false
+   ]
+  ],
+  "expl": "Une franchise bien construite tient sa valeur d’un système de gestion unique pour tout le réseau et de procédures identiques partout (Manuel du réseau, La valeur d’une franchise).",
+  "src": {
+   "type": "guide",
+   "ref": "art-valeur-franchise",
+   "lib": "Manuel du réseau — La valeur d’une franchise"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "vf",
+  "q": "Dans un réseau, celui qui reprend une boutique doit obligatoirement être boulanger de métier.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : dans un réseau, le repreneur n’a pas besoin d’être boulanger ; il doit être un bon gestionnaire et un bon manager, et le réseau lui apporte le reste (Manuel du réseau, La valeur d’une franchise).",
+  "src": {
+   "type": "guide",
+   "ref": "art-valeur-franchise",
+   "lib": "Manuel du réseau — La valeur d’une franchise"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "situation",
+  "q": "Un franchisé change « à sa façon » plusieurs procédures du réseau parce que ses résultats sont bons. Selon le Manuel du réseau, quel est l’effet ?",
+  "choix": [
+   [
+    "Aucun, tant que le résultat est bon",
+    false
+   ],
+   [
+    "Ses écarts retirent de la valeur à son fonds et abîment la valeur des autres boutiques",
+    true
+   ],
+   [
+    "Il augmente la valeur de sa boutique à la revente",
+    false
+   ],
+   [
+    "Il oblige le réseau à adopter sa méthode",
+    false
+   ]
+  ],
+  "expl": "Chaque écart à la procédure retire de la valeur au fonds, et un magasin qui fait à sa manière abîme la valeur de tous les autres (Manuel du réseau, La valeur d’une franchise).",
+  "src": {
+   "type": "guide",
+   "ref": "art-valeur-franchise",
+   "lib": "Manuel du réseau — La valeur d’une franchise"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Selon les bonnes pratiques du dirigeant, comment déléguer correctement ?",
+  "choix": [
+   [
+    "Confier une tâche précise et vérifier quand on a le temps",
+    false
+   ],
+   [
+    "Déléguer un résultat, avec un cadre et un point de contrôle fixé au moment de la délégation",
+    true
+   ],
+   [
+    "Laisser faire sans contrôle pour montrer sa confiance",
+    false
+   ],
+   [
+    "Garder la décision finale sur chaque détail",
+    false
+   ]
+  ],
+  "expl": "On délègue un résultat et non une tâche, on donne le cadre et on fixe le point de contrôle au moment de la délégation : déléguer sans contrôler, c’est abandonner (Manuel du réseau, Bonnes pratiques du dirigeant).",
+  "src": {
+   "type": "guide",
+   "ref": "art-bonnes-pratiques-dirigeant",
+   "lib": "Manuel du réseau — Bonnes pratiques du dirigeant"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "MAR",
+  "type": "qcm",
+  "q": "Dans quel délai un feedback doit-il être donné pour garder sa valeur ?",
+  "choix": [
+   [
+    "Dans les 24 heures",
+    true
+   ],
+   [
+    "À la fin de la semaine",
+    false
+   ],
+   [
+    "Lors de l’entretien de fond semestriel",
+    false
+   ],
+   [
+    "Seulement si le problème se répète",
+    false
+   ]
+  ],
+  "expl": "Un feedback utile décrit un fait, son effet et ce qu’on attend ; il se donne dans les 24 heures, sinon il perd sa valeur (Manuel du réseau, Bonnes pratiques du dirigeant).",
+  "src": {
+   "type": "guide",
+   "ref": "art-bonnes-pratiques-dirigeant",
+   "lib": "Manuel du réseau — Bonnes pratiques du dirigeant"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Quelle est la durée du contrat de franchise ?",
+  "choix": [
+   [
+    "5 ans",
+    false
+   ],
+   [
+    "7 ans",
+    false
+   ],
+   [
+    "9 ans",
+    true
+   ],
+   [
+    "Durée indéterminée",
+    false
+   ]
+  ],
+  "expl": "Le contrat dure neuf ans à compter de sa date d’effet, augmentés du délai jusqu’à l’ouverture du point de vente (contrat, art. 2.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "2.1",
+   "lib": "Contrat, art. 2.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Dans quel délai le point de vente doit-il ouvrir au public ?",
+  "choix": [
+   [
+    "Au plus tard 4 mois après la levée de la dernière condition suspensive",
+    true
+   ],
+   [
+    "Au plus tard 4 mois après la signature du DIP",
+    false
+   ],
+   [
+    "Au plus tard 6 mois après la signature du bail",
+    false
+   ],
+   [
+    "Au plus tard 1 an après la signature du contrat",
+    false
+   ]
+  ],
+  "expl": "L’ouverture doit intervenir au plus tard dans un délai de quatre mois suivant la levée de la dernière des conditions suspensives (contrat, art. 2.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "2.1",
+   "lib": "Contrat, art. 2.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "multi",
+  "q": "Quelles sont les conditions suspensives du contrat de franchise ? (plusieurs réponses)",
+  "choix": [
+   [
+    "L’obtention définitive du crédit bancaire",
+    true
+   ],
+   [
+    "La signature du bail commercial conforme",
+    true
+   ],
+   [
+    "L’obtention des permis et autorisations nécessaires",
+    true
+   ],
+   [
+    "L’atteinte d’un chiffre d’affaires minimum la première année",
+    false
+   ]
+  ],
+  "expl": "Le contrat est conclu sous trois conditions suspensives : le crédit bancaire, le bail commercial conforme et les permis et autorisations ; aucun chiffre d’affaires n’est promis (contrat, art. 2.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "2.1",
+   "lib": "Contrat, art. 2.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Les conditions suspensives ne sont pas toutes levées dans les 6 mois de la signature du contrat. Que se passe-t-il ?",
+  "choix": [
+   [
+    "Le contrat se poursuit automatiquement",
+    false
+   ],
+   [
+    "Chaque partie peut y mettre fin sans indemnité ; l’acompte est remboursé, sous déduction des prestations déjà fournies et justifiées",
+    true
+   ],
+   [
+    "Le franchisé perd son acompte dans tous les cas",
+    false
+   ],
+   [
+    "Le franchisé doit payer une indemnité au franchiseur",
+    false
+   ]
+  ],
+  "expl": "Sans levée dans les six mois, chaque partie peut mettre fin au contrat par notification, sans indemnité ; l’acompte est remboursé sous déduction des prestations justifiées (contrat, art. 2.1 et 26.1.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "2.1",
+   "lib": "Contrat, art. 2.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "vf",
+  "q": "À son terme, le contrat de franchise se renouvelle tacitement.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : le contrat ne peut pas se renouveler tacitement ; à défaut d’un nouveau contrat, les relations prennent fin de plein droit au terme (contrat, art. 2.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "2.2",
+   "lib": "Contrat, art. 2.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Que vous garantit l’exclusivité territoriale ?",
+  "choix": [
+   [
+    "Que vous êtes le seul boulanger de votre commune",
+    false
+   ],
+   [
+    "Que le franchiseur n’implante pas d’autre point de vente sur votre territoire, sous l’enseigne ou sous une autre, avec un droit de priorité pour vous",
+    true
+   ],
+   [
+    "Que vous pouvez ouvrir un second magasin sur le territoire sans accord",
+    false
+   ],
+   [
+    "Que les autres franchisés ne peuvent pas avoir de site internet",
+    false
+   ]
+  ],
+  "expl": "Sur le territoire, le franchiseur s’interdit d’implanter ou de laisser implanter un point de vente, sous l’enseigne ou toute autre enseigne ; le franchisé a un droit de priorité sur toute nouvelle opportunité (contrat, art. 1.3).",
+  "src": {
+   "type": "contrat",
+   "ref": "1.3",
+   "lib": "Contrat, art. 1.3"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "situation",
+  "q": "Vous voulez distribuer des flyers dans les boîtes aux lettres d’une ville où se trouve le territoire d’un autre franchisé. Que dit le contrat ?",
+  "choix": [
+   [
+    "C’est permis si vos prix sont plus bas",
+    false
+   ],
+   [
+    "C’est interdit : vous ne menez pas de campagne de vente active sur le territoire d’un autre",
+    true
+   ],
+   [
+    "C’est permis une fois par an",
+    false
+   ],
+   [
+    "C’est permis avec l’accord de l’autre franchisé seulement",
+    false
+   ]
+  ],
+  "expl": "Le franchisé respecte les territoires concédés aux autres et n’y développe pas de campagnes de ventes actives, comme le publipostage (contrat, art. 1.4).",
+  "src": {
+   "type": "contrat",
+   "ref": "1.4",
+   "lib": "Contrat, art. 1.4"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Combien de jours dure la formation initiale du franchisé ?",
+  "choix": [
+   [
+    "5 jours de théorie et 14 jours de pratique",
+    true
+   ],
+   [
+    "3 jours de théorie et 10 jours de pratique",
+    false
+   ],
+   [
+    "10 jours de théorie et 5 jours de pratique",
+    false
+   ],
+   [
+    "14 jours de théorie seulement",
+    false
+   ]
+  ],
+  "expl": "La formation initiale comprend une formation théorique de 5 jours et une formation pratique de 14 jours dans un point de vente désigné ; elle est comprise dans le droit d’entrée (contrat, art. 26.3.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.3.1",
+   "lib": "Contrat, art. 26.3.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Quelle est la durée de la période de lancement ?",
+  "choix": [
+   [
+    "Les 2 premières semaines",
+    false
+   ],
+   [
+    "Les 4 premières semaines",
+    false
+   ],
+   [
+    "Les 6 premières semaines",
+    true
+   ],
+   [
+    "Les 3 premiers mois",
+    false
+   ]
+  ],
+  "expl": "Les six premières semaines d’exploitation constituent la période de lancement (contrat, art. 4.5.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "4.5.1",
+   "lib": "Contrat, art. 4.5.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "À quel rythme le garant d’ouverture est-il présent pendant la période de lancement ?",
+  "choix": [
+   [
+    "7 jours sur 7 pendant 6 semaines",
+    false
+   ],
+   [
+    "5 jours sur 7 les 2 premières semaines, puis 3 jours sur 7 les 4 semaines suivantes",
+    true
+   ],
+   [
+    "3 jours sur 7 pendant 6 semaines",
+    false
+   ],
+   [
+    "Uniquement le jour de l’ouverture",
+    false
+   ]
+  ],
+  "expl": "Le garant d’ouverture est présent 5 jours sur 7 les deux premières semaines, puis 3 jours sur 7 les quatre semaines suivantes ; c’est compris dans la redevance initiale (contrat, art. 4.5.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "4.5.2",
+   "lib": "Contrat, art. 4.5.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "situation",
+  "q": "Pendant la période de lancement, vous voulez réduire les horaires d’ouverture fixés par le franchiseur. Que faites-vous ?",
+  "choix": [
+   [
+    "Vous les réduisez : vous restez libre de vos horaires",
+    false
+   ],
+   [
+    "Vous adressez la demande au garant d’ouverture ; le franchiseur tranche dans les 48 heures",
+    true
+   ],
+   [
+    "Vous attendez la fin du contrat",
+    false
+   ],
+   [
+    "Vous prévenez simplement vos clients",
+    false
+   ]
+  ],
+  "expl": "Pendant la période de lancement, les horaires font partie des paramètres fixés par le franchiseur ; toute demande d’adaptation passe par le garant et est tranchée dans les 48 heures (contrat, art. 4.5.3).",
+  "src": {
+   "type": "contrat",
+   "ref": "4.5.3",
+   "lib": "Contrat, art. 4.5.3"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Les indicateurs ne sont pas atteints après 6 semaines. Que prévoit le contrat pour la prolongation de la période de lancement ?",
+  "choix": [
+   [
+    "Elle est automatique et gratuite",
+    false
+   ],
+   [
+    "Elle est facultative : elle n’a lieu qu’avec votre accord écrit, à 350 € HT par jour",
+    true
+   ],
+   [
+    "Elle est obligatoire et à charge du franchiseur",
+    false
+   ],
+   [
+    "Elle entraîne la résiliation du contrat",
+    false
+   ]
+  ],
+  "expl": "La prolongation, par tranches d’une semaine, est facultative : elle n’a lieu qu’avec l’accord préalable et écrit du franchisé, à sa charge, au tarif de 350 € HT par jour (contrat, art. 4.5.5).",
+  "src": {
+   "type": "contrat",
+   "ref": "4.5.5",
+   "lib": "Contrat, art. 4.5.5"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Que prévoit le contrat pour la consultation hebdomadaire de suivi en visio ?",
+  "choix": [
+   [
+    "1 heure par mois, facultative",
+    false
+   ],
+   [
+    "10 à 40 minutes chaque semaine, obligatoire jusqu’à la fin de la période de lancement, puis souhaitée",
+    true
+   ],
+   [
+    "2 heures par semaine, obligatoire pendant tout le contrat",
+    false
+   ],
+   [
+    "Une visite physique par trimestre seulement",
+    false
+   ]
+  ],
+  "expl": "La consultation de suivi dure de 10 à 40 minutes ; elle est obligatoire de la signature jusqu’à la fin de la période de lancement, puis souhaitée chaque semaine (contrat, art. 4.4.4).",
+  "src": {
+   "type": "contrat",
+   "ref": "4.4.4",
+   "lib": "Contrat, art. 4.4.4"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Pour les Produits et Ingrédients non exclusifs, quelle part devez-vous acheter auprès du franchiseur ou de ses fournisseurs référencés ?",
+  "choix": [
+   [
+    "50 %",
+    false
+   ],
+   [
+    "75 %",
+    true
+   ],
+   [
+    "90 %",
+    false
+   ],
+   [
+    "100 %",
+    false
+   ]
+  ],
+  "expl": "Les Produits et Ingrédients non exclusifs sont achetés à hauteur de 75 % auprès du franchiseur ou des fournisseurs référencés ; les 25 % restants chez un fournisseur agréé (contrat, art. 6.2.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "6.2.2",
+   "lib": "Contrat, art. 6.2.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "situation",
+  "q": "Un Ingrédient Exclusif ne peut pas vous être livré à temps. Que pouvez-vous faire ?",
+  "choix": [
+   [
+    "Remplacer l’ingrédient par un autre de votre choix, sans prévenir",
+    false
+   ],
+   [
+    "Commander chez le fournisseur de votre choix, après avoir informé le franchiseur, et justifier ensuite l’impossibilité de livraison",
+    true
+   ],
+   [
+    "Retirer le produit de la carte pendant un mois",
+    false
+   ],
+   [
+    "Rien : vous devez attendre la livraison",
+    false
+   ]
+  ],
+  "expl": "Si la livraison est impossible en temps utile, le franchisé peut s’adresser au fournisseur de son choix, en informant préalablement le franchiseur et en justifiant ensuite l’impossibilité (contrat, art. 6.2.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "6.2.1",
+   "lib": "Contrat, art. 6.2.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Quel est le montant du droit d’entrée et quand est-il payé ?",
+  "choix": [
+   [
+    "15.000 € HT : 50 % à la signature du contrat, le solde à la prise d’effet",
+    true
+   ],
+   [
+    "15.000 € HT : la totalité à l’ouverture",
+    false
+   ],
+   [
+    "30.000 € HT : 50 % à la signature du DIP",
+    false
+   ],
+   [
+    "10.000 € HT : en douze mensualités",
+    false
+   ]
+  ],
+  "expl": "La redevance initiale forfaitaire est de 15.000 € HT ; un acompte de 50 % est payé à la signature du contrat et le solde à sa prise d’effet (contrat, art. 26.1.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.1.1",
+   "lib": "Contrat, art. 26.1.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Quel est le taux de la redevance de marque ?",
+  "choix": [
+   [
+    "1 % du chiffre d’affaires mensuel HT",
+    false
+   ],
+   [
+    "2 % du chiffre d’affaires mensuel HT",
+    true
+   ],
+   [
+    "3 % du chiffre d’affaires mensuel HT",
+    false
+   ],
+   [
+    "Un forfait mensuel de 399 € HT",
+    false
+   ]
+  ],
+  "expl": "La redevance de marque est de 2 % du chiffre d’affaires mensuel HT, payée le 15 du mois suivant (contrat, art. 8.2.1 et 26.2.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.2.1",
+   "lib": "Contrat, art. 26.2.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Que couvre notamment la redevance d’assistance de 2 % ?",
+  "choix": [
+   [
+    "La publicité nationale du réseau",
+    false
+   ],
+   [
+    "L’assistance permanente du franchiseur, dont la formation continue",
+    true
+   ],
+   [
+    "Le système de caisse et le webshop",
+    false
+   ],
+   [
+    "Le loyer du point de vente",
+    false
+   ]
+  ],
+  "expl": "La redevance d’assistance (2 % du CA mensuel) est la contrepartie d’un savoir-faire documenté et couvre notamment la formation permanente (contrat, art. 8.2.2 et 26.3.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "8.2.2",
+   "lib": "Contrat, art. 8.2.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "vf",
+  "q": "Le contrat vous oblige à consacrer 1 % de votre chiffre d’affaires mensuel à votre communication locale.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : le franchiseur recommande un budget de l’ordre de 1 % du CA mensuel ; ce montant est indicatif et ne constitue pas une obligation (contrat, art. 26.4.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.4.2",
+   "lib": "Contrat, art. 26.4.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Que prévoit le contrat pour la communication de lancement ?",
+  "choix": [
+   [
+    "Tout est compris dans le droit d’entrée, sans autre budget",
+    false
+   ],
+   [
+    "La conception du plan et la première publicité sont comprises ; vous y consacrez en plus un budget minimum de 3.000 € HT",
+    true
+   ],
+   [
+    "Le franchisé conçoit seul sa campagne, sans validation",
+    false
+   ],
+   [
+    "Elle est facultative",
+    false
+   ]
+  ],
+  "expl": "La conception du plan de communication de lancement et la première publicité sont comprises dans la redevance initiale ; le franchisé y consacre en plus un budget minimum de 3.000 € HT (contrat, art. 7.1 et 26.4.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "7.1",
+   "lib": "Contrat, art. 7.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "vf",
+  "q": "Le franchiseur exige une garantie bancaire de la part du franchisé.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : le franchiseur n’exige aucune garantie bancaire ; les garanties demandées par l’organisme qui finance le point de vente ne regardent que le franchisé et cet organisme (contrat, art. 27).",
+  "src": {
+   "type": "contrat",
+   "ref": "27",
+   "lib": "Contrat, art. 27"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "vf",
+  "q": "Respecter les règles et normes du réseau n’implique aucune restriction dans la direction de votre entreprise ni de votre qualité de commerçant indépendant.",
+  "choix": [
+   [
+    "Vrai",
+    true
+   ],
+   [
+    "Faux",
+    false
+   ]
+  ],
+  "expl": "Vrai : le contrat précise que le respect des règles du réseau n’implique aucune restriction dans la direction de l’entreprise du franchisé, commerçant indépendant (contrat, art. 9).",
+  "src": {
+   "type": "contrat",
+   "ref": "9",
+   "lib": "Contrat, art. 9"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Vous notifiez au franchiseur un projet de cession de votre magasin. Il ne répond pas dans les 30 jours. Que vaut son silence pour l’agrément ?",
+  "choix": [
+   [
+    "Un accord tacite",
+    false
+   ],
+   [
+    "Un rejet de la demande d’agrément",
+    true
+   ],
+   [
+    "Une prolongation automatique de 30 jours",
+    false
+   ],
+   [
+    "Une renonciation au contrat",
+    false
+   ]
+  ],
+  "expl": "Le franchiseur a trente jours pour répondre ; son silence dans ce délai vaut rejet de la demande d’agrément (contrat, art. 11.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "11.2",
+   "lib": "Contrat, art. 11.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Dans quel cas le franchiseur peut-il résilier le contrat sans mise en demeure préalable ?",
+  "choix": [
+   [
+    "En cas de fraude du franchisé ou de problème sanitaire avéré au point de vente",
+    true
+   ],
+   [
+    "Au premier retard de paiement d’une redevance",
+    false
+   ],
+   [
+    "En cas de violation de l’approvisionnement exclusif",
+    false
+   ],
+   [
+    "En cas d’absence à une réunion du réseau",
+    false
+   ]
+  ],
+  "expl": "Sans mise en demeure, seulement en cas de fraude (par exemple de fausses déclarations à la candidature) ou de problème sanitaire avéré ; les autres manquements graves exigent une mise en demeure de 15 jours ouvrables (contrat, art. 12.1.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "12.1.1",
+   "lib": "Contrat, art. 12.1.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Combien de temps dure la non-concurrence après la fin du contrat ?",
+  "choix": [
+   [
+    "6 mois",
+    false
+   ],
+   [
+    "1 an",
+    true
+   ],
+   [
+    "3 ans",
+    false
+   ],
+   [
+    "5 ans",
+    false
+   ]
+  ],
+  "expl": "Pendant un an après la cessation du contrat, le franchisé et l’associé s’interdisent toute activité concurrente dans ou à partir du point de vente ; cela ne s’applique pas si la fin résulte d’une faute du franchiseur ou de son refus de renouveler (contrat, art. 13.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "13.2",
+   "lib": "Contrat, art. 13.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Combien de temps après la fin du contrat l’obligation de confidentialité dure-t-elle ?",
+  "choix": [
+   [
+    "1 an",
+    false
+   ],
+   [
+    "3 ans",
+    false
+   ],
+   [
+    "5 ans",
+    true
+   ],
+   [
+    "Elle s’arrête à la fin du contrat",
+    false
+   ]
+  ],
+  "expl": "La confidentialité vaut pendant le contrat et pendant cinq ans après sa cessation ; une violation entraîne une clause pénale de 30.000 € (contrat, art. 14).",
+  "src": {
+   "type": "contrat",
+   "ref": "14",
+   "lib": "Contrat, art. 14"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "À la fin du contrat, dans quel délai devez-vous descendre l’enseigne et retirer de la vitrine tout élément de la Marque ?",
+  "choix": [
+   [
+    "8 jours",
+    false
+   ],
+   [
+    "15 jours",
+    false
+   ],
+   [
+    "30 jours",
+    true
+   ],
+   [
+    "3 mois",
+    false
+   ]
+  ],
+  "expl": "Le franchisé doit, sous trente jours et à ses frais, descendre l’enseigne et supprimer de sa vitrine tout élément relatif à la Marque (contrat, art. 15.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "15.1",
+   "lib": "Contrat, art. 15.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "CON",
+  "type": "qcm",
+  "q": "Lequel de ces éléments n’est PAS compris dans le droit d’entrée et les redevances ?",
+  "choix": [
+   [
+    "La présence du garant d’ouverture pendant les 6 semaines de lancement",
+    false
+   ],
+   [
+    "Les plans d’adaptation et d’exécution de l’Architecte désigné",
+    false
+   ],
+   [
+    "Vos déplacements et votre logement pendant la formation",
+    true
+   ],
+   [
+    "L’étude de marché de l’emplacement",
+    false
+   ]
+  ],
+  "expl": "Les déplacements et le logement du franchisé pendant la formation ne sont pas compris ; le garant d’ouverture, les plans de l’Architecte et l’étude de marché le sont (DIP, annexe 17).",
+  "src": {
+   "type": "contrat",
+   "ref": "annexe 17",
+   "lib": "DIP, annexe 17"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Quelle température doivent afficher les frigos et les comptoirs réfrigérés ?",
+  "choix": [
+   [
+    "De +2 °C à +5 °C",
+    true
+   ],
+   [
+    "De 0 °C à +2 °C",
+    false
+   ],
+   [
+    "De +5 °C à +8 °C",
+    false
+   ],
+   [
+    "De +4 °C à +10 °C",
+    false
+   ]
+  ],
+  "expl": "Les frigos et comptoirs réfrigérés doivent afficher de +2 °C à +5 °C ; toute panne se signale immédiatement (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Avec quoi manipule-t-on les produits non emballés au comptoir ?",
+  "choix": [
+   [
+    "Avec des gants propres ou une pince de service en inox",
+    true
+   ],
+   [
+    "À mains nues, après les avoir lavées",
+    false
+   ],
+   [
+    "Avec une serviette en papier",
+    false
+   ],
+   [
+    "Avec le papier d'emballage du produit",
+    false
+   ]
+  ],
+  "expl": "Un produit non emballé se manipule toujours avec des gants propres ou une pince de service en inox (standard 0.1.01, norme d'hygiène).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Quand faut-il se laver les mains pendant la fermeture ?",
+  "choix": [
+   [
+    "Après les déchets ou le nettoyage, et avant de toucher à nouveau des aliments",
+    true
+   ],
+   [
+    "Seulement en fin de service, avant de partir",
+    false
+   ],
+   [
+    "Seulement avant de toucher la caisse",
+    false
+   ],
+   [
+    "Une fois par heure, quelle que soit la tâche",
+    false
+   ]
+  ],
+  "expl": "On se lave les mains après les déchets ou le nettoyage, et avant de toucher à nouveau des aliments (standard 0.4.01, règles non négociables).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Combien de temps peut-on conserver la crème fraîche ou la crème pâtissière préparée ?",
+  "choix": [
+   [
+    "Jusqu'au lendemain de la production au maximum (J+1), filmée et datée",
+    true
+   ],
+   [
+    "Jusqu'à J+3, au frigo",
+    false
+   ],
+   [
+    "Une semaine si elle reste au frigo",
+    false
+   ],
+   [
+    "Elle se jette toujours le jour même",
+    false
+   ]
+  ],
+  "expl": "Les deux crèmes se conservent au maximum jusqu'au jour de production + 1 (J+1), toujours filmées et datées (standard 0.2.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.02",
+   "lib": "Standard 0.2.02 — Crème fraîche et crème pâtissière"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "À la fermeture, que reste-t-il allumé sur le panneau du comptoir réfrigéré ?",
+  "choix": [
+   [
+    "Le froid (bouton rouge de gauche avec le flocon de neige)",
+    true
+   ],
+   [
+    "La lumière (bouton vert du milieu)",
+    false
+   ],
+   [
+    "Le chauffage de vitre (bouton rouge de droite)",
+    false
+   ],
+   [
+    "Rien : on éteint tout le comptoir",
+    false
+   ]
+  ],
+  "expl": "On éteint la lumière et le chauffage de vitre, mais le froid (bouton avec le flocon) reste allumé (standard 0.4.01, phase 6).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "HYG",
+  "type": "situation",
+  "q": "Après le dernier client, vous rangez les quiches. Le frigo de la cuisine est plein. Que faites-vous ?",
+  "choix": [
+   [
+    "Je les mets dans le frigo du magasin",
+    true
+   ],
+   [
+    "Je les laisse sur un chariot, couvertes d'une housse",
+    false
+   ],
+   [
+    "Je les laisse dans le comptoir réfrigéré pour la nuit",
+    false
+   ],
+   [
+    "Je les jette",
+    false
+   ]
+  ],
+  "expl": "Les quiches vont d'abord dans le frigo de la cuisine, et dans le frigo du magasin seulement s'il est plein ; jamais à température ambiante (standard 0.4.01, matrice de conservation).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "À la fermeture, comment conserve-t-on les tartes sans obligation de froid et les pains carrés ?",
+  "choix": [
+   [
+    "Ensemble sur le chariot prévu, entièrement couverts d'une housse propre",
+    true
+   ],
+   [
+    "Dans le frigo de la cuisine, avec les tartes froides",
+    false
+   ],
+   [
+    "Dans le comptoir à tartes, sans protection",
+    false
+   ],
+   [
+    "Filmés sur une grille dans le frigo du magasin",
+    false
+   ]
+  ],
+  "expl": "Tartes sans obligation de froid et pains carrés : ensemble sur le chariot prévu, entièrement couverts d'une housse propre, sans jamais y ajouter de tartes froides (standard 0.4.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "vf",
+  "q": "Vrai ou faux : si l'on ne connaît pas la température ou la durée de conservation d'un produit, on l'estime au mieux.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : il ne faut jamais inventer une température ni une durée de conservation (standard 0.4.01, « À ne pas faire »).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "vf",
+  "q": "Vrai ou faux : on peut mélanger deux produits de nettoyage pour nettoyer plus vite.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : on ne mélange jamais les produits de nettoyage ; on utilise seulement le produit prévu en interne, au dosage validé (standard 0.4.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Que fait-on de l'œuf liquide qui reste dans le pistolet à dorer en fin de poste ?",
+  "choix": [
+   [
+    "On le filme, on le date et on le réfrigère, pour J+1 au maximum",
+    true
+   ],
+   [
+    "On le laisse dans le pistolet pour le lendemain",
+    false
+   ],
+   [
+    "On le garde au frigo jusqu'à J+3",
+    false
+   ],
+   [
+    "On le remet dans le bidon d'œufs liquides",
+    false
+   ]
+  ],
+  "expl": "L'œuf restant est filmé, daté et réfrigéré pour J+1 au maximum ; le pistolet est démonté, lavé et séché (standard 0.4.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.02",
+   "lib": "Standard 0.4.02 — Fin de poste de cuisson"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Pendant les moments calmes, que fait-on des bacs gastro de la saladette ?",
+  "choix": [
+   [
+    "On les couvre de film et on note la date",
+    true
+   ],
+   [
+    "On les laisse ouverts pour le service suivant",
+    false
+   ],
+   [
+    "On les vide dans un seul bac",
+    false
+   ],
+   [
+    "On les met au congélateur",
+    false
+   ]
+  ],
+  "expl": "Les bacs gastro de la saladette se couvrent de film et on y note la date (standard CHK-WKL-005).",
+  "src": {
+   "type": "sop",
+   "ref": "CHK-WKL-005",
+   "lib": "Standard CHK-WKL-005 — Moments calmes"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Quand peut-on éteindre un four en cours de nettoyage ?",
+  "choix": [
+   [
+    "Une fois le programme de nettoyage complètement terminé",
+    true
+   ],
+   [
+    "Dès que l'intérieur paraît propre",
+    false
+   ],
+   [
+    "Dès que le programme est lancé",
+    false
+   ],
+   [
+    "Après la moitié du programme",
+    false
+   ]
+  ],
+  "expl": "On n'éteint jamais le four et on ne le nettoie pas à la main tant que le programme tourne ; on l'éteint une fois le programme terminé (standard 0.4.03).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.03",
+   "lib": "Standard 0.4.03 — Nettoyage des fours"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Dans quel ordre nettoie-t-on une zone à la fermeture ?",
+  "choix": [
+   [
+    "Du propre vers le sale et de haut en bas, le sol en dernier",
+    true
+   ],
+   [
+    "Le sol d'abord, puis les surfaces en hauteur",
+    false
+   ],
+   [
+    "Du sale vers le propre, de bas en haut",
+    false
+   ],
+   [
+    "Dans n'importe quel ordre, tant que tout est fait",
+    false
+   ]
+  ],
+  "expl": "On travaille du propre vers le sale et de haut en bas ; le sol d'une zone ne se nettoie qu'après le travail en hauteur (standard 0.4.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Quel principe applique-t-on en remplissant le rayon pain ?",
+  "choix": [
+   [
+    "FIFO : premier entré, premier sorti",
+    true
+   ],
+   [
+    "Les produits les plus récents devant",
+    false
+   ],
+   [
+    "Les plus beaux produits en premier",
+    false
+   ],
+   [
+    "Les pains de la veille en dernier, au fond",
+    false
+   ]
+  ],
+  "expl": "Le rayon pain se remplit en FIFO (First In, First Out : premier entré, premier sorti) (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "situation",
+  "q": "Avant l'ouverture, une tarte de la veille vous semble douteuse. Personne d'expérimenté n'est présent. Que faites-vous ?",
+  "choix": [
+   [
+    "Je la mets de côté, je ne la présente pas et j'écris dans Shyfter · production",
+    true
+   ],
+   [
+    "Je la présente en vitrine si son aspect est correct",
+    false
+   ],
+   [
+    "Je la mets dans un panier Too Good To Go",
+    false
+   ],
+   [
+    "Je la jette sans rien signaler",
+    false
+   ]
+  ],
+  "expl": "En cas de doute qualité, on demande l'avis du gérant ; si personne n'est disponible, on met le produit de côté, on ne le présente pas et on écrit dans Shyfter · production (standard 0.1.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.02",
+   "lib": "Standard 0.1.02 — Ouverture du poste et premières cuissons"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Quels produits passe-t-on en revue pour les paniers Too Good To Go ?",
+  "choix": [
+   [
+    "Ceux qui ne se conservent pas jusqu'au lendemain : baguettes, pistolets, sandwiches, viennoiseries, produits à la crème",
+    true
+   ],
+   [
+    "Les produits dont la date est dépassée depuis la veille",
+    false
+   ],
+   [
+    "Uniquement les pains de la veille",
+    false
+   ],
+   [
+    "Tous les produits du comptoir, sans exception",
+    false
+   ]
+  ],
+  "expl": "On passe en revue les produits qui ne peuvent pas être conservés jusqu'au lendemain (baguettes, pistolets, sandwiches, viennoiseries, produits à la crème), plus les tartes, cookies et cakes signalés par l'équipe du matin (standard 0.3.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.02",
+   "lib": "Standard 0.3.02 — Paniers Too Good To Go"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "vf",
+  "q": "Vrai ou faux : les produits d'un panier Too Good To Go s'enregistrent comme pertes à la fermeture, avec les autres invendus.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : ils s'enregistrent comme pertes une seule fois, dès la préparation du panier, et ne sont pas réenregistrés à la fermeture (standard 0.3.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.02",
+   "lib": "Standard 0.3.02 — Paniers Too Good To Go"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "multi",
+  "q": "Sur quoi porte l'autocontrôle quotidien du point de vente ? (plusieurs réponses)",
+  "choix": [
+   [
+    "Les températures, la traçabilité et les dates",
+    true
+   ],
+   [
+    "La propreté",
+    true
+   ],
+   [
+    "La caisse",
+    true
+   ],
+   [
+    "Le respect de la Charte Architecturale",
+    false
+   ]
+  ],
+  "expl": "L'autocontrôle quotidien porte sur l'hygiène et la sécurité alimentaire (températures, traçabilité, dates), la fraîcheur et la présentation, la propreté et la caisse ; la Charte Architecturale relève de la visite de la Marque (DIP, annexe 18).",
+  "src": {
+   "type": "contrat",
+   "ref": "annexe 18",
+   "lib": "DIP, annexe 18"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Quel contrôle, une fois par semestre et sans être annoncé, porte en particulier sur l'hygiène et la sécurité alimentaire ?",
+  "choix": [
+   [
+    "La visite surprise",
+    true
+   ],
+   [
+    "La visite du consultant",
+    false
+   ],
+   [
+    "La visite de la Marque",
+    false
+   ],
+   [
+    "L'autocontrôle",
+    false
+   ]
+  ],
+  "expl": "La visite surprise, une fois par semestre et non annoncée, contrôle l'ensemble du point de vente, en particulier l'hygiène et la sécurité alimentaire (DIP, annexe 18).",
+  "src": {
+   "type": "contrat",
+   "ref": "annexe 18",
+   "lib": "DIP, annexe 18"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "Que risque le franchisé si deux contrôles successifs révèlent des irrégularités significatives en hygiène, propreté ou nettoyage ?",
+  "choix": [
+   [
+    "C'est une inexécution grave qui peut justifier la résiliation du contrat",
+    true
+   ],
+   [
+    "Une simple remarque dans le rapport de visite",
+    false
+   ],
+   [
+    "Une formation supplémentaire, sans autre conséquence",
+    false
+   ],
+   [
+    "Rien, tant que l'AFSCA n'a rien relevé",
+    false
+   ]
+  ],
+  "expl": "Deux contrôles successifs avec des irrégularités significatives sont une inexécution d'une gravité telle qu'elle justifierait la résiliation (contrat, art. 5.2.2 et 12).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.2.2",
+   "lib": "Contrat, art. 5.2.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "HYG",
+  "type": "qcm",
+  "q": "À quelle fréquence la formation HACCP et hygiène (FO-02) est-elle obligatoire ?",
+  "choix": [
+   [
+    "Chaque année, pour tous les postes",
+    true
+   ],
+   [
+    "Une seule fois, à l'ouverture du magasin",
+    false
+   ],
+   [
+    "Tous les trois ans, pour le responsable seulement",
+    false
+   ],
+   [
+    "Seulement après une non-conformité",
+    false
+   ]
+  ],
+  "expl": "La formation HACCP et hygiène (FO-02) est obligatoire chaque année, pour tous les postes (Manuel du réseau, les contrôles en magasin).",
+  "src": {
+   "type": "guide",
+   "ref": "art-controles",
+   "lib": "Manuel du réseau — Les contrôles en magasin"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "À quelle heure le magasin doit-il être rempli à 100 % pour le pic de vente ?",
+  "choix": [
+   [
+    "07:00",
+    true
+   ],
+   [
+    "06:00",
+    false
+   ],
+   [
+    "06:30",
+    false
+   ],
+   [
+    "08:00",
+    false
+   ]
+  ],
+  "expl": "L'équipe arrive et ouvre à 06:00 ; à 07:00, le magasin est rempli à 100 % pour le pic de vente (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "situation",
+  "q": "À 06:15, vous remplissez le comptoir des viennoiseries quand un client entre. Que faites-vous ?",
+  "choix": [
+   [
+    "Je le sers immédiatement et en priorité, puis je reprends le remplissage",
+    true
+   ],
+   [
+    "Je termine le comptoir avant de le servir",
+    false
+   ],
+   [
+    "Je lui demande de revenir après 07:00",
+    false
+   ],
+   [
+    "J'appelle le boulanger pour qu'il le serve",
+    false
+   ]
+  ],
+  "expl": "Entre 06:00 et 07:00, chaque client qui entre est servi immédiatement et en priorité ; le remplissage se fait entre deux clients (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Que saisit-on pour ouvrir la caisse le matin ?",
+  "choix": [
+   [
+    "Le code de gestion 12 et la valeur d'ouverture 0, sans compter la caisse",
+    true
+   ],
+   [
+    "Son code PIN personnel et le montant compté du fonds de caisse",
+    false
+   ],
+   [
+    "Le code 0 et la valeur d'ouverture 12",
+    false
+   ],
+   [
+    "Le montant de la veille, recompté",
+    false
+   ]
+  ],
+  "expl": "On saisit le code de gestion 12 et la valeur d'ouverture 0 ; on ne compte pas la caisse, le monnayeur automatique gère le cash (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "vf",
+  "q": "Vrai ou faux : on peut pointer sur Shyfter pour un collègue en retard.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : il est strictement interdit de pointer pour un collègue ou sous son nom ; chacun utilise son propre code (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "En arrivant au poste de cuisson vers 4 h, quelle est la première action ?",
+  "choix": [
+   [
+    "Désarmer l'alarme",
+    true
+   ],
+   [
+    "Allumer les deux fours",
+    false
+   ],
+   [
+    "Lire la liste de production",
+    false
+   ],
+   [
+    "Sortir le chariot du grand congélateur",
+    false
+   ]
+  ],
+  "expl": "On commence le service en désarmant l'alarme, puis on allume les lumières, on met son tablier et on se pointe (standard 0.1.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.02",
+   "lib": "Standard 0.1.02 — Ouverture du poste et premières cuissons"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "multi",
+  "q": "Que faut-il allumer à l'ouverture du poste de cuisson ? (plusieurs réponses)",
+  "choix": [
+   [
+    "Les deux fours",
+    true
+   ],
+   [
+    "Le bain-marie, sur 1,5",
+    true
+   ],
+   [
+    "Les frigos comptoirs",
+    true
+   ],
+   [
+    "Le programme de nettoyage des fours",
+    false
+   ]
+  ],
+  "expl": "À l'ouverture, on allume la climatisation du magasin, les frigos comptoirs, les deux fours et le bain-marie sur 1,5 ; le nettoyage des fours se fait après 16 h (standard 0.1.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.02",
+   "lib": "Standard 0.1.02 — Ouverture du poste et premières cuissons"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Dans quel four et avec quel programme cuit-on les pains et pains spéciaux le matin ?",
+  "choix": [
+   [
+    "Four gauche, programme « grands pains »",
+    true
+   ],
+   [
+    "Four droit, programme « baguettes »",
+    false
+   ],
+   [
+    "Four droit, programme « grands pains »",
+    false
+   ],
+   [
+    "N'importe quel four, en réglant le temps à la main",
+    false
+   ]
+  ],
+  "expl": "Pains et pains spéciaux : four gauche, programme « grands pains » ; baguettes et pistolets : four droit, programme « baguettes », sans modifier les paramètres (standard 0.1.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.02",
+   "lib": "Standard 0.1.02 — Ouverture du poste et premières cuissons"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Une sonnerie de pousse retentit alors que vous alliez commencer une nouvelle tâche. Quelle est la règle ?",
+  "choix": [
+   [
+    "La sonnerie de pousse passe avant la nouvelle tâche",
+    true
+   ],
+   [
+    "La nouvelle tâche passe d'abord",
+    false
+   ],
+   [
+    "On attend la fin de la cuisson en cours",
+    false
+   ],
+   [
+    "On laisse la pousse en mode froid jusqu'à 6 h",
+    false
+   ]
+  ],
+  "expl": "Une fin de cuisson ou une sonnerie de pousse passe avant une nouvelle tâche ; on termine seulement l'action courte engagée (standard 0.1.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.02",
+   "lib": "Standard 0.1.02 — Ouverture du poste et premières cuissons"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Quel est l'ordre de priorité pendant la fermeture ?",
+  "choix": [
+   [
+    "Client > sécurité alimentaire > caisse > nettoyage",
+    true
+   ],
+   [
+    "Nettoyage > caisse > client > sécurité alimentaire",
+    false
+   ],
+   [
+    "Caisse > client > nettoyage > sécurité alimentaire",
+    false
+   ],
+   [
+    "Sécurité alimentaire > nettoyage > client > caisse",
+    false
+   ]
+  ],
+  "expl": "Pendant la fermeture, l'ordre est : client, sécurité alimentaire, caisse, nettoyage (standard CHK-WKL-004).",
+  "src": {
+   "type": "sop",
+   "ref": "CHK-WKL-004",
+   "lib": "Standard CHK-WKL-004 — Checklist de fermeture quotidienne"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "À partir de quand lance-t-on le programme de nettoyage des fours ?",
+  "choix": [
+   [
+    "Après 16 h",
+    true
+   ],
+   [
+    "Au plus tard à 14 h 30",
+    false
+   ],
+   [
+    "Après le départ du dernier client",
+    false
+   ],
+   [
+    "Avant l'ouverture du magasin",
+    false
+   ]
+  ],
+  "expl": "Le programme de nettoyage des fours se lance après 16 h ; on éteint les fours quand il est terminé (standard 0.4.03).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.03",
+   "lib": "Standard 0.4.03 — Nettoyage des fours"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Avec quel bouton active-t-on l'alarme en quittant le magasin ?",
+  "choix": [
+   [
+    "Le bouton avec le pictogramme de trois petites maisons",
+    true
+   ],
+   [
+    "Le bouton rouge avec le flocon de neige",
+    false
+   ],
+   [
+    "L'interrupteur près de la porte arrière",
+    false
+   ],
+   [
+    "Le bouton gris en bas à droite du four",
+    false
+   ]
+  ],
+  "expl": "L'alarme s'active avec le bouton qui porte le pictogramme de trois petites maisons ; on quitte ensuite le bâtiment dans le délai prévu (standard 0.4.01, phase 8).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Quelle est la toute dernière étape de la fermeture ?",
+  "choix": [
+   [
+    "Mettre la clé dans le coffre à clés, avec le code communiqué en interne",
+    true
+   ],
+   [
+    "Activer l'alarme",
+    false
+   ],
+   [
+    "Éteindre les lumières près de la porte arrière",
+    false
+   ],
+   [
+    "Clôturer la caisse",
+    false
+   ]
+  ],
+  "expl": "Dans l'ordre : lumières, alarme, porte arrière fermée à clé et testée, puis la clé dans le coffre à clés (standard 0.4.01, phase 8).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "OUV",
+  "type": "vf",
+  "q": "Vrai ou faux : le code du coffre à clés est écrit dans la procédure de fermeture.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : le code est communiqué en interne et ne figure volontairement pas dans le document (standard 0.4.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.01",
+   "lib": "Standard 0.4.01 — Procédure de fermeture"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "situation",
+  "q": "Pendant la fermeture, une étape vous semble dangereuse ou vous ne pouvez pas la contrôler. Que faites-vous ?",
+  "choix": [
+   [
+    "Je m'arrête, je note le problème et je préviens le responsable",
+    true
+   ],
+   [
+    "Je coche la case pour ne pas retarder la fermeture",
+    false
+   ],
+   [
+    "Je saute l'étape et je la ferai demain matin",
+    false
+   ],
+   [
+    "Je demande à un client de m'aider",
+    false
+   ]
+  ],
+  "expl": "STOP : en cas d'étape dangereuse ou impossible à contrôler, on note le problème et on prévient le responsable ; on ne coche qu'après un vrai contrôle (standard CHK-WKL-004).",
+  "src": {
+   "type": "sop",
+   "ref": "CHK-WKL-004",
+   "lib": "Standard CHK-WKL-004 — Checklist de fermeture quotidienne"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "L'après-midi, à partir de combien de pièces restantes lance-t-on une recuisson de pains ou de baguettes ?",
+  "choix": [
+   [
+    "4",
+    true
+   ],
+   [
+    "2",
+    false
+   ],
+   [
+    "6",
+    false
+   ],
+   [
+    "10",
+    false
+   ]
+  ],
+  "expl": "On lance une recuisson dès qu'il ne reste plus que 4 pains d'une même sorte ou 4 baguettes en vente (standard 0.3.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.01",
+   "lib": "Standard 0.3.01 — Recuisson d'appoint"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Au plus tard à quelle heure cuit-on des pains supplémentaires si nécessaire ?",
+  "choix": [
+   [
+    "16 h",
+    true
+   ],
+   [
+    "14 h 30",
+    false
+   ],
+   [
+    "17 h",
+    false
+   ],
+   [
+    "17 h 30",
+    false
+   ]
+  ],
+  "expl": "Les pains supplémentaires se cuisent au plus tard à 16 h (les baguettes au plus tard à 14 h 30) (standard CHK-WKL-005).",
+  "src": {
+   "type": "sop",
+   "ref": "CHK-WKL-005",
+   "lib": "Standard CHK-WKL-005 — Moments calmes"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Dans quel état le poste de cuisson doit-il être laissé en fin de service ?",
+  "choix": [
+   [
+    "Prêt à être repris sans nettoyage préalable, le sol balayé en dernier",
+    true
+   ],
+   [
+    "Rangé, le nettoyage étant fait par l'équipe du matin",
+    false
+   ],
+   [
+    "Propre, sauf la vaisselle, faite le lendemain",
+    false
+   ],
+   [
+    "Fours allumés pour la recuisson du soir",
+    false
+   ]
+  ],
+  "expl": "Le poste doit pouvoir être repris sans nettoyage préalable ; le nettoyage se fait dans l'ordre indiqué et se termine par le sol (standard 0.4.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.4.02",
+   "lib": "Standard 0.4.02 — Fin de poste de cuisson"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Selon la grille des contrôles, combien de visites de la Marque le point de vente reçoit-il par an ?",
+  "choix": [
+   [
+    "4 (une par trimestre)",
+    true
+   ],
+   [
+    "12 (une par mois)",
+    false
+   ],
+   [
+    "2 (une par semestre)",
+    false
+   ],
+   [
+    "1 (une par an)",
+    false
+   ]
+  ],
+  "expl": "La visite de la Marque a lieu une fois par trimestre, annoncée ou non, soit 4 par an (DIP, annexe 18).",
+  "src": {
+   "type": "contrat",
+   "ref": "annexe 18",
+   "lib": "DIP, annexe 18"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Après une visite du consultant, dans quel délai faut-il corriger un point P0, photo à l'appui ?",
+  "choix": [
+   [
+    "2 jours",
+    true
+   ],
+   [
+    "7 jours",
+    false
+   ],
+   [
+    "14 jours",
+    false
+   ],
+   [
+    "30 jours",
+    false
+   ]
+  ],
+  "expl": "Délais de correction : P0 en 2 jours, P1 en 7 jours, P2 en 14 jours, avec une photo de la correction (Manuel du réseau, la visite du consultant).",
+  "src": {
+   "type": "guide",
+   "ref": "art-visite",
+   "lib": "Manuel du réseau — La visite du consultant"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUV",
+  "type": "qcm",
+  "q": "Une photo de contrôle est notée 3 sur 5 par le contrôleur. Qu'est-ce que cela signifie ?",
+  "choix": [
+   [
+    "Une non-conformité mineure, commentée et signalée, à corriger",
+    true
+   ],
+   [
+    "Conforme",
+    false
+   ],
+   [
+    "Exemplaire",
+    false
+   ],
+   [
+    "Une non-conformité critique",
+    false
+   ]
+  ],
+  "expl": "Une photo est notée de 1 à 5 ; 3 = non conforme mineur, et toute note sous 4 est une non-conformité à corriger (Manuel du réseau, les contrôles en magasin).",
+  "src": {
+   "type": "guide",
+   "ref": "art-controles",
+   "lib": "Manuel du réseau — Les contrôles en magasin"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Programme GRANDS PAINS : à quelle température cible le four doit-il avoir fini son préchauffage avant le chargement ?",
+  "choix": [
+   [
+    "175 °C",
+    false
+   ],
+   [
+    "190 °C",
+    false
+   ],
+   [
+    "205 °C",
+    true
+   ],
+   [
+    "220 °C",
+    false
+   ]
+  ],
+  "expl": "On ne charge qu'à la fin du préchauffage, cible 205 °C, quand l'écran affiche la porte et la flèche verte (standard 0.2.05).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.05",
+   "lib": "Standard 0.2.05 — Cuisson des baguettes et des pains"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "À l'arrivée, vers 4 h, quel programme lance-t-on dans le four gauche ?",
+  "choix": [
+   [
+    "« baguettes », pour les baguettes et pistolets",
+    false
+   ],
+   [
+    "« grands pains », pour les pains et pains spéciaux",
+    true
+   ],
+   [
+    "« viennoiseries », pour les premières pousses",
+    false
+   ],
+   [
+    "« quiche », pour la production salée",
+    false
+   ]
+  ],
+  "expl": "Four gauche : « grands pains » (pains et pains spéciaux) ; four droit : « baguettes » (baguettes et pistolets) (standard 0.0.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.0.01",
+   "lib": "Standard 0.0.01 — Organisation quotidienne du poste de cuisson"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Comment recuit-on le matin les pains de la veille ?",
+  "choix": [
+   [
+    "Dans le même four, juste après les grands pains, sans relancer de programme : + 4 min et 20 % d'humidité",
+    true
+   ],
+   [
+    "En relançant le programme « grands pains » complet",
+    false
+   ],
+   [
+    "Dans le four droit avec le programme « baguettes »",
+    false
+   ],
+   [
+    "+ 5 min à 205 °C, pour toutes les catégories de produits",
+    false
+   ]
+  ],
+  "expl": "Pains de la veille (catégorie pain uniquement) : même four après les grands pains, sans relancer de programme, « ajouter du temps » 4 min, 20 % d'humidité (standard 0.0.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.0.02",
+   "lib": "Standard 0.0.02 — Programmes de cuisson et de pousse"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Dans quel four et avec quel programme cuit-on les cookies ?",
+  "choix": [
+   [
+    "Four de gauche, programme « cake grand cru »",
+    false
+   ],
+   [
+    "Four de droite, programme « cookie »",
+    true
+   ],
+   [
+    "N'importe quel four libre, programme « Brownie »",
+    false
+   ],
+   [
+    "Four de gauche, programme « cookie »",
+    false
+   ]
+  ],
+  "expl": "Point critique des cookies : le four de droite et le programme exact « cookie » (standard 0.2.06).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.06",
+   "lib": "Standard 0.2.06 — Cookies, cakes et financiers"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "situation",
+  "q": "À la fin du programme « cake grand cru », vous piquez un cake au couteau : la pâte est encore liquide. Que faites-vous ?",
+  "choix": [
+   [
+    "Vous ajoutez 5 minutes une seule fois",
+    false
+   ],
+   [
+    "Vous le sortez : la chaleur intérieure finira la cuisson",
+    false
+   ],
+   [
+    "Vous ajoutez 3 minutes et refaites le test, au maximum 2 fois, puis demandez un avis",
+    true
+   ],
+   [
+    "Vous relancez le programme complet",
+    false
+   ]
+  ],
+  "expl": "Cake liquide : + 3 minutes, nouveau test, au maximum 2 fois ; s'il reste liquide, demander un avis (standard 0.2.06).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.06",
+   "lib": "Standard 0.2.06 — Cookies, cakes et financiers"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "vf",
+  "q": "Les financiers se cuisent avec le programme « cake grand cru ».",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : on ne lance aucun programme de cuisson pour les financiers ; on les décongèle et on les présente froids quand ils ne sont plus durs (standard 0.2.06).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.06",
+   "lib": "Standard 0.2.06 — Cookies, cakes et financiers"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Cramiques et craquelins : la pâte est encore liquide au test du couteau. Quelle prolongation est prévue ?",
+  "choix": [
+   [
+    "+ 3 minutes, au maximum 2 fois",
+    false
+   ],
+   [
+    "+ 5 minutes, au maximum 2 fois, puis demander un avis",
+    true
+   ],
+   [
+    "+ 7 minutes, une seule fois",
+    false
+   ],
+   [
+    "+ 10 minutes, sans limite",
+    false
+   ]
+  ],
+  "expl": "Programme « cramique craquelin » : pâte liquide = + 5 minutes puis nouveau test, au maximum 2 fois, puis demander un avis (standard 0.2.08).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.08",
+   "lib": "Standard 0.2.08 — Cramiques et craquelins"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "situation",
+  "q": "Après 4 minutes à vitesse 3, la crème fraîche ne tient pas au fouet. Que faites-vous ?",
+  "choix": [
+   [
+    "Vous ajoutez 1 minute à vitesse 5, une seule fois ; si elle reste trop molle, vous arrêtez et demandez un avis",
+    true
+   ],
+   [
+    "Vous relancez 4 minutes à vitesse 3",
+    false
+   ],
+   [
+    "Vous ajoutez du sucre et battez 2 minutes de plus",
+    false
+   ],
+   [
+    "Vous ajoutez 1 minute à vitesse 5 autant de fois que nécessaire",
+    false
+   ]
+  ],
+  "expl": "Une seule correction : + 1 minute à vitesse 5, sans la répéter ; sinon arrêter et demander un avis (standard 0.2.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.02",
+   "lib": "Standard 0.2.02 — Crème fraîche et crème pâtissière"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Quels réglages du Thermomix pour la crème pâtissière ?",
+  "choix": [
+   [
+    "90 °C · 50 min · vitesse 1,5",
+    true
+   ],
+   [
+    "120 °C · 30 min · vitesse 3",
+    false
+   ],
+   [
+    "90 °C · 30 min · vitesse 3",
+    false
+   ],
+   [
+    "150 °C · 50 min · vitesse 1",
+    false
+   ]
+  ],
+  "expl": "Crème pâtissière : 2 poches congelées en cubes, Thermomix 90 °C, 50 minutes, vitesse 1,5, puis bain-marie à 120 °C (standard 0.2.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.02",
+   "lib": "Standard 0.2.02 — Crème fraîche et crème pâtissière"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Jusqu'à quand peut-on utiliser la crème fraîche et la crème pâtissière ?",
+  "choix": [
+   [
+    "Le jour de production uniquement",
+    false
+   ],
+   [
+    "Au plus tard le lendemain du jour de production (J+1)",
+    true
+   ],
+   [
+    "Jusqu'à J+2",
+    false
+   ],
+   [
+    "Jusqu'à J+3 si elles sont filmées",
+    false
+   ]
+  ],
+  "expl": "Conservation des deux crèmes : jour de production + 1 maximum, toujours filmées et datées (standard 0.2.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.02",
+   "lib": "Standard 0.2.02 — Crème fraîche et crème pâtissière"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Comment nappe-t-on un éclair et un chou au fondant chocolat ?",
+  "choix": [
+   [
+    "Les deux en les trempant dans le fondant",
+    false
+   ],
+   [
+    "Éclair : une bande au doigt sur le dessus, sans couvrir les côtés ; chou : toute la partie bombée trempée",
+    true
+   ],
+   [
+    "Éclair trempé entièrement ; chou nappé au doigt",
+    false
+   ],
+   [
+    "Les deux à la spatule sur tout le produit",
+    false
+   ]
+  ],
+  "expl": "Éclairs nappés au doigt (bande large, régulière et centrée sur le dessus) ; choux trempés sur toute leur partie bombée (standard 0.1.04).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.04",
+   "lib": "Standard 0.1.04 — Éclairs et choux"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Quels réglages pour cuire un flan ?",
+  "choix": [
+   [
+    "Programme « tarte au sucre »",
+    false
+   ],
+   [
+    "180 °C · 40 min · ventilation 3",
+    false
+   ],
+   [
+    "150 °C · 50 min · ventilation 1, réglés à la main",
+    true
+   ],
+   [
+    "175 °C · 13 min · ventilation 4",
+    false
+   ]
+  ],
+  "expl": "Flan : réglage manuel 150 °C, 50 minutes, ventilation 1 ; dessus doré et centre ferme au toucher (standard 0.2.03).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.03",
+   "lib": "Standard 0.2.03 — Flans et tartes au sucre"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Au moment du nappage, par quel fondant commence-t-on d'habitude ?",
+  "choix": [
+   [
+    "Le fondant chocolat, qui tempère plus vite",
+    false
+   ],
+   [
+    "Le fondant blanc, qui se liquéfie généralement plus vite",
+    true
+   ],
+   [
+    "Peu importe, avec la même spatule sans la laver",
+    false
+   ],
+   [
+    "Celui dont le gastro est le plus plein",
+    false
+   ]
+  ],
+  "expl": "On commence par le fondant blanc ; le chocolat continue à tempérer pendant ce temps, et la spatule se lave entre les deux (standard 0.1.05).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.05",
+   "lib": "Standard 0.1.05 — Fondants et nappage"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "multi",
+  "q": "Quelles règles de chargement s'appliquent aux quiches et pommes parisiennes ? (plusieurs réponses)",
+  "choix": [
+   [
+    "Les enfourner encore congelées",
+    true
+   ],
+   [
+    "Placer 2 pièces par grille",
+    true
+   ],
+   [
+    "Laisser un niveau vide entre chaque grille chargée",
+    true
+   ],
+   [
+    "En fournée mixte, placer les pommes parisiennes dans le bas du four",
+    false
+   ]
+  ],
+  "expl": "Encore congelées, 2 pièces par grille, un niveau vide entre les grilles ; en fournée mixte, les pommes parisiennes vont dans le HAUT du four (standard 0.1.07).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.07",
+   "lib": "Standard 0.1.07 — Quiches et pommes parisiennes"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "vf",
+  "q": "Pour gagner du temps, on peut lancer les deux fours de quiches en même temps.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : ne jamais utiliser les deux fours simultanément pour des quiches ; elles se cuisent en dernier, après les autres cuissons longues (standard 0.1.07).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.07",
+   "lib": "Standard 0.1.07 — Quiches et pommes parisiennes"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Dans quel ordre traite-t-on les tartes riz, frangipane et fromage ?",
+  "choix": [
+   [
+    "Fromage, frangipane, riz",
+    false
+   ],
+   [
+    "Frangipane, riz, fromage",
+    false
+   ],
+   [
+    "Riz, fromage, frangipane",
+    false
+   ],
+   [
+    "Riz, frangipane, fromage",
+    true
+   ]
+  ],
+  "expl": "Ordre consigné : riz en premier, frangipane en deuxième, fromage en troisième, avec le programme « Riz-Fromage » (standard 0.2.07).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.07",
+   "lib": "Standard 0.2.07 — Tartes classiques et Brookie"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Que reçoit le Brookie à la fin du programme « Brownie » ?",
+  "choix": [
+   [
+    "Rien : la fin du programme suffit",
+    false
+   ],
+   [
+    "+ 4 minutes systématiquement, puis + 3 minutes une seule fois si de la pâte liquide reste sur la lame",
+    true
+   ],
+   [
+    "+ 3 minutes, au maximum 2 fois",
+    false
+   ],
+   [
+    "+ 5 minutes seulement s'il est trop pâle",
+    false
+   ]
+  ],
+  "expl": "Brookie : + 4 minutes systématiques, test du couteau, puis au maximum une prolongation de + 3 minutes ; ensuite on arrête (standard 0.2.07).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.07",
+   "lib": "Standard 0.2.07 — Tartes classiques et Brookie"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Quelle finition pour une tarte citron meringue ?",
+  "choix": [
+   [
+    "2 spirelli au chocolat blanc au centre",
+    false
+   ],
+   [
+    "Meringue colorée au chalumeau et 1 physalis au centre",
+    true
+   ],
+   [
+    "Crumble au centre avec une bordure d'une phalange",
+    false
+   ],
+   [
+    "1 groseille sur le dessus",
+    false
+   ]
+  ],
+  "expl": "Citron meringue : meringue colorée au chalumeau (couleur dorée régulière) et 1 physalis au centre (standard 0.1.03).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.03",
+   "lib": "Standard 0.1.03 — Tartes froides"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "À quelle température chauffer le Jelfix pour abricoter une tarte qui contient des fraises ?",
+  "choix": [
+   [
+    "60 °C",
+    false
+   ],
+   [
+    "80 °C",
+    false
+   ],
+   [
+    "100 °C",
+    true
+   ],
+   [
+    "120 °C",
+    false
+   ]
+  ],
+  "expl": "Jelfix à 80 °C, et à 100 °C si la tarte contient des fraises ; on l'applique en tapotant (standard 0.2.04).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.04",
+   "lib": "Standard 0.2.04 — Tartes aux fruits"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Combien de grilles un four peut-il contenir au maximum pour les viennoiseries et sandwiches ?",
+  "choix": [
+   [
+    "8",
+    false
+   ],
+   [
+    "10",
+    true
+   ],
+   [
+    "12",
+    false
+   ],
+   [
+    "14",
+    false
+   ]
+  ],
+  "expl": "Un four contient au maximum 10 grilles ; ne jamais les dépasser (standard 0.1.06).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.06",
+   "lib": "Standard 0.1.06 — Viennoiseries et sandwiches"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "qcm",
+  "q": "Pour les pousses, que désigne le « programme 4 » ?",
+  "choix": [
+   [
+    "La quatrième pousse physique, la plus proche",
+    false
+   ],
+   [
+    "Le programme du week-end",
+    false
+   ],
+   [
+    "La pousse immédiate, sans heure future, avec un minuteur séparé",
+    true
+   ],
+   [
+    "Le programme des sandwiches",
+    false
+   ]
+  ],
+  "expl": "Programme 4 = pousse immédiate (fonds de tarte 1 h 15, deuxième batch…) ; ce n'est pas la pousse physique 4 (standard 0.2.09).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.09",
+   "lib": "Standard 0.2.09 — Plaquage et programmation des pousses"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PRO",
+  "type": "vf",
+  "q": "En recuisson d'appoint l'après-midi, un pain qui sort du four peut être coupé et vendu tout de suite.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : attendre 10 à 15 minutes avant de couper un pain ; ne jamais couper ni vendre un pain chaud (standard 0.3.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.01",
+   "lib": "Standard 0.3.01 — Recuisson d'appoint"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Le magasin ouvre à 06:00. À quelle heure doit-il être rempli à 100 % pour le pic de vente ?",
+  "choix": [
+   [
+    "06:30",
+    false
+   ],
+   [
+    "07:00",
+    true
+   ],
+   [
+    "07:30",
+    false
+   ],
+   [
+    "08:00",
+    false
+   ]
+  ],
+  "expl": "Entre 06:00 et 07:00, on remplit les comptoirs en servant chaque client en priorité ; à 07:00, le magasin est rempli à 100 % (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "situation",
+  "q": "À l'ouverture, l'afficheur du frigo à quiches indique +8 °C. Que faites-vous ?",
+  "choix": [
+   [
+    "Rien : en dessous de +10 °C, c'est acceptable",
+    false
+   ],
+   [
+    "Vous signalez immédiatement la panne : il doit afficher entre +2 °C et +5 °C",
+    true
+   ],
+   [
+    "Vous le remplissez quand même et contrôlez à midi",
+    false
+   ],
+   [
+    "Vous baissez la température vous-même sans prévenir",
+    false
+   ]
+  ],
+  "expl": "Les frigos et comptoirs réfrigérés doivent afficher +2 °C à +5 °C ; toute panne se signale immédiatement (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Comment manipule-t-on les produits non emballés au comptoir ?",
+  "choix": [
+   [
+    "À mains nues, lavées avant le service",
+    false
+   ],
+   [
+    "Avec des gants propres ou une pince de service en inox",
+    true
+   ],
+   [
+    "Avec une serviette en papier",
+    false
+   ],
+   [
+    "Avec des gants, changés une fois par jour",
+    false
+   ]
+  ],
+  "expl": "Norme d'hygiène : produits non emballés toujours avec des gants propres ou une pince de service en inox (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": true
+ },
+ {
+  "theme": "VEN",
+  "type": "vf",
+  "q": "Un collègue est en retard : vous pouvez le pointer sur la tablette Shyfter avec son code pour lui rendre service.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : il est strictement interdit de pointer pour un collègue ; Shyfter et la caisse se font toujours avec son propre code ou nom (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "À l'ouverture de la caisse, pourquoi saisit-on 0 comme valeur d'ouverture, sans compter l'argent ?",
+  "choix": [
+   [
+    "Parce que le comptage se fait le soir seulement",
+    false
+   ],
+   [
+    "Parce que le monnayeur automatique gère le cash",
+    true
+   ],
+   [
+    "Parce que le responsable compte la caisse à sa place",
+    false
+   ],
+   [
+    "Parce que le fonds de caisse est toujours vide le matin",
+    false
+   ]
+  ],
+  "expl": "Code de gestion 12, valeur d'ouverture 0 : on ne compte pas la caisse, le monnayeur automatique gère le cash (standard 0.1.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.1.01",
+   "lib": "Standard 0.1.01 — Ouverture du magasin et des comptoirs"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Un particulier commande pour la première fois. Quel bouton utilisez-vous en caisse ?",
+  "choix": [
+   [
+    "« Nieuwe B2B klant »",
+    false
+   ],
+   [
+    "« Weergeven »",
+    false
+   ],
+   [
+    "« Nieuwe B2C klant »",
+    true
+   ],
+   [
+    "« Overzicht »",
+    false
+   ]
+  ],
+  "expl": "Nouveau particulier : « Nieuwe B2C klant » ; « Nieuwe B2B klant » est pour une entreprise avec un numéro de TVA qui souhaite une facture (standard 0.2.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.01",
+   "lib": "Standard 0.2.01 — Encodage des commandes clients en caisse"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "situation",
+  "q": "En encodant une commande, vous vous apercevez que l'acompte a été mal enregistré. Que faites-vous ?",
+  "choix": [
+   [
+    "Vous ajoutez une deuxième ligne de paiement pour corriger",
+    false
+   ],
+   [
+    "Vous supprimez la commande et la refaites",
+    false
+   ],
+   [
+    "Vous vous arrêtez et le signalez immédiatement au responsable",
+    true
+   ],
+   [
+    "Vous le notez dans la remarque pour la production",
+    false
+   ]
+  ],
+  "expl": "Paiement mal enregistré : pas de deuxième ligne au hasard ; s'arrêter et le signaler immédiatement au responsable (standard 0.2.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.01",
+   "lib": "Standard 0.2.01 — Encodage des commandes clients en caisse"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "multi",
+  "q": "Au contrôle final d'une commande client, que vérifie-t-on ? (plusieurs réponses)",
+  "choix": [
+   [
+    "La bonne date et la bonne heure de retrait",
+    true
+   ],
+   [
+    "Les articles, leurs variantes et leurs quantités",
+    true
+   ],
+   [
+    "Le statut du paiement ou de l'acompte",
+    true
+   ],
+   [
+    "Le coût matière de chaque article",
+    false
+   ]
+  ],
+  "expl": "Le contrôle final porte sur le client, la date et l'heure de retrait, les articles, les remarques, le total et le statut de paiement (standard 0.2.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.01",
+   "lib": "Standard 0.2.01 — Encodage des commandes clients en caisse"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Quelle valeur doit avoir le contenu d'un panier Too Good To Go ?",
+  "choix": [
+   [
+    "4,99 €, le prix payé dans l'app",
+    false
+   ],
+   [
+    "15 à 20 € aux prix normaux du magasin",
+    true
+   ],
+   [
+    "10 € aux prix normaux du magasin",
+    false
+   ],
+   [
+    "25 à 30 € aux prix normaux du magasin",
+    false
+   ]
+  ],
+  "expl": "Chaque panier vaut 15 à 20 € aux prix normaux du magasin ; les 4,99 € sont le prix payé par le client dans l'app (standard 0.3.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.02",
+   "lib": "Standard 0.3.02 — Paniers Too Good To Go"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Too Good To Go : quand enregistre-t-on les produits d'un panier comme pertes sur la caisse ?",
+  "choix": [
+   [
+    "À la fermeture, avec les autres invendus",
+    false
+   ],
+   [
+    "Tout de suite en préparant le panier, une seule fois",
+    true
+   ],
+   [
+    "Le lendemain matin, avec les pertes du cuiseur",
+    false
+   ],
+   [
+    "On ne les enregistre pas : ils sont vendus",
+    false
+   ]
+  ],
+  "expl": "Les produits du panier s'enregistrent comme pertes dès la préparation, et on ne les réenregistre pas à la fermeture (standard 0.3.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.02",
+   "lib": "Standard 0.3.02 — Paniers Too Good To Go"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Un panier Too Good To Go a été vendu, mais vous n'avez plus assez de produits pour le remplir. Que faites-vous ?",
+  "choix": [
+   [
+    "Vous le complétez avec des produits du lendemain",
+    false
+   ],
+   [
+    "Vous remettez un panier plus petit sans rien dire",
+    false
+   ],
+   [
+    "Vous annulez le panier via l'app, ou demandez l'aide du responsable si c'est impossible",
+    true
+   ],
+   [
+    "Vous remboursez le client en espèces à la caisse",
+    false
+   ]
+  ],
+  "expl": "Pas assez de produits pour un panier vendu : l'annuler via l'app ; si l'annulation est impossible, demander de l'aide au responsable (standard 0.3.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.02",
+   "lib": "Standard 0.3.02 — Paniers Too Good To Go"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "De quoi est fait le chiffre d'affaires d'un magasin ?",
+  "choix": [
+   [
+    "Clients × panier moyen",
+    true
+   ],
+   [
+    "Clients × marge brute",
+    false
+   ],
+   [
+    "Panier moyen × nombre de produits au catalogue",
+    false
+   ],
+   [
+    "Heures d'ouverture × nombre de vendeurs",
+    false
+   ]
+  ],
+  "expl": "Chiffre d'affaires = clients × panier moyen ; trois leviers : le trafic, le panier et le prix (Manuel, pôle vente FO-41).",
+  "src": {
+   "type": "guide",
+   "ref": "art-fo41-vente",
+   "lib": "Manuel du réseau — Pôle vente : les leviers du chiffre d'affaires"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "vf",
+  "q": "Avant de changer un prix en caisse, on en parle d'abord à son consultant.",
+  "choix": [
+   [
+    "Vrai",
+    true
+   ],
+   [
+    "Faux",
+    false
+   ]
+  ],
+  "expl": "Vrai : un prix se compare au réseau et aux concurrents, se simule dans la fiche du produit, puis on en parle à son consultant avant de le changer en caisse (Manuel, pôle vente FO-41).",
+  "src": {
+   "type": "guide",
+   "ref": "art-fo41-vente",
+   "lib": "Manuel du réseau — Pôle vente : les leviers du chiffre d'affaires"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Onglet Promotions du dashboard : quel est le repère du « coefficient du lot » ?",
+  "choix": [
+   [
+    "× 1,5 : en dessous, la promotion est bloquée",
+    false
+   ],
+   [
+    "× 2 : en dessous, la marge de la promotion est trop mince",
+    true
+   ],
+   [
+    "× 3 : au-dessus, la promotion est trop chère",
+    false
+   ],
+   [
+    "× 2 : au-dessus, la promotion est refusée",
+    false
+   ]
+  ],
+  "expl": "Coefficient du lot = prix payé HT ÷ coût matière ; repère × 2, vert au-dessus, rouge en dessous ; il signale une marge trop mince sans bloquer la promotion (Manuel, onglet Promotions).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-promos",
+   "lib": "Manuel du réseau — Dashboard, onglet Promotions"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Onglet Concurrence : quand un produit est-il « au prix du marché » ?",
+  "choix": [
+   [
+    "Quand il est à ± 5 % de la médiane des boulangeries",
+    true
+   ],
+   [
+    "Quand il est à ± 10 % de la médiane des boulangeries",
+    false
+   ],
+   [
+    "Quand il est à ± 5 % de la médiane des supermarchés",
+    false
+   ],
+   [
+    "Quand il est moins cher que tous les concurrents relevés",
+    false
+   ]
+  ],
+  "expl": "Verdict du Top 10 : « au prix du marché » entre − 5 % et + 5 % de la médiane des boulangeries (hors supermarchés) (Manuel, onglet Concurrence).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-concurrence",
+   "lib": "Manuel du réseau — Dashboard, onglet Concurrence"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Le franchiseur communique des prix de revente maximaux conseillés. Que peut faire le franchisé ?",
+  "choix": [
+   [
+    "Les dépasser s'il le justifie par ses coûts",
+    false
+   ],
+   [
+    "Fixer ses prix uniquement à la baisse",
+    true
+   ],
+   [
+    "Les ignorer : il fixe librement ses prix à la hausse comme à la baisse",
+    false
+   ],
+   [
+    "Les appliquer seulement pendant la première année",
+    false
+   ]
+  ],
+  "expl": "Le franchisé détermine ses prix mais doit respecter les prix maximaux conseillés et ne peut fixer ses prix qu'à la baisse (contrat, art. 5.1.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.1.2",
+   "lib": "Contrat, art. 5.1.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "qcm",
+  "q": "Le franchisé doit appliquer les opérations promotionnelles du franchiseur qui touchent les prix, tant que leur durée totale reste sous quel seuil ?",
+  "choix": [
+   [
+    "Une semaine par an",
+    false
+   ],
+   [
+    "Trois semaines par an",
+    true
+   ],
+   [
+    "Un mois par an",
+    false
+   ],
+   [
+    "Six semaines par an",
+    false
+   ]
+  ],
+  "expl": "Le franchisé met en œuvre ces opérations dès lors que leur durée totale est inférieure à trois semaines par an ; au-delà, il peut refuser en le notifiant (contrat, art. 5.1.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.1.2",
+   "lib": "Contrat, art. 5.1.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "VEN",
+  "type": "vf",
+  "q": "Le franchisé peut animer une page locale de son point de vente sur les réseaux sociaux, dans le respect de la Charte Graphique et des règles de communication du Réseau.",
+  "choix": [
+   [
+    "Vrai",
+    true
+   ],
+   [
+    "Faux",
+    false
+   ]
+  ],
+  "expl": "Vrai : le franchiseur gère les pages du Réseau ; le franchisé peut animer une page locale, dans le strict respect de la Charte Graphique et des règles du Réseau (contrat, art. 5.2.6).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.2.6",
+   "lib": "Contrat, art. 5.2.6"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Combien de points la carte à points rapporte-t-elle par euro dépensé ?",
+  "choix": [
+   [
+    "1 point par euro",
+    true
+   ],
+   [
+    "2 points par euro",
+    false
+   ],
+   [
+    "1 point tous les 2 euros",
+    false
+   ],
+   [
+    "10 points par euro",
+    false
+   ]
+  ],
+  "expl": "La carte à points rapporte 1 point par euro dépensé (programme de fidélité).",
+  "src": {
+   "type": "fidelite",
+   "ref": "",
+   "lib": "Programme de fidélité"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Combien de points faut-il cumuler pour recevoir un bon de 5 € ?",
+  "choix": [
+   [
+    "50 points",
+    false
+   ],
+   [
+    "100 points",
+    true
+   ],
+   [
+    "150 points",
+    false
+   ],
+   [
+    "200 points",
+    false
+   ]
+  ],
+  "expl": "Un bon de 5 € est remis tous les 100 points (programme de fidélité).",
+  "src": {
+   "type": "fidelite",
+   "ref": "",
+   "lib": "Programme de fidélité"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Quand la case Bingo de la semaine est-elle cochée pour un client ?",
+  "choix": [
+   [
+    "Dès 5 € d'achats sur la semaine",
+    false
+   ],
+   [
+    "Dès 10 € d'achats du lundi au dimanche",
+    true
+   ],
+   [
+    "Dès 20 € d'achats sur un seul ticket",
+    false
+   ],
+   [
+    "À chaque passage, quel que soit le montant",
+    false
+   ]
+  ],
+  "expl": "Une case par semaine, cochée dès 10 € d'achats du lundi au dimanche (programme de fidélité).",
+  "src": {
+   "type": "fidelite",
+   "ref": "",
+   "lib": "Programme de fidélité"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Combien de cases Bingo cochées donnent droit à un bon de 2 € ?",
+  "choix": [
+   [
+    "2 cases",
+    false
+   ],
+   [
+    "3 cases",
+    true
+   ],
+   [
+    "4 cases",
+    false
+   ],
+   [
+    "5 cases",
+    false
+   ]
+  ],
+  "expl": "La carte Bingo donne un bon de 2 € toutes les 3 cases cochées (programme de fidélité).",
+  "src": {
+   "type": "fidelite",
+   "ref": "",
+   "lib": "Programme de fidélité"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "vf",
+  "q": "Une fois la case Bingo de la semaine cochée, les points de la carte à points comptent double.",
+  "choix": [
+   [
+    "Vrai",
+    true
+   ],
+   [
+    "Faux",
+    false
+   ]
+  ],
+  "expl": "Vrai : les points comptent double une fois la case Bingo de la semaine cochée (programme de fidélité).",
+  "src": {
+   "type": "fidelite",
+   "ref": "",
+   "lib": "Programme de fidélité"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "multi",
+  "q": "Carte Bingo de saison : quelles affirmations sont justes ?",
+  "choix": [
+   [
+    "Un super bon de 10 € est remis à 13 cases sur 13",
+    true
+   ],
+   [
+    "Les bons sont valables 30 jours",
+    true
+   ],
+   [
+    "Une même carte Bingo dure toute l'année",
+    false
+   ],
+   [
+    "Chaque case cochée donne un bon de 2 €",
+    false
+   ]
+  ],
+  "expl": "Super bon de 10 € à 13 cases sur 13, bons valables 30 jours, quatre cartes (saisons) par an ; le bon de 2 € vient toutes les 3 cases (programme de fidélité).",
+  "src": {
+   "type": "fidelite",
+   "ref": "",
+   "lib": "Programme de fidélité"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "situation",
+  "q": "Un client paie dans votre magasin avec un avantage fidélité qu'il a gagné dans un autre magasin du réseau. Qui supporte le coût de cet avantage ?",
+  "choix": [
+   [
+    "Votre magasin, seul, sans compensation",
+    true
+   ],
+   [
+    "Le magasin où l'avantage a été gagné",
+    false
+   ],
+   [
+    "Le franchiseur, sur la redevance marketing",
+    false
+   ],
+   [
+    "Les deux magasins, à parts égales",
+    false
+   ]
+  ],
+  "expl": "Les avantages de la carte de fidélité valent dans tout le réseau ; le franchisé chez qui l'avantage est utilisé en supporte seul le coût, sans compensation (contrat, art. 5.1.2 e).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.1.2",
+   "lib": "Contrat, art. 5.1.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Pour la communication de lancement, qu'est-ce qui est compris dans le droit d'entrée ?",
+  "choix": [
+   [
+    "La conception du plan de communication de lancement et la première publicité",
+    true
+   ],
+   [
+    "Tout le budget de la campagne d'ouverture",
+    false
+   ],
+   [
+    "La communication locale de la première année",
+    false
+   ],
+   [
+    "Rien : tout est à la charge du franchisé",
+    false
+   ]
+  ],
+  "expl": "La conception du plan de communication de lancement et la première publicité de lancement, réalisées par le franchiseur, sont comprises dans la redevance forfaitaire initiale (contrat, art. 7.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "7.1",
+   "lib": "Contrat, art. 7.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Quel est le montant de la redevance de communication de lancement que le franchisé consacre en plus à sa campagne d'ouverture ?",
+  "choix": [
+   [
+    "1.500 € HT",
+    false
+   ],
+   [
+    "3.000 € HT",
+    true
+   ],
+   [
+    "5.000 € HT",
+    false
+   ],
+   [
+    "15.000 € HT",
+    false
+   ]
+  ],
+  "expl": "La redevance de communication de lancement est de 3.000 € HT ; elle s'ajoute à la conception du plan et à la première publicité, comprises (contrat, art. 26.4.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.4.1",
+   "lib": "Contrat, art. 26.4.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "vf",
+  "q": "Le contrat oblige le franchisé à consacrer 1 % de son chiffre d'affaires mensuel à sa communication locale.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : le franchiseur recommande un budget de l'ordre de 1 % du chiffre d'affaires mensuel ; ce montant est indicatif et ne constitue pas une obligation (contrat, art. 26.4.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.4.2",
+   "lib": "Contrat, art. 26.4.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Le franchisé soumet un projet de communication locale au franchiseur pour agrément. Après combien de temps sans réponse le projet est-il accepté ?",
+  "choix": [
+   [
+    "48 heures",
+    false
+   ],
+   [
+    "8 jours",
+    true
+   ],
+   [
+    "15 jours ouvrés",
+    false
+   ],
+   [
+    "30 jours",
+    false
+   ]
+  ],
+  "expl": "L'absence de réponse du franchiseur dans les 8 jours après réception du projet vaut acceptation (contrat, art. 7.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "7.2",
+   "lib": "Contrat, art. 7.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Qui effectue la communication numérique du point de vente (plateformes numériques, e-réputation) ?",
+  "choix": [
+   [
+    "Le franchisé, avec une agence de son choix",
+    false
+   ],
+   [
+    "Le franchiseur, directement",
+    true
+   ],
+   [
+    "Le consultant du réseau, lors de ses visites",
+    false
+   ],
+   [
+    "Le fournisseur du système de caisse",
+    false
+   ]
+  ],
+  "expl": "La communication numérique du point de vente est effectuée directement par le franchiseur ; le franchisé paie en contrepartie la redevance de communication numérique (contrat, art. 7.3).",
+  "src": {
+   "type": "contrat",
+   "ref": "7.3",
+   "lib": "Contrat, art. 7.3"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Le franchiseur lance des opérations promotionnelles qui touchent les prix de vente. Jusqu'à quelle durée totale par an le franchisé doit-il les appliquer ?",
+  "choix": [
+   [
+    "Moins d'une semaine par an",
+    false
+   ],
+   [
+    "Moins de trois semaines par an",
+    true
+   ],
+   [
+    "Moins de six semaines par an",
+    false
+   ],
+   [
+    "Toute l'année, sans limite",
+    false
+   ]
+  ],
+  "expl": "Le franchisé met en œuvre les opérations promotionnelles du franchiseur qui influent sur les prix dès lors que leur durée totale est inférieure à trois semaines par an (contrat, art. 5.1.2 b).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.1.2",
+   "lib": "Contrat, art. 5.1.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "qcm",
+  "q": "Dans l'onglet Fidélité du dashboard, la part des tickets scannés reste dans le noir ou le rouge. Que faire ?",
+  "choix": [
+   [
+    "Changer les conditions des profils dans la vignette",
+    false
+   ],
+   [
+    "Faire scanner la carte du client à chaque passage",
+    true
+   ],
+   [
+    "Relancer « ↻ Relire » jusqu'à ce que la part monte",
+    false
+   ],
+   [
+    "Rien : c'est normal pour un magasin",
+    false
+   ]
+  ],
+  "expl": "Une part basse veut dire que l'onglet ne parle que d'une petite partie des clients : il faut faire scanner la carte du client à chaque passage (Manuel, onglet Fidélité).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-fidelite",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Fidélité"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "FID",
+  "type": "situation",
+  "q": "Dans l'onglet Promotions, une promotion créée par votre magasin affiche un coefficient du lot de × 1,8, en rouge. Que faites-vous ?",
+  "choix": [
+   [
+    "Je la modifie directement dans l'onglet Promotions",
+    false
+   ],
+   [
+    "Je la revois au cockpit, dans Promotions › Édition",
+    true
+   ],
+   [
+    "Rien : le repère bloque déjà la promotion",
+    false
+   ],
+   [
+    "Je la signale à la marque, qui la corrige",
+    false
+   ]
+  ],
+  "expl": "Sous le repère × 2, la marge du lot est trop mince ; une promotion du magasin se revoit au cockpit (une promotion de la marque se signale à la marque). L'onglet est en lecture seule (Manuel, onglet Promotions).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-promos",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Promotions"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Quel est l'investissement global de départ estimé pour une cellule de 180 m² ?",
+  "choix": [
+   [
+    "Entre 150.000 € et 200.000 € HT",
+    false
+   ],
+   [
+    "Entre 240.000 € et 285.000 € HT",
+    false
+   ],
+   [
+    "Entre 302.500 € et 338.300 € HT",
+    true
+   ],
+   [
+    "Entre 400.000 € et 450.000 € HT",
+    false
+   ]
+  ],
+  "expl": "Le DIP estime l'investissement global de départ entre 302.500 € et 338.300 € HT pour une cellule de 180 m² (DIP, chapitre II, A.2).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre II, A.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "En général, quel apport personnel la banque demande-t-elle ?",
+  "choix": [
+   [
+    "Environ 10 % du crédit sollicité",
+    false
+   ],
+   [
+    "Environ 20 % du crédit sollicité",
+    true
+   ],
+   [
+    "Environ 35 % du crédit sollicité",
+    false
+   ],
+   [
+    "Environ 50 % du crédit sollicité",
+    false
+   ]
+  ],
+  "expl": "En général, la banque demande un apport d'environ 20 % du crédit sollicité (250.000 € de crédit : environ 50.000 € d'apport) ; c'est indicatif et dépend du comité de crédit (DIP, chapitre II, A.2).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre II, A.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "vf",
+  "q": "La garantie locative et la ligne de crédit opérationnelle demandent généralement un apport personnel.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : ce sont des produits bancaires qui ne demandent généralement pas d'apport personnel, mais ils doivent être comptés dans l'investissement global (DIP, chapitre II, A.2).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre II, A.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Quel montant de ligne de crédit opérationnelle le franchiseur conseille-t-il de négocier dès le départ ?",
+  "choix": [
+   [
+    "10.000 €",
+    false
+   ],
+   [
+    "15.000 €",
+    false
+   ],
+   [
+    "25.000 €",
+    true
+   ],
+   [
+    "50.000 €",
+    false
+   ]
+  ],
+  "expl": "Le franchiseur recommande de négocier dès le départ une ligne de crédit opérationnelle de 25.000 € (DIP, annexe 17, § 6).",
+  "src": {
+   "type": "contrat",
+   "ref": "annexe 17",
+   "lib": "DIP, annexe 17"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "multi",
+  "q": "Parmi ces recommandations financières, lesquelles sont celles du franchiseur ?",
+  "choix": [
+   [
+    "Négocier un leasing pour un maximum d'appareils",
+    true
+   ],
+   [
+    "Prévoir un besoin en fonds de roulement de 15.000 €",
+    true
+   ],
+   [
+    "Prévoir une garantie locative d'environ 25.000 €",
+    false
+   ],
+   [
+    "Financer le matériel de production sur fonds propres plutôt qu'en leasing",
+    false
+   ]
+  ],
+  "expl": "L'annexe 17 recommande un leasing pour un maximum d'appareils, un BFR de 15.000 €, une ligne de crédit de 25.000 € et une garantie locative d'environ 10.000 € (DIP, annexe 17, § 6).",
+  "src": {
+   "type": "contrat",
+   "ref": "annexe 17",
+   "lib": "DIP, annexe 17"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Qui établit les comptes de résultat et le bilan prévisionnels du futur point de vente ?",
+  "choix": [
+   [
+    "Le franchiseur",
+    false
+   ],
+   [
+    "Le candidat, avec son expert-comptable",
+    true
+   ],
+   [
+    "La banque qui finance le projet",
+    false
+   ],
+   [
+    "Le consultant du réseau",
+    false
+   ]
+  ],
+  "expl": "Les comptes prévisionnels sont élaborés par le seul candidat avec son expert-comptable ; le business plan du franchiseur n'est ni une prévision ni une promesse (DIP, chapitre II, A.9 ; annexe 17, § 5).",
+  "src": {
+   "type": "autre",
+   "ref": "DIP",
+   "lib": "DIP, chapitre II, A.9"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Quel jour la redevance de marque est-elle prélevée ?",
+  "choix": [
+   [
+    "Le 1er du mois considéré",
+    false
+   ],
+   [
+    "Le 5 du mois suivant",
+    false
+   ],
+   [
+    "Le 15 du mois suivant",
+    true
+   ],
+   [
+    "Le dernier jour du mois considéré",
+    false
+   ]
+  ],
+  "expl": "La redevance de marque est payée par prélèvement bancaire, à terme échu, le 15e jour du mois suivant le mois considéré (contrat, art. 8.2.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "8.2.1",
+   "lib": "Contrat, art. 8.2.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Ensemble, combien représentent les redevances de marque, d'assistance et marketing ?",
+  "choix": [
+   [
+    "4 % du chiffre d'affaires mensuel HT",
+    false
+   ],
+   [
+    "5 % du chiffre d'affaires mensuel HT",
+    false
+   ],
+   [
+    "6 % du chiffre d'affaires mensuel HT",
+    true
+   ],
+   [
+    "7,5 % du chiffre d'affaires mensuel HT",
+    false
+   ]
+  ],
+  "expl": "Marque 2 % + assistance 2 % + marketing 2 % du chiffre d'affaires mensuel, soit 6 % (contrat, art. 26.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.2",
+   "lib": "Contrat, art. 26.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Comment les sommes forfaitaires du contrat (comme la redevance de caisse) sont-elles indexées ?",
+  "choix": [
+   [
+    "Chaque 1er janvier, à la hausse comme à la baisse",
+    true
+   ],
+   [
+    "Chaque 1er janvier, à la hausse seulement",
+    false
+   ],
+   [
+    "Tous les trois ans, à la hausse comme à la baisse",
+    false
+   ],
+   [
+    "Jamais : elles restent fixes pendant tout le contrat",
+    false
+   ]
+  ],
+  "expl": "Les sommes forfaitaires sont actualisées au 1er janvier de chaque année, à la hausse comme à la baisse, selon l'indice des prix à la consommation de STATBEL (contrat, art. 26.5).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.5",
+   "lib": "Contrat, art. 26.5"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "En cas de panne du logiciel, quand le franchisé communique-t-il son chiffre d'affaires mensuel au franchiseur ?",
+  "choix": [
+   [
+    "Le 1er du mois",
+    false
+   ],
+   [
+    "Le 5 du mois",
+    true
+   ],
+   [
+    "Le 15 du mois",
+    false
+   ],
+   [
+    "À la clôture de l'exercice",
+    false
+   ]
+  ],
+  "expl": "Si les informations ne remontent pas par le logiciel, le franchisé communique son chiffre d'affaires mensuel le 5 du mois ; à défaut, les redevances sont calculées sur le mois précédent puis régularisées (contrat, art. 5.2.7).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.2.7",
+   "lib": "Contrat, art. 5.2.7"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "vf",
+  "q": "Le franchisé est obligé de tenir toute sa comptabilité selon le modèle de pratique comptable du franchiseur.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : le franchisé reste libre d'organiser sa comptabilité ; le modèle (annexe 16) ne sert qu'à la communication d'informations au franchiseur (contrat, art. 5.2.7).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.2.7",
+   "lib": "Contrat, art. 5.2.7"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Dans quel délai après la clôture de l'exercice le franchisé transmet-il ses états financiers annuels au franchiseur ?",
+  "choix": [
+   [
+    "1 mois",
+    false
+   ],
+   [
+    "3 mois",
+    true
+   ],
+   [
+    "6 mois",
+    false
+   ],
+   [
+    "12 mois",
+    false
+   ]
+  ],
+  "expl": "Le bilan, le compte de résultat et les annexes, attestés par un expert-comptable, sont transmis dans les 3 mois suivant la clôture (contrat, art. 5.2.7 b).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.2.7",
+   "lib": "Contrat, art. 5.2.7"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Dans l'onglet Semaine du dashboard, que mesure la tuile « Atteinte » ?",
+  "choix": [
+   [
+    "Le CA en % de l'objectif de toute la semaine",
+    false
+   ],
+   [
+    "Le CA en % de l'attendu à ce jour",
+    true
+   ],
+   [
+    "Le CA face à la même semaine de l'an dernier",
+    false
+   ],
+   [
+    "Le rang du magasin dans le réseau",
+    false
+   ]
+  ],
+  "expl": "« Atteinte » est le CA en % de l'attendu à ce jour (l'objectif réparti par jour), pas de l'objectif de toute la semaine (Manuel, onglet Semaine).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-semaine",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Semaine"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Selon la règle lue par le dashboard, quelle part du CA de la semaine les clients pro ne doivent-ils pas dépasser ?",
+  "choix": [
+   [
+    "25 %",
+    false
+   ],
+   [
+    "35 %",
+    false
+   ],
+   [
+    "40 %",
+    true
+   ],
+   [
+    "50 %",
+    false
+   ]
+  ],
+  "expl": "La règle plafonne le pro à 40 % du CA de la semaine : vert sous 35 %, orange de 35 à 40 %, rouge au-delà (Manuel, onglet Semaine).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-semaine",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Semaine"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "vf",
+  "q": "Une semaine sans invendus déclarés en caisse est une semaine sans pertes.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : rien de déclaré ne veut pas dire rien de jeté ; une poubelle non saisie fausse le résultat (Manuel, onglet Semaine).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-semaine",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Semaine"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "situation",
+  "q": "Dans l'onglet Produits, la catégorie Viennoiserie affiche « = +7 % ». Que concluez-vous ?",
+  "choix": [
+   [
+    "Elle progresse nettement",
+    false
+   ],
+   [
+    "Elle est stable : il faut au moins +8 % pour un ▲",
+    true
+   ],
+   [
+    "Les chiffres du panel sont incomplets",
+    false
+   ],
+   [
+    "La semaine en cours tire la moyenne vers le haut",
+    false
+   ]
+  ],
+  "expl": "L'onglet compare les 6 dernières semaines closes aux 6 d'avant ; entre −8 % et +8 %, le verdict est « = stable » (Manuel, onglet Produits).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-produits",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Produits"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "situation",
+  "q": "Pendant la revue du soir, une checklist n'est pas finie : deux tâches n'ont pas été faites, l'équipe a manqué de temps. Quelle raison choisissez-vous ?",
+  "choix": [
+   [
+    "« Fait, pas coché »",
+    false
+   ],
+   [
+    "« Pas eu le temps »",
+    true
+   ],
+   [
+    "Aucune : on passe à l'écran suivant",
+    false
+   ],
+   [
+    "« Oublié »",
+    false
+   ]
+  ],
+  "expl": "On donne la raison réelle ; « Fait, pas coché » compte la checklist comme faite et ne se choisit que si la tâche est vraiment faite (Manuel, la revue du soir).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-revue",
+   "lib": "Manuel du réseau — Le dashboard : la revue du soir"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "GES",
+  "type": "qcm",
+  "q": "Lequel de ces points fait partie des cinq points obligatoires de la réunion d'équipe du lundi ?",
+  "choix": [
+   [
+    "La validation du planning de la semaine suivante",
+    true
+   ],
+   [
+    "Le calcul des primes du mois",
+    false
+   ],
+   [
+    "L'inventaire matière du magasin",
+    false
+   ],
+   [
+    "La mise à jour des prix de vente",
+    false
+   ]
+  ],
+  "expl": "Les cinq points : retours clients, problèmes opérationnels, idées d'amélioration, validation du planning de la semaine suivante, informations du franchiseur (Manuel, la gestion de la semaine).",
+  "src": {
+   "type": "guide",
+   "ref": "art-gestion-semaine",
+   "lib": "Manuel du réseau — La gestion de la semaine"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "vf",
+  "q": "Le franchiseur est responsable des actes accomplis par les employés du franchisé.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : le franchisé est un commerçant indépendant ; le franchiseur n'encourt aucune responsabilité du fait des actes du franchisé ou de ses employés (contrat, art. 9).",
+  "src": {
+   "type": "contrat",
+   "ref": "9",
+   "lib": "Contrat, art. 9"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "Quelle tenue le personnel du point de vente doit-il porter ?",
+  "choix": [
+   [
+    "Une tenue libre, propre et soignée",
+    false
+   ],
+   [
+    "La tenue préconisée dans le Manuel opératoire, à l'exclusion de toute autre",
+    true
+   ],
+   [
+    "Une tenue choisie par le franchisé selon la charte graphique",
+    false
+   ],
+   [
+    "La tenue fournie par chaque fournisseur référencé",
+    false
+   ]
+  ],
+  "expl": "Le franchisé veille à ce que son personnel porte la tenue préconisée dans le Manuel opératoire, à l'exclusion de toute autre (contrat, art. 5.2.3).",
+  "src": {
+   "type": "contrat",
+   "ref": "5.2.3",
+   "lib": "Contrat, art. 5.2.3"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "Comment la formation initiale du manager (Responsable du point de vente) est-elle payée ?",
+  "choix": [
+   [
+    "Elle est comprise dans le droit d'entrée",
+    true
+   ],
+   [
+    "Elle est facturée par jour de formation",
+    false
+   ],
+   [
+    "Elle est payée par la redevance d'assistance",
+    false
+   ],
+   [
+    "Elle est à la charge du manager lui-même",
+    false
+   ]
+  ],
+  "expl": "La formation initiale du franchisé et du/des Responsable(s) est comprise dans la redevance initiale forfaitaire (contrat, art. 4.1.1 et 26.3.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "4.1.1",
+   "lib": "Contrat, art. 4.1.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "vf",
+  "q": "L'exploitation du point de vente peut être confiée à une personne qui n'a pas suivi la formation initiale, si le franchisé reste joignable.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : l'exploitation du point de vente ne peut être confiée qu'à une personne ayant suivi la formation initiale (contrat, art. 4.1.1).",
+  "src": {
+   "type": "contrat",
+   "ref": "4.1.1",
+   "lib": "Contrat, art. 4.1.1"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "Combien de jours par an, au maximum, le franchisé s'engage-t-il à consacrer aux formations permanentes ?",
+  "choix": [
+   [
+    "3 jours",
+    false
+   ],
+   [
+    "5 jours",
+    true
+   ],
+   [
+    "10 jours",
+    false
+   ],
+   [
+    "14 jours",
+    false
+   ]
+  ],
+  "expl": "Le franchisé assiste aux formations permanentes à raison de 5 jours maximum par an ; leur coût est compris dans la redevance d'assistance (contrat, art. 4.1.2 et 26.3.2).",
+  "src": {
+   "type": "contrat",
+   "ref": "4.1.2",
+   "lib": "Contrat, art. 4.1.2"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "À quel rythme le Manuel conseille-t-il de faire le point individuel avec chaque collaborateur ?",
+  "choix": [
+   [
+    "Chaque jour, 5 à 10 minutes",
+    false
+   ],
+   [
+    "Toutes les 1 à 2 semaines, 30 minutes",
+    true
+   ],
+   [
+    "Une fois par mois, une heure",
+    false
+   ],
+   [
+    "Deux fois par an seulement",
+    false
+   ]
+  ],
+  "expl": "Le point individuel a lieu toutes les 1 à 2 semaines, 30 minutes : résultats, blocages, besoins. Le brief est quotidien, l'entretien de fond semestriel (Manuel, bonnes pratiques du dirigeant).",
+  "src": {
+   "type": "guide",
+   "ref": "art-bonnes-pratiques-dirigeant",
+   "lib": "Manuel du réseau — Les bonnes pratiques du dirigeant"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "situation",
+  "q": "Vous voulez confier à votre adjoint la baisse de la casse. Quelle façon de déléguer suit le Manuel ?",
+  "choix": [
+   [
+    "« Vérifie les invendus de temps en temps »",
+    false
+   ],
+   [
+    "« La casse passe sous X % d'ici la fin du mois », avec un point de contrôle fixé tout de suite",
+    true
+   ],
+   [
+    "« Occupe-toi de la casse, je te fais confiance, on verra plus tard »",
+    false
+   ],
+   [
+    "« Fais exactement comme moi, étape par étape »",
+    false
+   ]
+  ],
+  "expl": "On délègue un résultat, pas une tâche, et on fixe le point de contrôle au moment de la délégation : déléguer sans contrôler, c'est abandonner (Manuel, bonnes pratiques du dirigeant).",
+  "src": {
+   "type": "guide",
+   "ref": "art-bonnes-pratiques-dirigeant",
+   "lib": "Manuel du réseau — Les bonnes pratiques du dirigeant"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "multi",
+  "q": "Selon le Manuel, à quelles conditions une prime ou un challenge motive-t-il vraiment l'équipe ?",
+  "choix": [
+   [
+    "La règle est simple et comprise par tous",
+    true
+   ],
+   [
+    "La personne peut influencer directement le résultat par son travail",
+    true
+   ],
+   [
+    "Le paiement est rapide et sans discussion",
+    true
+   ],
+   [
+    "La prime récompense le volume, sans regarder la marge ni la casse",
+    false
+   ]
+  ],
+  "expl": "Un incentive marche si la règle est simple, si la personne peut agir sur le résultat et si le paiement est rapide ; une prime au volume seul donne du volume, pas du résultat (Manuel, bonnes pratiques du dirigeant).",
+  "src": {
+   "type": "guide",
+   "ref": "art-bonnes-pratiques-dirigeant",
+   "lib": "Manuel du réseau — Les bonnes pratiques du dirigeant"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "Dans l'onglet Primes du dashboard, comment le franchisé apparaît-il ?",
+  "choix": [
+   [
+    "Il touche les primes d'équipe comme les vendeuses",
+    false
+   ],
+   [
+    "En gris, « franchisé · hors primes » : il n'a pas droit aux primes",
+    true
+   ],
+   [
+    "Il n'apparaît pas du tout dans le tableau",
+    false
+   ],
+   [
+    "Il compte double dans le calcul des primes d'équipe",
+    false
+   ]
+  ],
+  "expl": "Un franchisé n'a pas droit aux primes : il reste dans le tableau en gris, « franchisé · hors primes », et n'est pas compté parmi les éligibles (Manuel, onglet Primes).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-primes",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Primes"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "Selon « Une franchise bien tenue », par combien de personnes formées chaque poste doit-il pouvoir être tenu ?",
+  "choix": [
+   [
+    "Une seule, la plus expérimentée",
+    false
+   ],
+   [
+    "Au moins deux",
+    true
+   ],
+   [
+    "Au moins trois",
+    false
+   ],
+   [
+    "Toute l'équipe",
+    false
+   ]
+  ],
+  "expl": "Chaque poste doit pouvoir être tenu par au moins deux personnes formées : un départ, une maladie ou des vacances ne doivent pas faire baisser le niveau (Manuel, une franchise bien tenue).",
+  "src": {
+   "type": "guide",
+   "ref": "chk-bien-tenue",
+   "lib": "Manuel du réseau — Une franchise bien tenue"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "Pendant les moments calmes, jusqu'à quelle heure au plus tard cuit-on des baguettes supplémentaires si nécessaire ?",
+  "choix": [
+   [
+    "12 h",
+    false
+   ],
+   [
+    "14 h 30",
+    true
+   ],
+   [
+    "16 h",
+    false
+   ],
+   [
+    "17 h",
+    false
+   ]
+  ],
+  "expl": "La checklist des moments calmes fixe les baguettes supplémentaires au plus tard à 14 h 30 (les pains supplémentaires : au plus tard à 16 h).",
+  "src": {
+   "type": "sop",
+   "ref": "CHK-WKL-005",
+   "lib": "Standard CHK-WKL-005 — Moments calmes"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "Au poste de cuisson, une sonnerie de pousse retentit pendant que vous faites une autre action. Que dit l'organisation du poste ?",
+  "choix": [
+   [
+    "Tout arrêter immédiatement pour la pousse",
+    false
+   ],
+   [
+    "Terminer seulement l'action courte engagée, puis traiter la priorité",
+    true
+   ],
+   [
+    "Finir toute la série en cours avant de regarder la pousse",
+    false
+   ],
+   [
+    "Appeler le responsable avant de choisir",
+    false
+   ]
+  ],
+  "expl": "Fin de programme, sonnerie de pousse ou commande urgente : on termine seulement l'action courte engagée, puis on traite la priorité (Standard 0.0.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.0.01",
+   "lib": "Standard 0.0.01 — Organisation quotidienne du poste de cuisson"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "PER",
+  "type": "qcm",
+  "q": "Une checklist porte le code 3.4.01. Quelle zone et quel moment désigne-t-il ?",
+  "choix": [
+   [
+    "Traiteur, fermeture",
+    true
+   ],
+   [
+    "Nettoyage, après-midi",
+    false
+   ],
+   [
+    "Traiteur, après-midi",
+    false
+   ],
+   [
+    "Boulangerie, fermeture",
+    false
+   ]
+  ],
+  "expl": "1er chiffre = qui (1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion), 2e = quand (.1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture…) (Manuel, onglet Tâches).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-taches",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Tâches"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "qcm",
+  "q": "Quel est le montant de la redevance mensuelle du système de caisse, du webshop et de leurs annexes ?",
+  "choix": [
+   [
+    "150 € HT par mois",
+    false
+   ],
+   [
+    "350 € HT par mois",
+    false
+   ],
+   [
+    "399 € HT par mois, indexable",
+    true
+   ],
+   [
+    "499 € HT par mois, fixe",
+    false
+   ]
+  ],
+  "expl": "La redevance du système de caisse, du webshop et de leurs annexes est de 399 € HT par mois, indexable chaque année (contrat, art. 8.2.4 et 26.2.4).",
+  "src": {
+   "type": "contrat",
+   "ref": "26.2.4",
+   "lib": "Contrat, art. 26.2.4"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "vf",
+  "q": "Le monnayeur automatique CashDro est facultatif dans un point de vente du réseau.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : l'équipement d'un monnayeur CashDro est obligatoire ; sa redevance est de 150 € HT par mois, indexable (contrat, art. 8.2.5).",
+  "src": {
+   "type": "contrat",
+   "ref": "8.2.5",
+   "lib": "Contrat, art. 8.2.5"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "qcm",
+  "q": "Que fait le franchisé du logiciel et de ses bases de données à la fin du contrat ?",
+  "choix": [
+   [
+    "Il cesse immédiatement de les utiliser",
+    true
+   ],
+   [
+    "Il peut les utiliser encore six mois",
+    false
+   ],
+   [
+    "Il garde la base clients pour son nouveau commerce",
+    false
+   ],
+   [
+    "Il les rachète au franchiseur",
+    false
+   ]
+  ],
+  "expl": "Dès la cessation du contrat, le franchisé cesse immédiatement toute utilisation du logiciel et des bases de données qu'il gère (contrat, art. 15.3).",
+  "src": {
+   "type": "contrat",
+   "ref": "15.3",
+   "lib": "Contrat, art. 15.3"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "situation",
+  "q": "Vous venez d'encoder une précommande, mais vous ne la retrouvez pas. Que faites-vous ?",
+  "choix": [
+   [
+    "Je recrée tout de suite une seconde commande",
+    false
+   ],
+   [
+    "Je vérifie d'abord le récapitulatif, puis j'enregistre à nouveau correctement, sans doublon",
+    true
+   ],
+   [
+    "J'écris la commande sur papier et je laisse la caisse",
+    false
+   ],
+   [
+    "J'ajoute les articles au ticket du client suivant",
+    false
+   ]
+  ],
+  "expl": "Commande non visible : on vérifie d'abord le récapitulatif, puis on enregistre à nouveau correctement ; pas de commande en double (Standard 0.2.01).",
+  "src": {
+   "type": "sop",
+   "ref": "0.2.01",
+   "lib": "Standard 0.2.01 — Encodage des commandes clients en caisse"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "qcm",
+  "q": "À quelle heure contrôle-t-on les invendus et met-on les paniers Too Good To Go en vente ?",
+  "choix": [
+   [
+    "16 h",
+    false
+   ],
+   [
+    "17 h",
+    true
+   ],
+   [
+    "17 h 30",
+    false
+   ],
+   [
+    "18 h",
+    false
+   ]
+  ],
+  "expl": "On commence à 17 h ; le retrait est réglé de 17 h 30 à 18 h (Standard 0.3.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.02",
+   "lib": "Standard 0.3.02 — Gestion des paniers Too Good To Go"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "vf",
+  "q": "Les 4,99 € affichés dans l'app Too Good To Go sont la valeur du contenu du panier aux prix du magasin.",
+  "choix": [
+   [
+    "Vrai",
+    false
+   ],
+   [
+    "Faux",
+    true
+   ]
+  ],
+  "expl": "Faux : 4,99 € est le prix payé par le client dans l'app ; le contenu vaut 15 à 20 € aux prix normaux du magasin (Standard 0.3.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.02",
+   "lib": "Standard 0.3.02 — Gestion des paniers Too Good To Go"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "qcm",
+  "q": "Un client ne vient pas chercher son panier Too Good To Go. Que se passe-t-il après 18 h ?",
+  "choix": [
+   [
+    "On le réenregistre comme perte à la fermeture",
+    false
+   ],
+   [
+    "Le membre du personnel peut emporter les produits ou les jeter : ils sont déjà enregistrés comme pertes",
+    true
+   ],
+   [
+    "On le remet en vente le lendemain",
+    false
+   ],
+   [
+    "On rembourse le client en caisse",
+    false
+   ]
+  ],
+  "expl": "Après 18 h, le personnel peut emporter ou jeter les produits ; ils ont déjà été enregistrés une seule fois comme pertes, à la préparation du panier (Standard 0.3.02).",
+  "src": {
+   "type": "sop",
+   "ref": "0.3.02",
+   "lib": "Standard 0.3.02 — Gestion des paniers Too Good To Go"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "qcm",
+  "q": "Un chiffre du dashboard est faux. Que faites-vous ?",
+  "choix": [
+   [
+    "Je le corrige dans le dashboard",
+    false
+   ],
+   [
+    "Je le corrige à la source (caisse, panel, planning), puis « ↻ Relire »",
+    true
+   ],
+   [
+    "J'attends le lendemain, il se corrige seul",
+    false
+   ],
+   [
+    "Je demande au consultant de le changer dans le dashboard",
+    false
+   ]
+  ],
+  "expl": "Le dashboard ne corrige aucun chiffre : une erreur se corrige à la source, puis « ↻ Relire » (Manuel, le haut de l'écran du dashboard).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-haut",
+   "lib": "Manuel du réseau — Le dashboard : le haut de l'écran"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "qcm",
+  "q": "Depuis la fenêtre « Invendus et poubelle » du dashboard, quels gestes peut-on faire ?",
+  "choix": [
+   [
+    "Réclamer au fournisseur et faire une remarque à l'opérateur",
+    true
+   ],
+   [
+    "Modifier les quantités jetées",
+    false
+   ],
+   [
+    "Changer le prix du produit",
+    false
+   ],
+   [
+    "Supprimer une saisie de poubelle",
+    false
+   ]
+  ],
+  "expl": "Ce sont les deux seuls gestes qui écrivent depuis le dashboard : la réclamation part au fournisseur par le panel, la remarque rejoint les évaluations de l'opérateur (Manuel, onglet Opérationnel).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-ops",
+   "lib": "Manuel du réseau — Le dashboard : l'onglet Opérationnel"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "qcm",
+  "q": "L'Assistant du dashboard vous propose une priorité qui vous étonne. Que faire avant d'agir ?",
+  "choix": [
+   [
+    "Changer d'assistant pour obtenir d'autres chiffres",
+    false
+   ],
+   [
+    "Vérifier le chiffre dans l'onglet du dashboard concerné",
+    true
+   ],
+   [
+    "Appliquer la priorité : l'Assistant ne se trompe pas",
+    false
+   ],
+   [
+    "Recharger la page pour une nouvelle réponse",
+    false
+   ]
+  ],
+  "expl": "L'Assistant rédige à partir des chiffres du magasin : on vérifie le chiffre dans le dashboard avant d'agir. Changer d'assistant change le ton, jamais les chiffres (Manuel, l'Assistant).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-assistant",
+   "lib": "Manuel du réseau — Le dashboard : l'Assistant"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "qcm",
+  "q": "Au téléphone, la pastille de l'onglet « Exploitation » est rouge. Que veut-elle dire ?",
+  "choix": [
+   [
+    "Tous les chiffres de l'onglet sont à reprendre",
+    false
+   ],
+   [
+    "Au moins un chiffre de l'onglet est à reprendre",
+    true
+   ],
+   [
+    "L'onglet n'a pas encore été lu",
+    false
+   ],
+   [
+    "La journée est sous l'objectif depuis le matin",
+    false
+   ]
+  ],
+  "expl": "La pastille prend la couleur du pire des chiffres de l'onglet : un seul rouge suffit. Pas de pastille : rien n'est encore jugé (Manuel, le dashboard au téléphone).",
+  "src": {
+   "type": "guide",
+   "ref": "art-dash-telephone",
+   "lib": "Manuel du réseau — Le dashboard : au téléphone"
+  },
+  "bloq": false
+ },
+ {
+  "theme": "OUT",
+  "type": "multi",
+  "q": "Lors du contrôle sur la tablette, quelles informations restent internes et ne vont jamais dans le rapport du franchisé ?",
+  "choix": [
+   [
+    "La météo du franchisé",
+    true
+   ],
+   [
+    "Ses finances",
+    true
+   ],
+   [
+    "La note rapide de l'équipe en poste",
+    true
+   ],
+   [
+    "L'évaluation rapide sur six axes",
+    false
+   ]
+  ],
+  "expl": "La météo, les finances et la note de l'équipe sont internes ; l'évaluation rapide (radar et commentaires) part dans le rapport (Manuel, le contrôle sur la tablette).",
+  "src": {
+   "type": "guide",
+   "ref": "art-ctl-tablette",
+   "lib": "Manuel du réseau — Le contrôle sur la tablette"
+  },
+  "bloq": false
+ }
+]

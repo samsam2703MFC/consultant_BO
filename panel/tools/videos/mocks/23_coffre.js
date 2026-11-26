@@ -4,7 +4,11 @@
  * l'attestation d'assurance RC à renouveler (échéance le 31/12/2026, dans 42 jours), deux nouveautés (le dossier
  * d'analyse d'octobre, le dernier rapport de visite). Les écritures changent l'état en mémoire : déposer le bail, puis
  * ranger les grandes dates que l'assistant propose (calculées comme cofBailDates : prise de cours le 01/06/2024, 9 ans,
- * préavis de 6 mois), se relit. Tout est fictif : noms, adresses, documents. */
+ * préavis de 6 mois), se relit. Tout est fictif : noms, adresses, documents.
+ * Pour les vidéos par onglet (26/11/2026) : l'assistant lit aussi le contrat de franchise et les attestations RC (la
+ * nouvelle de 2027, pour « Renouveler ») ; « Télécharger » arrive en fichier (la page reste) ; l'envoi d'un e-mail qui
+ * joint un document du coffre y note « joint à un mail » (70_boite.js répond à l'envoi) ; un contrôle AFSCA passé ;
+ * demo.vider() pour le coffre vide. */
 'use strict';
 
 const AUJ = '2026-11-19', MAINTENANT = '2026-11-19 15:40';
@@ -96,12 +100,16 @@ function depart() {
     { id: 300, onglet: 'visites', le: '2026-10-20', type: 'Visite régulière', typeCode: 'reguliere', consultant: CONSULTANT, envoyeLe: '2026-10-21 10:05', envoyePar: CONSULTANT, luLe: '2026-10-21 18:40' },
     { id: 299, onglet: 'visites', le: '2026-09-15', type: 'Audit qualité', typeCode: 'audit', consultant: CONSULTANT, envoyeLe: '2026-09-16 08:30', envoyePar: CONSULTANT, luLe: '2026-09-16 12:02' },
   ];
-  // Les grandes dates rangées (con_coffre_date) ; les échéances des documents s'y ajoutent d'office.
-  const dates = [{ id: 51, docId: null, sorte: 'autorisation', titre: 'Contrôle AFSCA annuel', le: '2027-02-10', fin: null, note: 'Préparer le registre des températures et les fiches de traçabilité.', source: 'manuel', par: FRANCHISEE, role: 'franchise' }];
-  return { docs, visites, dates, exclues: {}, prochainId: 150, prochaineDate: 60 };
+  // Les grandes dates rangées (con_coffre_date) ; les échéances des documents s'y ajoutent d'office. Le contrôle de
+  // février 2026 est passé : il se replie sous « ▸ 1 date passée » (vidéos par onglet, 26/11/2026).
+  const dates = [{ id: 50, docId: null, sorte: 'autorisation', titre: 'Contrôle AFSCA annuel', le: '2026-02-10', fin: null, note: 'Fait : aucune remarque.', source: 'manuel', par: FRANCHISEE, role: 'franchise' },
+    { id: 51, docId: null, sorte: 'autorisation', titre: 'Contrôle AFSCA annuel', le: '2027-02-10', fin: null, note: 'Préparer le registre des températures et les fiches de traçabilité.', source: 'manuel', par: FRANCHISEE, role: 'franchise' }];
+  return { docs, visites, dates, exclues: {}, prochainId: 150, prochaineDate: 60, tic: 1 };
 }
 let E = null;
 const etat = () => E || (E = depart());
+/** L'heure d'une trace du tournage : 15:40 à l'écran, des secondes qui avancent pour que la plus récente passe en tête. */
+const maintenant = () => MAINTENANT + ':' + String(etat().tic++).padStart(2, '0');
 
 /* ── les lectures, aux formes du serveur ── */
 const pieceNom = k => { const p = PIECES.find(x => x[0] === k); return p ? p[2] : null; };
@@ -182,23 +190,49 @@ function deposer(corps) {   // wr_coffre_document (multipart : le titre, la date
   S.docs.push(x);
   return { ok: true, ajoutes: [ligne(x)], refuses: [] };
 }
-function assistant(c) {   // wr_coffre_assistant, pour le bail du magasin de démo
+/** Ce que l'assistant lit dans un document de démo (la réponse du modèle, $j de cofAssistantPropositions) : le contrat
+ * de franchise, une attestation d'assurance RC (celle de 2026, ou la nouvelle de 2027 déposée pour la renouveler), et
+ * par défaut le bail commercial (ses dates calculées depuis la prise de cours, comme cofBailDates). */
+function lecture(x) {
+  const P = (sorte, titre, le, extrait, page, fin) => ({ sorte, titre, le, fin: fin || null, note: null, source: 'assistant', extrait, page });
+  if (x.sorte === 'contrat_franchise') {
+    return { genre: 'contrat_franchise', titre: 'Contrat de franchise L’Atelier By', piece: null, echeance: '2033-02-28',
+      resume: 'Contrat de franchise de neuf ans, qui prend effet le 1er mars 2024 et prend fin le 28 février 2033. Il se reconduit sauf opposition notifiée au plus tard douze mois avant son terme.',
+      remarques: 'La reconduction renvoie aux conditions de l’article 14 : à relire avec votre consultant.',
+      dates: [P('autre', 'Prise d’effet du contrat', '2024-03-01', 'Le présent contrat prend effet le 1er mars 2024 pour une durée de neuf ans.', 2),
+        P('contrat_preavis', 'Dernier jour pour s’opposer à la reconduction', '2032-02-28', 'Chaque partie peut s’opposer à sa reconduction par lettre recommandée, au plus tard douze mois avant son terme.', 11),
+        P('contrat_fin', 'Fin du contrat de franchise', '2033-02-28', 'Le présent contrat prend effet le 1er mars 2024 pour une durée de neuf ans.', 2)] };
+  }
+  if (x.piece === 'assurance_rc') {
+    const an = x.id === 112 ? '2026' : '2027', fin = an + '-12-31';
+    return { genre: 'assurance', titre: 'Attestation d’assurance RC exploitation ' + an, piece: 'assurance_rc', echeance: fin,
+      resume: 'Attestation de la responsabilité civile exploitation du Magasin démo (police n° RC-000 000), valable du 1er janvier au 31 décembre ' + an + '.', remarques: '',
+      dates: [P('assurance', 'Échéance de l’assurance RC exploitation', fin, 'Période de validité : du 01/01/' + an + ' au 31/12/' + an + '.', 1)] };
+  }
+  const extrait = 'Le présent bail est consenti pour une durée de neuf années, prenant cours le 1er juin 2024. Le preneur pourra y mettre fin à l’expiration de chaque triennat, moyennant un préavis de six mois.';
+  return { genre: 'bail_commercial', titre: 'Bail commercial de la boutique', piece: 'bail', echeance: '2033-05-31', remarques: '',
+    resume: 'Bail commercial de neuf ans pour la boutique, qui prend cours le 1er juin 2024. Le preneur peut y mettre fin à chaque triennat avec un préavis de six mois ; le loyer est indexé chaque année.',
+    calcul: bailDates('2024-06-01').map(d => Object.assign(d, { source: 'calcul', extrait, page: null })),
+    dates: [P('bail_indexation', 'Indexation du loyer', '2027-06-01', 'Le loyer sera indexé chaque année à la date anniversaire de la prise de cours du bail.', 3)] };
+}
+const GENRES = { bail_commercial: 'Bail commercial', contrat_franchise: 'Contrat de franchise', assurance: 'Police d’assurance', autre: 'Autre document' };
+function assistant(c) {   // wr_coffre_assistant puis cofAssistantPropositions, pour les documents du magasin de démo
   const S = etat(), x = S.docs.find(d => d.id === +(c && c.id));
   if (!x) { return { __status: 404, json: { error: 'document introuvable dans ce coffre' } }; }
   const deja = S.dates.filter(r => r.docId === x.id).map(r => r.sorte + '|' + r.le);
-  const extrait = 'Le présent bail est consenti pour une durée de neuf années, prenant cours le 1er juin 2024. Le preneur pourra y mettre fin à l’expiration de chaque triennat, moyennant un préavis de six mois.';
-  const props = bailDates('2024-06-01').map(d => Object.assign(d, { source: 'calcul', extrait, page: null }));
-  props.push({ sorte: 'bail_indexation', titre: 'Indexation du loyer', le: '2027-06-01', fin: null, note: null, source: 'assistant',
-    extrait: 'Le loyer sera indexé chaque année à la date anniversaire de la prise de cours du bail.', page: 3 });
+  const j = lecture(x), props = (j.calcul || []).concat(j.dates);
   const vus = {};
   const propositions = props.filter(p => { const k = p.sorte + '|' + p.le; if (vus[k]) { return false; } vus[k] = true; return true; }).map(p => {
     const k = p.sorte + '|' + p.le, dj = deja.includes(k);
-    return Object.assign(p, { sorteLib: DATE_SORTES[p.sorte], deja: dj, coche: !dj && (p.fin || p.le) >= AUJ, cle: 'p' + p.sorte.slice(5, 9) + p.le.replace(/-/g, ''), etat: etatDate(p.le, p.fin) });
+    return Object.assign(p, { sorteLib: DATE_SORTES[p.sorte], deja: dj, coche: !dj && (p.fin || p.le) >= AUJ, cle: 'p' + p.sorte.replace(/[^a-z]/g, '').slice(0, 8) + p.le.replace(/-/g, ''), etat: etatDate(p.le, p.fin) });
   }).sort((a, b) => a.le.localeCompare(b.le));
-  return { ok: true, docId: x.id, nom: x.nom, docTitre: x.titre, genre: 'bail_commercial', genreLib: 'Bail commercial', titre: 'Bail commercial de la boutique',
-    resume: 'Bail commercial de neuf ans pour la boutique, qui prend cours le 1er juin 2024. Le preneur peut y mettre fin à chaque triennat avec un préavis de six mois ; le loyer est indexé chaque année.',
-    pieceSuggeree: { cle: 'bail', nom: 'Bail commercial', onglet: 'legal' }, remarques: '', propositions,
-    echeanceDoc: x.echeance === '2033-05-31' ? null : { actuelle: x.echeance, proposee: '2033-05-31' }, titreDoc: null, modele: 'démo' };
+  const piece = j.piece ? PIECES.find(p => p[0] === j.piece) : null;
+  const sansExt = x.nom.replace(/\.[^.]+$/, '');
+  return { ok: true, docId: x.id, nom: x.nom, docTitre: x.titre, genre: j.genre, genreLib: GENRES[j.genre], titre: j.titre, resume: j.resume,
+    pieceSuggeree: piece ? { cle: piece[0], nom: piece[2], onglet: piece[1] } : null, remarques: j.remarques, propositions,
+    echeanceDoc: j.echeance && j.echeance !== (x.echeance || '') ? { actuelle: x.echeance || null, proposee: j.echeance } : null,
+    // Le titre : proposé quand le document porte le nom de son fichier (cofAssistantPropositions).
+    titreDoc: j.titre !== x.titre && (x.titre === sansExt || !x.titre) ? { actuel: x.titre, propose: j.titre } : null, modele: 'démo' };
 }
 function ranger(c) {   // wr_coffre_dates
   const S = etat(); let n = 0; const maj = [];
@@ -218,6 +252,13 @@ function ranger(c) {   // wr_coffre_dates
 }
 
 module.exports = function (m, p, q, c) {
+  // « Joindre à un e-mail » : l'e-mail part par la Boîte mail (70_boite.js répond) ; le coffre note « joint à un mail »
+  // sur chaque document joint, comme le serveur (consultant/src/coffre.php). On ne répond pas : 70_boite.js le fait.
+  if (m === 'POST' && p === '/dashboard/boite/envoyer' && c && Array.isArray(c.coffre) && c.coffre.length
+    && String(c.a || '').split(',').every(x => /[^@\s<]+@[^@\s>]+\.[a-z]{2,}/i.test(x))) {
+    c.coffre.forEach(id => { const x = etat().docs.find(d => d.id === +id); if (x) { x.traces.push(trace(maintenant(), FRANCHISEE, 'franchise', 'mail')); } });
+    return undefined;
+  }
   if (!p.startsWith('/coffre/magasin')) { return undefined; }
   const S = etat();
   if (m === 'GET' && p === '/coffre/magasin') { return coffre(); }
@@ -226,7 +267,10 @@ module.exports = function (m, p, q, c) {
   }
   if (m === 'GET' && p === '/coffre/magasin/fichier') {
     const x = S.docs.find(d => d.id === +q.get('id'));
-    if (x && !q.get('apercu')) { x.traces.push(trace(MAINTENANT, FRANCHISEE, 'franchise', q.get('telecharger') ? 'telecharge' : 'ouvert')); x.vu = true; }
+    if (x && !q.get('apercu')) { x.traces.push(trace(maintenant(), FRANCHISEE, 'franchise', q.get('telecharger') ? 'telecharge' : 'ouvert')); x.vu = true; }
+    // « Télécharger » : le serveur l'envoie en pièce à enregistrer (Content-Disposition: attachment) ; la fausse API ne
+    // pose pas d'en-tête, un type que le navigateur n'affiche pas fait le même effet : le fichier arrive, la page reste.
+    if (x && q.get('telecharger')) { return { __body: '%PDF-1.4\n% ' + x.titre + ' (document fictif)\n', type: 'application/octet-stream' }; }
     return apercu(q.get('id'));
   }
   if (m === 'POST' && p === '/coffre/magasin/document') { return deposer(c); }
@@ -239,3 +283,6 @@ module.exports = function (m, p, q, c) {
   }
   return undefined;
 };
+/** Pour un scénario, hors film : le coffre d'un magasin qui n'y a encore rien (23-10-vide). Le module est celui que
+ * mock.js vient de charger (require le garde en cache) : require(<ce fichier>).demo.vider(). */
+module.exports.demo = { vider() { E = Object.assign(depart(), { docs: [], visites: [], dates: [] }); } };

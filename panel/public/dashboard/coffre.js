@@ -220,14 +220,18 @@
     if (!ev.length) { return ''; }
     const mois = Array.from({ length: 12 }, (_, i) => new Date(deb.getFullYear(), deb.getMonth() + i, 1, 12));
     const pct = v => (v * 100).toFixed(2) + '%';
-    let haut = true;
+    // Les étiquettes (26/11/2026 : coupées au bord gauche, ou l'une sur l'autre quand deux dates sont proches) : au bord,
+    // alignées vers l'intérieur ; chacune sur la rangée (haut ou bas) la plus libre ; raccourcies si les deux sont prises.
+    const der = { h: -1, b: -1 }, PROCHE = 0.2;
     return `<section class="cf2-frise"><div class="cf2-k">Les grandes dates des 12 prochains mois<i><span class="cf2-auj">aujourd’hui</span>un clic ouvre les grandes dates</i></div>
       <div class="cf2-fr"><div class="axe"></div>
         ${mois.map((m, i) => `<span class="tick" style="left:${pct(pos(iso(m)))}"></span><span class="m${i % 3 ? ' sec' : ''}" style="left:${pct(pos(iso(m)) + 1 / 24)}">${MOIS[m.getMonth()]}</span>`).join('')}
         ${ev.filter(d => d.fin).map(d => `<div class="fen" style="left:${pct(pos(d.le))};width:${pct(pos(d.fin) - pos(d.le))}"></div>`).join('')}
         <div class="auj" style="left:${pct(pos(iso(auj)))}"></div>
-        ${ev.map(d => { const x = d.fin && d.etat.cle === 'encours' ? d.fin : d.le, c = d.etat.cle === 'bientot' || d.etat.cle === 'encours' ? 'or' : 'av', h = haut; haut = !haut;
-          return `<button type="button" class="ev ${c}${h ? '' : ' bas'}" style="left:${pct(pos(x))}" data-cf-dos="dates" title="${esc(d.titre + ' · ' + dfr(x))}"><i></i><span>${esc(d.titre.length > 42 ? d.titre.slice(0, 40) + '…' : d.titre)} · ${esc(dfr(x).slice(0, 5))}</span></button>`; }).join('')}</div></section>`;
+        ${ev.map(d => { const x = d.fin && d.etat.cle === 'encours' ? d.fin : d.le, c = d.etat.cle === 'bientot' || d.etat.cle === 'encours' ? 'or' : 'av', p = pos(x);
+          const libreH = p - der.h >= PROCHE, libreB = p - der.b >= PROCHE, h = libreH || (!libreB && der.h <= der.b); if (h) { der.h = p; } else { der.b = p; }
+          const lim = libreH || libreB ? 42 : 18, bord = p < 0.15 ? ' g' : (p > 0.85 ? ' d' : '');
+          return `<button type="button" class="ev ${c}${h ? '' : ' bas'}${bord}" style="left:${pct(p)}" data-cf-dos="dates" title="${esc(d.titre + ' · ' + dfr(x))}"><i></i><span>${esc(d.titre.length > lim ? d.titre.slice(0, lim - 2) + '…' : d.titre)} · ${esc(dfr(x).slice(0, 5))}</span></button>`; }).join('')}</div></section>`;
   }
   function nav() {
     const PO = (st.d.pieces || {}).parOnglet || {};
@@ -492,4 +496,9 @@
       return lireCoffre(shop).then(d => (d.documents || []).map(x => ({ id: x.id, titre: x.titre, onglet: (d.onglets.find(o => o.cle === x.onglet) || {}).nom || '', nom: x.nom, octets: x.octets })));
     },
   };
+  // Revenir au coffre (le rail, un lien) le relit (26/11/2026 : après « Joindre à un e-mail » et l'envoi, « Qui l'a
+  // ouvert » n'affichait pas « joint à un mail » avant un rechargement de la page).
+  // Seulement en ARRIVANT sur la page (l'évènement part aussi quand l'adresse change sans changer de page).
+  let vuePrec = new URLSearchParams(location.search).get('vue');
+  window.addEventListener('dashboard:vue', e => { const v = e.detail && e.detail.vue; if (v === 'coffre' && vuePrec !== 'coffre' && st.el) { relireTout(); } vuePrec = v; });
 })();

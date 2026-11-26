@@ -39,7 +39,9 @@
       .catch(e => { st.err = e.message; }).finally(rendre);
   }
   function charger() {
-    return lire('/dashboard/boite/automatisations').then(d => { st.d = d; st.err = null; if (!st.form || !modifie()) { st.form = Object.assign({}, d.rappel.reglage); } })
+    // « Modifié » se juge AVANT de prendre le nouvel état (26/11/2026 : comparé au nouvel état, un réglage changé ailleurs —
+    // la fenêtre des Paramètres — gardait l'ancien formulaire et affichait « Modifié · à enregistrer »).
+    return lire('/dashboard/boite/automatisations').then(d => { const touche = !!st.form && modifie(); st.d = d; st.err = null; if (!touche) { st.form = Object.assign({}, d.rappel.reglage); } })
       .catch(e => { st.err = e.message; }).finally(rendre);
   }
   const R = () => (st.d && st.d.rappel) || null;
