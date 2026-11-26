@@ -131,16 +131,16 @@
       ],
       "fichier": "01-05-categories.mp4",
       "debut": 0,
-      "fin": 85.22,
+      "fin": 83.64,
       "affiche": "ops-ventes-categories.jpg",
-      "duree": "1 min 25",
+      "duree": "1 min 24",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "panel/src/stats_ventes.php",
         "marketing/src/promos_ventes.php"
       ],
-      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_sur": "710f014bba38854944d9bccf2ea03916061bab28",
       "tourne_le": "2026-11-26"
     },
     {
@@ -630,14 +630,14 @@
       ],
       "fichier": "01-24-fiche-ventes.mp4",
       "debut": 0,
-      "fin": 65.5,
+      "fin": 65.57,
       "affiche": "barre-fiche-ventes.jpg",
       "duree": "1 min 06",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css"
       ],
-      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_sur": "710f014bba38854944d9bccf2ea03916061bab28",
       "tourne_le": "2026-11-26"
     },
     {
@@ -653,14 +653,14 @@
       ],
       "fichier": "01-25-fiche-prix.mp4",
       "debut": 0,
-      "fin": 69.73,
+      "fin": 69.88,
       "affiche": "barre-fiche-prix.jpg",
       "duree": "1 min 10",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css"
       ],
-      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_sur": "710f014bba38854944d9bccf2ea03916061bab28",
       "tourne_le": "2026-11-26"
     },
     {
@@ -676,16 +676,16 @@
       ],
       "fichier": "01-26-fiche-recette.mp4",
       "debut": 0,
-      "fin": 70.74,
+      "fin": 72.05,
       "affiche": "barre-fiche-recette.jpg",
-      "duree": "1 min 11",
+      "duree": "1 min 12",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "panel/src/prix_produit.php",
         "panel/src/matiere_fiche.php"
       ],
-      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_sur": "710f014bba38854944d9bccf2ea03916061bab28",
       "tourne_le": "2026-11-26"
     },
     {
@@ -700,8 +700,8 @@
         "ops"
       ],
       "fichier": "01-26-fiche-recette.mp4",
-      "debut": 70.74,
-      "fin": 101.61,
+      "debut": 72.05,
+      "fin": 103.31,
       "affiche": "barre-fiche-adapter.jpg",
       "duree": "31 s",
       "sources": [
@@ -710,7 +710,7 @@
         "panel/src/prix_produit.php",
         "panel/src/matiere_fiche.php"
       ],
-      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_sur": "710f014bba38854944d9bccf2ea03916061bab28",
       "tourne_le": "2026-11-26"
     },
     {
@@ -725,8 +725,8 @@
         "ops"
       ],
       "fichier": "01-26-fiche-recette.mp4",
-      "debut": 101.61,
-      "fin": 136.24,
+      "debut": 103.31,
+      "fin": 138.55,
       "affiche": "barre-fiche-relever.jpg",
       "duree": "35 s",
       "sources": [
@@ -735,7 +735,7 @@
         "panel/src/prix_produit.php",
         "panel/src/matiere_fiche.php"
       ],
-      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
+      "tourne_sur": "710f014bba38854944d9bccf2ea03916061bab28",
       "tourne_le": "2026-11-26"
     },
     {
