@@ -11,8 +11,9 @@ use App\Services\Finances\PaymentProof\PaymentProofParser;
 /**
  * [439] Wyciągi bankowe et wpłaty klientów w walucie (Różnice kursowe) :
  *  - wyciąg (PDF) : enregistré chiffré comme les potwierdzenia wpłat (PaymentProofCipher, AES-256-GCM, p1:), texte lu par
- *    pdftotext (chiffré lui aussi), compte EUR / PLN choisi à l'envoi ; lecture par BankStatementParser (ING : format pas
- *    encore pris en charge → fichier gardé, lignes à saisir) ; seuls les crédits en devise deviennent des wpłaty, les
+ *    pdftotext (chiffré lui aussi), compte EUR / PLN choisi à l'envoi ; lecture par BankStatementParser ([444] ING : compte
+ *    EUR lu, totaux de l'en-tête contrôlés ; compte PLN pas encore → fichier gardé, lignes à saisir ; un relevé d'un autre
+ *    compte que celui choisi est refusé) ; seuls les crédits en devise deviennent des wpłaty, les
  *    autres lignes sont comptées ;
  *  - wpłata saisie ou corrigée à la main (date, montant, devise, klient, payeur, titre ; compte PLN : kurs ING ou montant
  *    en zł) ; payeur et titre chiffrés (données du client) ;
@@ -60,6 +61,15 @@ final class BankStatementService
         if ($old = $this->repo->statementBySha($sha)) throw new CustomException('Ten wyciąg jest już wczytany (' . self::ACCOUNTS[$old['account_currency']] . ').', 'errors', 409);
 
         $text = self::pdfText($content);
+        // [444] En-tête lu : un relevé EUR envoyé comme « PLN » (ou l'inverse) est refusé avant d'être enregistré ;
+        // période du relevé si elle n'est pas donnée.
+        $head = $text !== '' ? $this->parser->header($text) : [];
+        $cur = $head['account_currency'] ?? null;
+        if ($cur !== null && $cur !== $account) {
+            throw new CustomException(isset(self::ACCOUNTS[$cur]) ? 'To wyciąg z rachunku ' . $cur . ' (« Waluta rachunku ») — wybierz rachunek ' . $cur . '.'
+                : 'Wyciąg z rachunku ' . $cur . ' : obsługiwane są rachunki EUR i PLN.', 'errors', 422);
+        }
+        if ($from === null && $to === null && !empty($head['period_from']) && !empty($head['period_to'])) [$from, $to] = [$head['period_from'], $head['period_to']];
         $status = 'parsed';
         $message = null;
         $rows = [];

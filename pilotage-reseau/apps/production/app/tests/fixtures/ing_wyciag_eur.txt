@@ -1,0 +1,81 @@
+                                                                                                                   Wyciąg z rachunku
+ING Bank Śląski S.A.
+ul. Sokolska 34
+40-086 Katowice
+
+                                                                                                 FIRMA TESTOWA SPÓŁKA Z OGRANICZONĄ
+                                                                                                                 ODPOWIEDZIALNOŚCIĄ
+                                                                                                      UL. PRZYKŁADOWA 1/1           
+                                                                                                              00-001 TESTÓWO, POLSKA
+Numer wyciągu:             279
+Data wyciągu:              23.11.2026
+Data poprzedniego wyciągu: 21.11.2026
+
+
+
+
+Nr rachunku/NRB:                  00 1050 0000 0000 0000 0000 0001
+Nr rachunku IBAN:                 PL 00 1050 0000 0000 0000 0000 0001                      Waluta rachunku:                                     EUR
+Nazwa rachunku:                   Rachunek OKO Business w EUR                              Nr BIC (SWIFT):                                 INGBPLPW
+Saldo początkowe:                 10 000,00                                                    Przyznany Limit zadłużenia:                            0,00
+Suma uznań (+):                   0,00                         Liczba uznań (+): 0             Kwota zablokowana:                                     0,00
+Suma obciążeń (-):                8 670,00                     Liczba obciążeń (-): 7          Kwota prowizji zaległej:                               0,00
+Saldo końcowe:                    1 330,00                                                     Saldo dostępne:                                   1 330,00 
+
+       Data                    Dane Kontrahenta                      Tytuł operacji                    Szczegóły operacji                    Kwota
+   księgowania
+  Nr transakcji
+    23.11.2026 00 1050 0000 0000 0000 0000 0002              kupno PLN kwota 24211.27 KANTOR                                                    -5 520,00
+  97000000385 FIRMA TESTOWA SPÓŁKA Z                         kurs transakcji 4.3861      Data transakcji: 23.11.2026
+                 OGRANICZONĄ                                 sprzedaż EUR kwota          Ref. END TO END: nie podano
+                 ODPOWIEDZIALNOŚCIĄ                          5520.00
+                 UL. PRZYKŁADOWA 1/1                         FX 70007571
+                 00-001 TESTÓWO
+    23.11.2026 00 1050 0000 0000 0000 0000 0002              kupno PLN kwota 219.68      KANTOR                                                    -50,00
+  97000000386 FIRMA TESTOWA SPÓŁKA Z                         kurs transakcji 4.3936      Data transakcji: 23.11.2026
+                 OGRANICZONĄ                                 sprzedaż EUR kwota 50.00 Ref. END TO END: nie podano
+                 ODPOWIEDZIALNOŚCIĄ                          FX 70009041
+                 UL. PRZYKŁADOWA 1/1           
+                 00-001 TESTÓWO
+    23.11.2026 00 1050 0000 0000 0000 0000 0002              kupno PLN kwota 219.49      KANTOR                                                    -50,00
+  97000000655 FIRMA TESTOWA SPÓŁKA Z                         kurs transakcji 4.3898      Data transakcji: 23.11.2026
+                 OGRANICZONĄ                                 sprzedaż EUR kwota 50.00 Ref. END TO END: nie podano
+                 ODPOWIEDZIALNOŚCIĄ                          FX 70001030
+                 UL. PRZYKŁADOWA 1/1           
+                 00-001 TESTÓWO
+    23.11.2026 00 1050 0000 0000 0000 0000 0002              kupno PLN kwota 219.57      KANTOR                                                    -50,00
+  97000000989 FIRMA TESTOWA SPÓŁKA Z                         kurs transakcji 4.3913      Data transakcji: 23.11.2026
+                 OGRANICZONĄ                                 sprzedaż EUR kwota 50.00 Ref. END TO END: nie podano
+                 ODPOWIEDZIALNOŚCIĄ                          FX 70009922
+                 UL. PRZYKŁADOWA 1/1           
+                 00-001 TESTÓWO
+    23.11.2026 00 1050 0000 0000 0000 0000 0002              kupno PLN kwota 658.77      KANTOR                                                   -150,00
+  97000000981 FIRMA TESTOWA SPÓŁKA Z                         kurs transakcji 4.3918      Data transakcji: 23.11.2026
+                 OGRANICZONĄ                                 sprzedaż EUR kwota 150.00 Ref. END TO END: nie podano
+                 ODPOWIEDZIALNOŚCIĄ                          FX 70009915
+                 UL. PRZYKŁADOWA 1/1           
+                 00-001 TESTÓWO
+    23.11.2026 00 1140 0000 0000 0000 0000 0003              1/09/2026                   PRZELEW W EUR PILNY                                      -850,00
+  97000000254 DOSTAWCA SPZ                                                               ID transakcji: 40000000001
+                 ul. Testowa 2                                                           Ref. END TO END: NOTPROVIDED
+                 00-001                                                                  Opcja kosztowa: SHA
+                 Testowo
+                 PL
+    23.11.2026 00 1050 0000 0000 0000 0000 0002              kupno PLN kwota 8764.60 KANTOR                                                     -2 000,00
+  97000000655 FIRMA TESTOWA SPÓŁKA Z                         kurs transakcji 4.3823      Data transakcji: 23.11.2026
+                 OGRANICZONĄ                                 sprzedaż EUR kwota          Ref. END TO END: nie podano
+                 ODPOWIEDZIALNOŚCIĄ                          2000.00
+                 UL. PRZYK.
+Środki pieniężne zgromadzone     ŁADOWA        
+                              na rachunku           4/29
+                                          bankowym podlegają FX 70007246
+                                                             ochronie gwarancyjnej do wysokości równowartości w złotych 100 000,00 euro w ramach
+                 00-001 TESTÓWO
+obowiązkowego systemu gwarantowania depozytów prowadzonego przez Bankowy Fundusz Gwarancyjny, zgodnie z Ustawą o Bankowym Funduszu Gwarancyjnym,
+systemie gwarantowania depozytów oraz przymusowej restrukturyzacji. Kwota gwarantowana obliczana jest od sumy środków ulokowanych na wszystkich rachunkach
+jednego deponenta w ING Banku. W przypadku rachunku wspólnego kwota gwarantowana ma zastosowanie dla każdego z deponentów oddzielnie. Szczegółowe
+informacje można znaleźć na www.bfg.pl
+
+Dokument wygenerowany elektronicznie, nie wymaga pieczęci ani podpisu. Dokument sporządzony na podstawie art.7
+Ustawy Prawo Bankowe (Dz. U. Nr 72 z 2002 roku, poz. 665 z późniejszymi zmianami).                               Strona     1        z       1
+
