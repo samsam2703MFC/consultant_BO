@@ -57,6 +57,8 @@ function ep_prod_catalogue(): array
 }
 $prive = sys_get_temp_dir() . '/aq-banc-' . getmypid();
 putenv('COCKPIT_PRIVE=' . $prive);
+$public = sys_get_temp_dir() . '/aq-public-' . getmypid();
+putenv('COCKPIT_PUBLIC=' . $public);
 require __DIR__ . '/../src/autocontrole.php';
 
 // Une image PNG de 2 × 2, lisible par getimagesizefromstring.
@@ -207,6 +209,47 @@ $pub = wr_aq_publier();
 verifie('corrigé, il se publie : les tablettes lisent la nouvelle grille', ($pub['ok'] ?? false) && empty(aqGrilles()['aValider']) && aqGrilles()['categories'][0]['quand'] === 'À chaque fournée.');
 verifie('l\'état des grilles pour le siège', ep_aq_grilles()['publiee']['le'] !== null && ep_aq_grilles()['erreurs'] === []);
 
+echo "Standard qualité (manuel des fiches techniques)\n";
+$std = aqStandardCritere($crit['mie_toucher']);
+verifie('mie au toucher : bon = souple ; à surveiller = mou, ferme ; pas bon = très mou, dur',
+    $std['bon'] === ['Souple'] && $std['surveiller'] === ['Mou', 'Ferme'] && $std['pasBon'] === ['Très mou', 'Dur']);
+verifie('oui / non : « retombé » bon = Non, pas bon = Oui', aqStandardCritere($crit['retombe'])['bon'] === ['Non'] && aqStandardCritere($crit['retombe'])['pasBon'] === ['Oui']);
+verifie('mesure : la plage est bonne, hors tolérance à surveiller', aqStandardCritere($crit['poids'])['bon'] === ['380 à 420 g'] && aqStandardCritere($crit['poids'])['surveiller'] === ['Hors tolérance']);
+$sp = aqStandardProduit(['id' => 6700139, 'nom' => 'Cougnou Nature - 400 g.', 'categorie' => 'Cougnou']);
+verifie('le standard du Cougnou : 4 étapes, 17 critères, poids du produit', count($sp['etapes'] ?? []) === 4 && array_sum(array_map(fn ($e) => count($e['criteres']), $sp['etapes'])) === 17
+    && $sp['etapes'][1]['criteres'][5]['bon'] === ['380 à 420 g']);
+$se = aqStandardProduit(['id' => 3100001, 'nom' => 'Miel - Tilleul', 'categorie' => 'Épicerie']);
+verifie('épicerie : la seule étape Présentation', count($se['etapes'] ?? []) === 1 && $se['etapes'][0]['etape'] === 'presentation');
+
+echo "Réglage d'un produit (fiche produit du cockpit)\n";
+$a = ep_aq_produit_admin(1610004);
+verifie('pain au chocolat : grille par mots-clés, rien de forcé', ($a['grille']['cle'] ?? '') === 'viennoiserie' && $a['grille']['forcee'] === false && $a['mesures'] === []);
+$GLOBALS['corps'] = ['categorie' => 'brioche'];
+$w = wr_aq_produit_admin(1610004);
+verifie('grille forcée : brioche, effective tout de suite', ($w['grille']['cle'] ?? '') === 'brioche' && $w['grille']['forcee'] === true && $w['grille']['auto'] === 'viennoiserie'
+    && (aqCategorieDe(aqGrilles(), ['id' => 1610004, 'nom' => 'Pain au Chocolat'])['cle'] ?? '') === 'brioche');
+$GLOBALS['corps'] = ['surcharges' => ['poids' => ['cible' => 90, 'tolerance' => 5], 'odeur' => ['cible' => 1, 'tolerance' => 1]]];
+$w = wr_aq_produit_admin(1610004);
+$poids = array_values(array_filter($w['mesures'] ?? [], fn ($m) => $m['cle'] === 'poids'))[0] ?? [];
+verifie('poids propre au produit : 90 g ± 5, le critère non mesuré est ignoré', ($poids['produit'] ?? []) === ['cible' => 90, 'tolerance' => 5]
+    && !isset($GLOBALS['reglages']['autocontroleProduits']['1610004']['surcharges']['odeur']));
+$GLOBALS['corps'] = ['surcharges' => ['poids' => ['cible' => 90]]];
+verifie('une cible sans tolérance : refusée', str_contains((string) (wr_aq_produit_admin(1610004)['error'] ?? ''), 'ensemble'));
+$GLOBALS['corps'] = ['categorie' => 'inconnue'];
+verifie('une grille inconnue : refusée', (wr_aq_produit_admin(1610004)['error'] ?? '') === 'catégorie de grille inconnue');
+$GLOBALS['corps'] = ['photo' => $png];
+$w = wr_aq_produit_admin(1610004);
+verifie('photo de référence qualité : rangée dans uploads/autocontrole, lue par la tablette', str_starts_with((string) ($w['photo']['qualite'] ?? ''), 'uploads/autocontrole/ref-1610004-')
+    && is_file($public . '/' . $w['photo']['qualite']));
+$_GET = ['shop' => '4', 'produit' => '1610004'];
+verifie('la tablette montre la photo qualité et la grille forcée', (ep_aq_produit()['produit']['photo'] ?? '') === $w['photo']['qualite'] && (ep_aq_produit()['grille']['cle'] ?? '') === 'brioche');
+$GLOBALS['corps'] = ['categorie' => '', 'surcharges' => [], 'photo' => null];
+wr_aq_produit_admin(1610004);
+verifie('tout retiré : le produit n\'a plus de réglage', !isset($GLOBALS['reglages']['autocontroleProduits']['1610004']));
+verifie('le Cougnou garde le poids des grilles d\'exemple', (ep_aq_produit_admin(6700139)['mesures'][0]['produit'] ?? []) === ['cible' => 400, 'tolerance' => 20]);
+verifie('ses derniers contrôles sur 30 jours (sans les essais)', (ep_aq_produit_admin(6700139)['resultats']['n'] ?? 0) === 1);
+verifie('route : GET et PUT /autocontrole/produits/{id}', aqRoute('GET', '/autocontrole/produits/6700139') !== null);
+
 echo "Accès\n";
 $acces = (string) file_get_contents(__DIR__ . '/../../shared/src/acces.php');
 verifie('le franchisé a /autocontrole/magasin, pas les grilles', str_contains($acces, "'/autocontrole/magasin'") && !str_contains($acces, "'/autocontrole/grilles'"));
@@ -217,5 +260,7 @@ verifie('route inconnue sous /autocontrole : 404 du routeur', aqRoute('GET', '/a
 // Ménage du dossier privé temporaire.
 foreach (glob($prive . '/autocontrole/*') ?: [] as $f) { @unlink($f); }
 @rmdir($prive . '/autocontrole'); @rmdir($prive);
+foreach (glob($public . '/uploads/autocontrole/*') ?: [] as $f) { @unlink($f); }
+@rmdir($public . '/uploads/autocontrole'); @rmdir($public . '/uploads'); @rmdir($public);
 echo "\n$ok ok, $ko KO\n";
 exit($ko ? 1 : 0);

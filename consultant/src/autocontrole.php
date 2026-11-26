@@ -248,9 +248,32 @@ function aqGrilles(bool $publiees = true): array
 {
     $pub = setting(AQ_REGLAGE_PUBLIE, null);
     $pub = is_array($pub) && !empty($pub['categories']) ? $pub : array_merge(aqGraine(), ['aValider' => true]);
-    if ($publiees) { return $pub; }
-    $br = setting(AQ_REGLAGE, null);
-    return is_array($br) && !empty($br['categories']) ? $br : $pub;
+    if (!$publiees) {
+        $br = setting(AQ_REGLAGE, null);
+        $pub = is_array($br) && !empty($br['categories']) ? $br : $pub;
+    }
+    $pub['produits'] = aqProduitsFusion((array) ($pub['produits'] ?? []));
+    return $pub;
+}
+
+/**
+ * Les réglages par produit (fiche produit du cockpit, onglet Qualité) : [pid => {categorie, surcharges, photo}].
+ * Ils prennent effet tout de suite, sans publication : ils ne touchent qu'un produit, et la grille reste celle publiée.
+ */
+const AQ_REGLAGE_PRODUITS = 'autocontroleProduits';
+function aqProduitsReglages(): array
+{
+    $r = setting(AQ_REGLAGE_PRODUITS, []);
+    return is_array($r) ? $r : [];
+}
+
+/** Les réglages d'exemple des grilles, puis ceux posés dans les fiches produit, qui l'emportent. */
+function aqProduitsFusion(array $base): array
+{
+    foreach (aqProduitsReglages() as $pid => $r) {
+        if (is_array($r)) { $base[(string) $pid] = array_merge((array) ($base[(string) $pid] ?? []), $r); }
+    }
+    return $base;
 }
 
 /** Minuscules sans accents, pour rapprocher une catégorie du catalogue des mots-clés d'une grille. */
@@ -464,7 +487,7 @@ function ep_aq_produit(): array
     $grille = aqGrilleProduit($cat, (array) ($g['communs'] ?? []), (array) ($g['produits'][(string) $pid]['surcharges'] ?? []));
     $histo = aqHistorique($shop, $pid, 7);
     return ['magasin' => ['id' => $shop, 'nom' => function_exists('accesNomMagasin') ? accesNomMagasin($shop) : $shop],
-        'produit' => $p + ['photo' => aqPhotoReference($p['ref'], (int) $shop)],
+        'produit' => $p + ['photo' => aqPhotoProduit($p, (int) $shop, $g)],
         'grille' => $grille, 'etapes' => (array) ($g['etapes'] ?? []), 'decisions' => (array) ($g['decisions'] ?? []),
         'aValider' => !empty($g['aValider']), 'planogramme' => aqPlanogramme($p['ref']),
         'historique' => $histo, 'recurrents' => aqRecurrents($histo, 3)];
@@ -551,6 +574,183 @@ function aqPhotoSortir(int $id): never
     exit;
 }
 
+/* ── Le standard qualité d'un produit : ce qui est regardé, ce qui est bon, ce qui ne l'est pas ──────────────── */
+
+/** Un critère, lu comme un standard : les réponses bonnes, à surveiller et pas bonnes, par leur libellé. */
+function aqStandardCritere(array $c): array
+{
+    $bon = []; $surveiller = []; $pasBon = [];
+    $ranger = function (string $niv, string $lib) use (&$bon, &$surveiller, &$pasBon): void {
+        if ($niv === 'ok') { $bon[] = $lib; } elseif ($niv === 'majeur') { $pasBon[] = $lib; } else { $surveiller[] = $lib; }
+    };
+    $type = (string) ($c['type'] ?? '');
+    if ($type === 'echelle') {
+        foreach ((array) ($c['options'] ?? []) as $o) { $ranger((string) ($o['niveau'] ?? 'mineur'), (string) ($o['libelle'] ?? '')); }
+    } elseif ($type === 'oui_non') {
+        $att = (string) ($c['attendu'] ?? 'oui');
+        $autre = $att === 'oui' ? 'non' : 'oui';
+        $ranger('ok', $att === 'oui' ? 'Oui' : 'Non');
+        $ranger((string) ($c[$autre]['niveau'] ?? 'mineur'), $autre === 'oui' ? 'Oui' : 'Non');
+    } elseif ($type === 'mesure') {
+        $u = (string) ($c['unite'] ?? '');
+        $ranger('ok', isset($c['minimum']) ? $c['minimum'] . ' ' . $u . ' minimum'
+            : ((float) $c['cible'] - (float) $c['tolerance']) . ' à ' . ((float) $c['cible'] + (float) $c['tolerance']) . ' ' . $u);
+        $ranger((string) ($c['hors']['niveau'] ?? 'mineur'), 'Hors tolérance');
+    }
+    return ['libelle' => (string) ($c['libelle'] ?? ''), 'aide' => (string) ($c['aide'] ?? ''), 'facultatif' => !empty($c['facultatif']),
+        'bon' => $bon, 'surveiller' => $surveiller, 'pasBon' => $pasBon];
+}
+
+/** Le standard d'une grille, étape par étape (les étapes sans critère sont omises). */
+function aqStandard(array $grille, array $etapes): array
+{
+    $titres = [];
+    foreach ($etapes as $e) { $titres[(string) ($e['cle'] ?? '')] = (string) ($e['titre'] ?? ''); }
+    $out = [];
+    foreach (AQ_ETAPES as $e) {
+        $cs = array_values(array_filter((array) ($grille['criteres'] ?? []), static fn ($c) => ($c['etape'] ?? '') === $e));
+        if (!$cs) { continue; }
+        $out[] = ['etape' => $e, 'titre' => $titres[$e] ?? $e, 'photo' => (string) ($grille['photos'][$e] ?? 'facultative'),
+            'consigne' => (string) ($grille['consignes_photo'][$e] ?? ''), 'criteres' => array_map('aqStandardCritere', $cs)];
+    }
+    return $out;
+}
+
+/**
+ * Le standard qualité d'un produit du catalogue ({id, nom, categorie, groupe}) selon les grilles publiées : lu par le
+ * manuel « Fiches techniques » (formation/src/fiches_techniques.php). null : les grilles sont illisibles.
+ */
+function aqStandardProduit(array $produit): ?array
+{
+    static $g = null;
+    try { $g ??= aqGrilles(); } catch (Throwable $e) { return null; }
+    $cat = aqCategorieDe($g, $produit) ?? ['cle' => '', 'libelle' => 'Tous les produits', 'photos' => []];
+    $grille = aqGrilleProduit($cat, (array) ($g['communs'] ?? []), (array) ($g['produits'][(string) ($produit['id'] ?? '')]['surcharges'] ?? []));
+    return ['grille' => $grille['libelle'], 'quand' => $grille['quand'], 'aValider' => !empty($g['aValider']),
+        'etapes' => aqStandard($grille, (array) ($g['etapes'] ?? []))];
+}
+
+/* ── Le réglage d'un produit, dans sa fiche du cockpit ───────────────────────────────────────────────────── */
+
+/** La racine du site assemblé (COCKPIT_PUBLIC pour les tests) : uploads/ n'y est jamais touché par la livraison. */
+function aqRacinePublique(): string
+{
+    return rtrim((string) (getenv('COCKPIT_PUBLIC') ?: dirname(__DIR__, 2) . '/public'), '/');
+}
+
+/** Le dossier public des photos de référence qualité. */
+function aqDossierReferences(): string
+{
+    $d = aqRacinePublique() . '/uploads/autocontrole';
+    if (!is_dir($d)) { @mkdir($d, 0775, true); }
+    return $d;
+}
+
+/** La photo de référence d'un produit : celle posée pour la qualité, sinon celle du catalogue. Chemin sous le site. */
+function aqPhotoProduit(array $p, int $shop, array $g): ?string
+{
+    $q = (string) ($g['produits'][(string) $p['id']]['photo'] ?? '');
+    if ($q !== '' && is_file(aqRacinePublique() . '/' . $q)) { return $q; }
+    return aqPhotoReference((string) $p['ref'], $shop);
+}
+
+/** GET /autocontrole/produits/{pid} — la grille du produit, ses réglages, son standard et ses derniers contrôles. */
+function ep_aq_produit_admin(int $pid): array
+{
+    $p = aqCatalogue()[$pid] ?? null;
+    if ($p === null) { http_response_code(404); return ['error' => 'produit inconnu du catalogue']; }
+    $g = aqGrilles();
+    $reg = (array) ($g['produits'][(string) $pid] ?? []);
+    $force = (string) ($reg['categorie'] ?? '');
+    $auto = aqCategorieDe(array_merge($g, ['produits' => []]), $p);
+    $cat = aqCategorieDe($g, $p) ?? ['cle' => '', 'libelle' => 'Tous les produits', 'photos' => []];
+    $grille = aqGrilleProduit($cat, (array) ($g['communs'] ?? []), (array) ($reg['surcharges'] ?? []));
+    // Les critères mesurés, avec les valeurs de la grille et celles du produit : ce que la fiche peut régler.
+    $base = aqGrilleProduit($cat, (array) ($g['communs'] ?? []), []);
+    $mesures = [];
+    foreach ($base['criteres'] as $c) {
+        if (($c['type'] ?? '') !== 'mesure') { continue; }
+        $mesures[] = ['cle' => $c['cle'], 'libelle' => $c['libelle'], 'unite' => $c['unite'] ?? '',
+            'grille' => ['cible' => $c['cible'] ?? null, 'tolerance' => $c['tolerance'] ?? null, 'minimum' => $c['minimum'] ?? null],
+            'produit' => (array) ($reg['surcharges'][$c['cle']] ?? [])];
+    }
+    aqTables();
+    $rows = Db::rows('SELECT shop_id, niveau, decision, ecarts, bilan, cree_le FROM con_aq_controle WHERE produit_id = ? AND essai = 0 AND cree_le >= ? ORDER BY cree_le DESC, id DESC',
+        [$pid, date('Y-m-d 00:00:00', strtotime('-29 days'))]);
+    $noms = function_exists('accesMagasins') ? accesMagasins() : [];
+    $controles = array_map(static function ($r) use ($noms) {
+        $b = json_decode((string) $r['bilan'], true) ?: [];
+        return ['magasin' => $noms[(string) $r['shop_id']] ?? ('Magasin ' . $r['shop_id']), 'niveau' => (string) $r['niveau'],
+            'decision' => (string) $r['decision'], 'nbEcarts' => (int) $r['ecarts'], 'ecarts' => (array) ($b['ecarts'] ?? []), 'cree_le' => (string) $r['cree_le']];
+    }, $rows);
+    $photoQualite = (string) ($reg['photo'] ?? '');
+    return ['produit' => $p, 'aValider' => !empty($g['aValider']),
+        'categories' => array_map(static fn ($c) => ['cle' => (string) $c['cle'], 'libelle' => (string) $c['libelle']], (array) ($g['categories'] ?? [])),
+        'grille' => ['cle' => $grille['cle'], 'libelle' => $grille['libelle'], 'forcee' => $force !== '', 'auto' => $auto['cle'] ?? null, 'autoNom' => $auto['libelle'] ?? null],
+        'mesures' => $mesures, 'standard' => aqStandard($grille, (array) ($g['etapes'] ?? [])),
+        'photo' => ['qualite' => $photoQualite !== '' ? $photoQualite : null, 'catalogue' => aqPhotoReference($p['ref'], 0)],
+        'resultats' => ['n' => count($controles), 'conformes' => count(array_filter($controles, static fn ($k) => $k['niveau'] === 'ok')),
+            'derniers' => array_slice($controles, 0, 6), 'recurrents' => aqRecurrents($controles, 3)]];
+}
+
+/**
+ * PUT /autocontrole/produits/{pid} {categorie: ''|cle, surcharges: {cle: {cible, tolerance, minimum}}, photo: data-URL |
+ * null pour la retirer | absent pour la garder} — le réglage du produit, effectif tout de suite.
+ */
+function wr_aq_produit_admin(int $pid): array
+{
+    $p = aqCatalogue()[$pid] ?? null;
+    if ($p === null) { http_response_code(404); return ['error' => 'produit inconnu du catalogue']; }
+    $b = body();
+    $g = aqGrilles();
+    $tous = aqProduitsReglages();
+    $reg = (array) ($tous[(string) $pid] ?? []);
+    $reg['nom'] = $p['nom'];
+    if (array_key_exists('categorie', $b)) {
+        $cle = (string) ($b['categorie'] ?? '');
+        $connues = array_map(static fn ($c) => (string) $c['cle'], (array) ($g['categories'] ?? []));
+        if ($cle !== '' && !in_array($cle, $connues, true)) { http_response_code(422); return ['error' => 'catégorie de grille inconnue']; }
+        if ($cle === '') { unset($reg['categorie']); } else { $reg['categorie'] = $cle; }
+    }
+    if (array_key_exists('surcharges', $b)) {
+        $cat = aqCategorieDe(array_merge($g, ['produits' => [(string) $pid => $reg]]), $p) ?? ['criteres' => []];
+        $mesures = [];
+        foreach (array_merge((array) ($cat['criteres'] ?? []), (array) ($g['communs']['criteres'] ?? [])) as $c) {
+            if (($c['type'] ?? '') === 'mesure') { $mesures[(string) $c['cle']] = true; }
+        }
+        $sur = [];
+        foreach ((array) $b['surcharges'] as $cle => $v) {
+            if (!isset($mesures[(string) $cle]) || !is_array($v)) { continue; }
+            $x = [];
+            foreach (['cible', 'tolerance', 'minimum'] as $k) {
+                if (isset($v[$k]) && $v[$k] !== '' && $v[$k] !== null) {
+                    if (!is_numeric($v[$k]) || (float) $v[$k] < 0) { http_response_code(422); return ['error' => "valeur invalide : $cle · $k"]; }
+                    $x[$k] = (float) $v[$k] == (int) $v[$k] ? (int) $v[$k] : (float) $v[$k];
+                }
+            }
+            if (isset($x['cible']) !== isset($x['tolerance'])) { http_response_code(422); return ['error' => "$cle : une cible et sa tolérance, ensemble"]; }
+            if ($x) { $sur[(string) $cle] = $x; }
+        }
+        if ($sur) { $reg['surcharges'] = $sur; } else { unset($reg['surcharges']); }
+    }
+    if (array_key_exists('photo', $b)) {
+        if ($b['photo'] === null || $b['photo'] === '') { unset($reg['photo']); }
+        else {
+            $im = aqImage((string) $b['photo']);
+            if (isset($im['code'])) { http_response_code($im['code']); return ['error' => $im['error']]; }
+            [$bin, , $ext] = $im;
+            $f = 'ref-' . $pid . '-' . bin2hex(random_bytes(5)) . '.' . $ext;
+            if (@file_put_contents(aqDossierReferences() . '/' . $f, $bin) === false) { http_response_code(500); return ['error' => 'photo non enregistrée'];  }
+            $reg['photo'] = 'uploads/autocontrole/' . $f;
+        }
+    }
+    $reste = array_diff(array_keys($reg), ['nom']);
+    if ($reste) { $tous[(string) $pid] = $reg; } else { unset($tous[(string) $pid]); }
+    settingEcrire(AQ_REGLAGE_PRODUITS, $tous);
+    if (function_exists('journalAdd')) { journalAdd(function_exists('psAuteur') ? psAuteur() : 'Siège', 'autocontrole', null, 'Autocontrôle : réglage de ' . $p['nom']); }
+    return ['ok' => true] + ep_aq_produit_admin($pid);
+}
+
 /* ── Les routes du siège ─────────────────────────────────────────────────────────────────────────────────── */
 
 /** GET /autocontrole/grilles — le brouillon, la version publiée, et ce qui empêche de publier. */
@@ -583,7 +783,8 @@ function wr_aq_grilles(): array
     $doc = aqGraine();
     $doc['categories'] = array_values($b['categories']);
     $doc['communs'] = $b['communs'];
-    $doc['produits'] = is_array($b['produits'] ?? null) ? $b['produits'] : ($doc['produits'] ?? []);
+    // Les réglages par produit ne vivent plus dans le brouillon : ils se posent dans la fiche produit (aqProduitsReglages).
+    $doc['produits'] = aqGraine()['produits'] ?? [];
     unset($doc['aValider']);
     $doc['majLe'] = date('Y-m-d H:i:s');
     settingEcrire(AQ_REGLAGE, $doc);
@@ -661,5 +862,9 @@ function aqRoute(string $method, string $path): ?array
     if ($method === 'PUT' && $path === '/autocontrole/grilles') { return wr_aq_grilles(); }
     if ($method === 'POST' && $path === '/autocontrole/grilles/publication') { return wr_aq_publier(); }
     if ($method === 'GET' && $path === '/autocontrole/controles') { return ep_aq_controles(); }
+    if (preg_match('#^/autocontrole/produits/(\d+)$#', $path, $m)) {
+        if ($method === 'GET') { return ep_aq_produit_admin((int) $m[1]); }
+        if ($method === 'PUT') { return wr_aq_produit_admin((int) $m[1]); }
+    }
     return null;
 }
