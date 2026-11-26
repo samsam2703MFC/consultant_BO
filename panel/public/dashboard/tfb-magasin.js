@@ -15,15 +15,30 @@
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const cle = shop => 'tfb-magasin:' + shop;
   const maintenant = () => Math.floor(Date.now() / 1000);
+  /**
+   * L'échéance de session en secondes absolues (26/11/2026, « la session n'a pas pu être gardée ») : une durée (43 200)
+   * devient maintenant + durée, des millisecondes deviennent des secondes ; une valeur illisible : pas d'échéance.
+   */
+  const echeance = v => { const n = Number(v); if (!isFinite(n) || n <= 0) { return null; } if (n > 1e12) { return Math.floor(n / 1000); } if (n < 1e9) { return maintenant() + Math.floor(n); } return Math.floor(n); };
+  /** Où la session se garde : localStorage, sinon sessionStorage, sinon la mémoire de la page (perdue au rechargement). */
+  const memoire = {};
+  const magasins = () => { const l = []; try { l.push(window.localStorage); } catch (e) { /* refusé */ } try { l.push(window.sessionStorage); } catch (e) { /* refusé */ } return l.filter(Boolean); };
+  const lireBrut = shop => { for (const m of magasins()) { try { const v = m.getItem(cle(shop)); if (v) { return v; } } catch (e) { /* suivant */ } } return memoire[cle(shop)] || null; };
   const lire = shop => {
-    try {
-      const s = JSON.parse(localStorage.getItem(cle(shop)) || 'null');
-      if (!s || !s.acces) { return null; }
-      if (s.expireSession && s.expireSession < maintenant()) { localStorage.removeItem(cle(shop)); return null; }
-      return s;
-    } catch (e) { return null; }
+    let s = null;
+    try { s = JSON.parse(lireBrut(shop) || 'null'); } catch (e) { s = null; }
+    if (!s || !s.acces) { return null; }
+    if (s.expireSession && s.expireSession > 1e9 && s.expireSession < maintenant()) { ecrire(shop, null); return null; }
+    return s;
   };
-  const ecrire = (shop, j) => { try { if (j) { localStorage.setItem(cle(shop), JSON.stringify(j)); } else { localStorage.removeItem(cle(shop)); } } catch (e) { /* stockage refusé */ } };
+  const ecrire = (shop, j) => {
+    const v = j ? JSON.stringify(Object.assign({}, j, { expireSession: echeance(j.expireSession) })) : null;
+    let ok = false;
+    for (const m of magasins()) {
+      try { if (v) { m.setItem(cle(shop), v); ok = true; break; } m.removeItem(cle(shop)); } catch (e) { /* stockage refusé : le suivant */ }
+    }
+    if (v && !ok) { memoire[cle(shop)] = v; } else if (!v) { delete memoire[cle(shop)]; }
+  };
   const poster = (api, p, corps) => fetch(api + p, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(corps) })
     .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok) { const e = new Error(j.error || ('erreur ' + r.status)); e.code = r.status; e.expire = !!j.expire; e.tfb = j.code || null; e.attente = !!j.attente; throw e; } return j; }));
   const enCours = {};
@@ -106,7 +121,7 @@
      */
     const fini = j => {
       ecrire(shop, j);
-      if (!lire(shop)) { st.err = 'la session n’a pas pu être gardée dans ce navigateur (stockage local refusé ?)'; return null; }
+      if (!lire(shop)) { st.err = 'la session n’a pas pu être gardée dans ce navigateur (détail : ' + JSON.stringify({ expireSession: j && j.expireSession, expireAcces: j && j.expireAcces, maintenant: maintenant(), acces: !!(j && j.acces) }) + ')'; return null; }
       st.info = 'Connecté. Vérification de l’accès au magasin…'; rendre();
       return window.DashTfb.controler(shop, api).then(d => {
         if (d && d.recu && d.tfbuddy && d.tfbuddy.code >= 200 && d.tfbuddy.code < 300) { fermerOk(); return; }
