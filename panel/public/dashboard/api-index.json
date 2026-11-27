@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-27T13:56:29Z",
+ "genere": "2026-11-27T16:46:39Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1469,8 +1469,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1767",
-    "equipe.js:1783"
+    "equipe.js:1784",
+    "equipe.js:1800"
    ],
    "magasin": true,
    "routes": [
@@ -1512,8 +1512,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1251",
-    "equipe.js:1287"
+    "equipe.js:1252",
+    "equipe.js:1288"
    ],
    "magasin": true,
    "routes": [
@@ -1534,7 +1534,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:308",
+    "equipe.js:309",
     "equipe.js:91"
    ],
    "magasin": true,
@@ -1556,8 +1556,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1325",
-    "equipe.js:1367"
+    "equipe.js:1326",
+    "equipe.js:1368"
    ],
    "magasin": true,
    "routes": [
@@ -1578,7 +1578,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1377"
+    "equipe.js:1378"
    ],
    "magasin": true,
    "routes": [
@@ -1599,7 +1599,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1332"
+    "equipe.js:1333"
    ],
    "magasin": true,
    "routes": [
@@ -1620,7 +1620,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1333"
+    "equipe.js:1334"
    ],
    "magasin": true,
    "routes": [
@@ -1641,7 +1641,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1654",
+    "equipe.js:1667",
     "equipe.js:83"
    ],
    "magasin": true,
@@ -1663,7 +1663,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:325"
+    "equipe.js:326"
    ],
    "magasin": true,
    "routes": [
@@ -1684,7 +1684,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:266"
+    "equipe.js:267"
    ],
    "magasin": true,
    "routes": [
@@ -1705,7 +1705,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1294"
+    "equipe.js:1295"
    ],
    "magasin": true,
    "routes": [
@@ -1726,7 +1726,7 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1086"
+    "equipe.js:1087"
    ],
    "magasin": true,
    "routes": [
@@ -1743,6 +1743,28 @@
   },
   {
    "chemin": "/dashboard/equipe/semaine/generer",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "equipe.js:1184",
+    "equipe.js:903"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/equipe…",
+     "handler": "eqpRoute",
+     "source": "panel/src/equipe.php:135",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/equipe/semaine/recopie",
    "methodes": [
     "GET"
    ],
@@ -1764,34 +1786,12 @@
    ]
   },
   {
-   "chemin": "/dashboard/equipe/semaine/recopie",
-   "methodes": [
-    "GET"
-   ],
-   "fichiers": [
-    "equipe.js:1182",
-    "equipe.js:901"
-   ],
-   "magasin": true,
-   "routes": [
-    {
-     "methodes": [
-      "GET"
-     ],
-     "chemin": "/dashboard/equipe…",
-     "handler": "eqpRoute",
-     "source": "panel/src/equipe.php:135",
-     "resume": ""
-    }
-   ]
-  },
-  {
    "chemin": "/dashboard/equipe/semaine/retirer",
    "methodes": [
     "GET"
    ],
    "fichiers": [
-    "equipe.js:736"
+    "equipe.js:737"
    ],
    "magasin": true,
    "routes": [
@@ -1812,8 +1812,8 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:1163",
-    "equipe.js:903"
+    "equipe.js:1164",
+    "equipe.js:904"
    ],
    "magasin": true,
    "routes": [
@@ -1834,7 +1834,28 @@
     "GET"
    ],
    "fichiers": [
-    "equipe.js:879"
+    "equipe.js:880"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/equipe…",
+     "handler": "eqpRoute",
+     "source": "panel/src/equipe.php:135",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/equipe/statut",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "equipe.js:1808"
    ],
    "magasin": true,
    "routes": [

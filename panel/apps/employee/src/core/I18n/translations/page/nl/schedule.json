@@ -1,4 +1,8 @@
 {
+  "absence_circ": "Klein verlet",
+  "absence_cp": "Betaald verlof",
+  "absence_maladie": "Ziekte",
+  "absence_nonpaye": "Afwezigheid",
   "back_this_week": "terug naar deze week",
   "coming_soon": "binnenkort",
   "day_off": "Vrij",
@@ -11,6 +15,7 @@
   "no_shift_week": "Geen dienst deze week.",
   "on_shift": "In dienst",
   "prev_week": "Vorige week",
+  "replacement": "vervanging",
   "scale": "De balk: de dag, van {a}u tot {b}u.",
   "schedule": "Rooster",
   "schedule_unavailable": "Het rooster kan nu niet gelezen worden.",

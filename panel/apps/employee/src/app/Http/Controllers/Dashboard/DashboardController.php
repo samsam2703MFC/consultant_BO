@@ -51,7 +51,7 @@ class DashboardController extends Controller
         try {
             $auj = date('Y-m-d');
             foreach ($this->scheduleService->getForMe($auj, $auj) as $s) {
-                if ($s->getWorkDate() === $auj) { $service = ['debut' => substr((string) $s->getStartHour(), 0, 5), 'fin' => substr((string) $s->getEndHour(), 0, 5)]; break; }
+                if ($s->getWorkDate() === $auj && $s->getAbsence() === null) { $service = ['debut' => substr((string) $s->getStartHour(), 0, 5), 'fin' => substr((string) $s->getEndHour(), 0, 5)]; break; }
             }
         } catch (\Throwable $e) { $service = null; }
         $data['service'] = $service;

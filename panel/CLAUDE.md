@@ -24,6 +24,8 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   **Les absences** (`src/equipe_absences.php`, 27/11/2026, module principal) : sous contrat de travail, une absence payée (maladie, congé payé,
   circonstance) **garde son service au panel** (son coût reste partout, Résultat compris) et sort de la présence ; le remplaçant aux mêmes heures
   est un vrai service (son coût s'ajoute) ou un extérieur connu du cockpit ; seule l'absence non payée retire le service du panel.
+  Une maladie suit le salaire garanti (30 jours, puis la mutuelle ; employé·e ou ouvrier·ère : `panel_equipe_statut`, dans la fiche) ;
+  l'app employés montre l'absence à la place du service. Pas de solde des congés (Sam, 27/11/2026 : « non »).
 - **Commandes** (`src/commandes_tournees.php`, `public/dashboard/commandes.js`, 24/11/2026) : les commandes du jour
   (webshop, comptoir, bureau) liées aux tournées et aux bureaux à livrer ; deux vues, Liste et Tournées, sur un
   interrupteur à l'Abricot de la marque (Sam : « A et B on toggle (apricot) »), au jour, à la semaine et au mois

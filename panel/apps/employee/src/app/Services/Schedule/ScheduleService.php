@@ -57,7 +57,7 @@ class ScheduleService {
         $aujourdhui = date('Y-m-d', $maintenant);
         if ($semaine['prochain'] === null && $dimanche >= $aujourdhui) {
             $suite = $this->getForMe(max($aujourdhui, date('Y-m-d', strtotime($dimanche . ' +1 day'))), date('Y-m-d', strtotime($aujourdhui . ' +15 days')));
-            $semaine['prochain'] = self::prochain(self::services($suite), $maintenant);
+            $semaine['prochain'] = self::prochain(array_values(array_filter(self::services($suite), static fn ($s) => $s['absence'] === null)), $maintenant);
         }
         $semaine['indisponible'] = $this->panne;
         return $semaine;
@@ -83,7 +83,8 @@ class ScheduleService {
             $sv = array_values(array_filter($services, static fn ($s) => $s['date'] === $d));
             $jour = ['date' => $d, 'aujourdhui' => $d === $aujourdhui, 'passe' => $d < $aujourdhui, 'services' => [], 'maintenant' => null];
             foreach ($sv as $s) {
-                $minutes += $s['duree'];
+                // Une absence (27/11/2026) : montrée à sa place, pas comptée dans les heures travaillées.
+                if ($s['absence'] === null) { $minutes += $s['duree']; }
                 $jour['services'][] = $s + [
                     'gauche' => round(100 * ($s['de'] - $bas) / ($haut - $bas), 2),
                     'largeur' => round(min(100 * $s['duree'] / ($haut - $bas), 100 - 100 * ($s['de'] - $bas) / ($haut - $bas)), 2),
@@ -100,13 +101,15 @@ class ScheduleService {
         return ['lundi' => $lundi, 'dimanche' => $dimanche, 'numero' => (int) date('W', strtotime($lundi)),
             'courante' => $lundi === date('Y-m-d', strtotime('-' . ($n - 1) . ' days', $maintenant)),
             'prec' => date('Y-m-d', strtotime($lundi . ' -7 days')), 'suiv' => date('Y-m-d', strtotime($lundi . ' +7 days')),
-            'jours' => $jours, 'minutes' => $minutes, 'nbServices' => count($services),
+            'jours' => $jours, 'minutes' => $minutes, 'nbServices' => count(array_filter($services, static fn ($s) => $s['absence'] === null)),
+            'absences' => count(array_filter($services, static fn ($s) => $s['absence'] !== null)),
             'repos' => count(array_filter($jours, static fn ($j) => $j['services'] === [])),
             'axe' => ['de' => intdiv($bas, 60), 'a' => intdiv($haut, 60)],
-            'prochain' => self::prochain($services, $maintenant)];
+            'prochain' => self::prochain(array_values(array_filter($services, static fn ($s) => $s['absence'] === null)), $maintenant)];
     }
 
-    /** Les services lus, triés : {date, debut « 07:00 », fin, de (minutes depuis minuit), duree (minutes), shop, shopNom}. */
+    /** Les services lus, triés : {date, debut « 07:00 », fin, de (minutes depuis minuit), duree (minutes), shop, shopNom,
+     *  absence (maladie, cp, circ, nonpaye ou null), remplacement}. */
     private static function services(array $entrees): array
     {
         $out = [];
@@ -118,7 +121,8 @@ class ScheduleService {
             // Un service qui passe minuit finit le lendemain.
             $duree = ($a - $de + 1440) % 1440;
             $out[] = ['date' => $date, 'debut' => substr((string) $e->getStartHour(), 0, 5), 'fin' => substr((string) $e->getEndHour(), 0, 5),
-                'de' => $de, 'duree' => $duree, 'shop' => $e->getIdShop(), 'shopNom' => (string) ($e->getShopName() ?? '')];
+                'de' => $de, 'duree' => $duree, 'shop' => $e->getIdShop(), 'shopNom' => (string) ($e->getShopName() ?? ''),
+                'absence' => $e->getAbsence(), 'remplacement' => $e->isRemplacement()];
         }
         usort($out, static fn ($x, $y) => [$x['date'], $x['de']] <=> [$y['date'], $y['de']]);
         return $out;
