@@ -349,7 +349,8 @@
   function resumeBureaux() {
     const B = st.b, d = B.d, D = B.dev, ok = d && d.ok;
     const A = D ? D.demandes.filter(x => x.statut === 'a_valider') : [], Bx = ok ? d.data.bureaux : [];
-    const Hko = D ? D.demandes.filter(x => x.source === 'hors_zone' && (x.d || {})._tfbuddy !== 'ok') : [];
+    // Une demande hors zone reprise en bureau quitte « À corriger », comme elle quitte la liste.
+    const Hko = D ? D.demandes.filter(x => x.source === 'hors_zone' && x.statut === 'hors_zone' && (x.d || {})._tfbuddy !== 'ok') : [];
     if (!D && !ok) { return ''; }
     const L = A.map(x => x.erreurs.length ? { sig: 'stop', txt: `${esc(x.bureau)} : à reprendre dans TF Buddy`, titre: x.erreurs.join(' · '), attr: `data-act="dev-sel" data-id="${x.id}"` }
       : { sig: 'prize', txt: `${esc(x.bureau)} : à valider`, titre: 'Ouvrir la demande : créer le bureau dans TF Buddy', attr: `data-act="dev-sel" data-id="${x.id}"` })

@@ -521,7 +521,9 @@ function bdvHorsZoneEnregistrer(string $shop, array $d, string $ipHash): array
         $d['_tfbuddy'] = 'refus';
         $motif = 'la page du webshop n’a pas pu la remettre à TF Buddy';
     }
-    $deja = Db::row('SELECT id FROM panel_bureau_dev WHERE source = "hors_zone" AND donnees LIKE ? AND cree_le > DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY id DESC LIMIT 1',
+    // Seule une copie encore ouverte se met à jour : une copie reprise garde sa trace et son magasin, un nouvel envoi
+    // arrive alors comme une nouvelle demande ouverte.
+    $deja = Db::row('SELECT id FROM panel_bureau_dev WHERE source = "hors_zone" AND statut = "hors_zone" AND donnees LIKE ? AND cree_le > DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY id DESC LIMIT 1',
         ['%"request_key":"' . $d['request_key'] . '"%']);
     $json = json_encode($d, JSON_UNESCAPED_UNICODE);
     if ($deja !== null) {

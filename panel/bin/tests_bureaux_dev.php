@@ -14,8 +14,11 @@ final class Db
     public static array $exec = [];
     /** La ligne que rend row() (null par défaut : aucune ligne en base). */
     public static ?array $ligne = null;
+    /** Une base simulée : si posée, row() lui demande la ligne (sql, paramètres) au lieu de rendre $ligne. */
+    public static $base = null;
     public static function rows(string $sql, array $a = []): array { return []; }
-    public static function row(string $sql, array $a = []): ?array { return self::$ligne; }
+    public static function row(string $sql, array $a = []): ?array { return self::$base ? (self::$base)($sql, $a) : self::$ligne; }
+    public static function pdo(): object { return new class { public function lastInsertId(): string { return '77'; } }; }
     public static function exec(string $sql, array $a = []): int { self::$exec[] = [$sql, $a]; return 1; }
 }
 final class ErpApi
@@ -149,6 +152,17 @@ $a = bdvHorsZoneReprendre('2', 9, 16);
 Db::$ligne = null;
 $b = bdvHorsZoneReprendre('2', 9, 16);
 verifie('reprise : déjà reprise ou absente, rien ne bouge', $a === false && $b === false && $sql('UPDATE') === []);
+// Un visiteur renvoie la même demande (même request_key) après que le magasin l'a reprise : la copie reprise garde sa
+// trace et son magasin ; le nouvel envoi arrive comme une demande ouverte. La base simulée ne rend la copie reprise
+// qu'à une recherche qui ne la filtre pas sur le statut ouvert.
+$repris = ['statut' => 'reprise', 'donnees' => '{"cp":"1370","request_key":"cle12345","_reprise":15}'] + $hz;
+Db::$exec = []; Db::$ligne = null;
+Db::$base = static fn (string $q, array $a) => str_contains($q, 'donnees LIKE') && !str_contains($q, 'statut = "hors_zone"') ? $repris : null;
+[$dr] = bdvHorsZoneNettoyer(['cp' => '1370', 'email' => 'a@b.be', 'origine' => 'webshop', 'tfbuddy' => 'ok', 'request_key' => 'cle12345']);
+bdvHorsZoneEnregistrer('3', $dr, 'ip');
+Db::$base = null;
+verifie('renvoyée après reprise : la copie reprise ne bouge pas, une demande ouverte arrive', $sql('UPDATE') === [] && count($sql('INSERT')) === 1,
+    json_encode(Db::$exec, JSON_UNESCAPED_UNICODE));
 Db::$exec = []; Db::$ligne = null; $GLOBALS['corps'] = [];
 
 echo "Les tournées publiées\n";
