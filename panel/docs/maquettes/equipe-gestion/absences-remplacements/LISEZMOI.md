@@ -95,8 +95,16 @@ là n'est pas construit (on étire son service dans la fenêtre d'un service, co
 | `ecran-5-jour.png` | le vendredi : Camille hachurée, l'intérim parmi les extérieurs, le comptoir tenu |
 | `ecran-6-mois.png` | le mois : les absences en lettres (M, CP) |
 
-**Pas encore fait** : l'Opérationnel (qui est en poste) et la condition d'heures des primes lisent le planning du panel, où le
-service d'une absence payée reste.
+**L'Opérationnel et les primes** (27/11/2026, Sam : « fais aussi l'Opérationnel et les primes ») : le service d'une absence payée
+reste au planning du panel ; ces deux écrans ne le comptent plus comme du travail.
+- **L'Opérationnel** (`ep_exploitation_jour`, `shared/src/endpoints.php`) marque les absences du jour (`eqaAbsencesDuJour` : par
+  numéro de service, sinon par personne et heure de début) : elles ne comptent ni « en poste », ni dans le partage des ventes
+  heure par heure, ni dans les heures planifiées ; leur coût reste dans le coût du planning (comme au P&L du panel). Le
+  dashboard les montre à part sous « L'équipe du jour » (« Absences (Mon équipe) : … en congé payé ») et la tuile « Qui est en
+  poste » dit « (+1 absente) ». `ecran-10-operationnel.png`.
+- **Les primes** (`panel/src/primes.php`) : les trois lectures des heures du planning (le mois, la semaine d'une personne, le
+  CA par heure moyen) écartent les services d'une absence payée (`eqaSansAbsencesSql`) : la condition d'heures et le CA par
+  heure se comptent sur les heures travaillées.
 
 ## La suite (27/11/2026) : l'app employés, le salaire garanti
 

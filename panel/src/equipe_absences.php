@@ -397,6 +397,40 @@ function wr_equipe_absence_annuler(): array
     return ['ok' => true, 'annulees' => $ok, 'echecs' => $echecs];
 }
 
+/**
+ * L'OPÉRATIONNEL (27/11/2026, Sam : « fais aussi l'Opérationnel et les primes ») : les absences payées d'un jour, pour les
+ * magasins demandés — par service (`id` → motif) et, pour un planning sans numéro de service, par magasin, employé et
+ * heure de début (`cle` : sid → « employé|HH:MM » → motif). Le service d'une absence payée reste au panel : l'Opérationnel
+ * garde son coût mais ne la compte plus comme présence. Sans table : aucune.
+ */
+function eqaAbsencesDuJour(array $shops, string $date): array
+{
+    $out = ['id' => [], 'cle' => []];
+    $shops = array_values(array_filter(array_map('intval', $shops), static fn ($x) => $x > 0));
+    if ($shops === []) { return $out; }
+    try {
+        ensureEquipeAbsences();
+        foreach (Db::rows('SELECT shop_id, employe_id, service_id, de, motif FROM panel_equipe_absence WHERE jour = ? AND payee = 1 AND shop_id IN ('
+            . implode(',', array_fill(0, count($shops), '?')) . ')', array_merge([$date], array_map('strval', $shops))) as $r) {
+            $out['id'][(int) $r['service_id']] = (string) $r['motif'];
+            $out['cle'][(string) (int) $r['shop_id']][(int) $r['employe_id'] . '|' . substr((string) $r['de'], 0, 5)] = (string) $r['motif'];
+        }
+    } catch (Throwable $e) { /* sans table : aucune absence */ }
+    return $out;
+}
+
+/**
+ * LES PRIMES : la clause SQL qui écarte des heures du planning (la table locale franchisee_employee_schedule, alias $s)
+ * les services d'une absence payée — la personne n'a pas travaillé ces heures-là. '' sans table (les heures restent
+ * celles du planning, plutôt qu'une requête qui échoue et ne rend plus aucune heure).
+ */
+function eqaSansAbsencesSql(string $s = 's'): string
+{
+    try { ensureEquipeAbsences(); } catch (Throwable $e) { return ''; }
+    return ' AND NOT EXISTS (SELECT 1 FROM panel_equipe_absence eqa WHERE eqa.employe_id = ' . $s . '.id_employee AND eqa.jour = ' . $s . '.work_date'
+        . ' AND eqa.de = LEFT(' . $s . '.start_hour, 5) AND eqa.payee = 1)';
+}
+
 /** Un service retiré du planning (la fenêtre d'un service, retirer de l'horaire) : son absence, s'il en avait une, part avec. */
 function eqaOublierService(int $shop, int $service): void
 {

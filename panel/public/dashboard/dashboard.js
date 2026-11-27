@@ -3022,7 +3022,10 @@
     const vides = prods.filter(p => p.verdict === 'rupture'), manques = prods.filter(p => p.verdict === 'manque'), trop = prods.filter(p => p.verdict === 'trop');
     const cuissons = U && Array.isArray(U.cuissons) ? U.cuissons : [];
     const prochaine = now == null ? null : cuissons.filter(c => opMin(c.four) > now).sort((a, b) => opMin(a.four) - opMin(b.four))[0] || null;
-    const planning = m && Array.isArray(m.planning) ? m.planning : [];
+    // Les absences de Mon équipe (27/11/2026) : le service d'une absence payée reste au planning du panel (son coût
+    // reste) ; l'Opérationnel ne le compte pas comme présence — il est montré à part (`absents`), avec son motif.
+    const planTout = m && Array.isArray(m.planning) ? m.planning : [];
+    const planning = planTout.filter(p => !p.absence), absents = planTout.filter(p => p.absence);
     const enPoste = now == null ? [] : planning.filter(p => opMin(p.debut) <= now && now < opMin(p.fin));
     const releve = now == null ? null : planning.filter(p => opMin(p.debut) > now).sort((a, b) => opMin(a.debut) - opMin(b.debut))[0] || null;
     const cmd = CM && CM.commandes ? CM.commandes : null;
@@ -3036,7 +3039,7 @@
     const sk = SK && !SK.indispo ? SK : null;
 
     const listeC = CA && Array.isArray(CA.liste) ? CA.liste : [];
-    return { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC };
+    return { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, absents, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC };
   }
   /* ── Le duel avec J−7 (maquette B du 08/10/2026) ──────────────────────────────
    * Chaque chiffre du jour se compare d'abord à J−7 à la même heure (le serveur arrête la
@@ -3348,7 +3351,7 @@
           + `<span class="q"><b>${esc(l.nom)}</b><small>${esc(sous)}</small></span><span class="m">${l.ca != null ? fE(l.ca) : '—'}${l.parH != null ? `<span class="bm-tg">${fE(l.parH)}/h</span>` : ''}</span><span class="c">${o ? '▴' : '▾'}</span></div>`
           + (o ? `<div class="art"><table class="bm-art">${R.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td></tr>`).join('')}</table></div>` : '') + '</div>';
       };
-      corps = k4 + `<div class="bm-sec"><b>Par vendu à l’heure</b><span>toucher une personne : le détail</span></div><div class="bm-liste">${T.map(ligne).join('')}</div>`
+      corps = k4 + opAbsents(D) + `<div class="bm-sec"><b>Par vendu à l’heure</b><span>toucher une personne : le détail</span></div><div class="bm-liste">${T.map(ligne).join('')}</div>`
         + `<div class="bm-in"><div class="bm-msg">Vendu : le vendeur sur chaque ticket. À l’heure : ses ventes ÷ ses heures où le magasin a vendu. Le coût de chacun reste au bureau.</div></div>`;
     }
     bmPeindre(box, `<div class="fi-voile" data-eqmx="1"></div><div class="fi-modale bm-modale" role="dialog" aria-modal="true" aria-label="L’équipe du jour"><div class="bm-poi"></div>
@@ -3744,6 +3747,10 @@
     L.sort((a, b) => (b.parH == null ? -1 : b.parH) - (a.parH == null ? -1 : a.parH) || (b.ca || 0) - (a.ca || 0));
     return { L, horsPl, V, heureT, ov, cleNom };
   }
+  /** Le motif d'une absence de Mon équipe, en mots (27/11/2026). */
+  const OP_ABS = { maladie: 'malade', cp: 'en congé payé', circ: 'en congé de circonstance', nonpaye: 'absent·e' };
+  /** Les absents du jour : leur nom, leur motif, leurs heures ; ni en poste, ni dans le partage des ventes. */
+  const opAbsents = D => (D.absents || []).length ? `<div class="db-note eq-abs" style="padding:8px 16px 0">Absences (Mon équipe) : ${D.absents.map(p => `<b>${esc(p.nom)}</b> ${esc(OP_ABS[p.absence] || 'absent·e')} (${esc(p.debut)}–${esc(p.fin)})`).join(' · ')}. Leurs heures restent payées ; elles ne comptent ni en poste ni dans le partage des ventes.</div>` : '';
   function opEquipe(D) {
     const { now, m, planning, cuissons } = D;
     const { L, horsPl, V, heureT, ov, cleNom } = opEquipeLignes(D);
@@ -3818,7 +3825,7 @@
       <td><b>${V ? fE(tCa) : '—'}</b><small>${V ? fN(tTk) + ' tickets' : ''}</small></td><td><b>${V && tHV ? fE(tCa / tHV) + '/h' : '—'}</b></td><td>${tTk ? fU(tCa / tTk) : '—'}</td>
       <td>${tPcs ? fN(tPcs) + ' p.' : '—'}</td><td>${tCout ? fE(tCout) : '—'}</td><td><b>${tCout && tCa ? pct(tCout, tCa) : '—'}</b></td></tr>`;
     const avert = V === null ? `<div class="db-note" style="padding:10px 16px 0">Les ventes par vendeuse ne sont pas encore lues pour cette journée (panel) : les heures et les coûts se lisent, pas les ventes.</div>` : '';
-    return `<div class="db-card eq-carte"><div class="ct"><span class="op-h2">L’équipe du jour, ${now == null ? 'la journée' : 'à ' + heureT}</span><span class="db-mini">rangée par ventes à l’heure de vente · un clic sur une personne déplie son heure par heure</span><button type="button" class="eq-ferme" data-eqferme aria-label="Fermer l’équipe du jour">×</button></div>${avert}
+    return `<div class="db-card eq-carte"><div class="ct"><span class="op-h2">L’équipe du jour, ${now == null ? 'la journée' : 'à ' + heureT}</span><span class="db-mini">rangée par ventes à l’heure de vente · un clic sur une personne déplie son heure par heure</span><button type="button" class="eq-ferme" data-eqferme aria-label="Fermer l’équipe du jour">×</button></div>${avert}${opAbsents(D)}
       <div class="eq-defil"><table class="eq-tab"><thead><tr><th class="l">Personne</th><th>Planning</th><th>Faites</th><th>Vendu</th><th>Par heure</th><th>Panier</th><th>Produit</th><th>Coût</th><th>Coût / ventes</th></tr></thead>
       <tbody>${T.map(ligne).join('')}${pied}</tbody></table></div>
       <div class="db-note" style="padding:8px 16px 12px">Vendu : le vendeur sur chaque ticket. Par heure : ses ventes ÷ les heures de son poste où le magasin a vendu. Produit : les cuissons de son poste, si elle tient un poste de production. Coût : son taux horaire au panel × ses heures faites (un franchisé ne pèse pas au P&amp;L).</div></div>`;
@@ -8797,11 +8804,11 @@
     })(), corpsHeures);
 
     ajoute('equipe', 'journee', 'Qui est en poste', resume(() => {
-      const seuil = (d.seuils && d.seuils.labour) || 17, plan = Array.isArray(m.planning) ? m.planning : [];
+      const seuil = (d.seuils && d.seuils.labour) || 17, planT = Array.isArray(m.planning) ? m.planning : [], plan = planT.filter(p => !p.absence), nAbs = planT.length - plan.length;
       if (m.labourPct == null && !plan.length) { return { v: '—', s: 'pas de planning dans le panel', vd: 'neutre', mini: '' }; }
       const rouges = LH.filter(x => x.trav > x.ca * seuil / 100).map(x => x.h + ' h');
       return { v: m.labourPct != null ? fP(m.labourPct) : '—',
-        s: ['du CA en coût du personnel, seuil ' + seuil + ' %', pl(plan.length, 'personne') + (m.planningHeures != null ? ', ' + nf(m.planningHeures, 1) + ' h' : ''), rouges.length ? 'au-dessus du seuil : ' + rouges.join(', ') : 'aucune heure au-dessus du seuil'].join(' · '),
+        s: ['du CA en coût du personnel, seuil ' + seuil + ' %', pl(plan.length, 'personne') + (m.planningHeures != null ? ', ' + nf(m.planningHeures, 1) + ' h' : '') + (nAbs ? ' (+' + nAbs + ' absente' + (nAbs > 1 ? 's' : '') + ')' : ''), rouges.length ? 'au-dessus du seuil : ' + rouges.join(', ') : 'aucune heure au-dessus du seuil'].join(' · '),
         vd: m.labourPct == null ? 'neutre' : (m.labourPct <= seuil ? 'ok' : (m.labourPct <= seuil * 1.3 ? 'att' : 'ko')),
         mini: LH.length ? a4Cases(LH.map(x => !x.ca ? 'mu' : (x.trav > x.ca * seuil / 100 ? 'ko' : 'okc')), LH.map(x => x.h + ' h · ' + (x.ca ? fP(100 * x.trav / x.ca) : '—'))) : '' };
     }), m ? P.poste : attente(1));
