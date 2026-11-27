@@ -1611,3 +1611,41 @@ dur, grosseur de la croûte, retombé après cuisson) ; rapide, intuitif et comp
   tablette ») : `consultant/src/autocontrole.php`, la tablette `/consulant_bo/autocontrole/?shop=` et le siège
   `/consulant_bo/autocontrole/grilles.html` (voir `consultant/CLAUDE.md`). Le bouton de la fiche de l'app Cuisine reste
   à poser dans son dépôt : un lien vers la tablette avec `&produit=`.
+
+## La médiathèque et les examens théoriques, dans le rail du portail (26/11/2026)
+
+Deux entrées nouvelles du rail du portail de formation (le détail des routes : `shared/docs/contrat-api.md`, § Formation ·
+Médiathèque et § Formation · Examens théoriques).
+
+**Médiathèque** (`src/mediatheque.php`, `public/formation/mediatheque.js`, table `for_mediatheque_video`). Le rail porte
+une section *Médiathèque* : **Gérer les vidéos**, puis *Toute la médiathèque ↗* et un lien par collection du catalogue
+(*Utilisation du dashboard*, *Production*, *Vente et comptoir*, *Hygiène et sécurité*, *Ouverture et fermeture*).
+
+- La collection *Utilisation du dashboard* reste les vidéos d'instruction tournées sur l'écran (registre
+  `panel/public/dashboard/videos/videos.json`) : rien à faire ici quand l'une s'ajoute.
+- Les quatre autres reçoivent les **vidéos filmées** : dans *Gérer les vidéos*, choisir la collection, une catégorie
+  (texte libre : « Viennoiseries », « Caisse »…), le titre et le résumé en FR et en NL, puis la source — un **fichier**
+  (MP4, MOV ou WebM filmé au téléphone, 2 Go au plus, envoyé en morceaux de 4 Mo, gardé sur le serveur) ou un **lien**
+  (YouTube, Vimeo, Google Drive, adresse https d'un fichier vidéo) —, une affiche (JPEG) et la durée. La case
+  « Publiée » la rend visible dans la médiathèque des magasins ; sans elle, la vidéo reste un brouillon du siège.
+  « Voir dans la médiathèque ↗ » ouvre la collection ou la vidéo dans le catalogue.
+- Le catalogue (`#/videos`) range tout par collection et catégorie (`#/videos/c/<collection>[/<catégorie>]`), une
+  vidéo à `#/videos/v/<id>` (une vidéo filmée : `m<id>`), avec sa recherche. Tests : `php formation/bin/tests_mediatheque.php`.
+
+**Examens théoriques** (`src/examens.php`, `public/formation/examens.js`, tables `for_exam_*`). Rail › Formation ›
+**Examens théoriques** (`#/rfexamens`) : la banque de questions des candidats franchisés, que le CRM lit pour faire
+passer l'examen dans l'application du candidat (`GET /formation/examens/banque`). Rien n'entre dans un examen sans
+validation ici.
+
+- `#/rfexamens` : les thèmes — questions validées, brouillons, à revoir, nombre de questions tirées, seuil de réussite,
+  questions bloquantes, actif ou non.
+- `#/rfexamens/questions[/<thème>]` : la banque, filtrée par thème et par statut (Brouillon, Validée, À revoir, Écartée) ;
+  cocher des questions, puis « Valider les N questions cochées ».
+- `#/rfexamens/q/<id>` : une question — énoncé FR | NL, type (QCM · 1 bonne, Vrai / faux, Plusieurs bonnes, Mise en
+  situation), réponses, explication lue après correction, source (contrat de franchise, standard, programme de
+  fidélité, guide, autre), bloquante ou non ; « Valider la question », « Remettre en brouillon », « Écarter »,
+  « Supprimer » (impossible pour une question déjà validée : l'écarter). Une question *à revoir* montre sa source avant
+  et maintenant. `#/rfexamens/nouvelle[/<thème>]` crée une question en brouillon.
+- `#/rfexamens/releve` : **la relecture mensuelle** (la routine) — la dernière relecture, à qui part le rapport,
+  « Relire maintenant ». Elle tourne seule une fois par mois (`bin/examens_cron.sh`, cron 06:20) : une question validée
+  dont la source a changé passe *à revoir*.
