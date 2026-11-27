@@ -3,7 +3,9 @@
 
 /* Polices de l'imprimé (celles des brochures du Marketing), jamais celles de l'interface. */
 @font-face { font-family: 'CmPrint'; src: url('../assets/ds/fonts/Gotham_Light.otf') format('opentype'); font-weight: 300; font-display: block; }
-@font-face { font-family: 'CmPrint'; src: url('../assets/ds/fonts/Gotham_Regular.otf') format('opentype'); font-weight: 400; font-display: block; }
+/* 400 = Gotham Book, comme le Marketing (GothamPrint, src/views/brochure/Pages.tsx, 27/11/2026) : Gotham_Regular.otf est en
+   réalité du Gotham Black, le texte courant des aperçus sortait plus gras que le PDF. */
+@font-face { font-family: 'CmPrint'; src: url('../assets/ds/fonts/Gotham_Book.otf') format('opentype'); font-weight: 400; font-display: block; }
 @font-face { font-family: 'CmPrint'; src: url('../assets/ds/fonts/Gotham_Medium.otf') format('opentype'); font-weight: 500; font-display: block; }
 @font-face { font-family: 'CmVank'; src: url('../assets/ds/fonts/GC_Vank.ttf') format('truetype'); font-weight: 400; font-display: block; }
 /* La police manuscrite de la marque (Playwrite DE VA, livrée avec le design system) : la catégorie « en lettres manuscrites ». */

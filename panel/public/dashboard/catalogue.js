@@ -286,6 +286,37 @@
   const enBlocs = S => !!(S.cat && Array.isArray(S.cat.gammeBlocks));
   /** Une page intercalaire (`isSpacer` du Marketing) : ni présentation, ni pleine page, ni catégorie, ni gamme. */
   const estIntercalaire = p => !!p && !estPres(p.layout) && p.layout !== 'pleine' && p.category == null && p.gamme == null;
+  const TITRE_PRES_MARKETING = 'La présentation de la gamme (photos, disposition, titre, accroche, texte, fond) se règle dans le Marketing, pour tout le réseau : elle ne se modifie pas ici.';
+  /** L'ordre des gammes que disent les pages (gamme par gamme) : celui de leurs présentations, puis celui de leurs pages
+   * de catégories ; une gamme du catalogue sans page garde sa place relative, en fin. */
+  function ordreGammes(S) {
+    const vu = [];
+    (S.pages || []).filter(p => estPres(p.layout) && p.gamme != null).concat((S.pages || []).filter(p => !estPres(p.layout) && p.gamme != null))
+      .forEach(p => { if (!vu.includes(+p.gamme)) { vu.push(+p.gamme); } });
+    const blocs = (S.cat && S.cat.gammeBlocks) || [];
+    return vu.filter(g => blocs.includes(g)).concat(blocs.filter(g => !vu.includes(+g)).map(Number));
+  }
+  /** `gammeBlocks` à envoyer quand l'ordre des gammes a changé dans l'assistant (sinon rien : le Marketing garde le sien). */
+  function blocsCorps(S) {
+    if (!enBlocs(S)) { return null; }
+    const o = ordreGammes(S);
+    return JSON.stringify(o) !== JSON.stringify(S.cat.gammeBlocks.map(Number)) ? o : null;
+  }
+  /** Le groupe d'une gamme (gamme par gamme) qui commence à la page `de` (sa présentation) : la présentation, puis les
+   * pages qui suivent de la même gamme et les pages libres intercalées, jusqu'à la gamme suivante. */
+  function groupeGamme(S, de) {
+    const p = S.pages[de];
+    if (!enBlocs(S) || !p || !estPres(p.layout) || p.gamme == null) { return 1; }
+    let n = 1;
+    while (de + n < S.pages.length) {
+      const q = S.pages[de + n];
+      if (estPres(q.layout) || (q.gamme != null && +q.gamme !== +p.gamme) || (q.gamme == null && !estIntercalaire(q))) { break; }
+      n++;
+    }
+    // Une page libre en fin de groupe reste à sa place (elle tient la parité de la gamme suivante).
+    while (n > 1 && estIntercalaire(S.pages[de + n - 1])) { n--; }
+    return n;
+  }
 
   /* --- les gestes ----------------------------------------------------------------------------------------------- */
   function erreurMsg(S, e, avant) {
@@ -397,6 +428,8 @@
     const corps = { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) };
     if (S.cat && +S.cat.pageCount !== S.nbPages) { corps.pageCount = S.nbPages; }   // l'assistant ajoute ou retire 2 pages avec les pages
     if (S.choixModifie) { corps.products = lignesProduits(S); }   // les produits montrés ou cachés dans l'assistant (étape 3)
+    const blocs = blocsCorps(S);
+    if (blocs) { corps.gammeBlocks = blocs; }   // gamme par gamme : l'ordre des gammes déplacées à l'étape 3 (Marketing v1.23)
     const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { S.choixModifie = false; adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; entrer(S); });
     occupe(S, p, 'Enregistrement de la mise en page');
   }
@@ -411,7 +444,7 @@
     if (!S.cat) { S.nbPages = nb; rendre(S); return; }
     if (nb === S.nbPages) { return; }
     S.proposer = null;
-    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) }) : Promise.resolve();
+    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), Object.assign({ format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) }, blocsCorps(S) ? { gammeBlocks: blocsCorps(S) } : {})) : Promise.resolve();
     const p = avant.then(() => appel('PUT', '/' + S.cat.id + qs(S), { pageCount: nb })).then(j => { adopter(S, j.data); oublierDocs(S); S.liste = null; entrer(S); })
       .catch(e => { if (e.code === 'CATALOGUE_PAGES_NOT_EMPTY') { S.proposer = nb; } throw e; });
     occupe(S, p, 'Passage à ' + nb + ' pages');
@@ -1009,7 +1042,13 @@
     if (S.glisseBloc) {
       const cb = cibleBloc(S, ev), g = S.glisseBloc;
       S.glisseBloc = null;
-      if (cb) { ev.preventDefault(); mepDeplacer(S, g.de, g.n, cb.apres ? cb.de + cb.n : cb.de); }
+      if (cb) {
+        ev.preventDefault();
+        // Gamme par gamme : une présentation glissée emmène les pages de sa gamme (le Marketing range ensuite par blocs).
+        const n = enBlocs(S) && S.pages[g.de] && estPres(S.pages[g.de].layout) ? groupeGamme(S, g.de) : g.n;
+        const vers = cb.apres ? cb.de + cb.n : cb.de;
+        if (!(vers > g.de && vers < g.de + n)) { mepDeplacer(S, g.de, n, vers); }
+      }
       rendre(S); return;
     }
     const c = cibleDepot(S, ev);
@@ -1166,6 +1205,14 @@
   }
   /** Les flèches d'un bloc (sans souris) : avant le bloc précédent, après le suivant. */
   function mepBouger(S, de, n, d) {
+    if (enBlocs(S) && S.pages[de] && estPres(S.pages[de].layout)) {
+      const debuts = S.pages.map((p, i) => i).filter(i => estPres(S.pages[i].layout) && S.pages[i].gamme != null);
+      const k = debuts.indexOf(de), voisin = debuts[k + d];
+      if (k < 0 || voisin == null) { return; }
+      const g = groupeGamme(S, de), gv = groupeGamme(S, voisin);
+      mepDeplacer(S, de, g, d < 0 ? voisin : voisin + gv);
+      rendre(S); return;
+    }
     const blocs = mepBlocs(S, remplir(S)), k = blocs.findIndex(x => x.de === de);
     const voisin = blocs[k + d];
     if (k < 0 || !voisin) { return; }
@@ -1230,14 +1277,15 @@
       + blocs.map((b, k) => {
         const col = b.cle.charAt(0) === 'c' ? mepCouleur(S, b.p.category) : null;
         const pp = Array.from({ length: b.n }, (x, j) => b.de + j).map(i => '<div class="mep-th">' + (b.libre && !S.pages[i].filler && !enBlocs(S) ? '<div class="mep-vide">Photo ou illustration de la gamme · ou −2 pages</div>' : apercuPage(S, i, ids[i] || [], 92)) + '</div>').join('');
-        return '<div class="mep-bloc' + (S.glisseBloc && S.glisseBloc.de === b.de ? ' glisse' : '') + (b.libre ? ' libre' : '') + '" data-bloc="' + b.de + '" data-n="' + b.n + '"><div class="h">'
+        const surPres = enBlocs(S) && estPres(b.p.layout) ? ' title="' + esc(TITRE_PRES_MARKETING) + '"' : '';
+        return '<div class="mep-bloc' + (S.glisseBloc && S.glisseBloc.de === b.de ? ' glisse' : '') + (b.libre ? ' libre' : '') + '" data-bloc="' + b.de + '" data-n="' + b.n + '"' + surPres + '><div class="h">'
           + '<span class="mep-poi" draggable="true" data-blocdrag="' + b.de + '" data-n="' + b.n + '" title="Glisser pour déplacer" aria-label="Déplacer « ' + esc(nomBloc(b)) + ' »">⠿</span>' + (col ? mepPt(col) : '') + '<span class="nm">' + esc(nomBloc(b)) + '</span>'
           + '<span class="pg">p. ' + (b.de + 3) + (b.n > 1 ? '-' + (b.de + b.n + 2) : '') + '</span>'
           + '<button class="mep-mv" data-cm="mepBloc" data-v="' + b.de + '" data-n="' + b.n + '" data-d="-1"' + (k === 0 ? ' disabled' : '') + ' aria-label="Avant">‹</button><button class="mep-mv" data-cm="mepBloc" data-v="' + b.de + '" data-n="' + b.n + '" data-d="1"' + (k === blocs.length - 1 ? ' disabled' : '') + ' aria-label="Après">›</button>'
           + '</div><div class="pp">' + pp + '</div></div>';
       }).join('')
       + '<div class="mep-bloc lock"><div class="h">' + CADENAS + ' Marque</div><div class="pp">' + marque(np - 2, nb - 1) + marque(np - 1, nb) + '</div></div></div>'
-      + '<div class="mep-note">⠿ prendre une catégorie : ses pages suivent ensemble (‹ › sans souris) · un clic sur une page l’ouvre en grand · les pages de la marque ne bougent pas.</div>';
+      + '<div class="mep-note">⠿ prendre une catégorie : ses pages suivent ensemble (‹ › sans souris)' + (enBlocs(S) ? ' · une présentation emmène sa gamme : l’ordre des gammes change' : '') + ' · un clic sur une page l’ouvre en grand · les pages de la marque ne bougent pas.</div>';
     // Ce qui n'a pas de place, dit (la règle du Marketing).
     const sansPage = catsChoisies(S).filter(c => c != null && !(S.pages || []).some(p => !estPres(p.layout) && p.category != null && +p.category === +c));
     if (sansPage.length) { h += '<div class="cm-msg inf">' + sansPage.map(c => '« ' + esc(nomCat(S, c)) + ' »').join(', ') + (sansPage.length > 1 ? ' n’ont' : ' n’a') + ' pas de page : ' + (sansPage.length > 1 ? 'leurs' : 'ses') + ' produits vont en « Notre sélection » s’il y en a une.</div>'; }
@@ -1317,9 +1365,9 @@
       let corps = '';
       if (pres) {
         corps += '<select class="cm-sel" data-cm="pgamme" data-i="' + i + '" aria-label="Gamme de la page ' + (i + 3) + '">' + gs.map(g => '<option value="' + g + '"' + (+p.gamme === g ? ' selected' : '') + '>' + esc(nomGamme(S, g)) + '</option>').join('') + '</select>'
-          + '<div class="cm-cpt" style="margin-top:4px">' + (p.layout === 'presentation_liste' ? porte + ' produit' + (porte > 1 ? 's' : '') + ' de la gamme listé' + (porte > 1 ? 's' : '') + ' avec leurs prix (8 au plus)' : 'l’illustration, le nom et le texte de la gamme') + '</div>'
-          + '<textarea class="cm-txt" data-cm="ptexte" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte de la présentation (facultatif, 400 caractères)">' + esc(p.text) + '</textarea>'
-          + (S.langs.includes('nl') ? '<textarea class="cm-txt" data-cm="ptexteNl" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte néerlandais">' + esc(p.textNl) + '</textarea>' : '');
+          + '<div class="cm-cpt" style="margin-top:4px"' + (enBlocs(S) ? ' title="' + esc(TITRE_PRES_MARKETING) + '"' : '') + '>' + (p.layout === 'presentation_liste' ? porte + ' produit' + (porte > 1 ? 's' : '') + ' de la gamme listé' + (porte > 1 ? 's' : '') + ' avec leurs prix (8 au plus)' : 'l’illustration, le nom et le texte de la gamme') + (enBlocs(S) ? ' · se règle dans le Marketing' : '') + '</div>'
+          + (enBlocs(S) ? '' : '<textarea class="cm-txt" data-cm="ptexte" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte de la présentation (facultatif, 400 caractères)">' + esc(p.text) + '</textarea>'
+          + (S.langs.includes('nl') ? '<textarea class="cm-txt" data-cm="ptexteNl" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte néerlandais">' + esc(p.textNl) + '</textarea>' : ''));
       } else {
         const options = cats.filter(c => c !== null).concat(p.category != null && !cats.includes(p.category) ? [p.category] : []);
         corps += '<div class="cm-lig"><select class="cm-sel" data-cm="pcat" data-i="' + i + '" aria-label="Catégorie de la page ' + (i + 3) + '"><option value=""' + (p.category == null ? ' selected' : '') + '>Notre sélection (toutes catégories)</option>'

@@ -6390,7 +6390,12 @@ couleur ou photo avec voile, `gammeColor`) ; null : la présentation d'avant (ga
 `free: true` est une page libre intercalée (la photo ou l'illustration de la gamme voisine, sans titre). Le dashboard les
 dessine comme le Marketing (`presentationDesign`, `pageLibre`, `catalogue.js` ; classes `cat-pd*`, `cat-free*`) ; son
 aperçu local de l'étape 3 reprend le `design` du document par gamme, remplit les pages libres en dernier (`fillBlocks`)
-et donne à une page libre vide l'illustration que le document a choisie.
+et donne à une page libre vide l'illustration que le document a choisie. À la mise en page finale, une présentation emmène les
+pages de sa gamme (‹ › et glisser-déposer) ; l'enregistrement envoie alors `gammeBlocks` dans le nouvel ordre (la route
+de la boutique l'accepte) et relit le document. La présentation elle-même (photos, textes, fond) se règle dans le
+Marketing : le dashboard le dit au survol, et ne montre plus les champs de texte d'une présentation gamme par gamme.
+Police des pages : `CmPrint` 400 = Gotham Book (`assets/ds/fonts/Gotham_Book.otf`, comme le Marketing ; Gotham_Regular
+est en réalité du Black).
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `shared/config/config.php` ; jeton `erp_jeton_service` (erp_cles).
