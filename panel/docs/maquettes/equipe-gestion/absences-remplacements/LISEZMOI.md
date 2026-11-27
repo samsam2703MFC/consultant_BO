@@ -95,20 +95,35 @@ là n'est pas construit (on étire son service dans la fenêtre d'un service, co
 | `ecran-5-jour.png` | le vendredi : Camille hachurée, l'intérim parmi les extérieurs, le comptoir tenu |
 | `ecran-6-mois.png` | le mois : les absences en lettres (M, CP) |
 
-**Pas encore fait** : l'app employés (`/employee`) montre encore le service d'une personne absente comme un service ; l'Opérationnel
-(qui est en poste) et la condition d'heures des primes lisent le planning du panel, où le service d'une absence payée reste ; les
-vidéos de Mon équipe (la barre a un bouton de plus) sont à retourner.
+**Pas encore fait** : l'Opérationnel (qui est en poste) et la condition d'heures des primes lisent le planning du panel, où le
+service d'une absence payée reste.
+
+## La suite (27/11/2026) : l'app employés, le salaire garanti
+
+Sam : « fais l'app employés aussi » ; sur le coût d'une maladie qui dépend du statut et de la durée : « oui » ; sur le solde des
+congés payés : « non » (il n'est pas montré).
+
+- **L'app employés** (`/employee`, Planning) : le cockpit marque les services qu'il lui rend (`planAbsences`,
+  `panel/src/planning_moi.php`) — une absence porte son motif (« Maladie », « Congé payé », « Congé de circonstance »,
+  « Absence »), une absence non payée revient à sa place, le service d'un remplaçant porte « remplacement », sans dire qui il
+  remplace ni pourquoi. L'app montre l'absence à la place du service, hachurée, hors des heures travaillées et du prochain
+  service ; l'accueil ne la donne pas pour le service du jour. Traductions fr, en, nl, pl, it. `ecran-9-app-employes.png`.
+- **Le salaire garanti** : une maladie est payée par le magasin les 30 premiers jours de sa période ; employé·e : 100 % ;
+  ouvrier·ère : 100 % la première semaine, 85,88 % la deuxième, 25,88 % ensuite ; du 31e jour, la mutuelle : le service quitte
+  le panel et l'absence se lit « Malade · mutuelle ». Le statut (employé·e, ouvrier·ère) se choisit dans la fiche de la personne
+  (Identité et contrat), gardé au cockpit (`panel_equipe_statut`, `POST /dashboard/equipe/statut`) ; sans statut, compté
+  employé·e. Le panel garde le service jusqu'au 30e jour (son coût y compte entier) ; Mon équipe compte la part du magasin.
+  `ecran-7-fiche-statut.png`, `ecran-8-salaire-garanti-ouvrier.png` (Antoine, ouvrier, malade tout novembre).
+- Pas pris en compte : un employé sous contrat de moins de trois mois (régime des ouvriers), la rechute dans les 14 jours
+  (même période), la part au-dessus du plafond pour un ouvrier ; le jour se compte depuis le début de la période posée.
 
 ## À vérifier ou à décider
 
-1. **Ce que coûte vraiment une absence payée.** La maquette garde le coût du planning (heures × taux horaire du panel)
-   pour toute absence payée. La part réellement à charge du magasin dépend du statut (employé, ouvrier), de la durée (le
-   salaire garanti couvre les premières semaines de maladie, ensuite la mutuelle paie) et, pour les congés des ouvriers,
-   de la caisse de vacances : règles à reprendre avec le secrétariat social avant de coder.
+1. **Ce que coûte vraiment une absence payée.** Fait le 27/11/2026 pour la maladie (le salaire garanti, voir « La suite ») ;
+   les congés des ouvriers (la caisse de vacances) restent comptés au coût du planning.
 2. **Un jour de congé sans service prévu** (la semaine n'est pas encore faite) : combien d'heures payer ? Le panel ne
    donne pas d'heures de contrat ; il faudrait les saisir dans la fiche (heures par semaine, jours du régime).
-3. **Le solde des congés payés** : ni le panel ni le cockpit ne le connaissent ; « 8 j posés au planning » est
-   illustratif. Le solde légal viendrait du secrétariat social.
+3. **Le solde des congés payés** : décidé le 27/11/2026, non (Sam) ; il n'est pas montré.
 4. **Le taux de l'intérim** (24,50 €/h ici) : saisi à chaque fois, ou un réglage du magasin.
 5. **Les droits** : le compte du cockpit doit pouvoir `DELETE` et `POST /schedule` au panel (déjà à vérifier pour Mon
    équipe).

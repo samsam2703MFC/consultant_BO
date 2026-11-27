@@ -621,10 +621,12 @@ function eqpPlanningDonnees(int $shop, string $du, int $n): array
         if ($sid > 0 && (!isset($secteurs[$sid]) || $secteurs[$sid] === '')) { $secteurs[$sid] = (string) ($p['sector_name'] ?? ''); }
     }
     $equipe = [];
+    $statuts = function_exists('eqaStatuts') ? eqaStatuts($shop) : [];   // employé ou ouvrier : le salaire garanti (27/11/2026)
     foreach (analyseListe($res['emp']) as $r) {
         if (!is_array($r)) { continue; }
-        $e = eqpPersonne($r);
+        $e = eqpPersonne($r) + ['statut' => null];
         if ($e['id'] < 1 || ($e['shop'] > 0 && $e['shop'] !== $shop)) { continue; }
+        $e['statut'] = $statuts[$e['id']] ?? null;
         foreach ($e['postes'] as $i => $w) { $e['postes'][$i]['secteur'] = $postes[$w['id']] ?? null; }
         $e['secteurs'] = array_values(array_unique(array_filter(array_map(static fn ($w) => $w['secteur'], $e['postes']))));
         unset($e['shop']);

@@ -117,8 +117,10 @@ function ep_equipe_personne(?int $shop = null, ?int $id = null): array
     $detail = eqpGet('/employees/' . $id . '?include=competencies,positions');
     if (is_array($detail) && isset($detail['data']) && is_array($detail['data']) && !array_is_list($detail['data'])) { $detail = $detail['data']; }
     if (!is_array($detail) || (int) ($detail['id'] ?? $id) !== $id) { $detail = null; }
-    return ['personne' => eqfFiche($r, $detail), 'detailLu' => $detail !== null,
-        'choix' => ['contrats' => EQF_CONTRATS, 'roles' => EQF_ROLES, 'langues' => EQF_LANGUES]];
+    // Le statut (employé, ouvrier : le salaire garanti d'une maladie, 27/11/2026) vit au cockpit, pas au panel.
+    $statut = function_exists('eqaStatuts') ? (eqaStatuts($shop)[$id] ?? null) : null;
+    return ['personne' => eqfFiche($r, $detail) + ['statut' => $statut], 'detailLu' => $detail !== null,
+        'choix' => ['contrats' => EQF_CONTRATS, 'roles' => EQF_ROLES, 'langues' => EQF_LANGUES, 'statuts' => defined('EQA_STATUTS') ? EQA_STATUTS : []]];
 }
 
 /**

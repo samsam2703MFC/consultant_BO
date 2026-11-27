@@ -47,6 +47,9 @@ final class Db
     {
         if (str_contains($sql, 'FROM shops WHERE active = 1')) { return [['id' => 4], ['id' => 5]]; }
         if (str_contains($sql, 'SELECT id, name FROM shops')) { return [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 5, 'name' => 'Atelier by Max & Sandra - Namur']]; }
+        // Les absences (27/11/2026) : la table de Mon équipe, en doublure.
+        if (str_contains($sql, 'FROM panel_equipe_absence WHERE employe_id')) { return $GLOBALS['ABS'] ?? []; }
+        if (str_contains($sql, 'remplacant_service IN')) { return $GLOBALS['RP'] ?? []; }
         if (str_contains($sql, 'FROM franchisee_employee_schedule')) {
             return array_values(array_filter($GLOBALS['TABLE'], static fn ($r) => (int) $r['id_employee'] === (int) $a[0] && $r['work_date'] >= $a[1] && $r['work_date'] <= $a[2]));
         }
@@ -164,6 +167,40 @@ $s = $svc2->semaine('2026-10-28', $T0);
 verifie('cockpit muet : « indisponible », aucune semaine inventée', $s['indisponible'] === true && $s['nbServices'] === 0);
 verifie('l’app ne lit plus /employees/{id}/schedule', !is_file(__DIR__ . '/../apps/employee/src/app/Repositories/Schedule/ScheduleRepository.php')
     && !preg_match('#/employees/[^"\']*/schedule#', (string) shell_exec('grep -rh "apiClient->" ' . escapeshellarg(__DIR__ . '/../apps/employee/src/app') . ' 2>/dev/null')));
+
+echo "\nLes absences dans l'app (27/11/2026)\n";
+$SV = [['id_schedule' => 31, 'id_employee' => 12, 'work_date' => '2026-10-26', 'start_hour' => '07:00:00', 'end_hour' => '15:00:00', 'id_shop' => 4, 'shop_name' => 'Halle'],
+    ['id_schedule' => 32, 'id_employee' => 12, 'work_date' => '2026-10-27', 'start_hour' => '07:00:00', 'end_hour' => '15:00:00', 'id_shop' => 4, 'shop_name' => 'Halle'],
+    ['id_schedule' => 33, 'id_employee' => 12, 'work_date' => '2026-10-29', 'start_hour' => '12:00:00', 'end_hour' => '18:00:00', 'id_shop' => 4, 'shop_name' => 'Halle']];
+$GLOBALS['ABS'] = [['service_id' => 31, 'shop_id' => 4, 'jour' => '2026-10-26', 'de' => '07:00', 'a' => '15:00', 'motif' => 'maladie', 'payee' => 1],
+    ['service_id' => 40, 'shop_id' => 4, 'jour' => '2026-10-28', 'de' => '09:00', 'a' => '13:00', 'motif' => 'nonpaye', 'payee' => 0],
+    ['service_id' => 41, 'shop_id' => 4, 'jour' => '2026-10-30', 'de' => '09:00', 'a' => '13:00', 'motif' => 'cp', 'payee' => 1]];
+$GLOBALS['RP'] = [['remplacant_service' => 33]];
+$m = planAbsences(12, '2026-10-26', '2026-11-01', $SV, [4 => 'Halle']);
+verifie('un service d’absence payée porte son motif', $m[0]['absence'] === 'maladie' && !isset($m[1]['absence']), json_encode($m[0]));
+verifie('une absence non payée (service sorti du panel) revient, marquée, à sa place', count($m) === 4 && $m[2]['work_date'] === '2026-10-28' && $m[2]['absence'] === 'nonpaye' && $m[2]['shop_name'] === 'Halle');
+verifie('une absence payée dont le service a quitté le panel : oubliée', !array_filter($m, static fn ($x) => $x['work_date'] === '2026-10-30'));
+verifie('le service d’un remplaçant : « remplacement », sans qui ni pourquoi', ($m[3]['remplacement'] ?? false) === true && !isset($m[3]['absence']) && array_keys($m[3]) === ['id_schedule', 'id_employee', 'work_date', 'start_hour', 'end_hour', 'id_shop', 'shop_name', 'remplacement'], json_encode($m[3]));
+$GLOBALS['ABS'] = []; $GLOBALS['RP'] = [];
+verifie('sans absence : les services tels quels', planAbsences(12, '2026-10-26', '2026-11-01', $SV) === $SV);
+$GLOBALS['REP'] = ['ok' => true, 'code' => 200, 'data' => ['services' => [
+    ['id_schedule' => 31, 'id_employee' => 12, 'work_date' => '2026-10-26', 'start_hour' => '07:00:00', 'end_hour' => '15:00:00', 'id_shop' => 4, 'absence' => 'maladie'],
+    ['id_schedule' => 32, 'id_employee' => 12, 'work_date' => '2026-10-29', 'start_hour' => '07:00:00', 'end_hour' => '15:00:00', 'id_shop' => 4, 'absence' => 'cp'],
+    ['id_schedule' => 33, 'id_employee' => 12, 'work_date' => '2026-10-30', 'start_hour' => '12:00:00', 'end_hour' => '18:00:00', 'id_shop' => 4, 'remplacement' => true]]]];
+$s = (new \App\Employee\app\Services\Schedule\ScheduleService($cockpit))->semaine('2026-10-28', $T0);
+verifie('l’app : une absence n’est pas une heure travaillée ni un service', $s['minutes'] === 360 && $s['nbServices'] === 1 && $s['absences'] === 2, json_encode([$s['minutes'], $s['nbServices']]));
+verifie('l’app : le prochain service saute l’absence', $s['prochain'] !== null && $s['prochain']['date'] === '2026-10-30', json_encode($s['prochain']));
+verifie('l’app : un jour d’absence n’est pas « repos »', $s['repos'] === 4 && $s['jours'][3]['services'][0]['absence'] === 'cp' && $s['jours'][4]['services'][0]['remplacement'] === true);
+// Le gabarit du planning de l'app se compile (les fonctions de l'app en doublure).
+$tw = new \Twig\Environment(new \Twig\Loader\FilesystemLoader(__DIR__ . '/../apps/employee/src/app/Views'));
+foreach (['asset', 'jour', 'mois'] as $fn) { $tw->addFunction(new \Twig\TwigFunction($fn, static fn (...$a) => '')); }
+$src = $tw->getLoader()->getSourceContext('schedule/schedule.twig');
+$okTw = true; try { $tw->parse($tw->tokenize($src)); } catch (\Throwable $e) { $okTw = $e->getMessage(); }
+verifie('le gabarit du planning de l’app se compile, et montre l’absence et le remplacement', $okTw === true && str_contains($src->getCode(), 'data-absence') && str_contains($src->getCode(), 'data-remplacement'), is_string($okTw) ? $okTw : '');
+foreach (['fr', 'en', 'nl', 'pl', 'it'] as $lg) {
+    $j = json_decode((string) file_get_contents(__DIR__ . '/../apps/employee/src/core/I18n/translations/page/' . $lg . '/schedule.json'), true);
+    verifie('les mots des absences en ' . $lg, is_array($j) && !array_diff(['absence_maladie', 'absence_cp', 'absence_circ', 'absence_nonpaye', 'replacement'], array_keys($j)));
+}
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

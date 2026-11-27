@@ -1,4 +1,8 @@
 {
+  "absence_circ": "Urlop okolicznościowy",
+  "absence_cp": "Urlop płatny",
+  "absence_maladie": "Choroba",
+  "absence_nonpaye": "Nieobecność",
   "back_this_week": "wróć do tego tygodnia",
   "coming_soon": "wkrótce",
   "day_off": "Wolne",
@@ -11,6 +15,7 @@
   "no_shift_week": "Brak zmian w tym tygodniu.",
   "on_shift": "Na zmianie",
   "prev_week": "Poprzedni tydzień",
+  "replacement": "zastępstwo",
   "scale": "Pasek: dzień od {a}:00 do {b}:00.",
   "schedule": "Grafik",
   "schedule_unavailable": "Grafiku nie da się teraz odczytać.",

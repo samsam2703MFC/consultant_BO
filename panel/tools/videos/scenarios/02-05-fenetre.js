@@ -4,7 +4,7 @@
  *   fonction  equipe-adapter          mardi, Camille commence à 13 h 45 au lieu de 14 h 30 : le comptoir est comblé
  *   fonction  equipe-ajouter-shift    samedi, Camille ajoutée sur le shift d'Inès (9 h – 13 h)
  *   fonction  equipe-retirer          « Retirer du shift » (Inès, vendredi) et « Retirer de l'horaire de la semaine »
- *                                     (Lucie, absente), fusionnés ; les confirmations du navigateur redessinées
+ *                                     (Lucie ne travaille pas ; une absence se pose avec « Absente ou en congé »), fusionnés ; les confirmations du navigateur redessinées
  *   fonction  equipe-parcourir        la section « Comptoir », ‹ ›, « Enregistrer et suivant »
  *   fonction  equipe-creneau          l'option Matrice allumée : lundi, la carte « Matin » pour Camille
  * Données fictives : mocks/20_equipe.js (semaine du 16 au 22 novembre 2026). Chaque phrase vient de
@@ -95,8 +95,8 @@ module.exports = async function () {
 
   /* Retirer du shift, retirer de l'horaire de la semaine (fusionnés) */
   await f.fonction({ id: 'equipe-retirer', titre: 'Retirer du shift ou de l’horaire',
-    resume: 'Retirer une personne d’un shift (son service de ce jour), ou de l’horaire de toute la semaine (absente, en congé), après confirmation.',
-    points: ['Ouvrir le service', '« Retirer Prénom du shift » : ce jour-là', '« Retirer de l’horaire de la semaine » : absent·e', 'Confirmer'] });
+    resume: 'Retirer une personne d’un shift (son service de ce jour), ou de l’horaire de toute la semaine quand elle ne travaille pas, après confirmation. Malade ou en congé : « Absente ou en congé » (son coût reste).',
+    points: ['Ouvrir le service', '« Retirer Prénom du shift » : ce jour-là', '« Retirer de l’horaire de la semaine » : elle ne travaille pas', 'Confirmer'] });
   const ven = `.eqp-sem tr.eqp-pal th:nth-child(${await E.colonne(f, '2026-11-20')})`;
   await f.montrer(ven, 'Vendredi');
   await f.dire('Vendredi est <b>rouge</b> : trop d’heures pour le CA du jour.', 3200);
@@ -112,8 +112,8 @@ module.exports = async function () {
   await f.cacher(150); await f.taire(150);
   await E.sousLaTete(f, svc('2026-11-16', 210));
   await f.cliquer(svc('2026-11-16', 210), { apres: 1200 });
-  await f.montrer('[data-eqp-retirer-semaine]', 'Absente toute la semaine');
-  await f.dire('Lucie est absente toute la semaine : « <b>Retirer de l’horaire de la semaine</b> ».', 4000);
+  await f.montrer('[data-eqp-retirer-semaine]', 'Toute la semaine');
+  await f.dire('Lucie ne travaille pas cette semaine : « <b>Retirer de l’horaire de la semaine</b> ». Malade ou en congé, c’est « Absente ou en congé » : son coût reste.', 6000);
   await f.cacher(150); await f.taire(150);
   await f.cliquerConfirme('[data-eqp-retirer-semaine]', 'Retirer Lucie Bernard de l’horaire de la semaine du 16 novembre au 22 novembre ?', '2 services sont supprimés du planning du panel.', { apres: 1800 });
   await f.montrer('.eqp-tab tbody tr:has([data-emp="210"])', 'Lucie · plus aucun service', 1600);
