@@ -32,8 +32,23 @@
   /** L'assistant lit les PDF, les photos et les fichiers Word (le serveur dit non aux autres). */
   const LISIBLE = /^(application\/pdf|image\/(jpeg|png|webp)|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/vnd\.oasis\.opendocument\.text|text\/plain)$/;
   /** Les dossiers, leur icône et qui les remplit. */
-  const DOS = [['contrat', '📜', 'par votre consultant'], ['legal', '⚖️', 'par vous'], ['formation', '🎓', 'automatique'], ['visites', '📝', 'automatique'],
-    ['finances', '📊', 'par votre consultant'], ['courriers', '✉️', 'libre']];
+  // Les icônes : des tracés linéaires du design system (§7.12, §8.4), plus d'emoji (27/11/2026).
+  const svg = d => `<svg class="cf2-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const ICO = {
+    tout: svg('M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'),
+    contrat: svg('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5'),
+    legal: svg('M4 4h16v16H4zM8 8h8M8 12h8M8 16h5'),
+    formation: svg('M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6'),
+    visites: svg('M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'),
+    finances: svg('M4 20V10M10 20V4M16 20v-7M22 20H2'),
+    courriers: svg('M3 5h18v14H3zM3 6l9 7 9-7'),
+    dates: svg('M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'),
+    cadenas: svg('M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2'),
+    plus: svg('M12 5v14M5 12h14'),
+    envoyer: svg('M12 19V5M5 12l7-7 7 7'),
+  };
+  const DOS = [['contrat', ICO.contrat, 'par votre consultant'], ['legal', ICO.legal, 'par vous'], ['formation', ICO.formation, 'automatique'], ['visites', ICO.visites, 'automatique'],
+    ['finances', ICO.finances, 'par votre consultant'], ['courriers', ICO.courriers, 'libre']];
 
   const st = { shop: null, api: '../api/cockpit', el: null, d: null, err: null, dos: 'tout', filtre: 'tous', q: '', sel: null, tout: false,
     depot: null, dates: null, datesErr: null, ajout: null, passees: false, occupe: false, flash: null, aller: null };
@@ -78,15 +93,15 @@
   /** Ce qui demande une action, dans l'ordre : à renouveler, nouveaux, pièces que le magasin doit déposer. */
   function aFaire() {
     const A = [];
-    pieces().filter(p => p.etat === 'renouveler' || p.etat === 'expiree').forEach(p => A.push({ c: 'or', i: '⏳', t: p.nom + (p.etat === 'expiree' ? ' : échue' : ' : à renouveler'),
+    pieces().filter(p => p.etat === 'renouveler' || p.etat === 'expiree').forEach(p => A.push({ c: p.etat === 'expiree' ? 'stop' : 'prize', lead: p.nom, mot: p.etat === 'expiree' ? 'échue' : 'à renouveler', t: p.nom + (p.etat === 'expiree' ? ' : échue' : ' : à renouveler'),
       s: 'échéance le ' + dfr(p.doc.echeance) + (p.doc.etat.jours != null ? (p.doc.etat.jours >= 0 ? ' · dans ' + p.doc.etat.jours + ' jours' : ' · depuis ' + (-p.doc.etat.jours) + ' jours') : ''),
       go: p.qui === 'franchise' ? 'Déposer la nouvelle' : 'Voir', faire: p.qui === 'franchise' ? 'depot:' + p.cle : 'doc:' + p.doc.id }));
     const nv = lignes().filter(l => l.nouveau);
-    if (nv.length) { A.push({ c: 'ac', i: '✨', t: nv.length > 1 ? nv.length + ' nouveaux documents' : 'Un nouveau document', s: nv.slice(0, 2).map(l => l.titre).join(' · '), go: 'Voir', faire: 'nouveaux' }); }
+    if (nv.length) { A.push({ c: 'prize', lead: nv.length > 1 ? nv.length + ' nouveaux documents' : 'Un nouveau document', mot: 'à lire', t: nv.length > 1 ? nv.length + ' nouveaux documents' : 'Un nouveau document', s: nv.slice(0, 2).map(l => l.titre).join(' · '), go: 'Voir', faire: 'nouveaux' }); }
     const man = pieces().filter(p => p.etat === 'manquante' && p.qui === 'franchise');
-    if (man.length) { A.push({ c: 'ab', i: '⚖️', t: man.length > 1 ? man.length + ' pièces légales à déposer' : 'Une pièce légale à déposer', s: man.slice(0, 3).map(p => p.nom).join(' · ') + (man.length > 3 ? '…' : ''), go: 'Compléter', faire: 'dos:legal' }); }
+    if (man.length) { A.push({ c: 'prize', lead: man.length > 1 ? man.length + ' pièces légales' : 'Une pièce légale', mot: 'à déposer', t: man.length > 1 ? man.length + ' pièces légales à déposer' : 'Une pièce légale à déposer', s: man.slice(0, 3).map(p => p.nom).join(' · ') + (man.length > 3 ? '…' : ''), go: 'Compléter', faire: 'dos:legal' }); }
     const siege = pieces().filter(p => p.etat === 'manquante' && p.qui === 'siege' && p.onglet === 'contrat');
-    if (A.length < 3 && siege.length === 4) { A.push({ c: 'ac', i: '📜', t: 'Votre contrat et votre DIP', s: 'votre consultant les dépose : ils arriveront ici', go: 'Voir', faire: 'dos:contrat' }); }
+    if (A.length < 3 && siege.length === 4) { A.push({ c: 'neutre', lead: 'Votre contrat et votre DIP', mot: 'votre consultant les dépose', t: 'Votre contrat et votre DIP', s: 'votre consultant les dépose : ils arriveront ici', go: 'Voir', faire: 'dos:contrat' }); }
     return A.slice(0, 3);
   }
 
@@ -185,30 +200,33 @@
     : e.jours === 0 ? 'aujourd’hui' : e.jours <= 90 ? 'dans ' + e.jours + ' j' : 'dans ' + Math.round(e.jours / 30.44) + ' mois';
 
   function barre() {
-    const n = datesVenir().length;
-    return `<div class="cf2-barre"><span class="cf2-cad">🔒 Vos documents et ceux de votre consultant. Chaque ouverture est notée.</span>
-      <input class="db-sel cf2-q" data-cf-q="1" value="${esc(st.q)}" placeholder="Chercher un document…">
-      <button type="button" class="db-btn cf2-b abr${st.dos === 'dates' ? ' on' : ''}" data-cf-dos="dates">📅 Grandes dates${n ? `<i>${n}</i>` : ''}</button>
-      <button type="button" class="db-btn cf2-b prim" data-cf-depot="">＋ Déposer un document</button></div>`;
+    // Le nombre des grandes dates à venir est dans le dossier « Grandes dates » (à gauche) : un chiffre, une place.
+    return `<div class="cf2-barre"><input class="db-sel cf2-q" data-cf-q="1" value="${esc(st.q)}" placeholder="Chercher un document…">
+      <button type="button" class="db-btn cf2-b abr${st.dos === 'dates' ? ' on' : ''}" data-cf-dos="dates">${ICO.dates}Grandes dates</button>
+      <button type="button" class="db-btn cf2-b prim" data-cf-depot="">${ICO.plus}Déposer un document</button></div>`;
   }
+  /** Le résumé (27/11/2026, DESIGN_SYSTEM.md §7.13) : ligne 1, les pièces reçues sur les attendues (24 px, 700 : le seul gras)
+   * et leur état en mots, ce que garde le coffre, la prochaine grande date ; ligne 2 sous un filet, « À corriger » — les points
+   * d'aFaire (à renouveler, nouveaux, pièces à déposer), chacun un .btn--sm qui fait le geste d'avant (data-cf-faire). */
   function etat() {
     const P = (st.d.pieces || {}).completude || { a: 0, b: 0 }, man = pieces().filter(p => p.etat === 'manquante');
     const vide = !docs().length && !visites().length;
     const moi = man.filter(p => p.qui === 'franchise').length, lui = man.filter(p => p.qui !== 'franchise').length;
+    // Les pièces à déposer par le magasin sont dans « À corriger » : la phrase ne redit que celles du consultant (un chiffre, une place).
     const texte = vide ? 'Votre consultant y dépose le DIP, le contrat et vos rapports de visite. Vous y déposez vos pièces légales : l’assistant relève leurs grandes dates (bail, assurances…).'
-      : !man.length ? 'Toutes les pièces attendues sont là.' : 'Il manque ' + [moi ? moi + ' pièce' + (moi > 1 ? 's' : '') + ' à vous' : '', lui ? lui + ' pièce' + (lui > 1 ? 's' : '') + ' de votre consultant' : ''].filter(Boolean).join(' et ') + '.';
+      : (!man.length ? 'Toutes les pièces attendues sont là. ' : lui ? lui + ' pièce' + (lui > 1 ? 's' : '') + ' attendue' + (lui > 1 ? 's' : '') + ' de votre consultant. ' : '') + 'Vos documents et ceux de votre consultant ; chaque ouverture est notée.';
     const A = aFaire(), G = (st.d.reperes || {}).dates || {}, p = G.prochaine;
-    return `<section class="cf2-etat">
-      <div><div class="cf2-k">Votre coffre</div><div class="cf2-compl">${ring(P.a, P.b)}<div><h3>${vide ? 'Votre coffre est vide pour l’instant' : P.a + ' pièce' + (P.a > 1 ? 's' : '') + ' sur ' + P.b}</h3><p>${esc(texte)}</p>
-        ${moi ? `<button type="button" class="cf2-lien" data-cf-faire="${vide ? 'depot:' : 'dos:legal'}">${vide ? 'Déposer ma première pièce' : 'Compléter le coffre'} ›</button>` : ''}</div></div></div>
-      <div><div class="cf2-k">À traiter${A.length ? `<i>${A.length} point${A.length > 1 ? 's' : ''}</i>` : ''}</div>
-        ${A.length ? A.map(x => `<button type="button" class="cf2-af" data-cf-faire="${esc(x.faire)}"><span class="pt ${x.c}">${x.i}</span><span class="tx">${esc(x.t)}<small>${esc(x.s)}</small></span><span class="go">${esc(x.go)} ›</span></button>`).join('')
-          : '<div class="cf2-rien">Rien à traiter : votre coffre est à jour.</div>'}</div>
-      <div class="cf2-proch">${p ? `<div class="k2">Prochaine grande date</div><div class="dt"><b>${esc(p.le.slice(8, 10))}</b><span>${esc(MOIS[+p.le.slice(5, 7) - 1] + ' ' + p.le.slice(0, 4))}</span></div><p>${esc(p.titre)}</p>
-          ${p.etat.cle === 'encours' || p.etat.cle === 'bientot' ? `<span class="cf2-u">${esc(jours(p.etat))}</span>` : `<span class="cf2-u gr">${esc(jours(p.etat))}</span>`}
-          <button type="button" class="db-btn cf2-b abr sm" data-cf-dos="dates">📅 Toutes les grandes dates</button>`
-        : `<div class="k2">Grandes dates</div><p class="cf2-pv">Les échéances de vos documents apparaîtront ici : fins de triennat du bail, préavis, renouvellements, assurances.</p><p class="cf2-pv gr">L’assistant les relève quand un document est déposé.</p>`}</div>
-    </section>`;
+    const et = !man.length ? ['green', 'complet'] : ['prize', 'incomplet'];
+    const proche = p && (p.etat.cle === 'encours' || p.etat.cle === 'bientot');
+    return `<section class="cf2-rs" role="region" aria-label="Votre coffre en bref"><div class="cf2-rs-l1">
+        <div class="cf2-rs-v"><span class="cf2-rs-n">${P.a}<small> sur ${P.b}</small></span><span class="cf2-rs-et"><i class="cf2-pe ${et[0]}"></i>${et[1]}</span></div>
+        <div class="cf2-rs-q">${vide ? 'Votre coffre est vide pour l’instant' : 'pièces attendues reçues'}<span>${esc(texte)}</span>
+          ${vide && moi ? '<button type="button" class="cf2-lien" data-cf-faire="depot:">Déposer ma première pièce ›</button>' : ''}</div>
+        <div class="cf2-rs-pr">${p ? `<span class="k">Prochaine grande date</span><span class="t">${esc(dfr(p.le))} · ${esc(p.titre)}</span>
+            <span class="cf2-rs-pl"><span class="cf2-u${proche ? '' : ' gr'}">${esc(jours(p.etat))}</span><button type="button" class="cf2-lien" data-cf-dos="dates">Toutes les grandes dates ›</button></span>`
+          : '<span class="k">Grandes dates</span><span class="cf2-pv">Les échéances de vos documents apparaîtront ici : fins de triennat du bail, préavis, renouvellements, assurances. L’assistant les relève quand un document est déposé.</span>'}</div></div>
+      <div class="cf2-rs-l2">${A.length ? `<span class="cf2-rs-t">À corriger</span><span class="cf2-rs-l">${A.map(x => `<button type="button" class="btn btn--sm cf2-rs-b" data-cf-faire="${esc(x.faire)}" title="${esc(x.s)}"><i class="cf2-pe ${x.c}" aria-hidden="true"></i><span class="cf2-rs-j">${esc(x.lead)}</span>${esc(x.mot)}</button>`).join('')}</span>`
+        : '<p class="cf2-rs-ok">Rien à corriger : votre coffre est à jour.</p>'}</div></section>`;
   }
   /** La frise des 12 prochains mois : les grandes dates à venir, une fenêtre en bande, aujourd'hui marqué. */
   function frise() {
@@ -238,8 +256,8 @@
     const it = (k, ico, nom, qui, n) => { const c = PO[k]; return `<button type="button" class="cf2-d${st.dos === k ? ' on' : ''}" data-cf-dos="${k}"><span class="ico">${ico}</span>
       <span class="nm">${esc(nom)}${qui ? `<small>${esc(qui)}${c ? ' · ' + c.a + '/' + c.b + ' pièces' : ''}</small>` : ''}${c ? `<span class="bar"><b style="width:${c.b ? Math.round(c.a / c.b * 100) : 0}%"></b></span>` : ''}</span><span class="n">${n}</span></button>`; };
     const nv = datesVenir(), bientot = nv.filter(d => d.etat.cle === 'bientot' || d.etat.cle === 'encours').length;
-    return `<nav class="cf2-dos">${it('tout', '🗂️', 'Tout', '', nDos('tout'))}<div class="cf2-sep"></div>${DOS.map(([k, ico, qui]) => it(k, ico, nomDos(k), qui, nDos(k))).join('')}
-      <button type="button" class="cf2-d gd${st.dos === 'dates' ? ' on' : ''}" data-cf-dos="dates"><span class="ico">📅</span><span class="nm">Grandes dates<small>${nv.length} à venir${bientot ? ' · ' + bientot + ' dans les 4 mois' : ''}</small></span><span class="n">${nv.length}</span></button></nav>`;
+    return `<nav class="cf2-dos">${it('tout', ICO.tout, 'Tout', '', nDos('tout'))}<div class="cf2-sep"></div>${DOS.map(([k, ico, qui]) => it(k, ico, nomDos(k), qui, nDos(k))).join('')}
+      <button type="button" class="cf2-d gd${st.dos === 'dates' ? ' on' : ''}" data-cf-dos="dates"><span class="ico">${ICO.dates}</span><span class="nm">Grandes dates<small>${bientot ? bientot + ' dans les 4 mois' : 'à venir'}</small></span><span class="n">${nv.length}</span></button></nav>`;
   }
   const ligne = l => `<button type="button" class="cf2-l${st.sel === l.cle ? ' sel' : ''}" data-cf-sel="${l.cle}">${ty(l.ty)}
       <span class="tt"><b>${esc(l.titre)}${l.nouveau ? '<em class="cf2-nv">nouveau</em>' : ''}</b><small>${esc(l.sous)}</small></span>
@@ -256,7 +274,7 @@
     const max = st.tout ? 1e9 : 12; let n = 0;
     const part = X => X.filter(() => n++ < max).map(ligne).join('');
     const h1 = part(recents), h2 = part(avant);
-    return `<section class="cf2-carte"><div class="cf2-ch"><h2>${st.q ? 'Recherche « ' + esc(st.q) + ' »' : 'Tous les documents'}</h2><small>${L.length} · les plus récents d’abord</small><span class="sp"></span>
+    return `<section class="cf2-carte"><div class="cf2-ch"><h2>${st.q ? 'Recherche « ' + esc(st.q) + ' »' : 'Tous les documents'}</h2><small>${st.q || st.filtre !== 'tous' ? L.length + ' · ' : ''}les plus récents d’abord</small><span class="sp"></span>
         ${chips.map(([k, t, c]) => `<button type="button" class="cf2-chip${st.filtre === k ? ' on' : ''}" data-cf-filtre="${k}">${esc(t)}${k !== 'tous' && c ? ' · ' + c : ''}</button>`).join('')}</div>
       ${h1 ? '<div class="cf2-grp">Ce mois-ci</div>' + h1 : ''}${h2 ? '<div class="cf2-grp">Avant</div>' + h2 : ''}
       ${!L.length ? `<div class="cf2-videl">${st.q ? 'Aucun document ne répond à « ' + esc(st.q) + ' ».' : 'Aucun document pour ce filtre.'}</div>` : ''}
@@ -277,12 +295,12 @@
       const gd = d ? ((st.dates && st.dates.dates) || []).filter(x => x.docId === d.id && x.etat.cle !== 'passee').length : 0;
       const peut = p.qui === 'franchise';
       return `<div class="cf2-p ${cl}"${d ? ` data-cf-sel="d${d.id}" role="button" tabindex="0"` : ''}><span class="ck">${ck}</span><span class="tt"><b>${esc(p.nom)}</b><small>${esc(sous)}</small>
-        ${gd ? `<span class="gdm">📅 ${gd} grande${gd > 1 ? 's' : ''} date${gd > 1 ? 's' : ''}</span>` : ''}${p.n > 1 ? `<span class="gdm gr">${p.n} versions</span>` : ''}
+        ${gd ? `<span class="gdm">${ICO.dates}${gd} grande${gd > 1 ? 's' : ''} date${gd > 1 ? 's' : ''}</span>` : ''}${p.n > 1 ? `<span class="gdm gr">${p.n} versions</span>` : ''}
         ${peut && (p.etat === 'manquante' || p.etat === 'renouveler' || p.etat === 'expiree') ? `<span class="bt"><button type="button" class="db-btn cf2-b sm" data-cf-depot="${p.cle}">${p.etat === 'manquante' ? 'Déposer' : 'Déposer la nouvelle'}</button>${p.etat === 'manquante' ? `<button type="button" class="cf2-lien gr" data-cf-exclure="${p.cle}">pas concernée ?</button>` : ''}</span>` : ''}
         ${peut && p.etat === 'exclue' ? `<span class="bt"><button type="button" class="cf2-lien" data-cf-reintegrer="${p.cle}">la réintégrer</button></span>` : ''}</span></div>`;
     };
     return `<section class="cf2-carte"><div class="cf2-ch"><h2>${esc(nomDos(k))}</h2><small>${esc(qui === 'par vous' ? 'vos pièces · vous les déposez, votre consultant aussi' : qui === 'automatique' ? 'rangés d’office' : qui === 'libre' ? 'les comptes rendus et les courriers' : 'déposés par votre consultant')}</small><span class="sp"></span>
-        ${k === 'legal' ? '<button type="button" class="db-btn cf2-b prim sm" data-cf-depot="">＋ Déposer une pièce légale</button>' : ''}</div>
+        ${k === 'legal' ? `<button type="button" class="db-btn cf2-b prim sm" data-cf-depot="">${ICO.plus}Déposer une pièce légale</button>` : ''}</div>
       ${P.length ? `<div class="cf2-qui">Pièces attendues · ${c ? c.a + ' sur ' + c.b : ''}</div><div class="cf2-att">${P.map(carte).join('')}</div>` : ''}
       ${P.length && autres.length ? `<div class="cf2-grp">Autres documents · ${autres.length}</div>` : ''}${autres.map(ligne).join('')}
       ${!P.length && !autres.length ? `<div class="cf2-videl">${k === 'visites' ? 'Chaque rapport envoyé après une visite de votre consultant arrive ici. Le premier arrivera après sa prochaine visite.' : 'Rien dans ce dossier pour l’instant.'}</div>` : ''}</section>`;
@@ -296,9 +314,9 @@
     const moi = P.filter(p => p.qui === 'franchise').length, lui = P.filter(p => p.qui === 'siege').length;
     return `<section class="cf2-carte"><div class="cf2-ch"><h2>Ce que votre coffre doit contenir</h2><small>${P.filter(p => p.etat !== 'exclue').length} pièces attendues · chacune se dépose une fois, puis se renouvelle à son échéance</small><span class="sp"></span>
         <span class="cf2-chip">À déposer par moi · ${moi}</span><span class="cf2-chip">Attendu de mon consultant · ${lui}</span></div>
-      <div class="cf2-vide"><div class="cf2-vc">${bloc('legal', '⚖️', 'vous les déposez')}</div>
-        <div class="cf2-vc">${bloc('contrat', '📜', 'votre consultant les dépose')}${bloc('finances', '📊', 'votre consultant les dépose')}</div>
-        <div class="cf2-vc">${bloc('formation', '🎓', 'votre consultant, puis d’office')}${auto('📝', 'visites', 'arrivent tout seuls', 'Chaque rapport envoyé après une visite de votre consultant.')}${auto('✉️', 'courriers', 'libre', 'Les comptes rendus de réunion et les courriers échangés avec le réseau.')}</div></div></section>`;
+      <div class="cf2-vide"><div class="cf2-vc">${bloc('legal', ICO.legal, 'vous les déposez')}</div>
+        <div class="cf2-vc">${bloc('contrat', ICO.contrat, 'votre consultant les dépose')}${bloc('finances', ICO.finances, 'votre consultant les dépose')}</div>
+        <div class="cf2-vc">${bloc('formation', ICO.formation, 'votre consultant, puis d’office')}${auto(ICO.visites, 'visites', 'arrivent tout seuls', 'Chaque rapport envoyé après une visite de votre consultant.')}${auto(ICO.courriers, 'courriers', 'libre', 'Les comptes rendus de réunion et les courriers échangés avec le réseau.')}</div></div></section>`;
   }
   /** Les grandes dates : par année, la prochaine en tête, les passées repliées ; l'ajout à la main. */
   function vueDates() {
@@ -319,7 +337,7 @@
         <label><span>Jusqu’au (facultatif)</span><input class="db-sel" type="date" data-cf-a="fin" value="${esc(F.fin)}"></label>
         <label><span>Document (facultatif)</span><select class="db-sel" data-cf-a="docId"><option value="">—</option>${docs().map(x => `<option value="${x.id}"${String(x.id) === String(F.docId) ? ' selected' : ''}>${esc(x.titre)}</option>`).join('')}</select></label></div>
       <div class="cf2-fb"><input class="db-sel" style="flex:1" data-cf-a="note" value="${esc(F.note)}" placeholder="Note (facultatif)"><button type="button" class="db-btn" data-cf-a-annule="1">Annuler</button><button type="button" class="db-btn cf2-b prim" data-cf-a-ok="1"${st.occupe ? ' disabled' : ''}>Ajouter</button></div></div>` : '';
-    return `<section class="cf2-carte"><div class="cf2-ch"><h2>Grandes dates</h2><small>triennats du bail, préavis, renouvellements, échéances</small><span class="sp"></span>${F ? '' : '<button type="button" class="db-btn cf2-b prim sm" data-cf-ajout="1">＋ Ajouter une date</button>'}</div>${form}
+    return `<section class="cf2-carte"><div class="cf2-ch"><h2>Grandes dates</h2><small>triennats du bail, préavis, renouvellements, échéances</small><span class="sp"></span>${F ? '' : `<button type="button" class="db-btn cf2-b prim sm" data-cf-ajout="1">${ICO.plus}Ajouter une date</button>`}</div>${form}
       ${L.length ? h + (!venir.length ? '<div class="cf2-videl">Aucune grande date à venir.</div>' : '') + (pas.length ? `<button type="button" class="cf2-pas" data-cf-passees="1">${st.passees ? '▾' : '▸'} ${pas.length} date${pas.length > 1 ? 's' : ''} passée${pas.length > 1 ? 's' : ''}</button>${st.passees ? pas.slice().reverse().map(ld).join('') : ''}` : '')
         : '<div class="cf2-videl">Pas encore de grande date. Déposez votre bail ou une police d’assurance : l’assistant relève ses dates. Ou ajoutez-en une à la main.</div>'}</section>`;
   }
@@ -341,7 +359,7 @@
       <div class="c">
         ${pdf ? `<iframe class="cf2-page" src="${esc(urlFichier(x.id, false, true))}#toolbar=0&view=FitH" title="Aperçu"></iframe>` : im ? `<img class="cf2-page" src="${esc(urlFichier(x.id, false, true))}" alt="">` : `<div class="cf2-page x">${ty(ext(x.nom))}<small>pas d’aperçu : ouvrez-le</small></div>`}
         <div class="cf2-acts"><a class="db-btn cf2-b prim" href="${esc(urlFichier(x.id))}" target="_blank" rel="noopener" data-cf-ouvre="${x.id}">Ouvrir</a><a class="db-btn cf2-b" href="${esc(urlFichier(x.id, true))}" data-cf-ouvre="${x.id}">Télécharger</a>
-          ${st.aller ? `<button type="button" class="db-btn cf2-b" data-cf-mail="${x.id}">✉️ Joindre à un e-mail</button>` : ''}
+          ${st.aller ? `<button type="button" class="db-btn cf2-b" data-cf-mail="${x.id}">${ICO.courriers}Joindre à un e-mail</button>` : ''}
           ${remplacer ? `<button type="button" class="db-btn cf2-b" data-cf-depot="${pc.cle}">Remplacer</button>` : LISIBLE.test(x.mime || '') ? `<button type="button" class="db-btn cf2-b abr" data-cf-releve="${x.id}">✦ Relever les dates</button>` : ''}</div>
         ${x.note ? `<p class="cf2-n">${esc(x.note)}</p>` : ''}
         <div class="cf2-kv"><span>Date</span><span>${esc(dfr(x.date))}</span>${x.echeance ? `<span>Échéance</span><span>${esc(dfr(x.echeance))} ${etatTag(x.etat)}</span>` : ''}${x.pieceNom ? `<span>Pièce</span><span>${esc(x.pieceNom)}</span>` : ''}<span>Déposé par</span><span>${esc(x.deposePar)}, le ${esc(dfr(x.deposeLe))}</span></div>
@@ -366,7 +384,7 @@
     const ext2 = ((st.d.depot || {}).extensions || []).map(e => '.' + e).join(',');
     const A = D.as;
     const gauche = `<div class="g">
-      ${D.etape === 'choix' ? `<label class="cf2-drop${D.fichier ? ' ok' : ''}" data-cf-drop="1">${D.fichier ? ty(ext(D.fichier.name)) : '<span class="cf2-up">⬆</span>'}<span>${D.fichier ? `<b>${esc(D.fichier.name)}</b><small>${esc(taille(D.fichier.size))} · prêt à déposer</small>` : '<b>Glissez le fichier ici</b><small>ou cliquez pour le choisir · au téléphone : une photo</small>'}</span><input type="file" data-cf-fichier="1" hidden accept="${esc(ext2)}"></label>`
+      ${D.etape === 'choix' ? `<label class="cf2-drop${D.fichier ? ' ok' : ''}" data-cf-drop="1">${D.fichier ? ty(ext(D.fichier.name)) : `<span class="cf2-up">${ICO.envoyer}</span>`}<span>${D.fichier ? `<b>${esc(D.fichier.name)}</b><small>${esc(taille(D.fichier.size))} · prêt à déposer</small>` : '<b>Glissez le fichier ici</b><small>ou cliquez pour le choisir · au téléphone : une photo</small>'}</span><input type="file" data-cf-fichier="1" hidden accept="${esc(ext2)}"></label>`
         : `<div class="cf2-drop ok">${ty(ext(D.doc.nom))}<span><b>${esc(D.doc.nom)}</b><small>${esc(taille(D.doc.octets))} · ${D.relecture ? 'dans votre coffre' : 'rangé ✓'}</small></span></div>`}
       <div class="cf2-lab">C’est quelle pièce ?</div><div class="cf2-chips">${chips}</div>
       ${D.pieceAs ? '<div class="cf2-sug">✦ L’assistant y reconnaît cette pièce : elle est choisie pour vous.</div>' : ''}
