@@ -36,7 +36,7 @@ select.db-sel,input.db-sel{border:1px solid var(--color-border-secondary);border
 .db-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--color-primary)}
 .db-bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--color-text)}
 /* Objectif du jour atteint : la carte se dore, la barre brille, badge trophée, confettis. */
-.db-or{position:relative;overflow:hidden;background:linear-gradient(180deg,#fffbe9,var(--color-surface));border-left:4px solid var(--prize)}
+.db-or{position:relative;overflow:hidden;background:linear-gradient(180deg,#fffbe9,var(--color-surface));border:1px solid var(--prize)}
 .db-or .db-lab{color:var(--prize-ink)}
 .db-or .db-bar{background:#f3e9c9;height:11px}
 .db-or .db-bar i{background:linear-gradient(90deg,#d9a520,#f2d268 40%,#fff3b0 50%,#f2d268 60%,#d9a520);background-size:200% 100%;animation:db-shine 2.2s linear infinite;}
@@ -49,7 +49,7 @@ select.db-sel,input.db-sel{border:1px solid var(--color-border-secondary);border
 @keyframes db-fall{0%{transform:translateY(-20px) rotate(0)}100%{transform:translateY(130px) rotate(360deg)}}
 .db-or .in,.db-card .in{padding:12px 16px;position:relative;z-index:2}
 /* Record de jour : bandeau plein or, feux d'artifice, le record en gros à droite. */
-.db-rec{background:linear-gradient(135deg,#fff3c4,#ffe27a 45%,#f5cf57 100%);border:1px solid #d9a520;border-left-width:4px;border-left-color:#c9961a;min-height:96px}
+.db-rec{background:linear-gradient(135deg,#fff3c4,#ffe27a 45%,#f5cf57 100%);border:1px solid #d9a520;min-height:96px}
 .db-rec .db-lab,.db-rec .db-mini,.db-rec .db-mini b{color:#5c4200}
 .db-rec .db-bar{background:rgba(255,255,255,.55)}
 .db-rec .in{padding-right:300px}
@@ -378,7 +378,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
  * Les non-conformités de la veille : le bandeau en tête de journée, le tiroir
  * qui le déplie, et la validation des reprises.
  * ------------------------------------------------------------------------- */
-.db-ncbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(141, 29, 44, 0.05);border:1px solid rgba(141, 29, 44, 0.45);border-left:4px solid var(--color-primary);border-radius:10px;padding:9px 14px;margin:0 0 12px;font-size:12px;cursor:pointer;position:relative}
+.db-ncbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(141, 29, 44, 0.05);border:1px solid rgba(141, 29, 44, 0.45);border-radius:10px;padding:9px 14px;margin:0 0 12px;font-size:12px;cursor:pointer;position:relative}
 .db-ncbar.ouv{border-radius:10px 10px 0 0;margin-bottom:0}
 .db-ncbar .ic{font-size:18px;line-height:1}
 .db-ncbar .t{font-weight:400;color:var(--color-primary);white-space:nowrap}
@@ -393,14 +393,14 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-ncbar .act{display:flex;gap:8px;align-items:center;margin-left:auto}
 .db-ncbar .dr{font:400 11px var(--font-ui);color:var(--color-primary);white-space:nowrap}
 /* Rien à reprendre, rien à lire : le bandeau se fait discret et ne s'ouvre pas. */
-.db-ncbar.ok{background:#f0f7f2;border-color:rgba(63, 122, 82, 0.3);border-left-color:var(--green);cursor:default}
+.db-ncbar.ok{background:#f0f7f2;border-color:rgba(63, 122, 82, 0.3);border-color:var(--green);cursor:default}
 .db-ncbar.ok .t{color:var(--green)}
-.db-ncbar.mu{background:var(--color-background-secondary);border-color:var(--color-border-tertiary);border-left-color:var(--faint);cursor:default}
+.db-ncbar.mu{background:var(--color-background-secondary);border-color:var(--color-border-tertiary);border-color:var(--faint);cursor:default}
 .db-ncbar.mu .t{color:var(--color-text-muted);font-weight:400}
-.db-ncbar.fini{background:#f6faf7;border-left-color:var(--green)}
+.db-ncbar.fini{background:#f6faf7;border-color:var(--green)}
 
 /* Le tiroir : même bloc que le bandeau, il en prolonge la bordure. */
-.db-ncdl{background:var(--color-surface);border:1px solid rgba(141, 29, 44, 0.45);border-top:none;border-left:4px solid var(--color-primary);border-radius:0 0 10px 10px;margin:0 0 12px}
+.db-ncdl{background:var(--color-surface);border:1px solid rgba(141, 29, 44, 0.45);border-top:none;border-radius:0 0 10px 10px;margin:0 0 12px}
 .db-ncdl>.ct{padding:10px 16px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .db-ncdl>.ct .db-mini{margin-left:auto}
 .db-ncdl>.ct .db-lien{white-space:nowrap}
@@ -512,7 +512,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-valoc .dr{font-size:10px;color:var(--color-text-muted)}
 .db-valoc.att{font-size:11.5px;color:var(--color-text-muted);padding:2px 6px}
 /* Le tiroir : la formule, puis la valeur trimestre par trimestre. */
-.db-vdl{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-left:4px solid var(--prize);border-radius:12px;padding:12px 18px 14px;margin-bottom:14px}
+.db-vdl{background:var(--color-surface);border:1px solid var(--prize);border-radius:12px;padding:12px 18px 14px;margin-bottom:14px}
 .db-vdl .hd{font-size:11.5px;line-height:1.5;color:var(--color-text-muted)}
 .db-vdl .hd b{font-family:var(--font-display);font-size:18px;color:var(--prize-ink);font-weight:400}
 /* Une réserve dans la phrase — pas un second montant : elle se marque par le
@@ -822,7 +822,7 @@ em.bdl{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.06em;text-
 .db-obj.mob .db-notej-t small{display:block;font-weight:400;letter-spacing:0;text-transform:none;font-size:10.5px}
 @media (max-width:900px){.db-obj-corps{grid-template-columns:1fr}.db-obj-corps>div+div{border-left:none;border-top:1px solid var(--color-border-tertiary)}.db-obj-t4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* La promotion en cours : posée par le cockpit sur un creux, suivie ici sur son créneau. */
-.db-promo.on{border-left:4px solid #F08A2C}
+.db-promo.on{border-color:var(--prize);background:var(--prize-soft)}
 .db-promo-corps{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
 .db-promo-corps>div{padding:14px 16px;min-width:0}.db-promo-corps>div+div{border-left:1px solid var(--color-border-tertiary)}
 .db-promo-nom{font-family:var(--font-display);font-size:24px;line-height:1.1}
@@ -842,7 +842,7 @@ em.bdl{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.06em;text-
 .db-promo.mob .db-promo-nom{font-size:21px}
 @media (max-width:900px){.db-promo-corps{grid-template-columns:1fr}.db-promo-corps>div+div{border-left:none;border-top:1px solid var(--color-border-tertiary)}}
 /* Les clients pro (B2B) : les tickets aux sociétés du jour, les comptes, la part jour par jour. */
-.db-pro.on{border-left:4px solid #1f5f8b}
+.db-pro.on{border-color:#1f5f8b}
 .db-split-bar{display:flex;height:8px;border-radius:4px;overflow:visible;position:relative;margin:12px 16px 0;background:var(--color-background-secondary)}
 .db-split-bar i.c{border-radius:4px 0 0 4px}.db-split-bar i.p{border-radius:0 4px 4px 0}
 .db-split-bar b.lim{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);border-radius:1px}
@@ -850,8 +850,8 @@ em.bdl{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.06em;text-
 .db-pro-part.ok{background:rgba(63, 122, 82, 0.12);color:var(--green)}.db-pro-part.att{background:#fbecd8;color:#8a4e05}.db-pro-part.ko{background:#f8e0e3;color:#8c1020}
 .db-split-bar i{display:block;height:100%}.db-split-bar i.c{background:var(--faint)}.db-split-bar i.p{background:#1f5f8b}
 .db-split-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px 16px 14px}
-.db-split-g>div{background:var(--color-background-secondary);border-radius:10px;padding:10px 13px;border-left:4px solid var(--faint)}
-.db-split-g>div.p{border-left-color:#1f5f8b}
+.db-split-g>div{background:var(--color-background-secondary);border-radius:10px;padding:10px 13px;border:1px solid var(--faint)}
+.db-split-g>div.p{border-color:#1f5f8b}
 .db-split-g .k{font:400 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
 .db-split-g .v{font-family:var(--font-display);font-size:24px;line-height:1.15;margin-top:2px}
 .db-split-g .p .v{color:#1f5f8b}
@@ -880,19 +880,19 @@ em.bdl{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.06em;text-
 .db-pro.mob .db-pro-corps{grid-template-columns:1fr}.db-pro.mob .db-pro-corps>div{padding:8px 4px 6px}.db-pro.mob .db-pro-corps>div+div{border-left:none;border-top:1px solid var(--color-border-tertiary)}
 @media (max-width:900px){.db-pro-corps{grid-template-columns:1fr}.db-pro-corps>div+div{border-left:none;border-top:1px solid var(--color-border-tertiary)}.db-pro-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Comptoir et clients pro : un seul bloc, qui se déplie sur le détail pro. */
-.db-split.on{border-left:4px solid #1f5f8b}
+.db-split.on{border-color:#1f5f8b}
 .db-split-det{border-top:1px solid var(--color-border-tertiary);padding-top:4px}
 .db-split-det .db-pro-def{padding:10px 16px 0}
 /* Commandes et canaux : le comptoir, le click & collect, la livraison. */
 .db-split-bar i.w{background:#1f5f8b}.db-split-bar i.l{background:#0f3b5c}
 .db-split-g.co3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.db-split-g>div.w{border-left-color:#1f5f8b}.db-split-g>div.l{border-left-color:#0f3b5c}
+.db-split-g>div.w{border-color:#1f5f8b}.db-split-g>div.l{border-color:#0f3b5c}
 .db-split-g .w .v{color:#1f5f8b}.db-split-g .l .v{color:#0f3b5c}
 .db-split-g .s b{font-weight:400;color:var(--color-text)}
 .db-split-g.co4{grid-template-columns:repeat(4,minmax(0,1fr))}
-.db-split-g>div.b{border-left-color:var(--green)}.db-split-g .b .v{color:var(--green)}
+.db-split-g>div.b{border-color:var(--green)}.db-split-g .b .v{color:var(--green)}
 /* Commandes et canaux, au mois : chaque tuile s'ouvre sur l'évolution de son canal. */
-.co-tuile{cursor:pointer;border-left-color:var(--cc)!important}
+.co-tuile{cursor:pointer;border-color:var(--cc)!important}
 .co-tuile:hover{background:#faf7f3}
 .co-tuile:focus-visible{outline:2px solid var(--cc);outline-offset:2px}
 .co-tuile.on{background:#fff;box-shadow:inset 0 0 0 1.5px var(--cc)}
@@ -928,7 +928,7 @@ em.bdl{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.06em;text-
 .co-mode.w{background:#e6eef5;color:#1f5f8b}.co-mode.l{background:#dde7ef;color:#0f3b5c}.co-mode.c{background:var(--color-background-secondary);color:var(--color-text)}
 .co-st{font:400 10.5px var(--font-ui);white-space:nowrap}.co-st.ok{color:var(--green)}.co-st.att{color:var(--prize-ink)}.co-st.enc{color:#1f5f8b}
 /* Promotions et bundles. */
-.db-offres.att{border-left:4px solid var(--prize-ink)}
+.db-offres.att{border-color:var(--prize-ink)}
 .co-kpi{padding:12px 16px 0;margin-top:0}
 .co-type{display:inline-block;font:400 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;border-radius:5px;padding:2px 6px;margin-right:6px;color:#fff}
 .co-type.b{background:#7a4a12}.co-type.p{background:#F08A2C}
@@ -970,8 +970,8 @@ html.db-cq-ouvert,html.db-cq-ouvert body{overflow:hidden}
 .db-cql .fi{flex:0 0 360px;background:var(--color-surface);color:var(--color-text);border-radius:12px;padding:16px 18px}
 .db-cql .fi h3{font:400 21px var(--font-display);margin:8px 0 2px}
 .db-cql .fi .q{font-size:11.5px;color:var(--color-text-muted)}
-.db-cql .fi q{display:block;margin:12px 0 0;padding:9px 12px;border-left:3px solid var(--prize);background:#fff7ec;font-size:12.5px;quotes:none;border-radius:0 8px 8px 0;line-height:1.5}
-.db-cql .fi q.ok{border-left-color:var(--green);background:#f0f7f2}
+.db-cql .fi q{display:block;margin:12px 0 0;padding:9px 12px;background:var(--prize-soft);font-size:12.5px;quotes:none;border-radius:8px;line-height:1.5}
+.db-cql .fi q.ok{background:#f0f7f2}
 .db-cql .fi dl{display:grid;grid-template-columns:78px 1fr;gap:7px 12px;margin:12px 0 10px;font-size:12px}
 .db-cql .fi dt{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding-top:2px}
 .db-cql .fi dd{margin:0}
@@ -1018,7 +1018,7 @@ html.db-cq-ouvert,html.db-cq-ouvert body{overflow:hidden}
 .rc-in:focus{outline:none;border-color:var(--color-primary);background:var(--color-surface)}
 textarea.rc-in{resize:vertical;line-height:1.45;min-height:70px}
 .rc-pt{font-size:12px;color:var(--color-text-muted);padding:8px 0}
-.rc-err{font-size:12px;line-height:1.45;padding:9px 11px;border-radius:9px;background:rgba(141, 29, 44, 0.05);color:var(--accent);border-left:3px solid var(--stop);margin:4px 0 10px}
+.rc-err{font-size:12px;line-height:1.45;padding:9px 11px;border-radius:9px;background:var(--stop-soft);color:var(--stop);margin:4px 0 10px}
 .rc-aide{font-size:11.5px;line-height:1.45;color:#7a4a12}
 .rc-lien{border:none;background:none;padding:0;font:400 12px var(--font-ui);color:var(--color-primary);cursor:pointer;text-decoration:underline}
 /* La photo : un grand bouton, l'appareil s'ouvre. */
@@ -1174,7 +1174,7 @@ html.rc-direct-ouvert,html.rc-direct-ouvert body{overflow:hidden}
 .pp-msg{margin:0 0 10px;padding:9px 14px;border-radius:9px;font-size:12.5px;font-weight:400}
 .pp-msg.ok{background:rgba(63, 122, 82, 0.12);color:var(--green)}.pp-msg.ko{background:#F8E3E5;color:var(--stop)}
 .pp-cuis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px 16px 4px}
-.pp-cuis>div{background:var(--color-background-secondary);border-radius:11px;padding:11px 13px;border-left:4px solid var(--c,var(--faint));min-width:0}
+.pp-cuis>div{background:var(--color-background-secondary);border-radius:11px;padding:11px 13px;border:1px solid var(--c,var(--faint));min-width:0}
 .pp-cuis>div.loc{outline:1px dashed var(--color-border-secondary)}
 .pp-cuis .k{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);display:flex;align-items:center;gap:6px}
 .pp-cuis .v{font:400 26px var(--font-display);line-height:1.05;margin-top:3px}
@@ -1210,7 +1210,7 @@ html.rc-direct-ouvert,html.rc-direct-ouvert body{overflow:hidden}
 .pp-spark i{flex:1;background:#d9d1c6;border-radius:1px 1px 0 0;min-width:2px;padding:0}.pp-spark i.fe{background:#7a4a12}.pp-spark i.now{background:var(--stop)}
 .pp-bar{display:inline-block;height:7px;width:70px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:6px}
 .pp-bar i{display:block;height:100%;background:var(--green)}.pp-bar i.att{background:var(--prize-ink)}.pp-bar i.ko{background:var(--stop)}.pp-bar i.mu{background:var(--faint)}
-.pp-alerte{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-left:4px solid var(--stop);background:#fdf3f4;margin:10px 16px;border-radius:0 9px 9px 0;font-size:12.5px}
+.pp-alerte{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:var(--stop-soft);margin:10px 16px;border-radius:9px;font-size:12.5px}
 .pp-alerte.ok{border-color:var(--green);background:#eef6f0}
 .pp-alerte b{font-size:13px}.pp-alerte .pp-btn{margin-left:auto}
 .pp-now{font:400 11px var(--font-ui);color:var(--stop);background:#fdf3f4;border-radius:8px;padding:3px 9px}
@@ -1370,7 +1370,7 @@ body.pp-emb{background:var(--color-bg)}
 .eq-carte>.ct{gap:10px}.eq-ferme{margin-left:auto;border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;width:26px;height:26px;cursor:pointer;color:var(--color-text-muted);font-size:15px;line-height:1}
 .eq-defil{overflow-x:auto}.eq-tab{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}.eq-tab th{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:right;padding:8px 10px;border-bottom:1px solid var(--color-border-secondary);white-space:nowrap}
 .eq-tab td{padding:8px 10px;border-bottom:1px solid var(--color-border-tertiary);text-align:right;white-space:nowrap;vertical-align:top}.eq-tab .l{text-align:left}.eq-tab td small{display:block;font-size:10.5px;color:var(--color-text-muted);font-weight:400;margin-top:1px}
-.eq-tab tbody tr[data-eqsel]{cursor:pointer}.eq-tab tbody tr[data-eqsel]:hover td{background:#faf6f0}.eq-tab tr.on td{background:#fff6e8}.eq-tab tr.on td:first-child{box-shadow:inset 3px 0 0 #C9781E}.eq-tab tr.tot td{background:var(--color-background-secondary);border-bottom:none}
+.eq-tab tbody tr[data-eqsel]{cursor:pointer}.eq-tab tbody tr[data-eqsel]:hover td{background:#faf6f0}.eq-tab tr.on td{background:#fff6e8}.eq-tab tr.tot td{background:var(--color-background-secondary);border-bottom:none}
 .eq-hp{font:400 10px var(--font-ui);color:#C9781E;margin-left:6px;white-space:nowrap}
 .eq-tab tr.eq-dep td{background:#fffaf2;padding:8px 10px 12px;text-align:left;white-space:normal;cursor:default}
 .eq-dt{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:11.5px;margin:2px 0 8px}.eq-dt .k{font:400 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
@@ -1830,7 +1830,7 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-rtab tr.clic:focus-visible{outline:2px solid #bcd3ef;outline-offset:-2px}
 .fi-rdet td{padding:0 0 10px;border-bottom:.5px dashed var(--line);background:#faf7f3;text-align:left;white-space:normal}
 .fi-rdeux>section{min-width:0}
-.fi-rdf{padding:10px 12px 12px;border-left:3px solid var(--color-primary,var(--accent));overflow-x:auto}
+.fi-rdf{padding:10px 12px 12px;overflow-x:auto}
 .fi-rdh{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted-2);margin-bottom:8px;line-height:1.4}
 .fi-rdlu{font-size:10.5px;color:#8a8278;white-space:nowrap}
 .fi-rdlu .fi-rlien[disabled]{color:#a39c93;cursor:default;text-decoration:none}
@@ -2918,7 +2918,7 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 /* Le carrousel des checklists (08/11/2026) : une seule hauteur de photo ; le rappel des checklists au-dessus. */
 .cqk{padding:10px 16px 12px}
 .cqk-nav{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
-.cqk-ch{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--color-border-tertiary);border-left:4px solid var(--z);background:#fff;border-radius:8px;padding:3px 8px;font:400 11.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer;white-space:nowrap}
+.cqk-ch{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--z);background:#fff;border-radius:8px;padding:3px 8px;font:400 11.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer;white-space:nowrap}
 .cqk-ch b{font-weight:400;color:var(--z)}.cqk-ch i{width:8px;height:8px;border-radius:50%}.cqk-ch i.e-ok{background:var(--green)}.cqk-ch i.e-wa{background:var(--prize)}.cqk-ch i.e-ko{background:var(--stop)}
 .cqk-ch span{font-variant-numeric:tabular-nums}.cqk-ch span.e-ok{color:var(--green)}.cqk-ch span.e-wa{color:var(--prize-ink)}.cqk-ch span.e-ko{color:var(--stop)}
 .cqk-ch.vu{background:var(--z);color:#fff;border-color:var(--z)}.cqk-ch.vu b,.cqk-ch.vu span{color:#fff}.cqk-ch.vu i{box-shadow:0 0 0 2px #fff}
@@ -3269,7 +3269,7 @@ tr.moi td{background:rgba(141,29,44,.05)}
 
 /* Le détail d'une carte, sous sa ligne (13/11/2026). */
 .fdc-row[data-fdcarte]{cursor:pointer}.fdc-row[data-fdcarte]:hover{background:rgba(141,29,44,.03)}.fdc-row.on{background:rgba(141,29,44,.05)}
-.fdc-det{border-top:1px solid var(--color-border-tertiary);border-left:4px solid var(--c,#8D1D2C);padding:16px 20px;background:#fff}
+.fdc-det{border-top:1px solid var(--color-border-tertiary);padding:16px 20px;background:#fff}
 .fdc-det-g{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:24px}
 .fdc-det .lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
 .fdc-det .sub{font-size:11.5px;color:var(--color-text-muted);margin-top:8px}

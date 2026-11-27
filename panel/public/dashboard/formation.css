@@ -109,7 +109,7 @@
 .fs-et .x em{display:inline-block;margin-left:6px;font-style:normal;font-size:11px;color:var(--stop);background:var(--stop-soft);border-radius:4px;padding:0 6px}
 .fs-et img{width:120px;height:84px;object-fit:cover;border-radius:8px;flex:0 0 auto}
 .fs-crit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.fs-crit div{border:1px solid var(--line);border-left:3px solid var(--stop);background:#fff;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5}
+.fs-crit div{border:1px solid rgba(163, 32, 20, 0.35);background:#fff;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5}
 .fs-crit b{display:block;color:var(--stop);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:400}
 .fs-droite{display:flex;flex-direction:column;gap:14px;min-width:0}.fs-droite .fs-prof{position:static}
 .fs-bloc{padding:14px 16px;border-top:1px solid var(--line)}.fs-bloc:first-child,.fs-ok+.fs-bloc,.fs-att+.fs-bloc{border-top:0}

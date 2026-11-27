@@ -25,7 +25,7 @@
 .mm-pied { margin: 4px 0 0; font-size: 11px; color: var(--muted); }
 
 .mm-afaire { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.mm-afaire li { display: grid; gap: 1px; padding: 8px 10px 8px 12px; border-left: 3px solid var(--prize); border-radius: 0 8px 8px 0; background: var(--table-head); }
+.mm-afaire li { display: grid; gap: 1px; padding: 8px 10px 8px 12px; border-radius: 8px; background: var(--table-head); }
 .mm-afaire li.urg { border-left-color: var(--accent); }
 .mm-afaire .t { font-size: 12.5px; color: var(--ink); }
 .mm-afaire .s { font-size: 11.5px; color: var(--muted-2); }
@@ -125,7 +125,7 @@
 .mm-ctrl { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: var(--table-head); font-size: 12px; color: var(--ink); }
 .mm-ctrl b { font-weight: 400; }
 .mm-ecarts, .mm-pubs { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; color: var(--ink); }
-.mm-ecarts li { padding-left: 10px; border-left: 3px solid var(--prize); }
+.mm-ecarts li { padding-left: 0; }
 .mm-ecarts li.g3, .mm-ecarts li.g4 { border-left-color: var(--stop); }
 .mm-ecarts li span { display: block; font-size: 10.5px; color: var(--muted); }
 .mm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }

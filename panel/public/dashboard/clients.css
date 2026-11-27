@@ -34,7 +34,6 @@
 .pcl-ligne { cursor: pointer; }
 .pcl-ligne:hover td { background: var(--table-head); }
 .pcl-ligne.is-sel td { background: rgba(141, 29, 44, 0.05); }
-.pcl-ligne.is-sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .pcl-pied { padding: 10px 14px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
 
 /* Les avertissements */

@@ -38,7 +38,6 @@
 .eqp-ligne{cursor:pointer}
 .eqp-ligne:hover td{background:var(--table-head)}
 .eqp-ligne.is-sel td{background:rgba(141,29,44,.05)}
-.eqp-ligne.is-sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .eqp-vide-l{text-align:center;padding:28px!important;color:var(--muted)}
 .eqp-pers{display:flex;align-items:center;gap:10px;min-width:180px}
 .eqp-pers b{font-weight:400;color:var(--ink)}
@@ -145,7 +144,7 @@
 .eqp-bar{position:absolute;top:3px;bottom:3px;display:flex;align-items:center;gap:7px;padding:0 9px;overflow:hidden;white-space:nowrap;border-radius:6px;background:var(--chip);border:1px solid rgba(34,34,34,.08);font-size:11.5px;color:var(--ink);font-variant-numeric:tabular-nums}
 .eqp-bar b{font-weight:400}
 .eqp-bar i{font-style:normal;font-size:10.5px;color:var(--muted)}
-.eqp-bar.en{box-shadow:inset 3px 0 0 var(--accent)}
+.eqp-bar.en{box-shadow:inset 0 0 0 1px var(--accent)}
 .eqp-bar.en i{color:var(--accent)}
 .eqp-pg.edition .eqp-tl{cursor:crosshair}
 .eqp-bar.mobile{cursor:grab;touch-action:none}

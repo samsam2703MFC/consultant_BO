@@ -28,7 +28,7 @@
 .of-t .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .of-t small { display: block; margin-top: 2px; font-size: 10.5px; color: var(--muted); }
 .of-t tr.on td { background: rgba(141, 29, 44, 0.05); }
-.of-t tr.on td:first-child { padding-left: 9px; border-left: 3px solid var(--accent); }
+.of-t tr.on td { background: rgba(141, 29, 44, 0.05); }
 .of-t .of-vide { padding: 22px 12px; text-align: center; color: var(--muted); cursor: default; }
 .of-pied { padding: 8px 12px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted-2); background: var(--table-head); }   /* petit texte sur fond teinté : --muted-2 (§7.13) */
 .of-lien { border: 0; padding: 0; background: none; font: inherit; color: var(--accent); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }

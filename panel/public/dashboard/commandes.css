@@ -102,7 +102,7 @@
 .pco-ligne:hover td { background: var(--table-head); }
 .pco-ligne:hover .sub, .pco-ligne.is-alerte .sub, .pco-ligne.is-auj .sub, .pco-per-table td.is-auj .sub, .pco-total .sub { color: var(--muted-2); } /* petits textes sur fond teinté */
 .pco-ligne.is-vise td { background: rgba(141, 29, 44, 0.05); } /* la commande visée depuis « À corriger » : le fond d'une sélection */
-.pco-ligne.is-vise td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+.pco-ligne.is-vise td { background: rgba(141, 29, 44, 0.07); }
 .pco-ligne.is-passe td { color: var(--muted); }
 .pco-ligne.is-alerte td { background: rgba(176, 121, 42, 0.06); }
 .pco-nom { color: inherit; }
