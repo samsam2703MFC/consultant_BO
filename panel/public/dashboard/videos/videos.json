@@ -1637,7 +1637,7 @@
       ],
       "fichier": "02-16-fiche.mp4",
       "debut": 0,
-      "fin": 79.81,
+      "fin": 79.7,
       "affiche": "equipe-fiche.jpg",
       "duree": "1 min 20",
       "sources": [
@@ -1645,7 +1645,7 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_sur": "d296f96fae9ba979bb09f966f1cfc8542ef2fa7b",
       "tourne_le": "2026-11-27"
     },
     {
@@ -1660,8 +1660,8 @@
         "equipe"
       ],
       "fichier": "02-16-fiche.mp4",
-      "debut": 79.81,
-      "fin": 116.22,
+      "debut": 79.7,
+      "fin": 115.9,
       "affiche": "equipe-fiche-identite.jpg",
       "duree": "36 s",
       "sources": [
@@ -1669,7 +1669,7 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_sur": "d296f96fae9ba979bb09f966f1cfc8542ef2fa7b",
       "tourne_le": "2026-11-27"
     },
     {
@@ -1684,8 +1684,8 @@
         "equipe"
       ],
       "fichier": "02-16-fiche.mp4",
-      "debut": 116.22,
-      "fin": 156.27,
+      "debut": 115.9,
+      "fin": 155.89,
       "affiche": "equipe-fiche-taux.jpg",
       "duree": "40 s",
       "sources": [
@@ -1693,7 +1693,7 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_sur": "d296f96fae9ba979bb09f966f1cfc8542ef2fa7b",
       "tourne_le": "2026-11-27"
     },
     {
@@ -1781,7 +1781,7 @@
       ],
       "fichier": "02-19-absences.mp4",
       "debut": 0,
-      "fin": 62.06,
+      "fin": 61.91,
       "affiche": "equipe-absences.jpg",
       "duree": "1 min 02",
       "sources": [
@@ -1790,7 +1790,7 @@
         "panel/src/equipe.php",
         "panel/src/equipe_absences.php"
       ],
-      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_sur": "d296f96fae9ba979bb09f966f1cfc8542ef2fa7b",
       "tourne_le": "2026-11-27"
     },
     {
@@ -1805,8 +1805,8 @@
         "equipe"
       ],
       "fichier": "02-19-absences.mp4",
-      "debut": 62.06,
-      "fin": 94.1,
+      "debut": 61.91,
+      "fin": 93.78,
       "affiche": "equipe-conge.jpg",
       "duree": "32 s",
       "sources": [
@@ -1815,7 +1815,7 @@
         "panel/src/equipe.php",
         "panel/src/equipe_absences.php"
       ],
-      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_sur": "d296f96fae9ba979bb09f966f1cfc8542ef2fa7b",
       "tourne_le": "2026-11-27"
     },
     {
@@ -1830,8 +1830,8 @@
         "equipe"
       ],
       "fichier": "02-19-absences.mp4",
-      "debut": 94.1,
-      "fin": 132.1,
+      "debut": 93.78,
+      "fin": 131.74,
       "affiche": "equipe-exterieur.jpg",
       "duree": "38 s",
       "sources": [
@@ -1840,7 +1840,7 @@
         "panel/src/equipe.php",
         "panel/src/equipe_absences.php"
       ],
-      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_sur": "d296f96fae9ba979bb09f966f1cfc8542ef2fa7b",
       "tourne_le": "2026-11-27"
     },
     {
