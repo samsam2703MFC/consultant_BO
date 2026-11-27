@@ -1004,6 +1004,7 @@ function suRapportVue(array $v): array
         'evaluation' => suEvalVue($v, 'fr'),
         // L'audit des outils de gestion (17/11/2026) : dans le rapport, avec le rappel.
         'outils' => suOutilsVue($v, 'fr'),
+        'qualite' => function_exists('suQualiteVue') ? suQualiteVue($v, 'fr') : null,
         'causesDiag' => viCausesDiag(), 'roles' => $roles,
         'envoi' => ['a' => $ad['email'], 'source' => $ad['source'], 'langue' => $l, 'langueNom' => SU_LANGUES[$l], 'copies' => $copies,
             'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'envoyePar' => $v['rapport_envoye_par'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null,
@@ -1351,6 +1352,8 @@ function suRapportHtml(array $v, string $l): string
     $h .= suEvalHtml(suEvaluation($v), $l, $e);
     // L'audit des outils de gestion (17/11/2026) : chaque outil, son verdict, sa remarque, et le rappel encadré (seul sans audit).
     $h .= suOutilsHtml(suOutils($v), $l, $e);
+    // Le contrôle qualité des produits de la visite (26/11/2026, consultant/src/autocontrole.php).
+    if (function_exists('suQualiteHtml')) { $h .= suQualiteHtml(suQualite($v), $l, $e); }
     $sec = static fn (string $t, string $corps): string => '<div style="margin:0 0 12px"><div style="font-weight:400;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;margin:0 0 3px">' . htmlspecialchars($t, ENT_QUOTES, 'UTF-8') . '</div>' . $corps . '</div>';
     if ($c['positif'] !== '') { $h .= $sec(suL('positif', $l), '<div>' . nl2br($e($c['positif'])) . '</div>'); }
     $vu = [];
@@ -1864,7 +1867,7 @@ function ep_suivi_franchise(): array
                 'checklist' => ['ok' => $ck['ok'], 'total' => $ck['total']], 'ancien' => $ancien, 'phrase' => $ancien ? '' : ($c['phrase'] ?: suRapportVue($v)['contenu']['phrase']),
                 'positif' => $ancien ? '' : $c['positif'], 'reco' => $c['reco'], 'causes' => $ancien ? [] : array_map(static fn ($k) => suL('c_' . $k, $l), $c['causes']),
                 'diagnostic' => $ancien ? '' : $c['diagnostic'], 'points' => array_map(static fn ($p) => ['titre' => $p['titre'], 'priorite' => $p['priorite'], 'echeance' => $p['echeance']], $plans),
-                'photos' => $photos, 'evaluation' => $ancien ? null : suEvalVue($v, $l), 'outils' => $ancien ? null : suOutilsVue($v, $l), 'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null];
+                'photos' => $photos, 'evaluation' => $ancien ? null : suEvalVue($v, $l), 'outils' => $ancien ? null : suOutilsVue($v, $l), 'qualite' => $ancien || !function_exists('suQualiteVue') ? null : suQualiteVue($v, $l), 'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null];
         }
         $out['rapports'] = $raps;
     }

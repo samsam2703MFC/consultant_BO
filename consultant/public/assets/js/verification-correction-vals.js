@@ -175,7 +175,11 @@ function ligneReg(app, e, L){
   const lien = e.pid ? lienPanel(L.produit, { pid: e.pid }) : null;
   return { id: e.id, quand: heure(e.le), nom: e.nom, resume: e.resume, route: e.methode ? e.methode + ' ' + e.route : 'cockpit seulement',
     ok: e.resultat === 'ok' || e.resultat === 'local', annule: e.resultat === 'annule' || !!e.annuleDe || !!e.annulePar, resultat: e.resultatNom, message: e.message,
-    cout: e.coutAvant != null || e.coutApres != null ? fE(e.coutAvant) + ' → ' + fE(e.coutApres) : '',
+    cout: e.coutAvant != null || e.coutApres != null ? fE(e.coutAvant, 3) + ' → ' + fE(e.coutApres, 3) : '',
+    // Le food cost relu au panel après un prix, recette par recette (vrcEffet) : ce qui a bougé d'abord.
+    effet: (e.effet || []).slice(0, 8).map(x => ({ nom: x.nom || ('recette ' + x.rid),
+      txt: fE(x.avant, 3) + ' → ' + fE(x.apres, 3) + (x.pct != null ? ' (' + (x.pct > 0 ? '+' : '') + nf(x.pct, 1) + ' %)' : '') + (x.complet ? '' : ' · coût partiel'),
+      bouge: x.ecart != null && Math.abs(x.ecart) > 1e-6 })),
     annuler: e.annulable && !(A && A.d && A.d.ok) ? () => annuler(app, e.id) : null, annulEnCours: !!(A && A.enCours), annulErreur: A && A.d && !A.d.ok ? (A.d.error || 'L’annulation n’a pas pris.') : null,
     lien: e.resultat === 'refuse' || e.resultat === 'sans_effet' ? lien : null };
 }

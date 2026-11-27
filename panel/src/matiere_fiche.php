@@ -91,6 +91,7 @@ function mfMatiere(array $x): array
         'reference' => mfNombre($x['reference_unit_price_net'] ?? null), 'brut' => mfNombre($x['base_unit_price_gross'] ?? null),
         'tva' => mfNombre($x['vat_rate'] ?? null), 'unite' => (string) ($x['unit_name'] ?? ''), 'cat' => (string) ($x['category_name'] ?? ''),
         'perte' => mfNombre($x['waste_amount_perc'] ?? null), 'source' => strtoupper((string) ($x['source_type'] ?? '')),
+        'src' => strtoupper((string) ($x['price_source'] ?? '')),   // d'où vient le prix : LOCAL, SUPPLIER, REFERENCE, MISSING
         'integre' => (int) ($x['integrated_supplier'] ?? 0) === 1, 'type' => (string) ($x['material_type'] ?? '')];
 }
 

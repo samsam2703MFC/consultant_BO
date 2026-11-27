@@ -550,6 +550,12 @@ class App {
     }
     if (id === 'apiModule') { return { apiSrc: (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('source') || '').trim() }; }
     if (id === 'filFranchise') { const shop = App.shopDeAdresse(); return shop ? { flMag: shop } : {}; }
+    if (id === 'verifRecettes') {
+      // « ?vue=refs&recette=tagliata » (26/11/2026) : Matières premières › Références et pertes, la recette ouverte.
+      const a = new URLSearchParams(String(location.hash || '').split('?')[1] || ''), vue = (a.get('vue') || '').trim(), r = (a.get('recette') || '').trim().slice(0, 80);
+      if (vue !== 'refs') { return {}; }
+      return Object.assign({ vrVue: 'matieres', vmAff: 'refs' }, r ? { vfRefQ: r, vfRefAuto: r } : {});
+    }
     if (id === 'cadreTaches') {
       // « ?checklist=43 » ouvre la checklist ; « ?sop=ouv-mag » (Formation › la fiche d'une SOP) ouvre l'assistant sur ce standard.
       const a = new URLSearchParams(String(location.hash || '').split('?')[1] || ''), cl = (a.get('checklist') || '').trim(), sop = (a.get('sop') || '').trim();
@@ -4052,7 +4058,7 @@ class App {
     // --- la fiche d'une référence
     const l = S.catFiche ? L.find(x => x.k === S.catFiche) : null;
     if (!l) { common.catFiche = null; return; }
-    const s = l.s, p = l.p, onglet = ['magasins', 'marges', 'temps', 'fiche'].includes(S.catOnglet) ? S.catOnglet : 'magasins';
+    const s = l.s, p = l.p, onglet = ['magasins', 'marges', 'temps', 'fiche', 'qualite'].includes(S.catOnglet) ? S.catOnglet : 'magasins';
     const mqShop = {}; ((mq && mq.magasins) || []).forEach(m => { const t = (m.top || []).find(x => String(x.ref) === l.k); if (t) { mqShop[String(m.id)] = t; } });
     const pm = (s && s.parMagasin) || [];
     const vols = pm.map(m => m.vol || 0).filter(v => v > 0), moyV = vols.length ? vols.reduce((a, v) => a + v, 0) / vols.length : 0;
@@ -4060,7 +4066,8 @@ class App {
       nom: l.nom, sous: [l.catNom, eur(l.prix), l.score == null ? '' : 'score ' + Math.round(l.score)].filter(Boolean).join(' · '),
       dec: l.dec ? DEC[l.dec][0] : '', decCls: l.dec ? DEC[l.dec][1] : '',
       fermer: () => this.setState({ catFiche: null }),
-      onglets: [['magasins', 'Magasins'], ['marges', 'Marges'], ['temps', 'Dans le temps'], ['fiche', 'Fiche']]
+      // Qualité (26/11/2026) : l'autocontrôle du produit — sa grille, ses valeurs, sa photo de référence (consultant/src/autocontrole.php).
+      onglets: [['magasins', 'Magasins'], ['marges', 'Marges'], ['temps', 'Dans le temps'], ['fiche', 'Fiche'], ['qualite', 'Qualité']]
         .map(([k2, n2]) => ({ nom: n2, on: onglet === k2, choisir: () => this.setState({ catOnglet: k2 }) })),
       onglet,
       // Les gestes d'avant, au même endroit : la revue, nécessaire, le détail du score (projets, arrêt), la fiche de production.
@@ -4113,6 +4120,8 @@ class App {
       }
       fiche.tendance = l.tend == null ? 'pas assez de ventes pour une tendance' : pct(l.tend) + ' : la 2e moitié des ' + (S.apMois || 3) + ' derniers mois face à la 1re';
       fiche.versAnalyse = () => this.setState({ screen: 'analyse', catFiche: null });
+    } else if (onglet === 'qualite') {
+      fiche.qualite = this.aqFicheVals(l.pid);
     } else {
       fiche.prod = p ? [['Obligatoire', p.must ? 'oui' + (p.qmin ? ' · ' + p.qmin + ' minimum' : '') : 'non'], ['DLV', p.dlv ? p.dlv + ' h' : '—'],
         ['Préparation · cuisson · finition', [p.prep, p.cuisson, p.fin].map(v2 => (v2 || 0) + ' min').join(' · ')],
@@ -4144,6 +4153,57 @@ class App {
       champs: { prep: p.prep || 0, cuisson: p.cuisson || 0,
         fin: p.fin || 0, bmin: p.bmin || 0, bmult: p.bmult || 1, four: p.four || 0,
         profil: p.profil || '' } } });
+  }
+  /**
+   * L'onglet Qualité d'une référence (26/11/2026, consultant/src/autocontrole.php) : la grille d'autocontrôle du produit
+   * (par mots-clés, ou forcée ici), ses valeurs propres (le poids…), sa photo de référence qualité, son standard — ce qui
+   * est regardé, ce qui est bon, ce qui ne l'est pas — et ses contrôles des 30 derniers jours. Effectif tout de suite.
+   */
+  aqFicheVals(pid){
+    if (!pid) { return { vide: 'Cette référence n’a pas d’identifiant au panel : pas d’autocontrôle.' }; }
+    this._aq = this._aq || {};
+    const lire = () => readOne('/autocontrole/produits/' + pid)
+      .then(d => { this._aq[pid] = { d, b: this.aqBrouillon(d) }; this.setState({}); },
+        err => { this._aq[pid] = { err: (err && err.message) || 'lecture impossible' }; this.setState({}); });
+    if (!this._aq[pid]) { this._aq[pid] = { charge: true }; lire(); }
+    const e = this._aq[pid];
+    if (e.charge || e.err) { return { charge: !!e.charge, err: e.err || '' }; }
+    const d = e.d, b = e.b;
+    const shop = ((this.D.stores || []).find(x => x.status !== 'Fermé') || {}).id;
+    const modif = () => { e.modifie = true; this.setState({}); };
+    return { d, b, busy: !!e.busy, modifie: !!e.modifie,
+      choisirGrille: ev => { b.categorie = ev.target.value; modif(); },
+      poserMesure: (cle, k) => ev => { (b.surcharges[cle] = b.surcharges[cle] || {})[k] = ev.target.value; if (!e.modifie) { modif(); } },
+      // La photo : réduite à 1600 px avant l'envoi, comme à la tablette.
+      poserPhoto: ev => {
+        const f = ev.target.files && ev.target.files[0]; if (!f) { return; }
+        const img = new Image();
+        img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)); const cv = document.createElement('canvas');
+          cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          b.photo = cv.toDataURL('image/jpeg', 0.85); URL.revokeObjectURL(img.src); modif(); };
+        img.src = URL.createObjectURL(f);
+      },
+      retirerPhoto: () => { b.photo = null; modif(); },
+      enregistrer: () => {
+        e.busy = true; this.setState({});
+        const sur = {};
+        Object.keys(b.surcharges).forEach(k => { const v = b.surcharges[k]; const x = {}; ['cible', 'tolerance', 'minimum'].forEach(n => { if (v[n] !== '' && v[n] != null) { x[n] = Number(v[n]); } }); if (Object.keys(x).length) { sur[k] = x; } });
+        const corps = { categorie: b.categorie, surcharges: sur };
+        if (b.photo !== undefined) { corps.photo = b.photo; }
+        this.api('PUT', '/autocontrole/produits/' + pid, corps).then(r => {
+          if (r && r.ok) { this._aq[pid] = { d: r, b: this.aqBrouillon(r) }; this.notify('Autocontrôle du produit enregistré'); }
+          else { e.busy = false; }
+          this.setState({});
+        });
+      },
+      annuler: () => { this._aq[pid] = { d, b: this.aqBrouillon(d) }; this.setState({}); },
+      tablette: () => window.open('autocontrole/?essai=1&produit=' + pid + (shop ? '&shop=' + encodeURIComponent(shop) : ''), '_blank', 'noopener'),
+      grilles: () => window.open('autocontrole/grilles.html#grilles', '_blank', 'noopener') };
+  }
+  aqBrouillon(d){
+    const sur = {};
+    (d.mesures || []).forEach(m => { if (m.produit && Object.keys(m.produit).length) { sur[m.cle] = Object.assign({}, m.produit); } });
+    return { categorie: d.grille && d.grille.forcee ? d.grille.cle : '', surcharges: sur, photo: undefined };
   }
   /** Enregistre la référence en cours d'édition, puis recharge le catalogue. */
   /* --- Assortiment obligatoire : toute l'année, ou pendant une saison du panel ------------------ */

@@ -1,10 +1,15 @@
 /* L'autocontrôle qualité à la tablette du magasin (24/11/2026) — API : consultant/src/autocontrole.php.
  *
- * Adresse : /consulant_bo/autocontrole/?shop=4[&produit=6700139][&qui=Nathan][&essai=1]
+ * Adresse : /consulant_bo/autocontrole/?shop=4[&produit=6700139][&qui=Nathan][&role=manager][&essai=1][&visite=31&cadre=1]
  *   shop    : le magasin (un franchisé n'ouvre que les siens : garde.js) ;
  *   produit : ouvre directement ce produit (le lien de la fiche de l'app Cuisine) ; sans lui, la liste du catalogue ;
  *   qui     : la personne qui contrôle, préremplie ;
- *   essai   : un contrôle d'essai, enregistré à part (ni historique, ni résultats du réseau, ni journal).
+ *   role    : qui contrôle — equipe, manager, franchise ou consultant (26/11/2026), choisi aussi sur la page ;
+ *   essai   : un contrôle d'essai, enregistré à part (ni historique, ni résultats du réseau, ni journal) ;
+ *   visite  : le contrôle d'une visite du consultant (son id ou son client_id) : rôle consultant, jamais un essai,
+ *             il entre dans le rapport de la visite ;
+ *   cadre   : la page est ouverte dans la visite (visites.js) : « Revenir à la visite » lui écrit {type: 'aq-fermer'},
+ *             chaque contrôle enregistré {type: 'aq-fait', id}.
  * Le parcours : 1. Cuisson, 2. Structure, 3. Organoleptique, 4. Présentation, puis le bilan. Le bilan affiché est
  * calculé ici pour répondre tout de suite ; le serveur le recalcule à l'enregistrement, seul il fait foi.
  */
@@ -15,7 +20,8 @@
   const q = new URLSearchParams(location.search);
   const app = document.getElementById('aq');
   const S = {
-    shop: q.get('shop') || '', essai: q.get('essai') === '1', produitDemande: q.get('produit') || '',
+    shop: q.get('shop') || '', essai: q.get('essai') === '1' && !q.get('visite'), produitDemande: q.get('produit') || '',
+    visite: q.get('visite') || '', cadre: q.get('cadre') === '1', role: q.get('visite') ? 'consultant' : (q.get('role') || ''), clientId: '',
     liste: null, magasin: null, recherche: '', d: null, ecran: 'liste',
     rep: {}, photos: {}, decision: null, prevenir: null, reclamer: null,
     fournee: '', pieces: '', qui: q.get('qui') || '', envoi: false, erreur: '', fait: null,
@@ -27,6 +33,12 @@
   }
   const lire = path => fetch(API + path, { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).then(rep);
   const ecrire = (path, body) => fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) }).then(rep);
+  /** Qui contrôle : les mêmes clés que AQ_ROLES (src/autocontrole.php). */
+  const ROLES = [['equipe', 'Équipe'], ['manager', 'Manager'], ['franchise', 'Franchisé'], ['consultant', 'Consultant']];
+  /** Un identifiant par contrôle, gardé si l'envoi est rejoué : le serveur ne l'enregistre qu'une fois. */
+  const nouvelId = () => 'aq-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  /** Écrire à la visite qui a ouvert la page (même origine seulement). */
+  const aLaVisite = m => { if (S.cadre && window.parent !== window) { window.parent.postMessage(m, location.origin); } };
   const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const NIV = { ok: 'Conforme', mineur: 'À surveiller', majeur: 'Non conforme' };
   const etat = (niv, txt) => `<span class="aq-etat ${niv}">${esc(txt || NIV[niv])}</span>`;
@@ -170,7 +182,8 @@
     const carte = p => `<button type="button" class="aq-prod" data-aq-produit="${p.id}">${esc(p.nom)}<small>${esc(p.categorie || '—')}</small>
       ${p.aujourdhui ? etat(p.aujourdhui.niveau, (NIV[p.aujourdhui.niveau]) + ' à ' + p.aujourdhui.le) : ''}</button>`;
     app.innerHTML = `<div class="aq-ov">
-      <header class="aq-head"><div class="aq-titre"><p class="aq-kicker">Autocontrôle qualité · ${esc(l && l.magasin ? l.magasin.nom : 'Magasin ' + S.shop)}</p><h1>Quel produit contrôlez-vous ?</h1></div>
+      <header class="aq-head">${S.cadre ? `<button type="button" class="aq-btn aq-btn--icon" data-aq="fermer" aria-label="Revenir à la visite">${ICO('retour', 18)}</button>` : ''}
+        <div class="aq-titre"><p class="aq-kicker">${S.visite ? 'Contrôle qualité de la visite' : 'Autocontrôle qualité'} · ${esc(l && l.magasin ? l.magasin.nom : 'Magasin ' + S.shop)}</p><h1>Quel produit contrôlez-vous ?</h1></div>
         <span class="aq-duree">${ICO('horloge', 16)} 1 min par produit</span></header>
       <main class="aq-body">${bandeaux(l && l.aValider)}
         <input type="search" class="aq-recherche" placeholder="Rechercher un produit, une catégorie…" value="${esc(S.recherche)}" data-aq-recherche aria-label="Rechercher un produit">
@@ -179,7 +192,8 @@
       </main></div>`;
   }
   function bandeaux(aValider) {
-    return (S.essai ? `<p class="aq-bandeau essai">${ICO('info', 16)} Mode essai : le contrôle est enregistré à part, il ne compte ni dans l'historique ni dans les résultats du réseau.</p>` : '')
+    return (S.visite ? `<p class="aq-bandeau visite">${ICO('info', 16)} Contrôle de la visite du consultant : il entre dans le rapport de la visite, avec ses photos.</p>` : '')
+      + (S.essai ? `<p class="aq-bandeau essai">${ICO('info', 16)} Mode essai : le contrôle est enregistré à part, il ne compte ni dans l'historique ni dans les résultats du réseau.</p>` : '')
       + (aValider ? `<p class="aq-bandeau valider">${ICO('alerte', 16)} Grilles d'exemple : critères et corrections à valider par la production avant usage en magasin.</p>` : '')
       + (S.erreur ? `<p class="aq-bandeau erreur" role="alert">${ICO('alerte', 16)} ${esc(S.erreur)}</p>` : '');
   }
@@ -208,6 +222,8 @@
         <label>${ICO('flamme', 16)} Fournée sortie à <input class="aq-champ" type="time" value="${esc(S.fournee)}" data-aq-champ="fournee"></label>
         <label><input class="aq-champ" type="number" min="1" inputmode="numeric" placeholder="—" value="${esc(S.pieces)}" data-aq-champ="pieces"> pièces</label>
         <label>${ICO('personne', 16)} <input class="aq-champ qui" type="text" placeholder="Votre prénom" value="${esc(S.qui)}" data-aq-champ="qui"></label>
+        ${S.visite ? '<span class="aq-roles"><span class="aq-role is-on">Consultant</span></span>'
+          : `<span class="aq-roles" role="group" aria-label="Qui contrôle">${ROLES.map(([k, n]) => `<button type="button" class="aq-role${S.role === k ? ' is-on' : ''}" data-aq-role="${k}" aria-pressed="${S.role === k}">${n}</button>`).join('')}</span>`}
       </div></div>
       <main class="aq-body">${bandeaux(d.aValider)}${S.ecran === 'bilan' ? corpsBilan() : corpsEtape(S.ecran)}</main>
       <footer class="aq-foot">${pied()}</footer></div>`;
@@ -355,12 +371,13 @@
     const histo = (S.d.historique || []).slice(0, 7);
     app.innerHTML = `<div class="aq-ov"><main class="aq-body"><div class="aq-fin">
       ${ICO('controle', 40).replace('class="aq-ico"', 'class="aq-ico" style="margin:0 auto;color:var(--green)"')}
-      <h2>Autocontrôle enregistré${f.essai ? ' (essai)' : ''}</h2>
+      <h2>${f.visite ? 'Contrôle enregistré dans la visite' : 'Autocontrôle enregistré'}${f.essai ? ' (essai)' : ''}</h2>
       <p class="aq-note" style="justify-content:center;margin:0">${esc(S.d.produit.nom)} · lot ${dec} · ${ecartsTxt(f.bilan.ecarts.length)}${(S.prevenir ?? f.bilan.n.majeur > 0) ? ' · le responsable est prévenu' : ''}</p>
       ${f.bilan.actions.length ? `<section class="aq-card" style="margin-top:18px"><p class="aq-label">Pour la prochaine fournée</p>${f.bilan.actions.map(a => `<div class="aq-act"><span class="aq-case" style="background:#fff">${ICO('info', 14).replace('class="aq-ico"', 'class="aq-ico" style="color:var(--muted)"')}</span><div class="aq-act-t">${esc(a.consigne)}</div></div>`).join('')}</section>` : ''}
       ${histo.length ? `<p class="aq-note" style="justify-content:center;margin-top:14px">${histo.length} contrôle${histo.length > 1 ? 's' : ''} de ce produit sur 7 jours${(S.d.recurrents || []).length ? ' · défaut qui revient : ' + esc(S.d.recurrents.map(x => x.libelle + ' (' + x.fois + ' fois)').join(', ')) : ''}</p>` : ''}
       <div class="aq-fin-actions"><button type="button" class="aq-btn" data-aq="refaire">${ICO('repeter', 16)} Recontrôler ce produit</button>
-        <button type="button" class="aq-btn aq-btn--primary" data-aq="liste">Contrôler un autre produit ${ICO('suivant', 16)}</button></div>
+        <button type="button" class="aq-btn${S.cadre ? '' : ' aq-btn--primary'}" data-aq="liste">Contrôler un autre produit ${ICO('suivant', 16)}</button>
+        ${S.cadre ? `<button type="button" class="aq-btn aq-btn--primary" data-aq="fermer">Revenir à la visite ${ICO('suivant', 16)}</button>` : ''}</div>
     </div></main></div>`;
   }
 
@@ -381,7 +398,7 @@
     S.erreur = '';
     lire('/autocontrole/magasin/produit?shop=' + encodeURIComponent(S.shop) + '&produit=' + encodeURIComponent(pid))
       .then(d => {
-        S.d = d; S.rep = {}; S.photos = {}; S.decision = null; S.prevenir = S.reclamer = null; S.fait = null;
+        S.d = d; S.rep = {}; S.photos = {}; S.decision = null; S.prevenir = S.reclamer = null; S.fait = null; S.clientId = nouvelId();
         // La fournée : sortie il y a 20 minutes, le moment conseillé pour contrôler (corrigeable).
         S.fournee = S.fournee || hhmm(new Date(Date.now() - 20 * 60000));
         S.ecran = (etapesVues()[0] || { cle: 'bilan' }).cle;
@@ -398,9 +415,10 @@
     ecrire('/autocontrole/magasin/controles', {
       shop: S.shop, produit: S.d.produit.id, fournee: S.fournee, pieces: S.pieces ? Number(S.pieces) : null, auteur: S.qui,
       reponses: S.rep, photos, decision: S.decision || r.decision, prevenir: S.prevenir ?? r.n.majeur > 0, reclamer: S.reclamer ?? r.reclamation,
-      essai: S.essai,
+      essai: S.essai, visite: S.visite || null, role: S.role || null, client_id: S.clientId,
     }).then(res => {
       S.envoi = false; S.fait = res; S.ecran = 'fait';
+      aLaVisite({ type: 'aq-fait', id: res.id });
       // L'historique et les défauts qui reviennent, relus avec ce contrôle.
       return lire('/autocontrole/magasin/produit?shop=' + encodeURIComponent(S.shop) + '&produit=' + S.d.produit.id).then(d => { S.d.historique = d.historique; S.d.recurrents = d.recurrents; }, () => {});
     }).then(() => rendre())
@@ -408,10 +426,12 @@
   }
 
   app.addEventListener('click', ev => {
-    const t = ev.target.closest('[data-aq],[data-aq-rep],[data-aq-aller],[data-aq-photo],[data-aq-dec],[data-aq-tog],[data-aq-produit]');
+    const t = ev.target.closest('[data-aq],[data-aq-rep],[data-aq-aller],[data-aq-photo],[data-aq-dec],[data-aq-tog],[data-aq-produit],[data-aq-role]');
     if (!t || t.disabled) return;
     const d = t.dataset;
     if (d.aqProduit) { ouvrir(d.aqProduit); return; }
+    if (d.aq === 'fermer') { aLaVisite({ type: 'aq-fermer' }); return; }
+    if (d.aqRole) { S.role = d.aqRole; try { localStorage.setItem('aq:role', S.role); } catch (e) { /* navigation privée */ } rendre(); return; }
     if (d.aq === 'liste') { const u = new URL(location.href); u.searchParams.delete('produit'); history.replaceState(null, '', u); chargerListe(); return; }
     if (d.aq === 'refaire') { ouvrir(S.d.produit.id); return; }
     if (d.aq === 'valider') { valider(); return; }
@@ -449,6 +469,13 @@
 
   /* ── Démarrer : le magasin de l'adresse, sinon le premier de la session (garde.js) ──────────────────── */
   function demarrer(essais) {
+    // Qui contrôle, sans choix sur l'adresse : le dernier choix de cet appareil, sinon le franchisé connecté, sinon l'équipe.
+    if (!ROLES.some(([k]) => k === S.role)) {
+      let r = ''; try { r = localStorage.getItem('aq:role') || ''; } catch (e) { /* navigation privée */ }
+      const a = window.ACCES;
+      if (!a && essais > 0) { setTimeout(() => demarrer(essais - 1), 150); return; }
+      S.role = ROLES.some(([k]) => k === r) ? r : (a && a.role === 'franchise' && a.source !== 'code' ? 'franchise' : 'equipe');
+    }
     if (!S.shop) {
       const a = window.ACCES;
       if (a && a.shops && a.shops.length) { S.shop = String(a.shops[0]); if (!S.qui && a.role === 'franchise' && a.source !== 'code') S.qui = a.nom || ''; }

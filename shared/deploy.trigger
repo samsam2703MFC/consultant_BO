@@ -338,3 +338,10 @@
 2026-11-26T14:14:21Z Formation : la médiathèque des vidéos (sections du rail, pages, onglets, titres ; recherche avec synonymes, début de mot et faute de frappe)
 2026-11-26T14:21:26Z Bureaux : formulaire d'inscription en six étapes, générateur de liens par magasin
 2026-11-26T14:52:57Z Formation : la médiathèque en collections (Utilisation du dashboard, Production, Vente et comptoir, Hygiène et sécurité, Ouverture et fermeture), les vidéos filmées ajoutées dans le portail (rail › Médiathèque : fichier ou lien), « Voir dans la médiathèque » dans le lecteur du dashboard
+2026-11-26T18:14:10Z Autocontrôle qualité : l'onglet Qualité de la fiche produit (admin), le contrôle qualité dans les fiches techniques (ce qu'on regarde, bon, à surveiller, pas bon), le formulaire pour l'équipe, le manager, le franchisé et le consultant (3 produits dans la visite, dans le rapport)
+2026-11-26T20:02:03Z Vérification › Recettes : écritures au panel conformes au swagger du 26/11 (recettes, sous-recettes, portions, rendement), food cost relu après un prix, et Matières premières › Références et pertes (prix réseau en référence, prix de marché, pertes), par lot
+2026-11-26T20:20:34Z Matières premières › Références et pertes : lien direct (#/verification/recettes?vue=refs&recette=tagliata)
+2026-11-26T20:37:50Z Références et pertes : même food cost dans tous les magasins (alignement des prix sur la référence), pertes sur les lignes de toute la carte, envoi par lots
+2026-11-26T20:44:48Z Références et pertes : prix de marché des 49 matières sans prix, bouton « Tout faire » (toute la carte en un clic)
+2026-11-27T04:00:48Z Manuels du 27/11 : références et pertes des matières, autocontrôle, médiathèque, examens théoriques, compte TF Buddy du magasin (documentation seulement)
+2026-11-27T06:50:22Z Références et pertes : un prix tenu par le tarif d'un fournisseur intégré (403 SUPPLIER_MANAGED_PRICE) n'est plus une erreur ; la référence reprend ce tarif et les autres magasins s'y alignent

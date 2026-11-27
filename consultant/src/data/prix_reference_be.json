@@ -1,0 +1,348 @@
+{
+  "maj": "2026-11-26",
+  "note": "Prix de marché belges (HT, par kg) pour les matières qu'aucun magasin ne chiffre, et pertes validées par le CEO le 26/11/2026 (Salade Tagliata d'abord). Les prix estimés sont des prix pro déduits des prix de détail belges et des cotations de gros : à remplacer par le tarif du fournisseur dès qu'il existe. Le 26/11/2026 au soir : 49 matières sans aucun prix au réseau, prix de marché estimés (prix pro HT) ; les produits de la centrale sont marqués à remplacer par leur prix de revient.",
+  "prix": {
+    "756": {
+      "nom": "Mesclun",
+      "prix": 10.0,
+      "source": "estimé : détail belge 9,50 à 25 €/kg TTC (Carrefour, eFarmz, producteurs), prix pro retenu 10 €/kg HT"
+    },
+    "757": {
+      "nom": "Radicchio",
+      "prix": 5.0,
+      "source": "estimé : gros (Rungis) 4,00 à 5,60 €/kg, détail belge 6 à 8 €/kg"
+    },
+    "761": {
+      "nom": "Steak de bœuf",
+      "prix": 17.0,
+      "source": "estimé : gros (Rungis) 13,40 €/kg en moyenne, steaks Colruyt 21 à 29 €/kg TTC"
+    },
+    "694": {
+      "nom": "Houmous",
+      "prix": 7.5,
+      "source": "estimé : prix pro HT (détail belge 10 à 12 €/kg)"
+    },
+    "264": {
+      "nom": "Ravier DUNI - 187/137/40",
+      "prix": 0.25,
+      "source": "estimé : prix pro HT par pièce (barquettes 0,15 à 0,25 €)"
+    },
+    "480": {
+      "nom": "Étiquette Kraft Eco 50 mm | Logo",
+      "prix": 0.03,
+      "source": "estimé : prix pro HT par pièce"
+    },
+    "693": {
+      "nom": "Mayonnaise",
+      "prix": 4.5,
+      "source": "estimé : prix pro HT (seau pro)"
+    },
+    "731": {
+      "nom": "Philadelphia",
+      "prix": 12.0,
+      "source": "estimé : prix pro HT (Colruyt 17,70 à 26,30 €/kg au détail ; format pro moins cher)"
+    },
+    "730": {
+      "nom": "Thon mayo",
+      "prix": 9.0,
+      "source": "estimé : prix pro HT"
+    },
+    "692": {
+      "nom": "iceberg",
+      "prix": 2.5,
+      "source": "estimé : prix pro HT"
+    },
+    "732": {
+      "nom": "eau",
+      "prix": 0.005,
+      "source": "eau du robinet, environ 5 € le m³"
+    },
+    "698": {
+      "nom": "Pesto",
+      "prix": 12.0,
+      "source": "estimé : prix pro HT"
+    },
+    "691": {
+      "nom": "Béchamel",
+      "prix": 3.5,
+      "source": "estimé : prix pro HT"
+    },
+    "686": {
+      "nom": "Hauts de cuisses",
+      "prix": 7.5,
+      "source": "estimé : prix pro HT (poulet ; escalopes 11 €/kg au détail)"
+    },
+    "628": {
+      "nom": "Crêpes Artisanale",
+      "prix": 0.45,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par pièce)"
+    },
+    "736": {
+      "nom": "Feta",
+      "prix": 9.5,
+      "source": "estimé : prix pro HT (Colruyt 9,95 à 11,95 €/kg)"
+    },
+    "683": {
+      "nom": "Huile de sésame",
+      "prix": 12.0,
+      "source": "estimé : prix pro HT"
+    },
+    "728": {
+      "nom": "Burrata125g",
+      "prix": 18.0,
+      "source": "estimé : prix pro HT"
+    },
+    "687": {
+      "nom": "boulette 90g",
+      "prix": 10.0,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient"
+    },
+    "688": {
+      "nom": "Purée",
+      "prix": 2.5,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient"
+    },
+    "729": {
+      "nom": "Marinade hauts de cuisses",
+      "prix": 6.0,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient"
+    },
+    "635": {
+      "nom": "Coeur Brookie Individuel",
+      "prix": 0.9,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par pièce)"
+    },
+    "695": {
+      "nom": "Chutney de mangue",
+      "prix": 9.0,
+      "source": "estimé : prix pro HT"
+    },
+    "623": {
+      "nom": "Dés de poulets - CUIT",
+      "prix": 11.0,
+      "source": "estimé : prix pro HT"
+    },
+    "727": {
+      "nom": "Penne",
+      "prix": 1.8,
+      "source": "estimé : prix pro HT"
+    },
+    "718": {
+      "nom": "Melocake Lait – Boîte de 3 (b)",
+      "prix": 1.8,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par boîte)"
+    },
+    "719": {
+      "nom": "Melocake Mixte – Boîte de 10 (b)",
+      "prix": 5.5,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par boîte)"
+    },
+    "721": {
+      "nom": "Melocake Noir – Boîte de 3 (b)",
+      "prix": 1.8,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par boîte)"
+    },
+    "722": {
+      "nom": "Melocake Pistache – Boîte de 3 (b)",
+      "prix": 1.9,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par boîte)"
+    },
+    "723": {
+      "nom": "Melocake Caramel Beurre Salé – Boîte de 3 (b)",
+      "prix": 1.9,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par boîte)"
+    },
+    "724": {
+      "nom": "Melocake Spéculoos – Boîte de 3 (b)",
+      "prix": 1.8,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par boîte)"
+    },
+    "725": {
+      "nom": "Melocake Blanc – Boîte de 3 (b)",
+      "prix": 1.8,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par boîte)"
+    },
+    "759": {
+      "nom": "Chèvre",
+      "prix": 14.0,
+      "source": "estimé : prix pro HT"
+    },
+    "697": {
+      "nom": "oignon jeune",
+      "prix": 4.0,
+      "source": "estimé : prix pro HT"
+    },
+    "581": {
+      "nom": "Haché boeuf",
+      "prix": 9.5,
+      "source": "estimé : prix pro HT (16,90 €/kg en boucherie au détail)"
+    },
+    "735": {
+      "nom": "Haricot vert",
+      "prix": 4.5,
+      "source": "estimé : prix pro HT"
+    },
+    "734": {
+      "nom": "huile des tomates séchées",
+      "prix": 5.0,
+      "source": "estimé : prix pro HT"
+    },
+    "760": {
+      "nom": "poulet mariné salades",
+      "prix": 9.0,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient"
+    },
+    "685": {
+      "nom": "burrata 100g",
+      "prix": 18.0,
+      "source": "estimé : prix pro HT"
+    },
+    "582": {
+      "nom": "Roses Cosmos",
+      "prix": 1.0,
+      "source": "estimé : prix pro HT par pièce, à vérifier"
+    },
+    "764": {
+      "nom": "Cougnou - Nature 400 g. - Cru",
+      "prix": 1.6,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (par pièce)"
+    },
+    "649": {
+      "nom": "Poche Sauce Tikka",
+      "prix": 6.0,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient"
+    },
+    "689": {
+      "nom": "Poche sauce liégeoise",
+      "prix": 6.0,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient"
+    },
+    "650": {
+      "nom": "Poche Sauce Cacahuète",
+      "prix": 6.0,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient"
+    },
+    "648": {
+      "nom": "Poche Sauce Curry",
+      "prix": 6.0,
+      "source": "estimé, produit de la centrale : à remplacer par son prix de revient (au kg)"
+    },
+    "633": {
+      "nom": "Pâte à tartiner chocolat",
+      "prix": 6.8,
+      "source": "estimé : prix pro HT (Colruyt 4,90 à 6,80 €/kg)"
+    },
+    "625": {
+      "nom": "Guanciale",
+      "prix": 18.0,
+      "source": "estimé : prix pro HT"
+    },
+    "696": {
+      "nom": "guacamole",
+      "prix": 9.0,
+      "source": "estimé : prix pro HT"
+    },
+    "509": {
+      "nom": "Ravier menu alu noir - 178x136x45mm",
+      "prix": 0.2,
+      "source": "estimé : prix pro HT par pièce (barquettes alu 0,15 à 0,20 €)"
+    },
+    "733": {
+      "nom": "Couscous",
+      "prix": 2.2,
+      "source": "estimé : prix pro HT"
+    },
+    "755": {
+      "nom": "Tapenade tomates",
+      "prix": 12.0,
+      "source": "estimé : prix pro HT"
+    },
+    "573": {
+      "nom": "Saumon (Filet)",
+      "prix": 22.0,
+      "source": "estimé : prix pro HT"
+    }
+  },
+  "pertes": {
+    "368": {
+      "nom": "Courgettes",
+      "perte": 5,
+      "raison": "extrémités"
+    },
+    "401": {
+      "nom": "Fourme Ambert pré-pack",
+      "perte": 3,
+      "raison": "croûte"
+    },
+    "304": {
+      "nom": "Grenaille",
+      "perte": 3,
+      "raison": "tri, pommes abîmées"
+    },
+    "756": {
+      "nom": "Mesclun",
+      "perte": 10,
+      "raison": "tri, feuilles fanées"
+    },
+    "353": {
+      "nom": "Oignons rouges",
+      "perte": 10,
+      "raison": "pelure, extrémités"
+    },
+    "332": {
+      "nom": "Olives noires dénoyautées",
+      "perte": 0,
+      "raison": "égouttées : prix au poids net"
+    },
+    "270": {
+      "nom": "Parmesan",
+      "perte": 8,
+      "raison": "croûte"
+    },
+    "356": {
+      "nom": "Persil plat",
+      "perte": 30,
+      "raison": "tiges"
+    },
+    "757": {
+      "nom": "Radicchio",
+      "perte": 15,
+      "raison": "trognon, feuilles extérieures"
+    },
+    "761": {
+      "nom": "Steak de bœuf",
+      "perte": 5,
+      "raison": "parage"
+    },
+    "282": {
+      "nom": "Tomates cerises",
+      "perte": 3,
+      "raison": "pédoncules, fruits abîmés"
+    },
+    "387": {
+      "nom": "Tomates semi séchées",
+      "perte": 0,
+      "raison": "à l'huile : prix au poids net"
+    },
+    "692": {
+      "nom": "iceberg",
+      "perte": 10,
+      "raison": "tri, feuilles extérieures"
+    },
+    "697": {
+      "nom": "oignon jeune",
+      "perte": 10,
+      "raison": "racines, fanes"
+    },
+    "735": {
+      "nom": "Haricot vert",
+      "perte": 8,
+      "raison": "équeutage"
+    },
+    "573": {
+      "nom": "Saumon (Filet)",
+      "perte": 3,
+      "raison": "arêtes, parage"
+    }
+  }
+}
