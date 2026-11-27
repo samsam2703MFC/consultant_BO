@@ -350,3 +350,4 @@
 2026-11-27T13:58:03Z Mon équipe : absences, congés et remplacements — sous contrat de travail, une absence payée (maladie, congé payé, circonstance) garde son coût et sort de la présence ; remplaçant aux mêmes heures (équipe ou extérieur) avec son coût ; table panel_equipe_absence
 2026-11-27T15:00:18Z Vidéos de Mon équipe retournées (la barre « Absence ou congé », la fenêtre d’un service) et nouvelle vidéo 02-19 : absences, congés et remplacements
 2026-11-27T16:46:38Z Absences : l'app employés montre l'absence (motif) et le remplacement ; salaire garanti d'une maladie (30 jours puis la mutuelle ; employé·e ou ouvrier·ère, statut dans la fiche, table panel_equipe_statut) ; vidéos 02-16 et 02-19 retournées
+2026-11-27T17:05:56Z Absences : l'Opérationnel (une absence payée n'est ni en poste ni dans le partage des ventes, montrée à part ; son coût reste) et les primes (heures travaillées sans les absences)

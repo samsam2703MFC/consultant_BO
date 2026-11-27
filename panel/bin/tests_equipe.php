@@ -25,7 +25,12 @@ final class Db
     public static ?string $matrice = null;   // panel_equipe_matrice : le JSON gardé
     public static ?string $options = '{"assistant":true,"taches":true,"matrice":true,"recopie":true}';   // panel_equipe_options
     public static array $exec = [];
-    public static function rows(string $sql, array $a = []): array { return str_contains($sql, 'panel_equipe_roulement') ? self::$roul : []; }
+    public static array $absJour = [];        // panel_equipe_absence lue par l'Opérationnel (jour, payées)
+    public static function rows(string $sql, array $a = []): array
+    {
+        if (str_contains($sql, 'FROM panel_equipe_absence WHERE jour = ? AND payee = 1')) { return self::$absJour; }
+        return str_contains($sql, 'panel_equipe_roulement') ? self::$roul : [];
+    }
     public static function row(string $sql, array $a = []): ?array
     {
         if (str_contains($sql, 'panel_equipe_matrice')) { return self::$matrice !== null ? ['matrice' => self::$matrice] : null; }
@@ -718,6 +723,21 @@ $CORPS = ['shop' => 1, 'employe' => 201, 'statut' => 'cadre'];
 verifie('un statut inconnu : refusé', isset(wr_equipe_statut()['error']));
 $CORPS = ['shop' => 1, 'employe' => 300, 'statut' => 'employe'];
 verifie('une personne d’un autre magasin : refusée', isset(wr_equipe_statut()['error']));
+
+// L'Opérationnel et les primes (27/11/2026, Sam : « fais aussi l'Opérationnel et les primes »).
+Db::$absJour = [['shop_id' => '4', 'employe_id' => 201, 'service_id' => 31, 'de' => '12:45', 'motif' => 'maladie'],
+    ['shop_id' => '5', 'employe_id' => 206, 'service_id' => 32, 'de' => '06:45', 'motif' => 'cp']];
+$AJ = eqaAbsencesDuJour(['4', 5], '2026-11-18');
+verifie('l’Opérationnel : les absences payées du jour, par service et par personne + heure', $AJ['id'] === [31 => 'maladie', 32 => 'cp'] && $AJ['cle']['4']['201|12:45'] === 'maladie' && $AJ['cle']['5']['206|06:45'] === 'cp', json_encode($AJ));
+verifie('l’Opérationnel : aucun magasin, aucune lecture', eqaAbsencesDuJour([], '2026-11-18') === ['id' => [], 'cle' => []]);
+$sql = eqaSansAbsencesSql('s');
+verifie('les primes : les heures d’un service d’absence payée sont écartées (la personne, le jour, l’heure de début)',
+    str_contains($sql, 'NOT EXISTS') && str_contains($sql, 'eqa.employe_id = s.id_employee') && str_contains($sql, 'eqa.jour = s.work_date') && str_contains($sql, 'eqa.de = LEFT(s.start_hour, 5)') && str_contains($sql, 'eqa.payee = 1'), $sql);
+$src = (string) file_get_contents(__DIR__ . '/../src/primes.php');
+verifie('les primes : les trois lectures des heures passent par la clause', substr_count($src, "' . \$sansAbs . '") === 3);
+$ep = (string) file_get_contents(__DIR__ . '/../../shared/src/endpoints.php');
+verifie('l’Opérationnel : une absence ne compte ni en poste ni dans le partage des ventes ni dans les heures, son coût reste',
+    str_contains($ep, "if (empty(\$q9['absence']) && \$q9['hD']") && str_contains($ep, "!empty(\$p9['absence']) || \$p9['hD']") && str_contains($ep, "if (empty(\$p9['absence'])) { \$hPlan += \$p9['h']; }") && str_contains($ep, '$labPlan += $cout;'));
 
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);
