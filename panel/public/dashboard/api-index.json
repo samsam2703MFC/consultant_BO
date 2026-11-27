@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-27T18:14:05Z",
+ "genere": "2026-11-27T18:22:36Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [

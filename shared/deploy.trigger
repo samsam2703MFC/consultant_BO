@@ -353,4 +353,5 @@
 2026-11-27T17:00:08Z Résultat › Mois : le CA du réseau sur douze mois glissants — courbe des 12 derniers mois clos face au N-1, CA des 12 mois, évolution réseau entier et à magasins comparables, détail par magasin au survol
 2026-11-27T17:05:56Z Absences : l'Opérationnel (une absence payée n'est ni en poste ni dans le partage des ventes, montrée à part ; son coût reste) et les primes (heures travaillées sans les absences)
 2026-11-27T17:42:04Z Absences : le consultant — l'équipe de la visite montre une absence payée à part (pas à noter) ; les ventes par heure écartent ses heures
+2026-11-27T17:57:20Z Résultat › Mois : les douze mois glissants par catégorie principale (Traiteur, Boulangerie, Viennoiseries, Quiches, Tartes) — une case par catégorie (CA des 12 mois, part, évolution à magasins comparables), la courbe de la catégorie au clic ; GET /ventes/groupes-mois
 2026-11-27T18:14:44Z Livraison bureau : copie des demandes hors zone des deux landings (POST /bureau-hors-zone, transmises à TF Buddy delivery-interest), « Ce que voient vos clients » et « Demandes hors zone » dans Clients › Bureaux

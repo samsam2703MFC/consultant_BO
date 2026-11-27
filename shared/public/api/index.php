@@ -88,6 +88,7 @@ require __DIR__ . '/../../../consultant/src/rapports.php';
 require __DIR__ . '/../../../panel/src/planning_sync.php';
 require __DIR__ . '/../../../shared/src/panel_ventes.php';
 require __DIR__ . '/../../../consultant/src/analyse_produits.php';
+require __DIR__ . '/../../../consultant/src/ventes_groupes.php';   // Résultat › Mois : le CA par catégorie principale, mois par mois (27/11/2026)
 require __DIR__ . '/../../../panel/src/recette_produit.php';
 require __DIR__ . '/../../../panel/src/matiere_fiche.php';
 require __DIR__ . '/../../../consultant/src/pnl_mois.php';
@@ -724,6 +725,7 @@ function route(string $method, string $path): mixed
             $path === '/push/cle'                    => ep_push_cle(),
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/stats/reseau'          => ep_stats_ventes_reseau(),
+            $path === '/ventes/groupes-mois'          => ep_ventes_groupes_mois(),
             $path === '/historique/ventes'            => ep_historique_etat(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
