@@ -77,6 +77,7 @@ final class Panel
     public static array $portionVendue = []; // id => true : son type ne change plus (409)
     public static int $lien = 9000;        // les connection_id que le panel attribue aux lignes neuves
     public static array $prix = [];       // sid => [mid => prix]
+    public static array $fournisseur = []; // sid => [mid => true] : prix tenu par un fournisseur intégré (403 SUPPLIER_MANAGED_PRICE)
     public static array $noms = [];       // mid => [nom, unité]
     public static array $stock = [];      // sid => [[mid, nom, q, u]]
     public static array $refus = [];      // chemin => message (422)
@@ -263,6 +264,9 @@ final class Panel
         if (preg_match('#^/materials/(\d+)/manual-price$#', $c, $m) && $meth === 'POST') {
             if (isset($b['shop_ids'])) {   // le contrat : {shop_ids, pack_price, package_size}
                 if (!isset($b['pack_price'], $b['package_size'])) { PanelApi::$lastError = 'POST ' . $c . ' → HTTP 422'; return [false, ['description' => 'MISSING_REQUIRED_FIELDS']]; }
+                foreach ($b['shop_ids'] as $sh) {
+                    if (!empty(self::$fournisseur[(int) $sh][(int) $m[1]])) { PanelApi::$lastError = 'POST ' . $c . ' → HTTP 403 : SUPPLIER_MANAGED_PRICE'; return [false, ['code' => 'SUPPLIER_MANAGED_PRICE', 'description' => 'SUPPLIER_MANAGED_PRICE']]; }
+                }
                 foreach ($b['shop_ids'] as $sh) { self::$prix[(int) $sh][(int) $m[1]] = (float) $b['pack_price'] / (float) $b['package_size']; }
                 return [true, []];
             }
@@ -905,6 +909,28 @@ verifie('aligner : Gosselies reprend 4,20 €/kg, relu, au registre, et le food 
 $BODY = ['id' => $r['ecritures'][0]['id']];
 verifie('aligner : « Annuler » rend son prix à Gosselies', wr_verification_annuler()['ok'] && abs(Panel::$prix[3][282] - 0.005) < 1e-12);
 Panel::$prix[3][282] = 0.0042;
+
+// 27/11/2026 : « refusée par le panel : SUPPLIER_MANAGED_PRICE ». Halle paie ses tomates au tarif de la centrale, que seul
+// le fournisseur change : ce n'est pas une erreur ; la référence reprend ce tarif et les autres magasins s'y alignent.
+Panel::$prix[4][282] = 0.006; Panel::$fournisseur[4][282] = true;
+$BODY = ['rid' => 216, 'lignes' => [['mid' => 282, 'prix' => 4.2, 'aligner' => true]], 'sansEffet' => true];
+$r = wr_verification_references();
+$noms = array_map(static fn ($e) => $e['resultat'], $r['ecritures']);
+verifie('tarif fournisseur : le refus est une information, pas une erreur', $r['ok'] && in_array('fournisseur', $noms, true) && !in_array('refuse', $noms, true), json_encode($noms));
+verifie('tarif fournisseur : la référence reprend 6 €/kg et les autres magasins s’y alignent (même food cost)', abs((float) Panel::$materiaux[282]['reference_unit_price_net'] - 0.006) < 1e-12
+    && abs(Panel::$prix[3][282] - 0.006) < 1e-12 && abs(Panel::$prix[2][282] - 0.006) < 1e-12 && Panel::$prix[4][282] === 0.006
+    && abs(Panel::get('/shops/3/recipes/216/cost')['cost_net'] - Panel::get('/shops/4/recipes/216/cost')['cost_net']) < 1e-9, json_encode(Panel::$prix));
+verifie('tarif fournisseur : appris, il n’est plus « à aligner » et la proposition le reprend', vrfEstVerrou(vrfVerrous(), 4, 282)
+    && vrfAAligner([4 => ['prix' => 0.006, 'src' => 'SUPPLIER', 'verrou' => true], 3 => ['prix' => 0.005, 'src' => 'LOCAL']], 0.005) === []
+    && vrfProposition(['mid' => 282, 'nom' => 'Tomates', 'facteur' => 1000, 'prix' => [4 => ['prix' => 0.006, 'src' => 'SUPPLIER', 'verrou' => true], 3 => ['prix' => 0.005, 'src' => 'LOCAL']]], ['prix' => [], 'pertes' => []])['origine'] === 'fournisseur');
+$_GET = ['rid' => '216'];
+$R3 = ep_verification_references();
+$l282 = array_values(array_filter($R3['lignes'], static fn ($l) => $l['mid'] === 282))[0] ?? [];
+verifie('tarif fournisseur : la page le montre, rien à aligner', ($l282['propose']['origine'] ?? '') === 'fournisseur' && ($l282['aligner'] ?? null) === [] && ($R3['compteurs']['fournisseur'] ?? 0) === 1, json_encode([$l282['propose'] ?? null, $l282['aligner'] ?? null]));
+// On remet la Tagliata comme avant, pour la suite.
+Panel::$fournisseur = []; Db::$reglages['vrfVerrous'] = '{}';
+foreach ([2, 3, 4] as $s_) { if (isset(Panel::$prix[$s_][282])) { Panel::$prix[$s_][282] = 0.0042; } }
+Panel::$materiaux[282]['reference_unit_price_net'] = '0.0042';
 
 // Les pertes sur les lignes, toute la carte, par tranches.
 verifie('pertes sur les lignes : la perte de la matière, seulement si elle en porte une', vrfChangementsPerte(['materials' => [['id' => 282, 'quantity' => 60, 'waste_amount_perc' => '0.0000'], ['id' => 9, 'quantity' => 1], ['id' => 761, 'quantity' => 100, 'waste_amount_perc' => '5.0000']]], [282 => 3.0, 9 => 0.0, 761 => 5.0])
