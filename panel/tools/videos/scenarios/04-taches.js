@@ -18,8 +18,8 @@ module.exports = async function () {
   await f.montrer('.tj-j.on', 'Aujourd’hui');
   await f.dire('Aujourd’hui, en cours : <b>63 %</b> des tâches obligatoires faites, 5 sur 8.', 4000);
   await f.dire('Dessous : les <b>photos rendues</b>, la <b>note moyenne</b> du contrôle et les <b>non-conformités</b> du jour.', 4800);
-  await f.montrer('.tj-nc', 'Non-conformités · 30 jours');
-  await f.dire('En haut, les <b>non-conformités</b> des 30 derniers jours, et combien ont été reprises.', 4400);
+  await f.montrer('.ac [data-tjallerret]', 'Non-conformités · 30 jours');
+  await f.dire('Sous la semaine, dans <b>À corriger</b> : les <b>non-conformités</b> des 30 derniers jours, et combien ont été reprises.', 4800);
   await f.cacher(200);
   await f.cliquer('[data-tjjour="2026-11-17"]', { apres: 1500 });
   await f.montrer('.tj-j.on', 'Mardi');

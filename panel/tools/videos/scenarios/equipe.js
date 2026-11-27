@@ -2,6 +2,8 @@
  * Données fictives : mocks/20_equipe.js (semaine du 16 au 22 novembre 2026, jeudi 19 = aujourd'hui).
  * Le récit : le comptoir est vide mardi de 13 h 45 à 14 h 30 → on avance le service qui suit ; vendredi est rouge
  * → on retire une personne du shift de l'après-midi. */
+const { sousLaTete } = require('./equipe-onglets');
+
 const C = {
   mardi: '2026-11-17', vendredi: '2026-11-20', jeudi: '2026-11-19',
   // Le service à avancer mardi (il commence à 14 h 30, au bout du trou) et celui à retirer vendredi.
@@ -63,6 +65,7 @@ async function corrigerLeTrou(f) {
   await f.montrer(cible, 'Mardi');
   await f.dire('Mardi, ce service commence à <b>14 h 30</b> : juste à la fin du trou. Un clic l’ouvre.', 3800);
   await f.cacher(150);
+  await sousLaTete(f, cible);
   await f.cliquer(cible, { apres: 1300 });
   await f.montrer('[data-eqp-trace]', 'La ligne du service');
   await f.dire('La fenêtre du service. Plus de champ d’heure : on <b>tire la ligne</b>, au quart d’heure.', 4200);
@@ -84,6 +87,7 @@ async function retirerDuShift(f) {
   await f.cacher(150);
   if (!C.retrait.emp) { C.retrait.emp = await serviceDuJour(f, C.vendredi, { finit: '19:15', secteur: 'comptoir' }); }
   const cible = `[data-eqp-cell="${C.vendredi}"][data-emp="${C.retrait.emp}"] [data-eqp-svc]`;
+  await sousLaTete(f, cible);
   await f.cliquer(cible, { apres: 1300 });
   await f.montrer('[data-eqp-suppr]', 'Retirer du shift');
   await f.dire('Dans la fenêtre du service, <b>Retirer du shift</b> enlève cette personne de ce service.', 3800);

@@ -32,7 +32,7 @@ module.exports = async function () {
   await f.cliquer('.an-g2--top > .an-carte:first-child tr[data-pid="100"]', { apres: 1900 });
   await f.montrer('.an-titre', 'Croissant au beurre');
   await f.dire('En haut : sa catégorie, sa <b>famille</b> — un lien vers sa page — et sa référence.', 4400);
-  await f.montrer('.an-ret', 'Ce qu’il faut retenir');
+  await f.montrer('.an-res-ret', 'Ce qu’il faut retenir');
   await f.dire('D’abord, <b>ce qu’il faut retenir</b> : son rang, ce qu’on en jette, son jour fort, son prix face au réseau.', 5400);
   await f.cacher(150); await f.taire(150);
 

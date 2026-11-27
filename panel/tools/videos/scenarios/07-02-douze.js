@@ -21,7 +21,7 @@ module.exports = async function () {
 
   await enHautDe(f, DZ, 20);
   await dire(f, DZ + ' .db-s6', 'Douze mois', '<b>Les douze derniers mois</b>, glissants : les clients de chaque mois, en pointillé le même mois un an plus tôt.', 5800);
-  await f.dire('La bande : <b>bleue</b> au-dessus de l’an passé, <b>orange</b> en dessous ; dessous, l’écart de chaque mois.', 5000);
+  await f.dire('La bande : <b>verte</b> au-dessus de l’an passé, <b>or</b> en dessous ; dessous, l’écart de chaque mois.', 5000);
   await f.montrerTout(DZ + ' .db-tui', 'Trois tuiles');
   await f.dire('À droite : l’écart sur douze mois, le <b>mois en cours</b> face aux mêmes jours de l’an passé, le meilleur mois.', 5800);
   await rien(f);
@@ -38,7 +38,7 @@ module.exports = async function () {
   await dire(f, '#dash .db-frise', 'Les mois', 'En haut, les <b>douze mois</b> de l’année : le chiffre de chacun et sa jauge vers l’objectif.', 4800);
   await rien(f);
   await f.cliquer('#dash .db-frise .fr-c[data-fdate="2026-10-31"]', { apres: 2000 });
-  await dire(f, '#dash .qb-jauge', 'Octobre, clos', 'Un clic ouvre le mois : <b>octobre</b>, clos, se lit face à son objectif.', 4400);
+  await dire(f, '#dash .chr-l1', 'Octobre, clos', 'Un clic ouvre le mois : <b>octobre</b>, clos, se lit face à son objectif.', 4400);
   await rien(f);
   await enHautDe(f, DZ, 20);
   await dire(f, DZ + ' .db-card', 'Jusqu’à octobre', 'Les douze mois s’arrêtent à octobre.', 3200);

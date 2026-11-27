@@ -20,9 +20,9 @@ module.exports = async function () {
   await f.cliquer('[data-ofong="conv"]', { apres: 900 });
   await f.montrer('[data-ofong="conv"]', 'Converties');
   await f.dire('« <b>Converties</b> » : les offres que le client a acceptées, devenues commandes dans TF Buddy.', 4600);
-  await f.montrer('.of-kpis > div:nth-child(2)', 'Converties en commande');
-  await f.dire('En tête : leur nombre et leur montant TTC, dans la liste de TF Buddy.', 4000);
-  await f.montrer('.of-kpis > div:nth-child(3)', 'Taux de conversion');
+  await f.montrer('.of-res-sep', 'Converties en commande');
+  await f.dire('En tête, à droite : leur nombre et leur montant TTC, dans la liste de TF Buddy.', 4200);
+  await f.montrer('.of-res-sep span', 'Taux de conversion');
   await f.dire('Le <b>taux de conversion</b> : les offres converties, sur toutes les offres faites.', 4200);
   await f.montrer('.of-g', 'La liste');
   await f.dire('Chaque ligne : le numéro, l’offre et son client, le jour de l’événement, retrait ou livraison, le total TTC.', 5600);

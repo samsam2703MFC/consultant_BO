@@ -20,7 +20,7 @@ module.exports = async function () {
   await f.taire(200);
   await f.cacher(200);
   await f.cliquer('#dash .db-frise .fr-c[data-fdate="2026-10-31"]', { apres: 1900 });
-  await f.montrer('#dash .qb-jauge', 'Octobre, clos');
+  await f.montrer('#dash .chr-l1', 'Octobre, clos');
   await f.dire('Un clic ouvre le mois : <b>octobre</b>, clos, se lit face à son objectif.', 4200);
   await f.montrer('#dash [data-auj]', 'Revenir');
   await f.dire('« <b>Ce mois-ci</b> » ramène au mois en cours.', 3000);
@@ -29,11 +29,12 @@ module.exports = async function () {
 
   await f.chapitre({ n: 2, total: 4, titre: 'Le chiffre et les jours', texte: 'Où en est le mois face à ce qui était attendu, et chaque jour face à son objectif.' });
   await f.etape('2 · Le chiffre et les jours');
-  await f.montrer('#dash .qb-jauge', 'Le chiffre du mois');
+  await f.montrer('#dash .chr-l1', 'Le chiffre du mois');
   await f.dire('Le mois en cours se lit face à l’<b>attendu à ce jour</b>, le trait sur la jauge, et face à l’objectif du mois.', 5200);
-  await f.dire('Au <b>rythme actuel</b>, la fin du mois ; et ce qu’il <b>reste à faire</b>, par jour restant.', 4400);
-  await f.montrer('#dash .qb-tuiles', 'Quatre tuiles');
-  await f.dire('Les <b>clients</b>, le <b>panier moyen</b> hors clients pro, la <b>marge brute</b>, le <b>résultat</b> hors TVA ; le panier et le résultat face au réseau.', 6000);
+  await f.montrer('#dash .chr-lev', 'Reste à faire');
+  await f.dire('À droite : ce qu’il <b>reste à faire</b>, par jour restant ; et au <b>rythme actuel</b>, la fin du mois.', 4400);
+  await f.montrer('#dash .chr-l2', 'À corriger');
+  await f.dire('Dessous, « <b>À corriger</b> » : les coûts au-dessus de leur seuil, les heures sous 20 % de marge nette. Un clic mène à la ligne.', 5800);
   await f.montrer('#dash .qb-jours-c', 'Les jours');
   await f.dire('<b>Les jours</b> du mois : la barre du chiffre, le trait de l’objectif du jour, la couleur de l’atteinte.', 4800);
   await f.dire('En haut à droite : le jour le plus haut et le plus bas face à leur objectif.', 3800);
@@ -59,7 +60,7 @@ module.exports = async function () {
   await f.dire('<b>Les six leviers</b> du mois : trafic, récurrence, expérience client, food cost, labour cost, overhead cost.', 5400);
   await f.dire('Chacun face au <b>même mois de l’an passé</b> et au <b>réseau</b>.', 3600);
   await f.montrer('#dash [data-qbsec=leviers] .lv-leg', 'La pastille');
-  await f.dire('La <b>pastille</b> suit les seuils de la Table KPI : vert sous l’alerte, puis orange, puis rouge.', 4800);
+  await f.dire('La <b>pastille</b> suit les seuils de la Table KPI : vert sous l’alerte, puis or, puis rouge.', 4800);
   await f.cliquer('#dash [data-levvue=annee]', { apres: 1500 });
   await f.montrer('#dash [data-qbsec=leviers] .lv-card', 'L’évolution de l’année');
   await f.dire('« <b>L’évolution de l’année</b> » : une barre par mois, le meilleur et le pire mois, la moyenne face au réseau.', 5400);

@@ -15,13 +15,15 @@
 const { Film } = require('../film');
 const { fiabiliser, T, poster, modifierPlan, lignes, ligne, saisir, ecrire, onglet, fonction, fonctionPreparee, attendre } = require('./tresorerie');
 
-// Les deux rangées de deux cartes : la routine et la décision en tête, le pilotage et le hors plan sous le plan
-// (`f.montrer` prend le premier élément trouvé : la carte du haut).
+// En tête, le résumé (26/11/2026, §7.13) : le cash prévu, le coussin, la décision, les repères, puis « À corriger » ;
+// dessous, la routine du dimanche et le pilotage côte à côte ; le hors plan sous le plan.
 const ROUTINE = T + '.tr-g2 > .tr-carte:nth-child(1)';
-const DECISION = T + '.tr-g2 > .tr-carte:nth-child(2)';
+const DECISION = T + '.trs-lev';
+const REPERES = T + '.trs-g, ' + T + '.trs-meta';
+const COUSSIN = T + '.trs-g';
 const GRAPHE = T + '.tr-carte:has(.tr-graph)';
-const PILOTAGE = T + '.tr-g2:last-of-type > .tr-carte:nth-child(1)';
-const HORS = T + '.tr-g2:last-of-type > .tr-carte:nth-child(2)';
+const PILOTAGE = T + '.tr-g2 > .tr-carte:nth-child(2)';
+const HORS = T + '.tr-hors-c';
 
 module.exports = async function () {
   const f = await Film.ouvrir('09-01-plan', {
@@ -40,12 +42,16 @@ module.exports = async function () {
   });
   await f.montrer(T + '.tr-ong', 'Plan 2026-2027');
   await f.dire('La Trésorerie s’ouvre sur le <b>plan</b> : semaine par semaine, montants en € TTC.', 4000);
-  await f.montrer(ROUTINE, 'Routine du dimanche');
-  await f.dire('La <b>routine du dimanche</b> : le solde réel du compte, lu dans la banque, et l’écart avec le prévu.', 4600);
   await f.montrer(DECISION, 'La décision');
   await f.dire('<b>La décision</b> : le cash prévu des quatre semaines à venir, face au coussin de sécurité.', 4400);
-  await f.montrer(T + '.tr-kpis', 'Les repères');
+  await f.montrerTout(REPERES, 'Les repères');
   await f.dire('Les repères : le <b>point bas</b> du cash, les semaines sous le coussin, les ventes prévues, marchandises et personnel en % des ventes.', 6000);
+  await f.montrer(T + '.trs-l2', 'À corriger');
+  await f.dire('Dessous, « <b>À corriger</b> » : un bouton par point, qui mène à sa case du plan.', 4000);
+  await f.montrer(ROUTINE, 'Routine du dimanche');
+  await f.dire('La <b>routine du dimanche</b> : le solde réel du compte, lu dans la banque, et l’écart avec le prévu.', 4600);
+  await f.montrer(PILOTAGE, 'Pilotage');
+  await f.dire('À côté, le <b>pilotage</b> : le cash de départ et le coussin de sécurité.', 3600);
   await f.montrer(GRAPHE, 'Cash fin de semaine');
   await f.dire('Une barre par semaine : le cash prévu de fin de semaine. Sous le coussin, elle change de couleur ; à découvert, elle passe en rouge.', 6000);
   await f.cacher(200); await f.taire(150);
@@ -61,8 +67,8 @@ module.exports = async function () {
   await f.dire('Marchandises, gérant, personnel, frais… : calculés depuis les onglets <b>Fournisseurs</b> et <b>Paiements</b>.', 5000);
   await lignes(f, await ligne(f, 'Cash fin de semaine (prévu)', 'Cash réel en banque (dimanche)', 'Écart réel − prévu'), 'Le bas du plan');
   await f.dire('En bas, la ligne qui compte : le <b>cash fin de semaine</b>, puis le réel du dimanche et l’écart.', 4800);
-  await f.montrer(T + '.tr-g2:last-of-type', 'Pilotage · hors plan');
-  await f.dire('Dessous, le <b>pilotage</b> (cash de départ, coussin) et les dettes <b>hors plan</b>, à arbitrer.', 4600);
+  await f.montrer(HORS, 'Hors plan');
+  await f.dire('Sous le plan, les dettes <b>hors plan</b>, à arbitrer.', 3200);
   await f.taire(150); await f.cacher(300);
   await f.defiler(-4000);
 
@@ -146,8 +152,8 @@ module.exports = async function () {
   await saisir(f, 'coussin', '9000', { apres: 1000 });
   await f.montrer(GRAPHE, 'Coussin 9 000 €');
   await f.dire('La ligne pointillée du coussin monte : les semaines en dessous changent de couleur.', 4600);
-  await f.montrer(T + '.tr-kpi:nth-child(2)', 'Semaines sous le coussin');
-  await f.dire('Le repère compte <b>5 semaines</b> sous le coussin, au lieu d’une.', 3800);
+  await f.montrer(COUSSIN, 'Semaines sous le coussin');
+  await f.dire('Le résumé compte maintenant <b>5 semaines</b> sous le coussin.', 3600);
   await f.taire(150); await f.cacher(300);
 
   /* Les dettes hors plan */
@@ -194,7 +200,7 @@ module.exports = async function () {
   await f.dire('La saisie suivante est prévenue au lieu d’<b>écraser</b> la sienne : elle n’est pas enregistrée.', 4800);
   await f.cacher(150); await f.taire(150);
   await f.cliquer(T + '[data-tra="reprendre"]', { apres: 1300 });
-  await f.montrer(T + '.tr-kpi:nth-child(2)', 'Coussin : 6 000 €');
+  await f.montrer(COUSSIN, 'Coussin : 6 000 €');
   await f.dire('« <b>Reprendre le plan enregistré</b> » : le plan revient tel que le consultant l’a laissé. On y retape sa saisie.', 5600);
   await f.taire(150); await f.cacher(300);
 

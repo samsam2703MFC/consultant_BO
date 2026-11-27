@@ -26,7 +26,7 @@ module.exports = async function () {
   await f.montrer('.eqp-moi tbody tr:nth-child(2)', 'Une ligne par personne');
   await f.dire('Une ligne par personne : les heures de chaque service, <b>beige</b> le matin, <b>rose</b> l’après-midi.', 4800);
   await f.montrer('.eqp-moi tr.tot:not(.eqp-msem)', 'Par jour');
-  await f.dire('Sous chaque jour, ses heures et un <b>point de couleur</b> : vert dans la cible, orange, rouge, noir.', 5000);
+  await f.dire('Sous chaque jour, ses heures et un <b>point de couleur</b> : vert dans la cible, or, rouge, noir.', 5000);
   await f.montrer('.eqp-moi tr.eqp-msem', 'Par semaine');
   await f.dire('Chaque semaine : ses heures et son pourcentage face au budget.', 3400);
   await f.cacher(150); await f.taire(150);

@@ -10,7 +10,7 @@
  *     de chaque jour dessous), vue Mois (les heures de chacun jour par jour, chaque jour et chaque semaine face au budget) ;
  *     le BUDGET D'HEURES : les frais de personnel du planning face au CA du jour (la caisse, comptoir + B2B, pour un jour
  *     passé ; la projection aujourd'hui ; l'objectif du magasin pour un jour à venir), cible du réseau
- *     17 %, orange au-dessus, rouge au-dessus de 20 %, noir au-dessus de 22 % (personnelPaliers, réglables), et ce qu'il
+ *     17 %, or (--prize) au-dessus, rouge au-dessus de 20 %, noir au-dessus de 22 % (personnelPaliers, réglables), et ce qu'il
  *     faut retirer pour revenir à la cible ; au jour, la souris suffit : tirer une ligne sur celle d'une personne lui
  *     crée un service, glisser ou étirer une barre le change ; la fenêtre montre l'effet sur le comptoir, les secteurs et
  *     le budget avant d'enregistrer ; les ETP planifiés (jour, semaine, mois) et, au mois seulement, le CA par ETP face
@@ -366,7 +366,7 @@
   /** Les heures d'un temps plein sur la période vue : le mois, la semaine (× 12 / 52) ou le jour (× 12 / 365). */
   const heuresEtp = (P, quoi) => { const H = etpDe(P).heuresMois; return quoi === 'mois' ? H : quoi === 'semaine' ? H * 12 / 52 : H * 12 / 365; };
   const fN1 = x => (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
-  /** Le niveau d'un CA par ETP : dans la cible, en dessous (orange), sous le seuil critique (rouge). */
+  /** Le niveau d'un CA par ETP : dans la cible, en dessous (or, classe « orange »), sous le seuil critique (rouge). */
   const niveauEtp = (E, v) => v >= E.caCible ? 'ok' : v >= E.caCritique ? 'orange' : 'rouge';
   function jaugeEtp(P, quoi, titre, h, ca) {
     const E = etpDe(P), he = heuresEtp(P, quoi);

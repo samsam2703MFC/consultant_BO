@@ -12,21 +12,24 @@ module.exports = async function () {
 
   await f.chapitre({ n: 1, total: 4, titre: 'L’objectif de l’année', texte: 'L’engagement de l’année en une carte : où vous en êtes, et où vous allez.' });
   await f.etape('1 · L’objectif');
-  await f.montrer('#dash .db-an-obj', 'L’objectif de l’année');
-  await f.dire('En tête, l’<b>objectif de l’année</b> : l’engagement du franchisé, que le consultant valide.', 4600);
-  await f.montrer('#dash .db-an-barre', 'La barre');
+  await f.montrer('#dash .chr-l1', 'L’objectif de l’année');
+  await f.dire('En tête, le chiffre de l’année face à l’<b>objectif</b> : l’engagement du franchisé, que le consultant valide.', 4800);
+  await f.montrer('#dash .chr-g', 'La barre');
   await f.dire('La barre : le <b>réalisé</b>, la <b>projection</b> hachurée, et le trait de l’<b>attendu à ce jour</b>.', 4800);
   await f.dire('L’attendu suit les budgets des mois : la part de l’année déjà écoulée.', 4000);
-  await f.montrer('#dash .db-an-3', 'Trois chiffres');
-  await f.dire('Le <b>réalisé</b>, l’<b>écart</b> à l’attendu — en avance ou en retard — et la <b>projection</b> de fin d’année au rythme actuel.', 6000);
+  await f.dire('Sous la jauge, l’<b>écart</b> à l’attendu : en avance ou en retard.', 3600);
+  await f.montrer('#dash .chr-lev', 'La projection');
+  await f.dire('À droite, la <b>projection</b> de fin d’année au rythme actuel, face à l’objectif.', 4400);
+  await f.montrer('#dash .chr-l2', 'À corriger');
+  await f.dire('Dessous, « <b>À corriger</b> » : l’action du trimestre encore à lancer ; un clic ouvre le trimestre.', 4800);
   await f.cacher();
 
   await f.chapitre({ n: 2, total: 4, titre: 'Les quatre trimestres', texte: 'Le trimestre a rejoint l’Année : un clic sur un trimestre ouvre son détail.' });
   await f.etape('2 · Les trimestres');
   await f.montrer('#dash .db-an-q', 'Les trimestres');
   await f.dire('Les <b>quatre trimestres</b> côte à côte : clos, en cours ou à venir, le réalisé sur l’objectif, et ses trois mois.', 5600);
-  await f.montrer('#dash .db-an-qc[data-anq="4"] .db-pill', 'La pastille');
-  await f.dire('La <b>pastille</b> compare le réalisé à l’attendu à ce jour : rouge sous 80 %, orange jusqu’à 95, vert jusqu’à 105, doré au-delà.', 6400);
+  await f.montrer('#dash .db-an-qc[data-anq="4"] .an-att', 'L’atteinte');
+  await f.dire('L’<b>atteinte</b>, en mots : le réalisé face à l’attendu à ce jour. Rouge sous 90 %, or jusqu’à 100, vert à 100 % et plus.', 6000);
   await f.taire(150);
   await f.cacher(200);
   await f.cliquer('#dash .db-an-qc[data-anq="3"]', { apres: 1600 });
@@ -47,7 +50,7 @@ module.exports = async function () {
   await f.etape('3 · Les douze mois');
   await f.montrer('#dash .db-card:has(.db-an-12)', 'Les douze mois');
   await f.dire('<b>Les douze mois</b>, rangés par trimestre : la barre du chiffre, sa couleur dit l’atteinte du budget.', 5200);
-  await f.dire('Le mois en cours est en or ; le trait gris, c’est le même mois de l’an passé.', 4200);
+  await f.dire('Le mois en cours est hachuré : pas encore jugé. Le trait gris, c’est le même mois de l’an passé.', 4600);
   await f.montrer('#dash .db-card:has([data-anm])', 'Le trafic');
   await f.dire('<b>Le trafic</b> : les clients de chaque mois, et en pointillé ceux du même mois de l’an passé.', 4800);
   await f.dire('Le mois en cours est prolongé au rythme de ses jours ; son écart se lit aux mêmes jours de l’an passé.', 5200);
