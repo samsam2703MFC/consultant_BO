@@ -455,8 +455,8 @@ function bdvPublicMagasin(string $method, string $id, string $sous = ''): array
  *     Le même request_key reçu deux fois (un nouvel essai) met à jour la même copie.
  *   POST /dashboard/bureaux-dev/renvoyer {shop, id}     une copie que TF Buddy n'a pas reçue, renvoyée (même request_key)
  *   POST /dashboard/bureaux-dev/effacer {shop, id}      la copie effacée du cockpit (l'original reste dans TF Buddy)
- *   POST /dashboard/bureaux-dev {shop, donnees, hors_zone: id}   « Créer le bureau » : la demande créée depuis une
- *                                                       demande hors zone, qui passe « reprise » (données._reprise)
+ *   POST /dashboard/bureaux-dev/reprendre {shop, id, office_id}   « Créer le bureau » : le bureau créé par l'assistant
+ *                                                       « Ajouter un bureau » ; la demande hors zone passe « reprise »
  *   GET  /dashboard/bureaux-dev/tournees?shop=          les tournées que le webshop publie pour ce magasin (« ce que
  *                                                       voient vos clients » sur les deux pages)
  * Une copie est traitée dès son arrivée (traite_le) : comme toute demande traitée, elle s'efface après 90 jours.
@@ -628,18 +628,29 @@ function wr_bureaux_dev_renvoyer(): array
 }
 
 /**
- * « Créer le bureau » depuis une demande hors zone (27/11/2026, Sam : « deux actions, Créer le bureau et la poubelle ») :
- * la demande hors zone encore ouverte passe « reprise », avec le n° de la demande créée. Rend faux si elle n'est pas
- * (ou plus) une demande hors zone ouverte de ce magasin : rien ne bouge.
+ * « Créer le bureau » depuis une demande hors zone (27/11/2026, Sam : « deux actions, Créer le bureau et la poubelle »,
+ * puis « la création du bureau doit être cet assistant : Ajouter un bureau ») : une fois le bureau créé dans TF Buddy par
+ * l'assistant, la demande hors zone encore ouverte passe « reprise », avec le n° du bureau. Rend faux si elle n'est pas
+ * (ou plus) une demande hors zone ouverte de ce magasin : rien ne bouge (l'UPDATE re-teste le statut).
  */
-function bdvHorsZoneReprendre(string $shop, int $hzId, int $demandeId): bool
+function bdvHorsZoneReprendre(string $shop, int $hzId, int $officeId): bool
 {
     $r = bdvDemande($shop, $hzId);
     if ($r === null || $r['source'] !== 'hors_zone' || $r['statut'] !== 'hors_zone') { return false; }
-    $d = json_decode((string) $r['donnees'], true) ?: [];
-    $d['_reprise'] = $demandeId;
-    Db::exec('UPDATE panel_bureau_dev SET statut = "reprise", donnees = ?, traite_le = NOW() WHERE id = ?', [json_encode($d, JSON_UNESCAPED_UNICODE), (int) $r['id']]);
-    return true;
+    return Db::exec('UPDATE panel_bureau_dev SET statut = "reprise", office_id = ?, traite_le = NOW() WHERE id = ? AND shop_id = ? AND statut = "hors_zone"',
+        [$officeId, (int) $r['id'], $shop]) > 0;
+}
+
+/** POST /dashboard/bureaux-dev/reprendre {shop, id, office_id} : le bureau créé par l'assistant, la demande hors zone reprise. */
+function wr_bureaux_dev_reprendre(): array
+{
+    $b = body();
+    $shop = bdvShop($b);
+    $office = (int) ($b['office_id'] ?? 0);
+    if ($office <= 0) { http_response_code(422); return ['error' => 'le numéro du bureau créé manque']; }
+    if (!bdvHorsZoneReprendre($shop, (int) ($b['id'] ?? 0), $office)) { http_response_code(404); return ['error' => 'demande hors zone introuvable ou déjà reprise']; }
+    if (function_exists('journalAdd')) { journalAdd('dashboard', 'bureaux', null, 'Magasin ' . $shop . ' : demande hors zone n° ' . (int) $b['id'] . ' reprise en bureau n° ' . $office); }
+    return ['ok' => true, 'officeId' => $office];
 }
 
 /** La poubelle : la copie d'une demande hors zone effacée du cockpit ; l'original reste dans TF Buddy (aucune route pour l'y effacer). */
@@ -697,10 +708,7 @@ function wr_bureaux_dev_creer(): array
     if ($e) { http_response_code(422); return ['error' => 'Il manque ' . implode(', ', $e) . '.']; }
     $q = bdvQuestionnaire($shop, true);
     $promo = !empty($b['bon']) ? (int) ($q['promo'] ?? 0) : 0;
-    $l = bdvCreer($shop, $d, 'dashboard', '', $promo);
-    // « Créer le bureau » depuis une demande hors zone : elle passe « reprise » une fois la demande créée, jamais avant.
-    $hz = (int) ($b['hors_zone'] ?? 0);
-    return ['ok' => true, 'demande' => $l, 'reprise' => $hz > 0 && (int) ($l['id'] ?? 0) > 0 && bdvHorsZoneReprendre($shop, $hz, (int) $l['id'])];
+    return ['ok' => true, 'demande' => bdvCreer($shop, $d, 'dashboard', '', $promo)];
 }
 
 function wr_bureaux_dev_questionnaire(): array
@@ -830,6 +838,7 @@ function bdvRoute(string $method, string $path): ?array
             case '/dashboard/bureaux-dev/refuser': return wr_bureaux_dev_refuser();
             case '/dashboard/bureaux-dev/renvoyer': return wr_bureaux_dev_renvoyer();
             case '/dashboard/bureaux-dev/effacer': return wr_bureaux_dev_effacer();
+            case '/dashboard/bureaux-dev/reprendre': return wr_bureaux_dev_reprendre();
         }
     }
     http_response_code(404);

@@ -143,21 +143,31 @@ $r = wr_bureaux_dev_effacer();
 $del = $sql('DELETE');
 verifie('effacer : la copie hors zone disparaît', $r === ['ok' => true] && count($del) === 1 && $del[0][1] === [9, '2'] && str_contains($del[0][0], 'source = "hors_zone"'), json_encode($del));
 Db::$exec = []; Db::$ligne = $hz;
-$maj = bdvHorsZoneReprendre('2', 9, 15);
+$maj = bdvHorsZoneReprendre('2', 9, 957);
 $up = $sql('UPDATE');
-verifie('reprise : passe « reprise », garde le n° de la nouvelle demande', $maj === true && count($up) === 1 && str_contains($up[0][0], 'statut = "reprise"')
-    && str_contains((string) $up[0][1][0], '"_reprise":15') && end($up[0][1]) === 9, json_encode($up, JSON_UNESCAPED_UNICODE));
+verifie('reprise : passe « reprise », avec le bureau créé dans TF Buddy', $maj === true && count($up) === 1 && str_contains($up[0][0], 'statut = "reprise"')
+    && str_contains($up[0][0], 'office_id = ?') && str_contains($up[0][0], 'AND statut = "hors_zone"') && $up[0][1] === [957, 9, '2'], json_encode($up, JSON_UNESCAPED_UNICODE));
 Db::$exec = []; Db::$ligne = ['statut' => 'reprise'] + $hz;
-$a = bdvHorsZoneReprendre('2', 9, 16);
+$a = bdvHorsZoneReprendre('2', 9, 958);
 Db::$ligne = null;
-$b = bdvHorsZoneReprendre('2', 9, 16);
+$b = bdvHorsZoneReprendre('2', 9, 958);
 verifie('reprise : déjà reprise ou absente, rien ne bouge', $a === false && $b === false && $sql('UPDATE') === []);
+Db::$exec = []; Db::$ligne = $hz; $GLOBALS['corps'] = ['shop' => '2', 'id' => 9];
+$r = wr_bureaux_dev_reprendre();
+verifie('reprendre : sans le numéro du bureau créé, refusé', ($r['error'] ?? '') === 'le numéro du bureau créé manque' && $sql('UPDATE') === []);
+Db::$exec = []; Db::$ligne = ['statut' => 'reprise'] + $hz; $GLOBALS['corps'] = ['shop' => '2', 'id' => 9, 'office_id' => 957];
+$r = wr_bureaux_dev_reprendre();
+verifie('reprendre : une demande déjà reprise, refusée', ($r['error'] ?? '') === 'demande hors zone introuvable ou déjà reprise' && $sql('UPDATE') === []);
+Db::$exec = []; Db::$ligne = $hz;
+$r = wr_bureaux_dev_reprendre();
+verifie('reprendre : la demande ouverte passe « reprise » avec son bureau', $r === ['ok' => true, 'officeId' => 957] && count($sql('UPDATE')) === 1);
 // Un visiteur renvoie la même demande (même request_key) après que le magasin l'a reprise : la copie reprise garde sa
 // trace et son magasin ; le nouvel envoi arrive comme une demande ouverte. La base simulée ne rend la copie reprise
 // qu'à une recherche qui ne la filtre pas sur le statut ouvert.
 $repris = ['statut' => 'reprise', 'donnees' => '{"cp":"1370","request_key":"cle12345","_reprise":15}'] + $hz;
 Db::$exec = []; Db::$ligne = null;
-Db::$base = static fn (string $q, array $a) => str_contains($q, 'donnees LIKE') && !str_contains($q, 'statut = "hors_zone"') ? $repris : null;
+Db::$base = static fn (string $q, array $a) => str_contains($q, 'donnees LIKE') ? (str_contains($q, 'statut = "hors_zone"') ? null : $repris)
+    : (str_starts_with($q, 'SELECT *') ? ['id' => 77, 'shop_id' => '3', 'client_id' => null, 'societe_id' => null, 'bon_code' => null, 'office_id' => null, 'erreurs' => null, 'cree_le' => '2026-11-27 20:00:00', 'traite_le' => '2026-11-27 20:00:00'] + $hz : null);
 [$dr] = bdvHorsZoneNettoyer(['cp' => '1370', 'email' => 'a@b.be', 'origine' => 'webshop', 'tfbuddy' => 'ok', 'request_key' => 'cle12345']);
 bdvHorsZoneEnregistrer('3', $dr, 'ip');
 Db::$base = null;
