@@ -352,3 +352,4 @@
 2026-11-27T16:46:38Z Absences : l'app employés montre l'absence (motif) et le remplacement ; salaire garanti d'une maladie (30 jours puis la mutuelle ; employé·e ou ouvrier·ère, statut dans la fiche, table panel_equipe_statut) ; vidéos 02-16 et 02-19 retournées
 2026-11-27T17:00:08Z Résultat › Mois : le CA du réseau sur douze mois glissants — courbe des 12 derniers mois clos face au N-1, CA des 12 mois, évolution réseau entier et à magasins comparables, détail par magasin au survol
 2026-11-27T17:05:56Z Absences : l'Opérationnel (une absence payée n'est ni en poste ni dans le partage des ventes, montrée à part ; son coût reste) et les primes (heures travaillées sans les absences)
+2026-11-27T17:42:04Z Absences : le consultant — l'équipe de la visite montre une absence payée à part (pas à noter) ; les ventes par heure écartent ses heures
