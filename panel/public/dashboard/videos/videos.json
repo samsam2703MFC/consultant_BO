@@ -869,7 +869,7 @@
       ],
       "fichier": "02-mon-equipe.mp4",
       "affiche": "02-mon-equipe.jpg",
-      "duree": "2 min 21",
+      "duree": "2 min 17",
       "depuis": "2026-11-23",
       "sources": [
         "panel/public/dashboard/equipe.js",
@@ -877,8 +877,8 @@
         "panel/src/equipe.php",
         "shared/public/assets/ds/global.css"
       ],
-      "tourne_sur": "b693753fb10c16e827bda3fce500af04364d2e5d",
-      "tourne_le": "2026-11-24"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-responsabilites",
@@ -893,7 +893,7 @@
       ],
       "fichier": "02-01-responsabilites.mp4",
       "debut": 0,
-      "fin": 59.04,
+      "fin": 59.28,
       "affiche": "equipe-responsabilites.jpg",
       "duree": "59 s",
       "sources": [
@@ -901,8 +901,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-affectations",
@@ -916,8 +916,8 @@
         "equipe"
       ],
       "fichier": "02-01-responsabilites.mp4",
-      "debut": 59.04,
-      "fin": 89.3,
+      "debut": 59.28,
+      "fin": 89.76,
       "affiche": "equipe-affectations.jpg",
       "duree": "30 s",
       "sources": [
@@ -925,8 +925,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-lettre",
@@ -940,8 +940,8 @@
         "equipe"
       ],
       "fichier": "02-01-responsabilites.mp4",
-      "debut": 89.3,
-      "fin": 125.57,
+      "debut": 89.76,
+      "fin": 126.22,
       "affiche": "equipe-lettre.jpg",
       "duree": "36 s",
       "sources": [
@@ -949,8 +949,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-semaine",
@@ -965,7 +965,7 @@
       ],
       "fichier": "02-02-semaine.mp4",
       "debut": 0,
-      "fin": 65.62,
+      "fin": 65.99,
       "affiche": "equipe-semaine.jpg",
       "duree": "1 min 06",
       "sources": [
@@ -973,8 +973,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-ajouter-service",
@@ -988,8 +988,8 @@
         "equipe"
       ],
       "fichier": "02-02-semaine.mp4",
-      "debut": 65.62,
-      "fin": 114.83,
+      "debut": 65.99,
+      "fin": 114.67,
       "affiche": "equipe-ajouter-service.jpg",
       "duree": "49 s",
       "sources": [
@@ -997,8 +997,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-jour",
@@ -1013,16 +1013,16 @@
       ],
       "fichier": "02-03-jour.mp4",
       "debut": 0,
-      "fin": 59.95,
+      "fin": 53.51,
       "affiche": "equipe-jour.jpg",
-      "duree": "1 min",
+      "duree": "54 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-tracer",
@@ -1036,8 +1036,8 @@
         "equipe"
       ],
       "fichier": "02-03-jour.mp4",
-      "debut": 59.95,
-      "fin": 92.19,
+      "debut": 53.51,
+      "fin": 85.4,
       "affiche": "equipe-tracer.jpg",
       "duree": "32 s",
       "sources": [
@@ -1045,8 +1045,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-deplacer",
@@ -1060,17 +1060,17 @@
         "equipe"
       ],
       "fichier": "02-03-jour.mp4",
-      "debut": 92.19,
-      "fin": 122.77,
+      "debut": 85.4,
+      "fin": 115.82,
       "affiche": "equipe-deplacer.jpg",
-      "duree": "31 s",
+      "duree": "30 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-mois",
@@ -1085,16 +1085,16 @@
       ],
       "fichier": "02-04-mois.mp4",
       "debut": 0,
-      "fin": 60.4,
+      "fin": 57.19,
       "affiche": "equipe-mois.jpg",
-      "duree": "1 min",
+      "duree": "57 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "7690c2a9671c404809cf95e0e1a111db524312cc",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-fenetre",
@@ -1108,17 +1108,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 0.01,
-      "fin": 49.85,
+      "debut": 0,
+      "fin": 46.49,
       "affiche": "equipe-fenetre.jpg",
-      "duree": "50 s",
+      "duree": "46 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-adapter",
@@ -1132,17 +1132,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 49.85,
-      "fin": 84.86,
+      "debut": 46.49,
+      "fin": 79.12,
       "affiche": "equipe-adapter.jpg",
-      "duree": "35 s",
+      "duree": "33 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-ajouter-shift",
@@ -1156,8 +1156,8 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 84.86,
-      "fin": 120.43,
+      "debut": 79.12,
+      "fin": 115.35,
       "affiche": "equipe-ajouter-shift.jpg",
       "duree": "36 s",
       "sources": [
@@ -1165,8 +1165,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-retirer",
@@ -1175,22 +1175,22 @@
       "niveau": "fonction",
       "parent": "equipe-fenetre",
       "titre": "Retirer du shift ou de l’horaire",
-      "resume": "Retirer une personne d’un shift (son service de ce jour), ou de l’horaire de toute la semaine (absente, en congé), après confirmation.",
+      "resume": "Retirer une personne d’un shift (son service de ce jour), ou de l’horaire de toute la semaine quand elle ne travaille pas, après confirmation. Malade ou en congé : « Absente ou en congé » (son coût reste).",
       "vues": [
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 120.43,
-      "fin": 171.25,
+      "debut": 115.35,
+      "fin": 167.74,
       "affiche": "equipe-retirer.jpg",
-      "duree": "51 s",
+      "duree": "52 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-parcourir",
@@ -1204,8 +1204,8 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 171.25,
-      "fin": 216.36,
+      "debut": 167.74,
+      "fin": 212.24,
       "affiche": "equipe-parcourir.jpg",
       "duree": "45 s",
       "sources": [
@@ -1213,8 +1213,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-creneau",
@@ -1228,17 +1228,17 @@
         "equipe"
       ],
       "fichier": "02-05-fenetre.mp4",
-      "debut": 216.36,
-      "fin": 268.68,
+      "debut": 212.24,
+      "fin": 262.32,
       "affiche": "equipe-creneau.jpg",
-      "duree": "52 s",
+      "duree": "50 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-options",
@@ -1253,7 +1253,7 @@
       ],
       "fichier": "02-06-options.mp4",
       "debut": 0,
-      "fin": 41.98,
+      "fin": 41.96,
       "affiche": "equipe-options.jpg",
       "duree": "42 s",
       "sources": [
@@ -1261,8 +1261,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-option",
@@ -1276,8 +1276,8 @@
         "equipe"
       ],
       "fichier": "02-06-options.mp4",
-      "debut": 41.98,
-      "fin": 84.09,
+      "debut": 41.96,
+      "fin": 83.99,
       "affiche": "equipe-option.jpg",
       "duree": "42 s",
       "sources": [
@@ -1285,8 +1285,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-assistant-base",
@@ -1301,16 +1301,16 @@
       ],
       "fichier": "02-07-assistant-base.mp4",
       "debut": 0,
-      "fin": 52.6,
+      "fin": 52.45,
       "affiche": "equipe-assistant-base.jpg",
-      "duree": "53 s",
+      "duree": "52 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-assistant-qui",
@@ -1325,7 +1325,7 @@
       ],
       "fichier": "02-08-assistant-qui.mp4",
       "debut": 0,
-      "fin": 46.1,
+      "fin": 45.89,
       "affiche": "equipe-assistant-qui.jpg",
       "duree": "46 s",
       "sources": [
@@ -1333,8 +1333,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-assistant-chiffre",
@@ -1349,16 +1349,16 @@
       ],
       "fichier": "02-09-assistant-chiffre.mp4",
       "debut": 0,
-      "fin": 47.55,
+      "fin": 45.3,
       "affiche": "equipe-assistant-chiffre.jpg",
-      "duree": "48 s",
+      "duree": "45 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-assistant-temps-morts",
@@ -1373,7 +1373,7 @@
       ],
       "fichier": "02-10-assistant-temps-morts.mp4",
       "debut": 0,
-      "fin": 44.1,
+      "fin": 43.75,
       "affiche": "equipe-assistant-temps-morts.jpg",
       "duree": "44 s",
       "sources": [
@@ -1381,8 +1381,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-taches",
@@ -1396,8 +1396,8 @@
         "equipe"
       ],
       "fichier": "02-10-assistant-temps-morts.mp4",
-      "debut": 44.1,
-      "fin": 87.4,
+      "debut": 43.75,
+      "fin": 87.06,
       "affiche": "equipe-taches.jpg",
       "duree": "43 s",
       "sources": [
@@ -1405,8 +1405,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-assistant-verifier",
@@ -1421,16 +1421,16 @@
       ],
       "fichier": "02-11-assistant-verifier.mp4",
       "debut": 0,
-      "fin": 44.27,
+      "fin": 43.36,
       "affiche": "equipe-assistant-verifier.jpg",
-      "duree": "44 s",
+      "duree": "43 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-assistant",
@@ -1444,17 +1444,17 @@
         "equipe"
       ],
       "fichier": "02-11-assistant-verifier.mp4",
-      "debut": 44.27,
-      "fin": 90.2,
+      "debut": 43.36,
+      "fin": 86.5,
       "affiche": "equipe-assistant.jpg",
-      "duree": "46 s",
+      "duree": "43 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "987cb99b50892ff6f8637d1d871bc25f0fb822ef",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-recopie",
@@ -1469,7 +1469,7 @@
       ],
       "fichier": "02-12-recopier.mp4",
       "debut": 0,
-      "fin": 41.98,
+      "fin": 42.12,
       "affiche": "equipe-recopie.jpg",
       "duree": "42 s",
       "sources": [
@@ -1477,8 +1477,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-recopier",
@@ -1492,8 +1492,8 @@
         "equipe"
       ],
       "fichier": "02-12-recopier.mp4",
-      "debut": 41.98,
-      "fin": 80.97,
+      "debut": 42.12,
+      "fin": 81.18,
       "affiche": "equipe-recopier.jpg",
       "duree": "39 s",
       "sources": [
@@ -1501,8 +1501,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-shift-maker",
@@ -1517,16 +1517,16 @@
       ],
       "fichier": "02-13-shift-maker.mp4",
       "debut": 0,
-      "fin": 41.5,
+      "fin": 41.44,
       "affiche": "equipe-shift-maker.jpg",
-      "duree": "42 s",
+      "duree": "41 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-shift-maker-creer",
@@ -1540,8 +1540,8 @@
         "equipe"
       ],
       "fichier": "02-13-shift-maker.mp4",
-      "debut": 41.5,
-      "fin": 72.86,
+      "debut": 41.44,
+      "fin": 72.56,
       "affiche": "equipe-shift-maker-creer.jpg",
       "duree": "31 s",
       "sources": [
@@ -1549,8 +1549,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-matrice",
@@ -1565,7 +1565,7 @@
       ],
       "fichier": "02-14-matrice.mp4",
       "debut": 0,
-      "fin": 45.37,
+      "fin": 45.35,
       "affiche": "equipe-matrice.jpg",
       "duree": "45 s",
       "sources": [
@@ -1573,8 +1573,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-matrice-regler",
@@ -1588,17 +1588,17 @@
         "equipe"
       ],
       "fichier": "02-14-matrice.mp4",
-      "debut": 45.37,
-      "fin": 87.06,
+      "debut": 45.35,
+      "fin": 86.8,
       "affiche": "equipe-matrice-regler.jpg",
-      "duree": "42 s",
+      "duree": "41 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe.php"
       ],
-      "tourne_sur": "993884f106436ee80c0fccf02641dc82293b2338",
-      "tourne_le": "2026-11-25"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-primes",
@@ -1613,16 +1613,16 @@
       ],
       "fichier": "02-15-primes.mp4",
       "debut": 0,
-      "fin": 88.81,
+      "fin": 88.36,
       "affiche": "equipe-primes.jpg",
-      "duree": "1 min 29",
+      "duree": "1 min 28",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/dashboard.css",
         "panel/src/primes.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-fiche",
@@ -1637,16 +1637,16 @@
       ],
       "fichier": "02-16-fiche.mp4",
       "debut": 0,
-      "fin": 84.1,
+      "fin": 79.81,
       "affiche": "equipe-fiche.jpg",
-      "duree": "1 min 24",
+      "duree": "1 min 20",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-fiche-identite",
@@ -1660,17 +1660,17 @@
         "equipe"
       ],
       "fichier": "02-16-fiche.mp4",
-      "debut": 84.1,
-      "fin": 121.69,
+      "debut": 79.81,
+      "fin": 116.22,
       "affiche": "equipe-fiche-identite.jpg",
-      "duree": "38 s",
+      "duree": "36 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-fiche-taux",
@@ -1684,17 +1684,17 @@
         "equipe"
       ],
       "fichier": "02-16-fiche.mp4",
-      "debut": 121.69,
-      "fin": 163.69,
+      "debut": 116.22,
+      "fin": 156.27,
       "affiche": "equipe-fiche-taux.jpg",
-      "duree": "42 s",
+      "duree": "40 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-evaluations",
@@ -1709,16 +1709,16 @@
       ],
       "fichier": "02-17-evaluations.mp4",
       "debut": 0,
-      "fin": 46.05,
+      "fin": 44.85,
       "affiche": "equipe-evaluations.jpg",
-      "duree": "46 s",
+      "duree": "45 s",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-noter",
@@ -1732,8 +1732,8 @@
         "equipe"
       ],
       "fichier": "02-17-evaluations.mp4",
-      "debut": 46.05,
-      "fin": 86.79,
+      "debut": 44.85,
+      "fin": 85.64,
       "affiche": "equipe-noter.jpg",
       "duree": "41 s",
       "sources": [
@@ -1741,8 +1741,8 @@
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "equipe-ventes",
@@ -1757,16 +1757,91 @@
       ],
       "fichier": "02-18-ventes.mp4",
       "debut": 0,
-      "fin": 70.33,
+      "fin": 66,
       "affiche": "equipe-ventes.jpg",
-      "duree": "1 min 10",
+      "duree": "1 min 06",
       "sources": [
         "panel/public/dashboard/equipe.js",
         "panel/public/dashboard/equipe.css",
         "panel/src/equipe_fiche.php"
       ],
-      "tourne_sur": "c203ce679bb956402849dd497fb8823bf57df07a",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
+    },
+    {
+      "id": "equipe-absences",
+      "genre": "tuto",
+      "depuis": "2026-11-27",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Absences, congés et remplacements",
+      "resume": "Depuis son service, « Absente ou en congé » : sous contrat de travail, l’absence payée (maladie, congé payé, circonstance) garde son coût et sort de la présence ; un remplaçant aux mêmes heures ajoute le sien.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-19-absences.mp4",
+      "debut": 0,
+      "fin": 62.06,
+      "affiche": "equipe-absences.jpg",
+      "duree": "1 min 02",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "panel/src/equipe_absences.php"
+      ],
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
+    },
+    {
+      "id": "equipe-conge",
+      "genre": "tuto",
+      "depuis": "2026-11-27",
+      "niveau": "fonction",
+      "parent": "equipe-absences",
+      "titre": "Poser un congé payé",
+      "resume": "« Absence ou congé » dans la barre : la personne, du … au … ; chaque jour où elle travaillait devient congé payé, avec son remplaçant.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-19-absences.mp4",
+      "debut": 62.06,
+      "fin": 94.1,
+      "affiche": "equipe-conge.jpg",
+      "duree": "32 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "panel/src/equipe_absences.php"
+      ],
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
+    },
+    {
+      "id": "equipe-exterieur",
+      "genre": "tuto",
+      "depuis": "2026-11-27",
+      "niveau": "fonction",
+      "parent": "equipe-absences",
+      "titre": "Un remplaçant extérieur",
+      "resume": "Un intérimaire ou un extra : son nom et son taux horaire ; son coût s’ajoute au budget, sa facture passe par les frais.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-19-absences.mp4",
+      "debut": 94.1,
+      "fin": 132.1,
+      "affiche": "equipe-exterieur.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "panel/src/equipe_absences.php"
+      ],
+      "tourne_sur": "38ab3f453a2975c1d70b47042fe4975816af5716",
+      "tourne_le": "2026-11-27"
     },
     {
       "id": "formation-horaires",
