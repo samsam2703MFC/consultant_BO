@@ -101,9 +101,24 @@
   const fusion = L => { const r = []; L.slice().sort((a, b) => a[0] - b[0]).forEach(([a, b]) => { const d = r[r.length - 1]; if (d && a <= d[1]) { d[1] = Math.max(d[1], b); } else { r.push([a, b]); } }); return r; };
   const trous = (L, a, b) => { const r = []; let c = a; fusion(L).forEach(([x, y]) => { if (x > c) { r.push([c, Math.min(x, b)]); } c = Math.max(c, y); }); if (c < b) { r.push([c, b]); } return r.filter(([x, y]) => y > x); };
 
-  /** Les services d'un jour, la modification `edit` appliquée ({id, employe, de, a, suppr}). */
+  /** Les absences d'un jour (27/11/2026, panel/src/equipe_absences.php) : par service absent (payée : son service est au
+   *  planning ; non payée : il en est retiré), les services des remplaçants, les extérieurs. Une absence payée dont le
+   *  service a quitté le panel est oubliée ; un remplaçant dont le service a quitté le panel ne compte plus. */
+  function absJour(J) {
+    if (J._abs) { return J._abs; }
+    const ids = new Set((J.services || []).map(s => s.id)), parSv = new Map(), sans = [], remp = new Map(), ext = [];
+    (J.absences || []).forEach(a => {
+      if (ids.has(a.service)) { parSv.set(a.service, a); } else if (!a.payee) { sans.push(a); } else { return; }
+      if (a.remplacantService && ids.has(a.remplacantService)) { remp.set(a.remplacantService, a); } else if (a.externe) { ext.push(a); }
+    });
+    return (J._abs = { parSv, sans, remp, ext, ids });
+  }
+  /** Les services d'un jour, la modification `edit` appliquée ({id, employe, de, a, suppr}). Une personne absente n'y est
+   *  pas (elle n'est pas là) ; son remplaçant y est, marqué ; un extérieur y entre aux heures de l'absence. */
   function servicesDe(J, edit) {
-    let L = (J.services || []).map(s => ({ id: s.id, employe: s.employe, de: mn(s.de), a: mn(s.a) }));
+    const A = absJour(J);
+    let L = (J.services || []).filter(s => !A.parSv.has(s.id)).map(s => ({ id: s.id, employe: s.employe, de: mn(s.de), a: mn(s.a), remplace: A.remp.get(s.id) || null }));
+    A.ext.forEach(a => { const s = (J.services || []).find(x => x.id === a.service); L.push({ id: 'x' + a.id, employe: -a.id, de: mn(s ? s.de : a.de), a: mn(s ? s.a : a.a), ext: a, remplace: a }); });
     if (edit && edit.date === J.date) {
       if (edit.id) { L = L.map(s => s.id === edit.id ? Object.assign({}, s, { de: edit.de, a: edit.a, edite: true }) : s).filter(s => !(edit.suppr && s.id === edit.id)); }
       else if (!edit.suppr && edit.employe) { L.push({ id: 0, employe: edit.employe, de: edit.de, a: edit.a, edite: true }); }
@@ -117,21 +132,30 @@
     if (E.some(comptoir)) { L.push({ nom: 'Comptoir', f: comptoir, comptoir: true }); }
     return L;
   }
+  /** La personne d'un service : un extérieur prend le rôle de l'absente (ses postes, ses secteurs) et son propre taux. */
+  const persSv = (eq, s) => s.ext ? Object.assign({}, eq.get(s.ext.employe) || {}, { id: s.employe, nom: s.ext.externe.nom, taux: s.ext.externe.taux, franchise: false, externe: true }) : (eq.get(s.employe) || { nom: 'Employé ' + s.employe });
   function calculJour(P, J, edit) {
-    const eq = equipeDe(P), sv = servicesDe(J, edit);
+    const eq = equipeDe(P), sv = servicesDe(J, edit), A = absJour(J);
     let h = 0, cout = 0, sansTaux = 0;
-    sv.forEach(s => { const e = eq.get(s.employe) || {}; const d = (s.a - s.de) / 60; h += d; if (e.taux == null && !e.franchise) { sansTaux += d; } cout += d * (e.taux || 0); });
+    sv.forEach(s => { const e = persSv(eq, s); const d = (s.a - s.de) / 60; h += d; if (e.taux == null && !e.franchise) { sansTaux += d; } cout += d * (e.taux || 0); });
+    // Les absences : payée, son coût reste (sans présence) ; non payée, rien. Avec son remplaçant, s'il y en a un.
+    const abs = [];
+    const rpDe = a => a.remplacantService && A.ids.has(a.remplacantService) ? { nom: (eq.get(a.remplacant) || {}).nom || 'Employé ' + a.remplacant, service: a.remplacantService } : a.externe ? { nom: a.externe.nom, externe: true } : null;
+    (J.services || []).forEach(s => { const a = A.parSv.get(s.id); if (!a) { return; } const e = eq.get(s.employe) || {}, d = (mn(s.a) - mn(s.de)) / 60; abs.push({ id: s.id, employe: s.employe, de: mn(s.de), a: mn(s.a), abs: a, h: d, cout: a.payee ? d * (e.taux || 0) : 0, rp: rpDe(a) }); });
+    A.sans.forEach(a => abs.push({ id: 0, employe: a.employe, de: mn(a.de), a: mn(a.a), abs: a, h: (mn(a.a) - mn(a.de)) / 60, cout: 0, rp: rpDe(a) }));
+    const coutAbs = abs.reduce((x, y) => x + y.cout, 0), hAbs = abs.reduce((x, y) => x + (y.abs.payee ? y.h : 0), 0);
+    cout += coutAbs;
     const ouv = (P.ouvertures || {})[wd(J.date)] || null;
     const lin = lineaires(P).map(l => {
-      const cv = sv.filter(s => l.f(eq.get(s.employe) || {})).map(s => [s.de, s.a]);
-      return Object.assign({}, l, { cv: fusion(cv), n: new Set(sv.filter(s => l.f(eq.get(s.employe) || {})).map(s => s.employe)).size,
+      const cv = sv.filter(s => l.f(persSv(eq, s))).map(s => [s.de, s.a]);
+      return Object.assign({}, l, { cv: fusion(cv), n: new Set(sv.filter(s => l.f(persSv(eq, s))).map(s => s.employe)).size,
         trous: l.comptoir && ouv && cv.length ? trous(cv, ouv[0], ouv[1]) : [], vide: !cv.length });
     });
     // Le CA des % (23/11/2026, Sam : « le chiffre du jour complet, comptoir + B2B ») : la caisse d'un jour passé, la
     // projection aujourd'hui (J.ca, J.caSource), sinon l'objectif. `objectif` reste le nom du CA de base dans les calculs.
     const base = J.ca > 0 ? J.ca : J.objectif;
     return { sv, eq, h, cout, sansTaux, ouv, lin, objectif: base, prevu: J.objectif, caSource: J.ca > 0 ? J.caSource : (J.objectif ? 'prevu' : null), pct: base ? cout / base * 100 : null,
-      presents: new Set(sv.map(s => s.employe)).size };
+      presents: new Set(sv.map(s => s.employe)).size, abs, coutAbs, hAbs, nAbs: new Set(abs.map(x => x.employe)).size, pctSans: base && coutAbs ? (cout - coutAbs) / base * 100 : null };
   }
   // Le niveau se lit sur le pourcentage tel qu'il s'affiche, au dixième (25/11/2026 : 17,03 % s'affichait « 17,0 % » en
   // orange, à côté de « dans la cible »).
@@ -146,13 +170,14 @@
   /* ── Le cadre ────────────────────────────────────────────────────────────────────────────────────────────────── */
   function rendre() {
     if (!st.el) { return; }
-    const garde = st.el.querySelector('.eqp-pg-defil'), x = garde ? garde.scrollLeft : 0;
+    const garde = st.el.querySelector('.eqp-pg-defil'), x = garde ? garde.scrollLeft : 0, gAb = st.el.querySelector('.eqp-ab-fo'), yAb = gAb ? gAb.scrollTop : 0;
     // Primes (24/11/2026) : après le planning ; la page est celle du dashboard (st.primes l'ouvre).
     const tabs = [['resp', 'Responsabilités'], ['planning', 'Planning']].concat(st.primes ? [['primes', 'Primes']] : []).map(([k, l]) => `<button type="button" class="page-tabs__tab${st.onglet === k ? ' is-on' : ''}" data-eqp-onglet="${k}">${l}</button>`).join('');
     const nOpt = Object.values(st.opts).filter(Boolean).length;
     st.el.innerHTML = `<nav class="page-tabs eqp-tabs" aria-label="Mon équipe">${tabs}<span class="eqp-sp"></span><button type="button" class="btn btn--sm btn--ghost eqp-opt-btn" data-eqp-options="1"${st.O ? '' : ' disabled'}>Options${nOpt ? ' · ' + nOpt + ' allumée' + (nOpt > 1 ? 's' : '') : ''}</button></nav>${st.flash ? `<div class="eqp-flash ${st.flash[0]}" role="status">${esc(st.flash[1])}</div>` : ''}`
-      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal() + rendAssistant() + rendOptions() + rendFichePersonne();
+      + (st.onglet === 'resp' ? rendResp() : rendPlanning()) + rendModale() + rendRecopie() + rendMatrice() + rendEditeurModal() + rendAbsence() + rendAssistant() + rendOptions() + rendFichePersonne();
     const g2 = st.el.querySelector('.eqp-pg-defil'); if (g2) { g2.scrollLeft = x; }
+    const gAb2 = st.el.querySelector('.eqp-ab-fo'); if (gAb2) { gAb2.scrollTop = yAb; }
     brancher();
   }
   function flash(type, msg) { st.flash = [type, msg]; rendre(); setTimeout(() => { if (st.flash && st.flash[1] === msg) { st.flash = null; rendre(); } }, 5000); }
@@ -255,6 +280,7 @@
     const barre = `<div class="eqp-pbar"><span class="eqp-nav">${nav}</span><span class="eqp-sp"></span>
       <div class="seg" role="group" aria-label="Affichage">${[['jour', 'Jour'], ['tableau', 'Semaine'], ['mois', 'Mois']].map(([k, l]) => `<button type="button" class="${st.vue === k ? 'is-on' : ''}" data-eqp-vue="${k}">${l}</button>`).join('')}</div>
       ${st.vue === 'tableau' ? menuSemaine() : ''}
+      <button type="button" class="btn" data-eqp-abs-nouv="1">Absence ou congé</button>
       <button type="button" class="btn btn--primary" data-eqp-ajouter="1">Ajouter un service</button>
       <button type="button" class="btn" data-eqp-pdf="1" aria-expanded="${st.pdf ? 'true' : 'false'}">Imprimer le planning</button></div>${rendPdf()}`;
     if (st.Perr && !P) { return barre + `<div class="eqp-err">Impossible de lire le planning : ${esc(st.Perr)}. <button type="button" class="linklike" data-eqp-relire="1">Réessayer</button></div>`; }
@@ -322,7 +348,7 @@
   function resume(P, o) {
     const b = P.budget, ci = String(b.cible).replace('.', ','), ac = aCorriger(o.corriger, o.ok, o.titreL);
     if (!o.ca) { return `<section class="card eqp-rs" aria-label="Budget d’heures"><div class="eqp-rs-sans"><span>Pas de CA ${esc(o.sansCa || '')}${P.objectif && P.objectif.motif ? ' : ' + esc(P.objectif.motif) : ''} : le budget ne se calcule pas.</span><p class="eqp-rs-meta">${o.meta}</p></div>${ac}</section>`; }
-    const pct = o.cout / o.ca * 100, n = niveau(P, pct), moy = o.h > 0 ? o.cout / o.h : 0, bH = moy > 0 ? b.cible / 100 * o.ca / moy : 0, bC = o.h > 0 ? b.cible / 100 * o.ca / o.h : 0;
+    const cA = o.coutAbs || 0, pct = o.cout / o.ca * 100, n = niveau(P, pct), moy = o.h > 0 ? (o.cout - cA) / o.h : 0, bH = moy > 0 ? (b.cible / 100 * o.ca - cA) / moy : 0, bC = o.h > 0 ? (b.cible / 100 * o.ca - cA) / o.h : 0;
     const lev = pct > b.cible && moy > 0
       ? `<span class="eqp-rs-lh">−${fH(o.h - bH)} pour revenir à ${ci} %</span><span>au coût moyen de ${fEh(moy)}, ou ${fEh(bC)} de coût moyen pour les mêmes heures</span>`
       : `<span class="eqp-rs-lh">Dans la cible</span><span>${moy > 0 ? 'encore ' + fH(bH - o.h) + ' possibles au coût moyen de ' + fEh(moy) : 'aucune heure au planning'}</span>`;
@@ -330,7 +356,7 @@
         <div class="eqp-rs-v"><span class="eqp-rs-pct">${fP(pct)}</span><span class="eqp-rs-niv"><i class="eqp-pt0 ${n}" aria-hidden="true"></i>${motPalier(P, n)}</span></div>
         <div class="eqp-rs-q">de frais de personnel ${esc(o.quoi)}<span>${fE(o.cout)} de personnel pour ${fE(o.ca)} ${esc(o.src || 'de CA')}${P.objectif && P.objectif.source === 'theorique' ? ', au CA théorique faute de budget' : ''}</span></div>
         <div class="eqp-rs-g">${jaugeG(P, pct)}<p class="eqp-rs-meta">${o.meta}</p></div>
-        <div class="eqp-rs-lev">${lev}</div></div>${ac}</section>`;
+        <div class="eqp-rs-lev">${lev}</div></div>${o.absHtml || ''}${ac}</section>`;
   }
   /** « À corriger » : un bouton par jour (ou semaine, ou ligne) qui a un souci ; chacun porte l'attribut du geste qui
    *  existe déjà (data-eqp-jour ouvre le jour, data-eqp-semaine la semaine, data-eqp-voir fait défiler jusqu'à la ligne).
@@ -338,7 +364,7 @@
   function aCorriger(L, ok, titre) {
     if (L == null) { return ''; }
     if (!L.length) { return ok ? `<div class="eqp-rs-l2"><p class="eqp-rs-ok">${esc(ok)}</p></div>` : ''; }
-    const ic = it => it.trou ? '<i class="eqp-ic-trou" aria-hidden="true"></i>' : it.creux ? '<i class="eqp-ic-creux" aria-hidden="true"></i>' : it.niv ? `<i class="eqp-pt0 ${it.niv}" aria-hidden="true"></i>` : '';
+    const ic = it => it.abs ? '<i class="eqp-ic-abs" aria-hidden="true"></i>' : it.trou ? '<i class="eqp-ic-trou" aria-hidden="true"></i>' : it.creux ? '<i class="eqp-ic-creux" aria-hidden="true"></i>' : it.niv ? `<i class="eqp-pt0 ${it.niv}" aria-hidden="true"></i>` : '';
     return `<div class="eqp-rs-l2"><span class="eqp-rs-ct">${esc(titre || 'À corriger')}</span>${L.map(c => `<button type="button" class="btn btn--sm eqp-rs-b" ${c.attr}${c.title ? ` title="${esc(c.title)}"` : ''}>${c.titre ? `<span class="j">${esc(c.titre)}</span>` : ''}${c.items.map(it => `<span class="s"${it.long ? ` title="${esc(it.long)}"` : ''}>${ic(it)}${esc(it.txt)}</span>`).join('')}</button>`).join('')}</div>`;
   }
   /** Les jours d'aujourd'hui et à venir qui ont un souci : au-dessus de la cible, un secteur sans personne, le comptoir
@@ -348,7 +374,9 @@
     return L.map(([J, C]) => {
       if (J.date < P.aujourdhui) { return null; }
       const it = [], n = C.pct != null && C.h > 0 ? niveau(P, C.pct) : null;
-      if (n && n !== 'ok') { it.push({ niv: n, txt: fP(C.pct) + ' de frais de personnel' }); }
+      if (n && n !== 'ok') { it.push({ niv: n, txt: fP(C.pct) + ' de frais de personnel' }); if (C.pctSans != null) { it.push({ txt: fP(C.pctSans) + ' sans les absences' }); } }
+      // Une absence sans remplaçant (27/11/2026) : le trou qu'elle laisse est dit par les linéaires, elle par son nom.
+      C.abs.filter(x => !x.rp && (J.date > P.aujourdhui || x.a > now)).forEach(x => it.push({ abs: true, txt: prenomDe(C.eq, x.employe) + ' ' + ABS_MOTIFS[x.abs.motif].court + ' : à remplacer' }));
       C.lin.forEach(l => {
         if (!l.comptoir && l.vide) { it.push({ trou: true, txt: l.nom.toLowerCase() + ' sans personne' }); }
         if (l.comptoir) { l.trous.filter(([, b]) => J.date > P.aujourdhui || b > now).forEach(([a, b]) => it.push({ trou: true, txt: 'comptoir vide de ' + hcl(a) + ' à ' + hcl(b) })); }
@@ -413,8 +441,8 @@
     const q = []; for (let t = H0; t < H1; t += 15) { q.push([t, C.sv.filter(s => s.de <= t && s.a > t).length]); }
     const pic = Math.max(0, ...q.map(x => x[1])), picQ = q.filter(x => x[1] === pic && pic > 0);
     const tmMin = creux.reduce((a, [x, y]) => a + y - x, 0), tmPers = creux.reduce((a, [x, y]) => a + q.filter(([t]) => t >= x && t < y).reduce((b, [, n]) => b + n * 15, 0), 0);
-    const budgetJ = C.objectif && C.cout && C.h ? ' pour un budget de ' + fH(P.budget.cible / 100 * C.objectif / (C.cout / C.h)) : '';
-    const metaJ = `${fH(C.h)} planifiées${budgetJ}, soit ${fN1(C.h / heuresEtp(P, 'jour'))} ETP${C.sansTaux ? ' (' + fH(C.sansTaux) + ' sans taux)' : ''}${TM.habitude && TM.habitude.jours >= 2 && tmMin ? ' ; ' + fH(tmPers / 60) + ' de personnel pendant les creux habituels' : ''}`;
+    const budgetJ = C.objectif && C.cout && C.h ? ' pour un budget de ' + fH(Math.max(0, P.budget.cible / 100 * C.objectif - C.coutAbs) / ((C.cout - C.coutAbs) / C.h)) : '';
+    const metaJ = `${C.hAbs ? fH(C.h) + ' au magasin, ' + fHq(C.hAbs) + ' d’absence payée' : fH(C.h) + ' planifiées'}${budgetJ}, soit ${fN1(C.h / heuresEtp(P, 'jour'))} ETP${C.sansTaux ? ' (' + fH(C.sansTaux) + ' sans taux)' : ''}${TM.habitude && TM.habitude.jours >= 2 && tmMin ? ' ; ' + fH(tmPers / 60) + ' de personnel pendant les creux habituels' : ''}`;
     // Le fond : l'ouverture, les heures, les creux habituels, maintenant.
     let fond = C.ouv ? `<span class="eqp-ouv" style="left:${X(C.ouv[0])};width:${W(C.ouv[0], C.ouv[1])}"></span>` : '';
     for (let t = H0 + 60; t < H1; t += 60) { fond += `<span class="eqp-g${t % 240 === 0 ? ' f' : ''}" style="left:${X(t)}"></span>`; }
@@ -428,13 +456,15 @@
       const L = C.sv.filter(s => s.employe === e.id), orig = ed && ed.id ? C0.sv.find(s => s.id === ed.id && s.employe === e.id) : null;
       const barres = L.map(s => {
         const en = !ed && maintenant !== null && s.de <= maintenant && s.a > maintenant, sel = ed && s.edite;
-        return `<span class="eqp-bar${en ? ' en' : ''}${sel ? ' sel' : ''} mobile" style="left:${X(s.de)};width:${W(s.de, s.a)}" data-eqp-bar="${s.id}" data-emp="${e.id}" title="${hh(s.de)}–${hh(s.a)}"><span class="eqp-poi g" data-bord="g"></span><b>${hh(s.de)}–${hh(s.a)}</b><i>${fH((s.a - s.de) / 60)}${en ? ' · en poste' : ''}</i><span class="eqp-poi d" data-bord="d"></span></span>`;
-      }).join('');
+        return `<span class="eqp-bar${en ? ' en' : ''}${sel ? ' sel' : ''}${s.remplace ? ' rp' : ''} mobile" style="left:${X(s.de)};width:${W(s.de, s.a)}" data-eqp-bar="${s.id}" data-emp="${e.id}" title="${hh(s.de)}–${hh(s.a)}"><span class="eqp-poi g" data-bord="g"></span><b>${hh(s.de)}–${hh(s.a)}</b><i>${fH((s.a - s.de) / 60)}${en ? ' · en poste' : ''}${s.remplace ? ' · remplace ' + esc(prenomDe(C.eq, s.remplace.employe)) : ''}</i><span class="eqp-poi d" data-bord="d"></span></span>`;
+      }).join('') + C.abs.filter(x => x.employe === e.id).map(x => `<span class="eqp-absbar${x.abs.payee ? '' : ' np'}" style="left:${X(x.de)};width:${W(x.de, x.a)}" data-eqp-abs="${x.abs.id}" title="${esc(absLibelle(x.abs))} · ${hh(x.de)}–${hh(x.a)}"><b>${hh(x.de)}–${hh(x.a)}</b><i>${esc(absLibelle(x.abs))}${x.rp ? ' · ' + esc(x.rp.nom.split(' ')[0]) + ' la remplace' : ' · à remplacer'}</i></span>`).join('');
       const fant = orig && ed && ed.id && orig ? `<span class="eqp-fant" style="left:${X(orig.de)};width:${W(orig.de, orig.a)}"></span>` : '';
-      const vide = !L.length ? `<span class="eqp-repos">${e.actif === false ? 'plus dans l’équipe' : 'repos'}${e.actif !== false ? ' · <u>tirez une ligne sur les heures voulues pour ajouter un service</u>' : ''}</span>` : '';
+      const vide = !L.length && !C.abs.some(x => x.employe === e.id) ? `<span class="eqp-repos">${e.actif === false ? 'plus dans l’équipe' : 'repos'}${e.actif !== false ? ' · <u>tirez une ligne sur les heures voulues pour ajouter un service</u>' : ''}</span>` : '';
       return `<div class="eqp-l${L.length ? '' : ' repos'}"><div class="eqp-n"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b>${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}${e.taux == null && !e.franchise ? ' · <span class="eqp-vide">taux inconnu</span>' : ''}</span></span></div><div class="eqp-tl" data-eqp-tl="${e.id}">${fant}${barres}${vide}</div></div>`;
     };
-    const corps = groupes(P, C.eq).map(([g, L]) => `<div class="eqp-gr"><div class="eqp-n">${esc(g)} · ${L.filter(e => C.sv.some(s => s.employe === e.id)).length}/${L.length}</div><div></div></div>${L.map(ligne).join('')}`).join('');
+    const extJ = C.sv.filter(s => s.ext);
+    const corps = groupes(P, C.eq).map(([g, L]) => `<div class="eqp-gr"><div class="eqp-n">${esc(g)} · ${L.filter(e => C.sv.some(s => s.employe === e.id)).length}/${L.length}</div><div></div></div>${L.map(ligne).join('')}`).join('')
+      + (extJ.length ? `<div class="eqp-gr"><div class="eqp-n">Extérieurs · ${extJ.length}</div><div></div></div>${extJ.map(s => `<div class="eqp-l"><div class="eqp-n"><span class="eqp-av">+</span><span><b>${esc(s.ext.externe.nom)}</b><span class="sub">remplace ${esc(prenomDe(C.eq, s.ext.employe))} · ${fEh(s.ext.externe.taux)}</span></span></div><div class="eqp-tl"><span class="eqp-bar rp ext" style="left:${X(s.de)};width:${W(s.de, s.a)}" data-eqp-abs="${s.ext.id}" title="${hh(s.de)}–${hh(s.a)}"><b>${hh(s.de)}–${hh(s.a)}</b><i>${fH((s.a - s.de) / 60)} · extérieur</i></span></div></div>`).join('')}` : '');
     // Le linéaire de présence : la marche des personnes, et les tickets d'un jour habituel.
     const maxP = Math.max(4, pic), yP = n => (64 - n / maxP * 56).toFixed(1);
     let d = `M0 ${yP(q[0] ? q[0][1] : 0)}`; q.forEach(([t, n]) => { d += ` H${((t - H0) / (H1 - H0) * 1000).toFixed(1)} V${yP(n)}`; }); d += ' H1000';
@@ -445,7 +475,7 @@
     const jourTM = TM.jour ? `<div class="eqp-l eqp-li eqp-tml"><div class="eqp-n">${TM.jour.etat === 'encours' ? 'Aujourd’hui' : 'Ce jour-là'}<span class="sub">${TM.jour.trous.length} temps mort${TM.jour.trous.length > 1 ? 's' : ''} · ${dm(TM.jour.mort)}${TM.jour.etat === 'encours' ? ' jusqu’ici' : ''}</span></div><div class="eqp-tl">${TM.jour.trous.filter(([a, b]) => b > H0 && a < H1).map(([a, b]) => `<span class="eqp-tmb jour" style="left:${X(Math.max(a, H0))};width:${W(Math.max(a, H0), Math.min(b, H1))}" title="${hh(a)}–${hh(b)} · ${b - a} min sans client">${b - a >= 20 ? `<b>${b - a} min</b>` : ''}</span>`).join('')}</div></div>` : '';
     const tmL = TM.habitude ? `<div class="eqp-l eqp-li eqp-tml"><div class="eqp-n">Temps morts habituels<span class="sub">${TM.habitude.jours >= 2 ? creux.length + ' · ' + dm(tmMin) + ' sans client · ' + TM.habitude.jours + ' ' + JOURS[dt(J.date).getDay()] + 's d’avant' : 'pas assez de jours mesurés'}</span></div><div class="eqp-tl">${creux.map(([a, b]) => `<span class="eqp-tmb" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)} · ${b - a} min sans client">${b - a >= 20 ? `<b>${b - a} min</b>` : ''}</span>`).join('')}</div></div>` : '';
     const ins = ed ? null : constats(P, J, C, creux, tk, q), passe = J.date < P.aujourdhui;
-    return resume(P, { quoi: 'ce jour', h: C.h, cout: C.cout, ca: C.objectif, src: C.objectif ? SRC_CA[C.caSource || 'prevu'] + (C.caSource !== 'prevu' && C.prevu ? ', objectif ' + fE(C.prevu) : '') : '', meta: metaJ, corriger: ins, ok: passe ? '' : 'Rien à corriger ce jour.', titreL: passe ? 'Ce jour-là' : 'À corriger', sansCa: 'ce jour' })
+    return resume(P, { quoi: 'ce jour', h: C.h, cout: C.cout, coutAbs: C.coutAbs, absHtml: absBloc(P, [C]), ca: C.objectif, src: C.objectif ? SRC_CA[C.caSource || 'prevu'] + (C.caSource !== 'prevu' && C.prevu ? ', objectif ' + fE(C.prevu) : '') : '', meta: metaJ, corriger: ins, ok: passe ? '' : 'Rien à corriger ce jour.', titreL: passe ? 'Ce jour-là' : 'À corriger', sansCa: 'ce jour' })
       + `<div class="eqp-pg-defil"><section class="card eqp-pg edition" aria-label="Planogramme du ${esc(long(J.date))}"><div class="eqp-fond">${fond}</div>
         <div class="eqp-l eqp-axe"><div class="eqp-n">${esc(court(J.date))} · ${C.presents} pers. au planning</div><div class="eqp-tl">${axe}</div></div>${corps}
         <div class="eqp-sep"><div class="eqp-n">Les linéaires</div><div class="eqp-leg"><span><i class="l"></i>personnes au planning</span>${tkE.length ? `<span><i class="b"></i>tickets, moyenne des ${TM.habitude.jours} ${JOURS[dt(J.date).getDay()]}s d’avant</span>` : ''}${creux.length ? '<span><i class="m"></i>temps mort (10 min et plus sans ticket)</span>' : ''}${C.ouv ? `<span><i class="o"></i>ouvert ${hh(C.ouv[0])}–${hh(C.ouv[1])} (d’après les tickets)</span>` : ''}</div></div>
@@ -500,25 +530,30 @@
     const X = m => ((Math.min(H1, Math.max(H0, m)) - H0) / (H1 - H0) * 100).toFixed(2) + '%', W = (a, b) => ((Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0) * 100).toFixed(2) + '%';
     const ouv = i => { const o = CJ[i].ouv; return o ? `<span class="eqp-ouv" style="left:${X(o[0])};width:${W(o[0], o[1])}"></span>` : ''; };
     const zone = e => (e.secteurs || []).length ? secteurNom(P, e.secteurs[0]) : ((e.postes || [])[0] || {}).nom || 'sans poste';
-    const lignes = (P.employes || []).filter(e => e.actif !== false || CJ.some(c => c.sv.some(s => s.employe === e.id))).map(e => {
+    const lignes = (P.employes || []).filter(e => e.actif !== false || CJ.some(c => c.sv.some(s => s.employe === e.id) || c.abs.some(x => x.employe === e.id))).map(e => {
       let hp = 0, cp = 0;
       const cells = CJ.map((C, i) => {
-        const L = C.sv.filter(s => s.employe === e.id), d = P.jours[i].date;
+        const L = C.sv.filter(s => s.employe === e.id), Ab = C.abs.filter(x => x.employe === e.id), d = P.jours[i].date;
         L.forEach(s => { hp += (s.a - s.de) / 60; cp += (s.a - s.de) / 60 * (e.taux || 0); });
+        // Une absence payée : ses heures et son coût restent sur sa ligne (elle est payée), pas dans la présence du jour.
+        Ab.forEach(x => { if (x.abs.payee) { hp += x.h; cp += x.cout; } });
         const ouvert = st.edit && st.edit.mode === 'modal' && st.edit.date === d && (st.edit.employe === e.id);
-        return `<td class="eqp-c${d === P.aujourdhui ? ' auj' : ''}${ouvert ? ' on' : ''}${e.actif === false ? '' : ' cliquable'}" data-eqp-cell="${d}" data-emp="${e.id}">${L.length ? L.map(s => `<button type="button" class="eqp-sv${st.edit && st.edit.id === s.id ? ' on' : ''}" data-eqp-svc="${s.id}" title="Ouvrir le service">${hh(s.de)}–${hh(s.a)}<small>${esc(zone(e))}</small><span class="eqp-mini" aria-hidden="true">${ouv(i)}<i style="left:${X(s.de)};width:${W(s.de, s.a)}"></i></span></button>`).join('') : `<span class="eqp-tiret">—</span>${e.actif === false ? '' : '<span class="eqp-plus">+ Ajouter</span>'}`}</td>`;
+        const html = Ab.map(x => absBouton(P, x, d, ouv(i), X, W)).join('') + L.map(s => `<button type="button" class="eqp-sv${s.remplace ? ' rp' : ''}${st.edit && st.edit.id === s.id ? ' on' : ''}" data-eqp-svc="${s.id}" title="Ouvrir le service">${hh(s.de)}–${hh(s.a)}<small>${esc(zone(e))}</small>${s.remplace ? `<span class="eqp-rp-t">remplace ${esc(prenomDe(C.eq, s.remplace.employe))}</span>` : ''}<span class="eqp-mini" aria-hidden="true">${ouv(i)}<i style="left:${X(s.de)};width:${W(s.de, s.a)}"></i></span></button>`).join('');
+        return `<td class="eqp-c${d === P.aujourdhui ? ' auj' : ''}${ouvert ? ' on' : ''}${e.actif === false ? '' : ' cliquable'}" data-eqp-cell="${d}" data-emp="${e.id}">${html || `<span class="eqp-tiret">—</span>${e.actif === false ? '' : '<span class="eqp-plus">+ Ajouter</span>'}`}</td>`;
       }).join('');
-      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b class="eqp-fp-lien" data-eqp-fiche="${e.id}" role="button" tabindex="0" title="Ouvrir la fiche">${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
-    }).join('') || `<tr><td colspan="10" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
+      return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b class="eqp-fp-lien" data-eqp-fiche="${e.id}" role="button" tabindex="0" title="Ouvrir la fiche">${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste')}</span>${absSousLigne(P, CJ, e.id)}</span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
+    }).join('') + ligneExterieurs(P, CJ, X, W, ouv) || `<tr><td colspan="10" class="eqp-vide-l">Aucun employé actif.</td></tr>`;
     // Le résumé : le budget de la semaine, puis les jours d'aujourd'hui et à venir qui ont un souci.
-    const meta = `${fH(h)} planifiées${ca && coutCa && hCa ? ' pour un budget de ' + fH(P.budget.cible / 100 * ca / (coutCa / hCa)) : ''}, soit ${fN1(h / heuresEtp(P, 'semaine'))} ETP`;
-    const res = nSv ? resume(P, { quoi: 'cette semaine', h: hCa || h, cout: coutCa, ca, src: srcCaJours(CJ), meta, corriger: P.jours.some(J => J.date >= P.aujourdhui) ? corrigerJours(P, P.jours.map((J, i) => [J, CJ[i]])) : null, ok: 'Rien à corriger d’ici dimanche.', sansCa: 'pour ces jours' }) : '';
+    // Les absences payées (27/11/2026) : leurs heures sont payées sans présence ; le budget d'heures se compte sur les présents.
+    const cAbs = CJ.reduce((a, c) => a + (c.objectif ? c.coutAbs : 0), 0), hAbs = CJ.reduce((a, c) => a + c.hAbs, 0), moyP = hCa ? (coutCa - cAbs) / hCa : 0;
+    const meta = `${hAbs ? fHq(h + hAbs) + ' payées, dont ' + fHq(hAbs) + ' d’absence : ' + fH(h) + ' au magasin' : fH(h) + ' planifiées'}${ca && moyP ? ' pour un budget de ' + fH(Math.max(0, P.budget.cible / 100 * ca - cAbs) / moyP) : ''}, soit ${fN1(h / heuresEtp(P, 'semaine'))} ETP`;
+    const res = nSv || CJ.some(c => c.abs.length) ? resume(P, { quoi: 'cette semaine', h: hCa || h, cout: coutCa, coutAbs: cAbs, absHtml: absBloc(P, CJ), ca, src: srcCaJours(CJ), meta, corriger: P.jours.some(J => J.date >= P.aujourdhui) ? corrigerJours(P, P.jours.map((J, i) => [J, CJ[i]])) : null, ok: 'Rien à corriger d’ici dimanche.', sansCa: 'pour ces jours' }) : '';
     // La tête : les jours ; le ruban des paliers (une couleur par palier, toujours avec son mot), les personnes et les
     // heures ; puis les linéaires (qui tient chaque section, les trous). Elle reste en haut quand on descend.
     const auj = J => J.date === P.aujourdhui ? ' auj' : '';
     const tete = `<tr><th>Employé</th>${P.jours.map(J => `<th class="${auj(J).trim()}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le planogramme du jour">${esc(court(J.date))}</button>${J.date === P.aujourdhui ? '<span class="sub">aujourd’hui</span>' : ''}</th>`).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr>`;
     const pal = `<tr class="eqp-pal"><th class="eqp-pal-t">Budget du jour<span>personnes et heures</span></th>${CJ.map((C, i) => { const n = C.pct != null && C.h > 0 ? niveau(P, C.pct) : null;
-      return `<th class="eqp-pd${auj(P.jours[i])}"><i class="eqp-rib ${n || 'vide'}" aria-hidden="true"></i><span class="eqp-pd-in">${n ? `<span class="v">${fP(C.pct)}</span><span class="w${n === 'ok' ? '' : ' hors'}">${motPalier(P, n)}</span>` : '<span class="v">—</span>'}<span class="s">${C.presents} pers., ${fH(C.h)}</span></span></th>`; }).join('')}<th class="num eqp-pd-tot">${fH(h)}</th><th class="num eqp-pd-tot">${fE(cout)}</th></tr>`;
+      return `<th class="eqp-pd${auj(P.jours[i])}"><i class="eqp-rib ${n || 'vide'}" aria-hidden="true"></i><span class="eqp-pd-in">${n ? `<span class="v">${fP(C.pct)}</span><span class="w${n === 'ok' ? '' : ' hors'}">${motPalier(P, n)}</span>${C.coutAbs && C.objectif ? `<span class="a">dont ${fPt(C.coutAbs / C.objectif * 100)} d’absence</span>` : ''}` : '<span class="v">—</span>'}<span class="s">${C.presents} pers.${C.nAbs ? ` (+${C.nAbs} abs.)` : ''}, ${fH(C.h)}</span></span></th>`; }).join('')}<th class="num eqp-pd-tot">${fH(h)}</th><th class="num eqp-pd-tot">${fE(cout)}</th></tr>`;
     const lin = nSv && CJ[0] ? CJ[0].lin : [];
     const pistes = lin.map((l, k) => `<tr class="eqp-lin${k ? '' : ' prem'}"><td>${esc(l.nom)}</td>${P.jours.map((J, i) => { const x = CJ[i].lin[k] || { cv: [], trous: [], vide: false };
         return `<td class="${auj(J).trim()}${x.vide || x.trous.length ? ' trou-c' : ''}"><span class="eqp-mini l">${ouv(i)}${x.cv.map(([a, b]) => `<span class="eqp-cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}${x.vide ? '<span class="eqp-trou" style="left:0;width:100%"></span>' : ''}${x.trous.map(([a, b]) => `<span class="eqp-trou" style="left:${X(a)};width:${W(a, b)}" title="${hh(a)}–${hh(b)}"></span>`).join('')}</span>${x.vide ? '<span class="eqp-tr">personne</span>' : x.trous.length ? `<span class="eqp-tr">${x.trous.map(([a, b]) => hcl(a) + '–' + hcl(b)).join(', ')}</span>` : ''}</td>`; }).join('')}<td></td><td></td></tr>`).join('');
@@ -526,7 +561,7 @@
       const taux = (P.employes || []).filter(e => e.actif && e.taux > 0).map(e => e.taux), moy = taux.length ? taux.reduce((a, b) => a + b, 0) / taux.length : 0, bud = ca ? P.budget.cible / 100 * ca : 0;
       return `<div class="eqp-vide7"><b>Aucun service au planning cette semaine.</b> ${st.opts.assistant ? '<button type="button" class="btn btn--sm btn--primary" data-eqp-assistant="1">Lancer l’assistant de la semaine</button> Il part de la semaine passée et l’ajuste au chiffre prévu ; ou cliquez' : 'Cliquez'} une case pour ajouter un service${st.opts.recopie ? ', ou recopiez la semaine précédente (« Préparer la semaine »)' : ''}.${bud ? `<div class="eqp-vide7-b">Budget de la semaine à ${String(P.budget.cible).replace('.', ',')} % : <b>${fE(bud)}</b> de personnel pour ${fE(ca)} de CA prévu${moy ? `, soit environ <b>${fH(bud / moy)}</b> au taux moyen de l’équipe (${fEh(moy)})` : ''}.</div>` : ''}</div>`;
     })();
-    const leg = lin.length ? '<span class="eqp-leg"><span><i class="c"></i>quelqu’un du secteur est là</span><span><i class="t"></i>trou : comptoir vide pendant l’ouverture, ou secteur vide</span><span><i class="o"></i>ouverture (d’après les tickets)</span></span>' : '';
+    const leg = lin.length ? '<span class="eqp-leg">' + (CJ.some(c => c.abs.length) ? '<span><i class="ab"></i>absence payée : le coût reste</span><span><i class="rp"></i>remplaçant·e : son coût s’ajoute</span>' : '') + '<span><i class="c"></i>quelqu’un du secteur est là</span><span><i class="t"></i>trou : comptoir vide pendant l’ouverture, ou secteur vide</span><span><i class="o"></i>ouverture (d’après les tickets)</span></span>' : '';
     return vide + res + `<section class="card eqp-tab eqp-sem"><div class="eqp-table"><table><thead>${tete}${nSv ? pal + pistes : ''}</thead><tbody>${lignes}</tbody></table></div></section>
       <p class="eqp-note eqp-note-l"><span>Un clic sur un service l’ouvre, sur une case vide en ajoute un, sur un jour l’ouvre en grand pour tracer les services à la souris. Le coût suit le taux horaire du panel.</span>${leg}</p>`;
   }
@@ -547,7 +582,7 @@
     const cl = (J, base) => { const g = dt(J.date).getDay(); return [base, g === 0 || g === 6 ? 'we' : '', J.date === P.aujourdhui ? 'auj' : ''].filter(Boolean).join(' '); };
     const semaines = []; P.jours.forEach((J, i) => { const l = lundiDe(J.date), w = semaines[semaines.length - 1]; if (w && w.lundi === l) { w.i.push(i); } else { semaines.push({ lundi: l, i: [i] }); } });
     const tete = `<tr><th>Employé</th>${P.jours.map(J => { const d = dt(J.date); return `<th class="${cl(J, 'eqp-mj')}"><button type="button" class="eqp-jb" data-eqp-jour="${J.date}" title="Ouvrir le ${esc(long(J.date))}"><span>${LETTRE[d.getDay()]}</span><b>${d.getDate()}</b></button></th>`; }).join('')}<th class="num">Heures</th><th class="num">Coût</th></tr>`;
-    const visible = e => e.actif !== false || CJ.some(c => c.sv.some(x => x.employe === e.id));
+    const visible = e => e.actif !== false || CJ.some(c => c.sv.some(x => x.employe === e.id) || c.abs.some(x => x.employe === e.id));
     const G = groupes(P, equipeDe(P)).map(([g, L]) => [g, L.filter(visible)]).filter(([, L]) => L.length);
     const ligneSec = (g, L) => {
       const ids = new Set(L.map(e => e.id)), hs = CJ.reduce((a, C) => a + C.sv.filter(x => ids.has(x.employe)).reduce((b, x) => b + (x.a - x.de) / 60, 0), 0);
@@ -559,10 +594,11 @@
     const ligne = e => {
       let hp = 0, cp = 0;
       const cells = CJ.map((C, i) => {
-        const J = P.jours[i], L = C.sv.filter(x => x.employe === e.id);
+        const J = P.jours[i], L = C.sv.filter(x => x.employe === e.id), Ab = C.abs.filter(x => x.employe === e.id);
         L.forEach(x => { hp += (x.a - x.de) / 60; cp += (x.a - x.de) / 60 * (e.taux || 0); });
+        Ab.forEach(x => { if (x.abs.payee) { hp += x.h; cp += x.cout; } });
         const ouvert = st.edit && st.edit.mode === 'modal' && st.edit.date === J.date && st.edit.employe === e.id;
-        return `<td class="${cl(J, 'eqp-mc')}${e.actif === false ? '' : ' cliquable'}${ouvert ? ' on' : ''}" data-eqp-cell="${J.date}" data-emp="${e.id}">${L.map(x => `<button type="button" class="eqp-ms ${x.de < 12 * 60 ? 'm' : 'a'}" data-eqp-svc="${x.id}" title="${esc(court(J.date))} · ${hh(x.de)}–${hh(x.a)}">${nb((x.a - x.de) / 60)}</button>`).join('')}</td>`;
+        return `<td class="${cl(J, 'eqp-mc')}${e.actif === false ? '' : ' cliquable'}${ouvert ? ' on' : ''}" data-eqp-cell="${J.date}" data-emp="${e.id}">${Ab.map(x => `<button type="button" class="eqp-ms abs${x.abs.payee ? '' : ' np'}" data-eqp-abs="${x.abs.id}" title="${esc(court(J.date))} · ${esc(absLibelle(x.abs))} ${hh(x.de)}–${hh(x.a)}${x.rp ? ' · ' + esc(x.rp.nom) + ' la remplace' : ''}">${ABS_MOTIFS[x.abs.motif].lettre}</button>`).join('')}${L.map(x => `<button type="button" class="eqp-ms ${x.de < 12 * 60 ? 'm' : 'a'}" data-eqp-svc="${x.id}" title="${esc(court(J.date))} · ${hh(x.de)}–${hh(x.a)}">${nb((x.a - x.de) / 60)}</button>`).join('')}</td>`;
       }).join('');
       return `<tr><td><div class="eqp-pers"><span class="eqp-av">${esc(ini(e.nom))}</span><span><b class="eqp-fp-lien" data-eqp-fiche="${e.id}" role="button" tabindex="0" title="Ouvrir la fiche">${esc(e.nom)}</b>${lettreChip(e)}<span class="sub">${esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste')}</span></span></div></td>${cells}<td class="num">${hp ? fH(hp) : '—'}</td><td class="num">${hp ? fE(cp) : '—'}</td></tr>`;
     };
@@ -591,7 +627,7 @@
       return it.length ? { attr: `data-eqp-semaine="${w.lundi}"`, titre: 'Semaine du ' + dt(w.lundi).getDate() + '/' + (dt(w.lundi).getMonth() + 1), title: 'Voir la semaine du ' + long(w.lundi).toLowerCase(), items: it.length > 4 ? it.slice(0, 3).concat({ txt: 'et ' + (it.length - 3) + ' de plus' }) : it } : null;
     }).filter(Boolean) : null;
     const metaM = `${fH(h)} planifiées${ca && coutCa && hCa ? ' pour un budget de ' + fH(b.cible / 100 * ca / (coutCa / hCa)) : ''}, soit ${fN1(h / heuresEtp(P, 'mois'))} ETP`;
-    return vide + (nSv ? resume(P, { quoi: 'ce mois', h: hCa || h, cout: coutCa, ca, src: srcCaJours(CJ), meta: metaM, corriger: corrM, ok: 'Rien à corriger d’ici la fin du mois.', sansCa: 'pour ces jours' }) + jaugeEtp(P, 'mois', 'CA par ETP du mois', hCa, ca) : '') + `<section class="card eqp-tab eqp-moi"><div class="eqp-table"><table><thead>${tete}${parJour}${parSem}</thead><tbody>${lignes}</tbody></table></div></section>
+    return vide + (nSv ? resume(P, { quoi: 'ce mois', h: hCa || h, cout: coutCa, coutAbs: somme(c => c.objectif ? c.coutAbs : 0), absHtml: absBloc(P, CJ), ca, src: srcCaJours(CJ), meta: metaM, corriger: corrM, ok: 'Rien à corriger d’ici la fin du mois.', sansCa: 'pour ces jours' }) + jaugeEtp(P, 'mois', 'CA par ETP du mois', hCa, ca) : '') + `<section class="card eqp-tab eqp-moi"><div class="eqp-table"><table><thead>${tete}${parJour}${parSem}</thead><tbody>${lignes}</tbody></table></div></section>
       <p class="eqp-note">Groupé par section : sur la ligne de chaque section, le nombre de ses personnes au planning ce jour-là ; un <b class="eqp-trou-n">0</b> : personne de la section un jour d’ouverture. Dans chaque case, les heures du service : <span class="eqp-ms m">8</span> le matin (avant midi), <span class="eqp-ms a">6</span> l’après-midi. Un clic sur une case l’ouvre (adapter, retirer, ajouter quelqu’un sur le shift) ou ajoute un service ; un clic sur un jour l’ouvre en grand ; sur une semaine, la montre. Les points sous chaque jour suivent les paliers du budget (cible ${String(b.cible).replace('.', ',')} %, orange au-dessus, rouge au-dessus de ${String(b.rouge).replace('.', ',')} %, noir au-dessus de ${String(b.noir).replace('.', ',')} %).</p>`;
   }
 
@@ -739,7 +775,7 @@
     const D = DUREES(P);
     const autresL = C0.sv.filter(s => s.employe !== ed.employe).sort((x, y) => x.de - y.de || x.a - y.a);
     const dansSec = id => { if (!st.edSection) { return false; } const g = groupes(P, eq).find(([n]) => n === st.edSection); return !!g && g[1].some(x => x.id === id); };
-    const lignesQui = autresL.map(s => { const p2 = eq.get(s.employe) || { nom: 'Employé ' + s.employe }; return `<div class="eqp-fo-l${dansSec(s.employe) ? ' sec' : ''}"><span>${esc(p2.nom)}</span><div class="eqp-fo-p">${ouv}<span class="eqp-fo-b" style="left:${X(s.de)};width:${W(s.de, s.a)}">${hh(s.de)}–${hh(s.a)}</span></div></div>`; }).join('');
+    const lignesQui = autresL.map(s => { const p2 = persSv(eq, s); return `<div class="eqp-fo-l${dansSec(s.employe) ? ' sec' : ''}"><span>${esc(p2.nom)}</span><div class="eqp-fo-p">${ouv}<span class="eqp-fo-b" style="left:${X(s.de)};width:${W(s.de, s.a)}">${hh(s.de)}–${hh(s.a)}</span></div></div>`; }).join('');
     const c0 = C0.lin.find(l => l.comptoir), c1 = C.lin.find(l => l.comptoir);
     const comble = c0 && c1 ? c0.trous.flatMap(([x, y]) => trous(c1.trous, x, y)) : [];
     const ligneCpt = c1 ? `<div class="eqp-fo-l cpt"><span>Comptoir</span><div class="eqp-fo-p">${ouv}${c1.cv.map(([a, b]) => `<span class="eqp-fo-b cv" style="left:${X(a)};width:${W(a, b)}"></span>`).join('')}${comble.map(([a, b]) => `<span class="eqp-fo-b comble" style="left:${X(a)};width:${W(a, b)}">comblé</span>`).join('')}${c1.trous.map(([a, b]) => `<span class="eqp-fo-b trou" style="left:${X(a)};width:${W(a, b)}" title="Personne au comptoir ${hh(a)}–${hh(b)}"></span>`).join('')}</div></div>` : '';
@@ -760,11 +796,11 @@
       <div><span>${prenom} cette semaine</span>${S ? `<b class="eqp-num">${fH(S.h0)} → ${fH(S.h1)}</b><em>${S.jours.size} jour${S.jours.size > 1 ? 's' : ''}${S.repos.length ? ', repos ' + esc(S.repos.join(', ')) : ', aucun repos'}</em>` : '<b>—</b>'}</div></div>` : '';
     // Ceux du même shift (un service ouvert) : les ouvrir, les retirer, ajouter quelqu'un sur ces heures.
     const meme = C0.sv.filter(s => s.id !== ed.id && s.de < ed.a && s.a > ed.de).sort((x, y) => x.de - y.de);
-    const libres = (P.employes || []).filter(x => x.actif !== false && x.id !== ed.employe && !C0.sv.some(s => s.employe === x.id && s.de < ed.a && s.a > ed.de));
+    const libres = (P.employes || []).filter(x => x.actif !== false && x.id !== ed.employe && !C0.sv.some(s => s.employe === x.id && s.de < ed.a && s.a > ed.de) && !C0.abs.some(a => a.employe === x.id));
     let ajoutEffet = '';
     if (ed.ajout) { const Ca = calculJour(P, J, { id: 0, employe: ed.ajout, date: J.date, de: ed.de, a: ed.a }); ajoutEffet = `<span class="mu">+${fH((ed.a - ed.de) / 60)} · +${fE(Ca.cout - C0.cout)}${Ca.objectif ? ' · budget du jour ' + marq(P, Ca.pct) : ''}</span>`; }
     const shift = ed.id ? `<div class="eqp-fo-sec eqp-shift"><div class="eqp-opt-g">Sur ce shift · ${hh(ed.de)}–${hh(ed.a)}</div>
-        ${meme.length ? meme.map(x => { const p2 = eq.get(x.employe) || { nom: 'Employé ' + x.employe }; return `<div class="eqp-shift-l"><span><b>${esc(p2.nom)}</b>${lettreChip(p2)} <span class="mu">${hh(x.de)}–${hh(x.a)}</span></span><span class="eqp-sp"></span><button type="button" class="linklike" data-eqp-ouvrir-svc="${x.id}">Ouvrir</button><button type="button" class="btn btn--sm btn--danger" data-eqp-retirer="${x.id}" data-nom="${esc(p2.nom)}"${ed.occupe ? ' disabled' : ''}>Retirer</button></div>`; }).join('') : '<p class="eqp-note" style="margin:4px 0 0">Personne d’autre sur ces heures.</p>'}
+        ${meme.length ? meme.map(x => { const p2 = persSv(eq, x); if (x.ext) { return `<div class="eqp-shift-l"><span><b>${esc(p2.nom)}</b> <span class="mu">${hh(x.de)}–${hh(x.a)} · extérieur, remplace ${esc(prenomDe(eq, x.ext.employe))}</span></span><span class="eqp-sp"></span><button type="button" class="linklike" data-eqp-abs="${x.ext.id}">Ouvrir l’absence</button></div>`; } return `<div class="eqp-shift-l"><span><b>${esc(p2.nom)}</b>${lettreChip(p2)} <span class="mu">${hh(x.de)}–${hh(x.a)}</span></span><span class="eqp-sp"></span><button type="button" class="linklike" data-eqp-ouvrir-svc="${x.id}">Ouvrir</button><button type="button" class="btn btn--sm btn--danger" data-eqp-retirer="${x.id}" data-nom="${esc(p2.nom)}"${ed.occupe ? ' disabled' : ''}>Retirer</button></div>`; }).join('') : '<p class="eqp-note" style="margin:4px 0 0">Personne d’autre sur ces heures.</p>'}
         <div class="eqp-shift-aj"><select data-eqp-ajout-sel="1"${libres.length ? '' : ' disabled'}><option value="">${libres.length ? '+ Ajouter une personne sur ce shift' : 'Toute l’équipe est déjà là'}</option>${libres.map(x => `<option value="${x.id}"${x.id === ed.ajout ? ' selected' : ''}>${esc(x.nom)}${(x.postes || []).length ? ' · ' + esc(x.postes[0].nom) : ''}</option>`).join('')}</select>${ed.ajout ? `<button type="button" class="btn btn--sm" data-eqp-ajout-ok="1"${ed.occupe ? ' disabled' : ''}>Ajouter ${esc(((eq.get(ed.ajout) || {}).nom || '').split(' ')[0])} ${hh(ed.de)}–${hh(ed.a)}</button>` : ''}</div>${ajoutEffet ? `<div class="eqp-shift-ef">${ajoutEffet}</div>` : ''}</div>` : '';
     const choisir = ed.choisir ? `<div class="eqp-fo-sec eqp-ed-ch"><label class="eqp-f">Qui <select data-eqp-ed-emp="1"><option value="">— choisir —</option>${(P.employes || []).filter(x => x.actif !== false).map(x => `<option value="${x.id}"${x.id === ed.employe ? ' selected' : ''}>${esc(x.nom)}</option>`).join('')}</select></label><label class="eqp-f">Jour <select data-eqp-ed-date="1">${P.jours.map(x => `<option value="${x.date}"${x.date === ed.date ? ' selected' : ''}>${esc(long(x.date).replace(/ \d{4}$/, ''))}</option>`).join('')}</select></label></div>` : '';
     // Parcourir le jour (23/11/2026, « je dois pouvoir switcher personne par personne et section par section pour être
@@ -780,7 +816,7 @@
         <div class="eqp-fo-pl">${file.map(x => { const L = auPl(x.id); return `<button type="button" class="eqp-fo-pc${x.id === ed.employe ? ' on' : ''}${L.length ? ' a' : ''}" data-eqp-fo-aller="${x.id}"><b>${esc(x.nom.split(' ')[0])}</b><small>${L.length ? L.map(y => hc(y.de) + '–' + hc(y.a)).join(', ') : 'repos'}</small></button>`; }).join('')}</div>
         <button type="button" class="btn btn--icon" data-eqp-fo-aller="${suivant ? suivant.id : ''}"${suivant ? '' : ' disabled'} aria-label="Personne suivante">›</button><span class="eqp-fo-pos">${iF + 1}/${file.length}</span></div></div>` : '';
     const res = `${e ? '<b>' + prenom + '</b> · ' : ''}${esc(court(ed.date))} · ${hh(ed.de)}–${hh(ed.a)} · ${fH((ed.a - ed.de) / 60)}${e ? ' · ' + signeE(dC) : ''}${hors ? `<span class="tag-r">${esc(motifDuree(P, hors))}</span>` : ''}`;
-    return `<div class="eqp-fo-tete">${e ? `<span class="eqp-av">${esc(ini(e.nom))}</span>` : ''}<div><b>${e ? esc(e.nom) + lettreChip(e) : 'Ajouter un service'}</b><span class="sub">${e ? esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste') + ' · ' : ''}${esc(long(ed.date).replace(/ \d{4}$/, ''))}${ed.id ? (orig ? ' · ' + hh(orig.de) + '–' + hh(orig.a) + ' au planning' : '') : ' · nouveau service'}</span></div>${e && servicesSemaine(ed.employe, ed.date) ? `<button type="button" class="btn btn--sm btn--ghost eqp-fo-hor" data-eqp-retirer-semaine="${ed.employe}"${ed.occupe ? ' disabled' : ''} title="Absent·e, en congé : tous ses services de la semaine sont supprimés">Retirer de l’horaire de la semaine</button>` : ''}<button type="button" class="eqp-fo-x" data-eqp-annuler="1" aria-label="Fermer">×</button></div>
+    return `<div class="eqp-fo-tete">${e ? `<span class="eqp-av">${esc(ini(e.nom))}</span>` : ''}<div><b>${e ? esc(e.nom) + lettreChip(e) : 'Ajouter un service'}</b><span class="sub">${e ? esc((e.postes || []).map(x => x.nom).join(', ') || 'aucun poste') + ' · ' : ''}${esc(long(ed.date).replace(/ \d{4}$/, ''))}${ed.id ? (orig ? ' · ' + hh(orig.de) + '–' + hh(orig.a) + ' au planning' : '') : ' · nouveau service'}</span></div>${e && ed.id ? `<button type="button" class="btn btn--sm eqp-fo-hor" data-eqp-absente="1" title="Malade, en congé, absente : ses heures restent payées (contrat de travail) ; un remplaçant aux mêmes heures">Absente ou en congé</button>` : ''}${e && servicesSemaine(ed.employe, ed.date) ? `<button type="button" class="btn btn--sm btn--ghost eqp-fo-hor" data-eqp-retirer-semaine="${ed.employe}"${ed.occupe ? ' disabled' : ''} title="Absent·e, en congé : tous ses services de la semaine sont supprimés">Retirer de l’horaire de la semaine</button>` : ''}<button type="button" class="eqp-fo-x" data-eqp-annuler="1" aria-label="Fermer">×</button></div>
       ${nav}${choisir}${cartes}${plan}${effs}
       ${chev ? `<p class="eqp-fo-err" role="alert">Chevauche son service de ${hh(chev.de)} à ${hh(chev.a)} : adaptez les heures.</p>` : ''}${ed.err ? `<p class="eqp-fo-err" role="alert">${esc(ed.err)}</p>` : ''}
       <div class="eqp-fo-pied"><span class="eqp-fo-res">${res}</span>${ed.id ? `<button type="button" class="btn btn--danger" data-eqp-suppr="1"${ed.occupe ? ' disabled' : ''}>Retirer ${prenom} du shift</button>` : ''}<button type="button" class="btn btn--ghost" data-eqp-annuler="1"${ed.occupe ? ' disabled' : ''}>${ed.id && !change ? 'Fermer' : 'Annuler'}</button><button type="button" class="btn btn--primary${ed.occupe ? ' is-busy' : ''}" data-eqp-ok="1"${ed.occupe || !change || !ed.employe || chev ? ' disabled' : ''}>${ed.occupe ? 'Enregistrement…' : ed.id ? 'Enregistrer' : 'Ajouter le service'}</button>${suivant ? `<button type="button" class="btn btn--primary" data-eqp-ok-suivant="${suivant.id}"${ed.occupe || !ed.employe || chev ? ' disabled' : ''}>${change ? (ed.id ? 'Enregistrer' : 'Ajouter') + ' et suivant' : 'Suivant'} : ${esc(suivant.nom.split(' ')[0])} ›</button>` : ''}</div>
@@ -1521,6 +1557,253 @@
   }
 
   /* ── Les gestes ──────────────────────────────────────────────────────────────────────────────────────────────── */
+  /* ── Absences, congés et remplacements (27/11/2026 ; panel/src/equipe_absences.php ; maquette
+   * panel/docs/maquettes/equipe-gestion/absences-remplacements/). Sam : « lorsqu'une personne est engagée sous le régime
+   * d'un contrat de travail, lorsqu'elle est absente ou en maladie, les frais doivent rester et on doit pouvoir, aux mêmes
+   * heures, rajouter une tierce personne avec les frais supplémentaires que ça apporte. Et congé payé. » Une absence payée
+   * garde son service au panel (son coût reste partout) et sort ici de la présence ; le remplaçant est un vrai service au
+   * panel (son coût s'ajoute) ou quelqu'un d'extérieur (son nom et son taux, connus du cockpit). ─────────────────────── */
+  const ABS_MOTIFS = {
+    maladie: { nom: 'Maladie', court: 'malade', paye: true, lettre: 'M', dit: 'Salaire garanti : ses heures restent payées' },
+    cp: { nom: 'Congé payé', court: 'en congé payé', paye: true, lettre: 'CP', dit: 'Ses heures restent payées' },
+    circ: { nom: 'Congé de circonstance', court: 'en congé de circonstance', paye: true, lettre: 'C', dit: 'Mariage, décès, déménagement… : ses heures restent payées' },
+    nonpaye: { nom: 'Absence non payée', court: 'absente', paye: false, lettre: 'A', dit: 'Sans solde, injustifiée : le coût sort, le service quitte le panel' },
+  };
+  /** Les contrats payés aux heures prestées : une absence n'y coûte rien (le `employment_type` du panel). */
+  const ABS_SANS = ['civil_law_contract', 'b2b', 'temporary_work', 'internship', 'volunteer'];
+  const ABS_CONTRATS = { employment_contract: 'Contrat de travail', civil_law_contract: 'Contrat civil', b2b: 'B2B', temporary_work: 'Intérim', internship: 'Stage', volunteer: 'Bénévole', other: 'Autre contrat' };
+  const absPayee = (motif, e) => !!(ABS_MOTIFS[motif] || {}).paye && !ABS_SANS.includes((e && e.contrat) || '');
+  const fPt = x => x.toFixed(1).replace('.', ',') + ' pt' + (x >= 2 ? 's' : '');
+  /** Des heures payées, au quart d'heure (12,75 h et pas « 13 h »). */
+  const fHq = n => String(Math.round(n * 4) / 4).replace('.', ',') + ' h';
+  const prenomDe = (eq, id) => ((eq.get(id) || {}).nom || 'Employé ' + id).split(' ')[0];
+  /** Ce que dit la case d'une absence. */
+  const absLibelle = a => a.payee ? { maladie: 'Malade · payée', cp: 'Congé payé', circ: 'Circonstance · payée', nonpaye: 'Absente' }[a.motif]
+    : { maladie: 'Malade · non payée', cp: 'Congé · non payé', circ: 'Circonstance · non payée', nonpaye: 'Absente · non payée' }[a.motif];
+  const periodeDe = a => a.du === a.au ? court(a.du).toLowerCase() : 'du ' + court(a.du).toLowerCase() + ' au ' + court(a.au).toLowerCase();
+
+  /** La case d'un service absent : hachurée, le motif, qui la remplace ou « À remplacer ». */
+  function absBouton(P, x, d, ouvH, X, W) {
+    return `<button type="button" class="eqp-sv eqp-abs${x.abs.payee ? '' : ' np'}" data-eqp-abs="${x.abs.id}" title="${esc(ABS_MOTIFS[x.abs.motif].nom + (x.abs.payee ? ' : ses heures restent payées' : ' : non payée'))} — ouvrir l’absence">${hh(x.de)}–${hh(x.a)}<small>${esc(absLibelle(x.abs))}</small>${x.rp ? `<span class="eqp-abs-par">→ ${esc(x.rp.nom.split(' ')[0])} la remplace</span>` : d >= P.aujourdhui ? '<span class="tag-warn eqp-abs-ar">À remplacer</span>' : ''}<span class="eqp-mini" aria-hidden="true">${ouvH}<i style="left:${X(x.de)};width:${W(x.de, x.a)}"></i></span></button>`;
+  }
+  /** Sous le nom d'une personne : ses absences de la période (le motif, quand, ce qui reste payé). */
+  function absSousLigne(P, CJ, id) {
+    const G = new Map();
+    CJ.forEach(C => C.abs.filter(x => x.employe === id).forEach(x => { const k = [x.abs.du, x.abs.au, x.abs.motif, x.abs.payee].join('|'); if (!G.has(k)) { G.set(k, { a: x.abs, h: 0, c: 0 }); } const g = G.get(k); g.h += x.h; g.c += x.cout; }));
+    return [...G.values()].map(g => `<span class="sub eqp-abs-sub" data-eqp-abs="${g.a.id}" role="button" tabindex="0" title="Ouvrir l’absence"><i aria-hidden="true"></i>${esc(ABS_MOTIFS[g.a.motif].nom)} ${esc(periodeDe(g.a))} · ${fHq(g.h)}${g.a.payee ? ' payées, ' + fE(g.c) : ' non payées'}</span>`).join('');
+  }
+  /** La ligne des extérieurs (intérim, extra) de la semaine : connus du cockpit seul. */
+  function ligneExterieurs(P, CJ, X, W, ouv) {
+    if (!CJ.some(C => C.sv.some(s => s.ext))) { return ''; }
+    let h = 0, c = 0;
+    const cells = CJ.map((C, i) => {
+      const d = P.jours[i].date;
+      const html = C.sv.filter(s => s.ext).map(s => { const dh = (s.a - s.de) / 60; h += dh; c += dh * s.ext.externe.taux;
+        return `<button type="button" class="eqp-sv rp ext" data-eqp-abs="${s.ext.id}" title="${esc(s.ext.externe.nom)} · ${fEh(s.ext.externe.taux)} — ouvrir l’absence">${hh(s.de)}–${hh(s.a)}<small>${esc(s.ext.externe.nom)}</small><span class="eqp-rp-t">remplace ${esc(prenomDe(C.eq, s.ext.employe))}</span><span class="eqp-mini" aria-hidden="true">${ouv(i)}<i style="left:${X(s.de)};width:${W(s.de, s.a)}"></i></span></button>`; }).join('');
+      return `<td class="eqp-c${d === P.aujourdhui ? ' auj' : ''}">${html || '<span class="eqp-tiret">—</span>'}</td>`;
+    }).join('');
+    return `<tr class="eqp-ext-l"><td><div class="eqp-pers"><span class="eqp-av">+</span><span><b>Extérieurs</b><span class="sub">intérim, extra : connus du cockpit, pas du panel</span></span></div></td>${cells}<td class="num">${fHq(h)}</td><td class="num">${fE(c)}</td></tr>`;
+  }
+  /** Le bloc du résumé : ce que coûtent les absences, le budget sans elles, chacune et ses remplacements. */
+  function absBloc(P, CJ) {
+    const L = CJ.flatMap((C, i) => C.abs.map(x => Object.assign({ date: P.jours[i].date }, x)));
+    if (!L.length) { return ''; }
+    const eq = CJ[0].eq, ca = CJ.reduce((a, c) => a + (c.objectif || 0), 0), cAbsCa = CJ.reduce((a, c) => a + (c.objectif ? c.coutAbs : 0), 0);
+    const cAbs = CJ.reduce((a, c) => a + c.coutAbs, 0), coutCa = CJ.reduce((a, c) => a + (c.objectif ? c.cout : 0), 0);
+    const G = new Map();
+    L.forEach(x => { const k = [x.employe, x.abs.du, x.abs.au, x.abs.motif].join('|'); if (!G.has(k)) { G.set(k, []); } G.get(k).push(x); });
+    const lignes = [...G.values()].map(xs => {
+      const a = xs[0].abs, e = eq.get(a.employe) || { nom: 'Employé ' + a.employe }, h = xs.reduce((t, x) => t + x.h, 0), c = xs.reduce((t, x) => t + x.cout, 0);
+      const jours = xs.map(x => x.rp ? `<span class="eqp-ab-j ok">${esc(court(x.date).toLowerCase())} : ${esc(x.rp.nom.split(' ')[0])}</span>`
+        : `<span class="eqp-ab-j${x.date >= P.aujourdhui ? ' ko' : ''}">${esc(court(x.date).toLowerCase())} : ${x.date >= P.aujourdhui ? 'à remplacer' : 'pas remplacée'}</span>`).join('');
+      return `<div class="eqp-ab-l"><span class="eqp-av">${esc(ini(e.nom))}</span><div><button type="button" class="linklike eqp-ab-n" data-eqp-abs="${a.id}" title="Ouvrir l’absence">${esc(e.nom)}</button><span class="chip chip--neutral">${esc(ABS_MOTIFS[a.motif].nom)}${a.certificat ? ' · certificat' : ''}</span>
+        <span class="eqp-ab-p">${esc(periodeDe(a))} · ${fHq(h)} ${a.payee ? 'payées : ' + fE(c) + ' qui restent' : 'non payées : le coût sort'}</span></div><div class="eqp-ab-r">${jours}</div></div>`;
+    }).join('');
+    const remps = CJ.reduce((t, C) => t + C.sv.filter(s => s.remplace).reduce((u, s) => u + (s.a - s.de) / 60 * (persSv(C.eq, s).taux || 0), 0), 0);
+    return `<div class="eqp-rs-abs"><div class="eqp-rs-abs-t"><span class="k">Absences et congés</span><b>${fE(cAbs)}</b><span>payés sans présence${ca && cAbsCa ? ' · ' + fPt(cAbsCa / ca * 100) + ' du budget' : ''}</span></div>
+      <div class="eqp-rs-abs-ls">${lignes}</div>
+      <div class="eqp-rs-abs-s">${ca && cAbsCa ? `<span>Sans les absences</span><b>${marq(P, (coutCa - cAbsCa) / ca * 100)}</b>` : ''}<span>Remplacements : ${signeE(remps)}</span></div></div>`;
+  }
+
+  /* — La fenêtre « Absence ou congé » : depuis un service (« Absente ou en congé »), une absence (sa case), ou la barre
+   * du planning. Le motif, la période, et jour par jour : ce qui reste payé, qui remplace (chacun avec ce qu'il ajoute),
+   * le budget du jour avant → après, le comptoir. — */
+  function ouvrirAbsence(o) {
+    let taux = ''; try { taux = localStorage.getItem('eqpTauxExterieur') || ''; } catch (e) { /* sans stockage */ }
+    st.edit = null;
+    st.ab = { emp: o.emp || null, du: o.du || AUJ, au: o.au || o.du || AUJ, motif: o.motif || 'maladie', certificat: !!o.certificat, existant: !!o.existant,
+      remps: {}, ext: { nom: 'Intérim', taux }, P: null, cle: '', err: null, occupe: false, retirerRp: true };
+    chargerAbsence(); rendre();
+  }
+  /** Une absence posée, par son numéro : la fenêtre sur sa période. */
+  function ouvrirAbsenceId(id) {
+    for (const P of [st.PS, st.PJ, st.PM]) {
+      for (const J of (P ? P.jours : [])) { const a = (J.absences || []).find(x => x.id === id); if (a) { ouvrirAbsence({ emp: a.employe, du: a.du, au: a.au, motif: a.motif, certificat: a.certificat, existant: true }); return; } }
+    }
+  }
+  const absNbJours = A => Math.round((dt(A.au) - dt(A.du)) / 864e5) + 1;
+  /** Le planning de la période de la fenêtre (31 jours au plus). */
+  function chargerAbsence() {
+    const A = st.ab; if (!A) { return; }
+    A.err = null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(A.du) || !/^\d{4}-\d{2}-\d{2}$/.test(A.au)) { A.P = null; A.err = 'les dates de la période'; return; }
+    if (A.au < A.du) { A.P = null; A.err = 'la période finit avant de commencer'; return; }
+    const n = absNbJours(A); if (n > 31) { A.P = null; A.err = 'une absence se pose sur 31 jours au plus d’un coup'; return; }
+    const cle = A.du + '|' + n; if (A.P && A.cle === cle) { return; }
+    A.P = null; A.cle = cle;
+    lire('/dashboard/equipe/planning', { du: A.du, jours: n }).then(r => { if (st.ab === A && A.cle === cle) { A.P = r; } })
+      .catch(e => { if (st.ab === A) { A.err = 'le planning de la période ne se lit pas : ' + e.message; } }).finally(rendre);
+  }
+  /** Ses services sur la période, jour par jour (et ses absences non payées, dont le service a quitté le panel). */
+  function absItems(A) {
+    const P = A.P; if (!P || !A.emp) { return []; }
+    const L = [];
+    P.jours.forEach(J => {
+      (J.services || []).filter(s => s.employe === A.emp).forEach(s => L.push({ J, s: { id: s.id, de: mn(s.de), a: mn(s.a) }, a: (J.absences || []).find(x => x.service === s.id) || null }));
+      (J.absences || []).filter(x => x.employe === A.emp && !x.payee && !(J.services || []).some(s => s.id === x.service)).forEach(x => L.push({ J, s: { id: x.service, de: mn(x.de), a: mn(x.a) }, a: x, sorti: true }));
+    });
+    return L.sort((x, y) => x.J.date.localeCompare(y.J.date) || x.s.de - y.s.de);
+  }
+  /** Le remplacement déjà posé d'une absence (son service au planning, ou un extérieur), ou null. */
+  const absRpDeja = (J, a) => !a ? null : a.remplacantService && (J.services || []).some(s => s.id === a.remplacantService) ? 'equipe' : a.externe ? 'externe' : null;
+  /** Le jour tel qu'il serait : ses services absents (le motif choisi), le remplaçant choisi. */
+  function absSimJour(J, A, payee, items) {
+    const mes = items.filter(x => x.J === J), services = (J.services || []).slice();
+    const absences = (J.absences || []).filter(x => x.employe !== A.emp || (!x.payee && !(J.services || []).some(s => s.id === x.service)));
+    const choix = A.remps[J.date] || '';
+    mes.filter(x => !x.sorti).forEach(x => {
+      const a0 = x.a, deja = absRpDeja(J, a0), n = { id: a0 ? a0.id : 'n' + x.s.id, employe: A.emp, service: x.s.id, de: hh(x.s.de), a: hh(x.s.a), motif: A.motif, payee, du: A.du, au: A.au,
+        remplacant: deja ? a0.remplacant : null, remplacantService: deja === 'equipe' ? a0.remplacantService : null, externe: deja === 'externe' ? a0.externe : null };
+      if (!deja && choix === 'x') { n.externe = { nom: A.ext.nom || 'Intérim', taux: +String(A.ext.taux).replace(',', '.') || 0 }; }
+      else if (!deja && choix.startsWith('e:')) { const id = +choix.slice(2); n.remplacant = id; n.remplacantService = 'r' + x.s.id; services.push({ id: 'r' + x.s.id, employe: id, de: hh(x.s.de), a: hh(x.s.a) }); }
+      absences.push(n);
+    });
+    return Object.assign({}, J, { _abs: null, services, absences });
+  }
+  /** Qui peut remplacer ce jour-là : l'équipe active, libre à ces heures et pas absente ; ceux du même rôle d'abord
+   *  (un secteur commun, ou le comptoir), puis le moins cher. */
+  function absCandidats(P, J, A, items) {
+    const eq = equipeDe(P), e = eq.get(A.emp) || {}, mes = items.filter(x => x.J === J);
+    const absents = new Set((J.absences || []).map(x => x.employe));
+    const role = x => (x.secteurs || []).some(id => (e.secteurs || []).includes(id)) || (comptoir(x) && comptoir(e));
+    return (P.employes || []).filter(x => x.actif !== false && x.id !== A.emp && !absents.has(x.id)
+      && !(J.services || []).some(s => s.employe === x.id && mes.some(m => mn(s.de) < m.s.a && mn(s.a) > m.s.de)))
+      .map(x => ({ x, role: role(x), cout: mes.reduce((t, m) => t + (m.s.a - m.s.de) / 60 * (x.taux || 0), 0) }))
+      .sort((p, q) => (q.role - p.role) || (p.cout - q.cout) || p.x.nom.localeCompare(q.x.nom, 'fr'));
+  }
+  function rendAbsence() {
+    const A = st.ab; if (!A) { return ''; }
+    const base = A.P || planVue() || st.PS, eq = base ? equipeDe(base) : new Map(), e = A.emp ? eq.get(A.emp) || null : null, pr = e ? e.nom.split(' ')[0] : '';
+    const payee = absPayee(A.motif, e), M = ABS_MOTIFS[A.motif], P = A.P, items = absItems(A);
+    const contrat = e ? (e.contrat ? ABS_CONTRATS[e.contrat] || e.contrat : 'Contrat à préciser') : '';
+    const tete = `<div class="eqp-fo-tete">${e ? `<span class="eqp-av">${esc(ini(e.nom))}</span>` : ''}<div><b>${e ? esc(e.nom) : 'Absence ou congé'}</b>${e ? ` <span class="chip chip--neutral eqp-ab-ct">${esc(contrat)}</span>` : ''}<span class="sub">${A.existant ? 'Absence posée' : 'Absence ou congé'}${e ? ' · ' + esc((e.postes || []).map(p => p.nom).join(', ') || 'aucun poste') + ' · ' + (e.taux != null ? fEh(e.taux) : 'taux inconnu') : ''}</span></div><button type="button" class="eqp-fo-x" data-eqp-ab-fermer="1" aria-label="Fermer">×</button></div>`;
+    const equipe = ((base && base.employes) || []).filter(x => x.actif !== false || x.id === A.emp);
+    const qui = A.existant ? '' : `<label class="eqp-f">Qui <select class="input" data-eqp-ab-emp="1"><option value="">— choisir —</option>${equipe.map(x => `<option value="${x.id}"${x.id === A.emp ? ' selected' : ''}>${esc(x.nom)}</option>`).join('')}</select></label>`;
+    const note = !e ? '' : !ABS_SANS.includes(e.contrat || '')
+      ? `<b>${e.contrat === 'employment_contract' ? 'Contrat de travail' : esc(contrat) + ' (sa fiche) : compté comme un contrat de travail'} : ses heures restent payées</b> et restent au budget d’heures, sauf absence non payée. ${esc(pr)} ne compte plus comme présence (le comptoir, les linéaires).`
+      : `<b>${esc(contrat)} : payé·e aux heures prestées.</b> Une absence ne coûte rien : son service quitte le panel.`;
+    const hTot = items.reduce((t, x) => t + (x.s.a - x.s.de) / 60, 0), cTot = hTot * ((e && e.taux) || 0);
+    const cartes = Object.entries(ABS_MOTIFS).map(([k, m]) => { const p = absPayee(k, e);
+      return `<button type="button" class="eqp-fo-carte eqp-ab-m${k === A.motif ? ' on' : ''}" data-eqp-ab-motif="${k}"><span class="eqp-fo-radio"></span><span class="t">${esc(m.nom)}</span><span class="prix${p ? '' : ' moins'}">${items.length && cTot ? (p ? fE(cTot) : '−' + fE(cTot)) : ''}<small>${p ? 'reste au budget' : 'sort du budget'}</small></span><span class="d"><span>${esc(m.dit)}</span></span></button>`; }).join('');
+    const periode = `<div class="eqp-ab-per"><label class="eqp-f">Du <input type="date" class="input" data-eqp-ab-du="1" value="${esc(A.du)}"></label><label class="eqp-f">au <input type="date" class="input" data-eqp-ab-au="1" value="${esc(A.au)}"></label>
+      ${A.motif === 'maladie' ? `<label class="eqp-ab-cb"><input type="checkbox" data-eqp-ab-cert="1"${A.certificat ? ' checked' : ''}> Certificat médical reçu</label>` : ''}</div>`;
+    // Jour par jour.
+    let cRest = 0, hRest = 0, cRemp = 0, nRemp = 0, av = 0, ap = 0, caJ = 0; const trousAp = [], erreurs = [];
+    const rows = P ? P.jours.filter(J => items.some(x => x.J === J)).map(J => {
+      const mes = items.filter(x => x.J === J), C0 = calculJour(P, J, null), C1 = calculJour(P, absSimJour(J, A, payee, items), null);
+      const h = mes.reduce((t, x) => t + (x.s.a - x.s.de) / 60, 0), c = h * ((e && e.taux) || 0);
+      if (payee) { cRest += c; hRest += h; }
+      const deja = mes.map(x => absRpDeja(J, x.a)).find(Boolean), a0 = mes.map(x => x.a).find(Boolean);
+      const choix = A.remps[J.date] || '';
+      let rp;
+      if (deja) {
+        rp = `<span class="eqp-ab-deja">${deja === 'externe' ? esc(a0.externe.nom) + ' · ' + fEh(a0.externe.taux) : esc((eq.get(a0.remplacant) || { nom: 'Employé ' + a0.remplacant }).nom)} · au planning</span>`;
+      } else {
+        const K = absCandidats(P, J, A, items);
+        rp = `<select class="input" data-eqp-ab-rp="${J.date}"><option value="">— personne</option>${K.map((k, i) => `<option value="e:${k.x.id}"${choix === 'e:' + k.x.id ? ' selected' : ''}>${esc(k.x.nom)} · ${signeE(k.cout)}${i === 0 && k.role ? ' (proposé)' : ''}</option>`).join('')}<option value="x"${choix === 'x' ? ' selected' : ''}>Quelqu’un d’extérieur (intérim, extra)…</option></select>`;
+        if (choix) { nRemp++; const t = choix === 'x' ? (+String(A.ext.taux).replace(',', '.') || 0) : ((eq.get(+choix.slice(2)) || {}).taux || 0); cRemp += h * t; }
+      }
+      if (C0.objectif) { av += C0.cout; ap += C1.cout; caJ += C0.objectif; }
+      const cp1 = C1.lin.find(l => l.comptoir), tr = cp1 ? cp1.trous : [];
+      if (tr.length) { trousAp.push(court(J.date).toLowerCase() + ' ' + tr.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ')); }
+      return `<tr><td><b>${esc(court(J.date))}</b></td><td class="mu">${mes.map(x => hh(x.s.de) + '–' + hh(x.s.a)).join(', ')}${mes.some(x => x.a) ? '<span class="sub">absence déjà posée</span>' : ''}</td>
+        <td><span class="eqp-ab-chip${payee ? '' : ' np'}">${esc(absLibelle({ motif: A.motif, payee }))}</span></td><td class="num">${fHq(h)}</td><td class="num">${payee ? fE(c) : '<span class="eqp-ab-moins">−' + fE(c) + '</span>'}</td>
+        <td>${rp}</td><td class="num">${signeE(C1.cout - C0.cout)}</td><td class="nw">${C0.objectif ? `${marq(P, C0.pct)} → ${marq(P, C1.pct)}` : '—'}</td>
+        <td class="${tr.length ? 'eqp-ab-ko' : 'eqp-ab-okc'}">${cp1 ? (tr.length ? 'vide ' + tr.map(([a, b]) => hc(a) + '–' + hc(b)).join(', ') : '✓ tenu') : '—'}</td></tr>`;
+    }).join('') : '';
+    const repos = P && e ? P.jours.filter(J => !items.some(x => x.J === J)).map(J => court(J.date).toLowerCase()) : [];
+    if (!A.emp) { erreurs.push('Choisissez la personne.'); }
+    else if (P && !items.length) { erreurs.push(`Aucun service de ${pr} sur cette période : rien à marquer. Une absence se pose sur ses services (faites d’abord son horaire).`); }
+    if (payee && items.some(x => x.sorti)) { erreurs.push('Une absence non payée est déjà posée sur ces jours : annulez-la d’abord, puis posez la nouvelle.'); }
+    if (Object.values(A.remps).includes('x') && !(+String(A.ext.taux).replace(',', '.') > 0)) { erreurs.push('Le taux horaire de l’extérieur (la facture de l’agence, par heure).'); }
+    const ext = Object.values(A.remps).includes('x') ? `<div class="eqp-ab-ext"><span>Extérieur</span><label class="eqp-f">Nom <input class="input" data-eqp-ab-xnom="1" value="${esc(A.ext.nom)}" maxlength="80"></label><label class="eqp-f">Taux <input class="input" type="number" min="0" step="0.01" data-eqp-ab-xtaux="1" value="${esc(A.ext.taux)}"> €/h</label><em>connu du cockpit seul : son coût s’ajoute ici, sa facture passe par les frais</em></div>` : '';
+    const table = !A.emp ? '' : A.err ? `<p class="eqp-fo-err" role="alert">${esc(A.err)}</p>` : !P ? '<div class="eqp-attente">Lecture du planning de la période…</div>' : items.length ? `<div class="eqp-table eqp-ab-t"><table><thead><tr><th>Jour</th><th>Son service</th><th>Devient</th><th class="num">Heures</th><th class="num">${payee ? 'Coût qui reste' : 'Coût qui sort'}</th><th>Remplacer par</th><th class="num">Effet</th><th>Budget du jour</th><th>Comptoir</th></tr></thead><tbody>${rows}</tbody></table></div>${repos.length ? `<p class="eqp-note eqp-ab-rep">Repos sur la période : ${esc(repos.join(', '))} (rien à payer en plus).</p>` : ''}${ext}` : '';
+    const effs = A.emp && P && items.length ? `<div class="eqp-fo-effs">
+      <div><span>L’absence de ${esc(pr)}</span><b class="eqp-num">${payee ? fE(cRest) : '−' + fE(cTot)}</b><em>${payee ? fHq(hRest) + ' payées sans présence' : 'non payée : le coût sort'}</em></div>
+      <div><span>Les remplacements</span><b class="eqp-num">${signeE(cRemp)}</b><em>${nRemp ? nRemp + ' service' + (nRemp > 1 ? 's' : '') + ' aux mêmes heures' : 'aucun nouveau'}</em></div>
+      <div><span>Budget de ces jours</span>${caJ ? `<b>${marq(P, av / caJ * 100)} → ${marq(P, ap / caJ * 100)}</b><em>${signeE(ap - av)}</em>` : '<b>—</b><em>pas de CA prévu</em>'}</div>
+      <div class="${trousAp.length ? 'ko' : 'ok'}"><span>Comptoir</span><b>${trousAp.length ? 'vide' : '<i class="eqp-fo-ok">✓</i>tenu'}</b><em>${trousAp.length ? esc(trousAp.join(' · ')) : 'pendant l’ouverture, ces jours-là'}</em></div></div>` : '';
+    const nAbs = P ? P.jours.reduce((t, J) => t + (J.absences || []).filter(x => x.employe === A.emp).length, 0) : 0;
+    const nRpPoses = P ? P.jours.reduce((t, J) => t + (J.absences || []).filter(x => x.employe === A.emp && absRpDeja(J, x) === 'equipe').length, 0) : 0;
+    const ok = A.emp && P && items.length && !erreurs.length && !A.occupe;
+    const res = e && items.length ? `<b>${esc(pr)}</b> · ${esc(M.court)} ${esc(periodeDe(A))} · ${items.length} service${items.length > 1 ? 's' : ''}${payee ? ', ' + fHq(hRest) + ' payées' : ''}${nRemp ? ' · ' + nRemp + ' remplacement' + (nRemp > 1 ? 's' : '') + ' ' + signeE(cRemp) : ''}` : '';
+    const pied = `<div class="eqp-fo-pied"><span class="eqp-fo-res">${res}</span>
+      ${A.existant && nAbs ? `${nRpPoses ? `<label class="eqp-ab-cb"><input type="checkbox" data-eqp-ab-rpret="1"${A.retirerRp ? ' checked' : ''}> retirer aussi ${nRpPoses > 1 ? 'ses remplaçants' : 'son remplaçant'}</label>` : ''}<button type="button" class="btn btn--danger" data-eqp-ab-annuler="1"${A.occupe ? ' disabled' : ''}>${esc(pr)} travaille : annuler l’absence</button>` : ''}
+      <button type="button" class="btn btn--ghost" data-eqp-ab-fermer="1"${A.occupe ? ' disabled' : ''}>Fermer</button>
+      <button type="button" class="btn btn--primary${A.occupe ? ' is-busy' : ''}" data-eqp-ab-ok="1"${ok ? '' : ' disabled'}>${A.occupe ? 'Enregistrement…' : (A.existant ? 'Enregistrer' : 'Poser l’absence') + (nRemp ? ' et ' + nRemp + ' remplacement' + (nRemp > 1 ? 's' : '') : '')}</button></div>`;
+    return `<div class="eqp-voile" data-eqp-ab-voile="1"><div class="eqp-fo card eqp-ab-fo" role="dialog" aria-modal="true" aria-label="Absence ou congé" data-eqp-garde="1">${tete}
+      <div class="eqp-fo-sec eqp-ab-q">${qui}${periode}${note ? `<p class="eqp-ab-note">${note}</p>` : ''}</div>
+      ${e ? `<div class="eqp-fo-sec"><div class="eqp-opt-g">Pourquoi</div><div class="eqp-ab-ms">${cartes}</div></div>` : ''}
+      ${table ? `<div class="eqp-fo-sec"><div class="eqp-opt-g">Jour par jour <span>chacun avec ce qu’il ajoute ; ${esc(pr)} ${payee ? 'reste payée' : 'n’est pas payée'}</span></div>${table}</div>` : ''}
+      ${effs}${erreurs.length && A.emp && P ? `<p class="eqp-fo-err" role="alert">${esc(erreurs[0])}</p>` : ''}${A.errEnvoi ? `<p class="eqp-fo-err" role="alert">${esc(A.errEnvoi)}</p>` : ''}${pied}</div></div>`;
+  }
+  function enregistrerAbsence() {
+    const A = st.ab; if (!A || A.occupe) { return; }
+    const taux = +String(A.ext.taux).replace(',', '.');
+    const remps = Object.entries(A.remps).filter(([, v]) => v).map(([date, v]) => v === 'x' ? { date, externe: { nom: (A.ext.nom || '').trim() || 'Intérim', taux } } : { date, employe: +v.slice(2) });
+    if (remps.some(r => r.externe)) { try { localStorage.setItem('eqpTauxExterieur', String(A.ext.taux)); } catch (e) { /* sans stockage */ } }
+    const base = A.P || planVue(), e = base ? equipeDe(base).get(A.emp) : null, pr = e ? e.nom.split(' ')[0] : 'La personne';
+    A.occupe = true; A.errEnvoi = null; rendre();
+    envoyer('POST', '/dashboard/equipe/absence', { employe: A.emp, du: A.du, au: A.au, motif: A.motif, certificat: A.motif === 'maladie' && A.certificat, remplacements: remps })
+      .then(r => {
+        st.ab = null;
+        const ech = (r.echecs || []).length ? ' ' + r.echecs.length + ' écriture' + (r.echecs.length > 1 ? 's' : '') + ' refusée' + (r.echecs.length > 1 ? 's' : '') + ' par le panel' + (r.arret ? ' (' + r.arret + ')' : '') + '.' : '';
+        flash(ech ? 'ko' : 'ok', `${pr} ${ABS_MOTIFS[A.motif].court} ${periodeDe(A)} : ${r.absences} service${r.absences > 1 ? 's' : ''}${r.payee ? ', ses heures restent payées' : ', retiré' + (r.absences > 1 ? 's' : '') + ' du panel'}${r.remplacements ? ', ' + r.remplacements + ' remplacement' + (r.remplacements > 1 ? 's' : '') : ''}.${ech}`);
+        relireTout();
+      })
+      .catch(err => { A.occupe = false; A.errEnvoi = 'Rien n’est enregistré : ' + err.message + (err.j && err.j.detail ? ' (' + err.j.detail + ')' : '') + '.'; rendre(); });
+  }
+  function annulerAbsence() {
+    const A = st.ab; if (!A || A.occupe || !A.P) { return; }
+    const L = A.P.jours.flatMap(J => (J.absences || []).filter(x => x.employe === A.emp).map(x => Object.assign({ rp: absRpDeja(J, x) }, x)));
+    if (!L.length) { return; }
+    const e = equipeDe(A.P).get(A.emp), pr = e ? e.nom.split(' ')[0] : 'La personne', nRp = L.filter(x => x.rp === 'equipe').length, np = L.filter(x => !x.payee).length;
+    if (!window.confirm(`Annuler l’absence de ${pr} ${periodeDe(A)} ?\n${L.length} service${L.length > 1 ? 's' : ''} : ${np ? 'les services retirés reviennent au planning du panel' : pr + ' compte de nouveau comme présente'}${A.retirerRp && nRp ? ' ; ' + (nRp > 1 ? 'ses ' + nRp + ' remplaçants sont retirés' : 'son remplaçant est retiré') + ' du planning' : ''}.`)) { return; }
+    A.occupe = true; A.errEnvoi = null; rendre();
+    envoyer('DELETE', '/dashboard/equipe/absence', { ids: L.map(x => x.id), remplacants: !!(A.retirerRp && nRp) })
+      .then(r => { st.ab = null; flash((r.echecs || []).length ? 'ko' : 'ok', `L’absence de ${pr} est annulée (${r.annulees} service${r.annulees > 1 ? 's' : ''}).${(r.echecs || []).length ? ' ' + r.echecs.map(x => x.motif).join(' ; ') + '.' : ''}`); relireTout(); })
+      .catch(err => { A.occupe = false; A.errEnvoi = 'Rien n’est annulé : ' + err.message + '.'; rendre(); });
+  }
+  function absBrancher(on) {
+    on('[data-eqp-abs]', 'click', e => { e.stopPropagation(); ouvrirAbsenceId(+e.currentTarget.dataset.eqpAbs); });
+    on('[data-eqp-abs][role="button"]', 'keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrirAbsenceId(+e.currentTarget.dataset.eqpAbs); } });
+    on('[data-eqp-absente]', 'click', () => { const ed = st.edit; if (!ed || !ed.employe) { return; } ouvrirAbsence({ emp: ed.employe, du: ed.date, au: ed.date, motif: 'maladie' }); });
+    on('[data-eqp-abs-nouv]', 'click', () => { const P = planVue(); const d = P && P.jours.some(J => J.date === AUJ) ? AUJ : (P ? P.jours[0].date : AUJ); ouvrirAbsence({ emp: null, du: d, au: d, motif: 'cp' }); });
+    on('[data-eqp-ab-emp]', 'change', e => { st.ab.emp = +e.target.value || null; st.ab.remps = {}; rendre(); });
+    on('[data-eqp-ab-motif]', 'click', e => { st.ab.motif = e.currentTarget.dataset.eqpAbMotif; rendre(); });
+    on('[data-eqp-ab-du]', 'change', e => { const A = st.ab; A.du = e.target.value; if (A.au < A.du) { A.au = A.du; } A.remps = {}; chargerAbsence(); rendre(); });
+    on('[data-eqp-ab-au]', 'change', e => { const A = st.ab; A.au = e.target.value; A.remps = {}; chargerAbsence(); rendre(); });
+    on('[data-eqp-ab-cert]', 'change', e => { st.ab.certificat = e.target.checked; });
+    on('[data-eqp-ab-rp]', 'change', e => { st.ab.remps[e.target.dataset.eqpAbRp] = e.target.value; rendre(); });
+    on('[data-eqp-ab-xnom]', 'change', e => { st.ab.ext.nom = e.target.value; rendre(); });
+    on('[data-eqp-ab-xtaux]', 'change', e => { st.ab.ext.taux = e.target.value; rendre(); });
+    on('[data-eqp-ab-rpret]', 'change', e => { st.ab.retirerRp = e.target.checked; });
+    on('[data-eqp-ab-ok]', 'click', enregistrerAbsence);
+    on('[data-eqp-ab-annuler]', 'click', annulerAbsence);
+    on('[data-eqp-ab-fermer]', 'click', () => { if (st.ab && !st.ab.occupe) { st.ab = null; rendre(); } });
+    on('[data-eqp-ab-voile]', 'click', e => { if (e.target === e.currentTarget && st.ab && !st.ab.occupe) { st.ab = null; rendre(); } });
+  }
+
   function brancher() {
     const el = st.el, on = (sel, ev, f) => el.querySelectorAll(sel).forEach(n => n.addEventListener(ev, f));
     fpBrancher(el, on);
@@ -1568,7 +1851,7 @@
     on('[data-eqp-pdfok]', 'click', telechargerPdf);
     on('[data-eqp-annuler]', 'click', () => { st.edit = null; rendre(); });
     on('[data-eqp-cell]', 'click', e => {
-      if (e.target.closest('[data-eqp-garde]')) { return; }
+      if (e.target.closest('[data-eqp-garde]') || e.target.closest('[data-eqp-abs]')) { return; }
       const c = e.currentTarget, sv = e.target.closest('[data-eqp-svc]'), emp = +c.dataset.emp, P = planVue();
       const x = P && (P.employes || []).find(y => y.id === emp); if (!x || (!sv && x.actif === false)) { return; }
       ouvrirEdition({ mode: 'modal', id: sv ? +sv.dataset.eqpSvc : 0, employe: emp, date: c.dataset.eqpCell });
@@ -1587,6 +1870,7 @@
     on('[data-eqp-ajout-ok]', 'click', () => { const ed = st.edit; if (!ed.ajout) { return; } const n = ((equipeDe(ctxEdition(ed)[0]).get(ed.ajout) || {}).nom || '').split(' ')[0];
       ecrireShift('POST', { employe: ed.ajout, date: ed.date, de: hh(ed.de), a: hh(ed.a) }, n + ' est ajouté(e) au shift ' + hh(ed.de) + '–' + hh(ed.a) + '.', true); });
     on('[data-eqp-ok]', 'click', () => enregistrerService(false));
+    absBrancher(on);
     on('[data-eqp-retirer-semaine]', 'click', e => retirerSemaine(+e.currentTarget.dataset.eqpRetirerSemaine));
     on('[data-eqp-options]', 'click', () => { st.optMod = true; st.optErr = null; rendre(); });
     on('[data-eqp-options-fermer]', 'click', () => { st.optMod = false; rendre(); });
@@ -1631,7 +1915,7 @@
   /** Glisser sur le linéaire : déplacer une barre, l'étirer par un bord, ou dessiner un nouveau service sur une ligne. */
   function glisserDebut(ev) {
     if (ev.button !== 0 || !st.PJ || st.PJ.du !== st.jour) { return; }
-    if (ev.target.closest('button, input, select, textarea, a, label')) { return; }
+    if (ev.target.closest('button, input, select, textarea, a, label, [data-eqp-abs]')) { return; }
     const tl = ev.currentTarget, emp = +tl.dataset.eqpTl, P = st.PJ, J = P.jours[0];
     const e = (P.employes || []).find(x => x.id === emp); if (!e || e.actif === false) { return; }
     const [H0, H1] = bornes(P, calculJour(P, J, st.edit).sv), r = tl.getBoundingClientRect();

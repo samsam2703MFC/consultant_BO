@@ -91,7 +91,8 @@ function eqfFiche(array $r, ?array $detail = null): array
         foreach (['level', 'position_level', 'current_level'] as $k) { if (isset($p[$k])) { $n = eqfNomDe($p[$k]); if ($n !== '') { return $n; } if (is_scalar($p[$k])) { return (string) $p[$k]; } } }
         return null;
     };
-    return eqpPersonne($r) + [
+    // Le détail fait foi (array_merge) : son contrat passe devant celui de la liste (eqpPersonne, 27/11/2026).
+    return array_merge(eqpPersonne($r), [
         'prenom' => trim((string) ($d['name'] ?? '')), 'nomFamille' => trim((string) ($d['surname'] ?? '')),
         'affiche' => trim((string) ($d['display_name'] ?? '')),
         'langue' => strtolower(trim((string) ($d['lang_code'] ?? ''))),
@@ -103,7 +104,7 @@ function eqfFiche(array $r, ?array $detail = null): array
         'roles' => array_values(array_filter(array_map('eqfNomDe', (array) ($d['roles'] ?? [])))),
         'competences' => array_values(array_filter(array_map('eqfNomDe', (array) ($d['competencies'] ?? [])))),
         'positions' => array_values(array_filter(array_map(static fn ($p) => ($n = eqfNomDe($p)) !== '' ? ['nom' => $n, 'niveau' => $niveau($p)] : null, (array) ($d['positions'] ?? [])))),
-    ];
+    ]);
 }
 
 /** GET /dashboard/equipe/personne?shop=&id= */

@@ -183,6 +183,7 @@ require __DIR__ . '/../../../panel/src/boite_mail.php';         // Boîte mail d
 require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
 require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe : la carte des responsabilités, le planning et son budget d'heures (23/11/2026)
 require __DIR__ . '/../../../panel/src/equipe_fiche.php';       // Mon équipe › la fiche d'une personne : identité, contrat, taux, évaluations, ventes (24/11/2026)
+require __DIR__ . '/../../../panel/src/equipe_absences.php';    // Mon équipe › absences, congés et remplacements : le coût reste, le remplaçant s'ajoute (27/11/2026)
 require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
 require __DIR__ . '/../../../panel/src/tfb_magasin.php';               // Le compte TF Buddy du magasin : téléphone, PIN, SMS ; le jeton reste dans le navigateur (25/11/2026)
 require __DIR__ . '/../../../panel/src/clients_panel.php';
