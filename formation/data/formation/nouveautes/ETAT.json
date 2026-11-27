@@ -1,8 +1,8 @@
 {
   "brancheEnLigne": "claude/deploiement-application-serveur-lmz1bm",
-  "dernierCommitLu": "ce02b8e9abfb38f3f34be28407cda8a170ad5d9b",
-  "dernierCommitLuLe": "2026-11-26T05:21:57+01:00",
-  "passeLe": "2026-11-26",
+  "dernierCommitLu": "b4979cb638017eaa37587b58522a34df550e7310",
+  "dernierCommitLuLe": "2026-11-27T05:01:15+01:00",
+  "passeLe": "2026-11-27",
   "prochainNumero": 11,
   "themes": [
     {
@@ -554,6 +554,74 @@
       ],
       "raison": "documentation des routines",
       "le": "2026-11-26"
+    },
+    {
+      "sujet": "Formation : examens théoriques des candidats franchisés (banque de questions, relecture mensuelle, #/rfexamens)",
+      "sources": [
+        "4e345895"
+      ],
+      "raison": "écran du siège (portail de formation) ; l’examen se passe dans l’application du candidat (CRM)",
+      "le": "2026-11-27"
+    },
+    {
+      "sujet": "Vérification › Recettes et Matières premières › Références et pertes (prix de référence, prix de marché, pertes, « Tout faire »)",
+      "sources": [
+        "9a7fc502",
+        "e7718863",
+        "cc79387e",
+        "24c388d4"
+      ],
+      "raison": "outil du siège (écritures réseau au panel)",
+      "le": "2026-11-27"
+    },
+    {
+      "sujet": "Médiathèque : rail › Médiathèque › Gérer les vidéos (ajouter, publier une vidéo filmée)",
+      "sources": [
+        "312efae6"
+      ],
+      "raison": "écran du siège (le côté magasin est signalé en mise à jour de 0.0.67)",
+      "le": "2026-11-27"
+    },
+    {
+      "sujet": "Production [444] : Różnice kursowe, relevés ING du compte EUR",
+      "sources": [
+        "cc99070a"
+      ],
+      "raison": "atelier de production (écrans en polonais)",
+      "le": "2026-11-27"
+    },
+    {
+      "sujet": "Compte TF Buddy du magasin : jeton doublé d’un cookie, clic après le code, session gardée",
+      "sources": [
+        "eedf6933",
+        "4725c2d3",
+        "241b76e0"
+      ],
+      "raison": "correctifs sans changement de geste",
+      "le": "2026-11-27"
+    },
+    {
+      "sujet": "Correctifs : fin du mois (Mois), étiquettes d’Analyse et Produits, Concurrence (changer de sujet ferme le relevé), encadré du taux (Mon équipe), « Demander au Professeur », relecture des 2 minutes (Opérationnel), pièce proposée au coffre-fort",
+      "sources": [
+        "a0d64ecd",
+        "710f014b",
+        "cb245841",
+        "cc44d262",
+        "2889a8d4",
+        "2f42fce8",
+        "327fc8f1"
+      ],
+      "raison": "correctifs sans changement de geste",
+      "le": "2026-11-27"
+    },
+    {
+      "sujet": "Manuels du 27/11 ; Manuel opératoire, thèmes 1 à 10 publiés",
+      "sources": [
+        "57df0b36",
+        "7dae0bf2"
+      ],
+      "raison": "documentation des routines",
+      "le": "2026-11-27"
     }
   ],
   "misesAJourSignalees": [
@@ -646,6 +714,43 @@
       "titre": "Le dashboard : Formations et suivi",
       "change": "la vidéo « Formation : construire le planning de la semaine » s’ouvre aussi depuis Formations et suivi (carré des vidéos, 23/11)",
       "le": "2026-11-24"
+    },
+    {
+      "code": "0.0.68",
+      "titre": "Le dashboard : Vendre › Clients (particuliers, entreprises B2B, bureaux)",
+      "change": "Clients › Bureaux : la fiche d’un bureau dans un tiroir large et « Ajouter un site » ; l’assistant « Ajouter un bureau » dans le tiroir (adresses suggérées par TF Buddy, logo) ; les bureaux en développement ; le questionnaire public du magasin (lien court …/bureau/?m=<nom ou numéro>, QR à télécharger, Copier, Ouvrir) en six étapes qui crée la personne, sa société et son bon, le bureau à la validation ; un refus dit l’état du compte TF Buddy du magasin (26/11)",
+      "sources": [
+        "ecc09778",
+        "043a339c",
+        "094f7cdf",
+        "980484ae",
+        "111a32e6",
+        "f149d048",
+        "7e58d045"
+      ],
+      "le": "2026-11-27"
+    },
+    {
+      "code": "0.0.69",
+      "titre": "L'autocontrôle qualité d'un produit, sur la tablette",
+      "change": "la tablette demande qui contrôle (Équipe, Manager, Franchisé, Consultant) ; dans la visite du consultant, l’étape « Le contrôle qualité de 3 produits » ouvre la tablette par-dessus la visite, et le rapport montre chaque produit contrôlé ; le manuel « Fiches techniques » montre le standard d’autocontrôle de chaque produit (vert, or, rouge, photo obligatoire) (26/11) — touche aussi 0.0.32 « La visite du consultant en magasin »",
+      "sources": [
+        "53ae1abb"
+      ],
+      "le": "2026-11-27"
+    },
+    {
+      "code": "0.0.67",
+      "titre": "Le dashboard : les vidéos d’instruction",
+      "change": "la vidéothèque devient la médiathèque : cinq collections (Utilisation du dashboard, Production, Vente et comptoir, Hygiène et sécurité, Ouverture et fermeture), recherche (synonymes, début de mot, faute de frappe), vidéos filmées ; le lecteur du dashboard porte « Voir dans la médiathèque » ; lots 2 et 3 des vidéos par onglet (26/11)",
+      "sources": [
+        "4288f76d",
+        "312efae6",
+        "465e9d3f",
+        "f1b5fd41",
+        "98a1ffca"
+      ],
+      "le": "2026-11-27"
     }
   ],
   "regles": [
