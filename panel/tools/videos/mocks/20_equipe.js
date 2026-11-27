@@ -70,7 +70,7 @@ const hh = x => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 6
 const bruit = (s, k = 0) => { let h = 2166136261 ^ k; for (const c of s) { h = Math.imul(h ^ c.charCodeAt(0), 16777619); } return ((h >>> 0) % 2001) / 1000 - 1; };
 
 /* ── l'état ── */
-const S = { fiches: {}, evals: {}, services: {}, ca: {}, absences: [], prochainAbs: 1, options: { assistant: false, taches: false, matrice: false, recopie: false }, prochainId: 90001,
+const S = { fiches: {}, evals: {}, services: {}, ca: {}, absences: [], prochainAbs: 1, statuts: {}, options: { assistant: false, taches: false, matrice: false, recopie: false }, prochainId: 90001,
   postes: Object.fromEntries(EQUIPE.map(e => [e.id, e.postes.slice()])), matrice: null,
   roulements: { 201: 'B', 202: 'A', 203: 'A', 204: 'D', 205: 'C', 206: 'D', 207: 'C', 208: 'B', 209: 'C', 210: 'A' } };
 const COMPTOIR_IDS = new Set([201, 204, 205, 206, 208, 210]);
@@ -114,7 +114,7 @@ function caDu(date) {
 const posteDe = id => POSTES.find(p => p.id === id);
 function personnePlanning(e) {
   const postes = S.postes[e.id].map(id => { const p = posteDe(id); return { id: p.id, nom: p.nom, secteur: p.secteur }; });
-  return { id: e.id, nom: e.nom, fonctions: e.fonctions, postes, actif: true, taux: e.taux, franchise: false, contrat: contratDe(e.id),
+  return { id: e.id, nom: e.nom, fonctions: e.fonctions, postes, actif: true, taux: e.taux, franchise: false, contrat: contratDe(e.id), statut: S.statuts[e.id] || null,
     secteurs: [...new Set(postes.map(p => p.secteur).filter(Boolean))], lettre: S.options.matrice ? (S.roulements[e.id] || null) : null };
 }
 function carte() {
@@ -271,8 +271,9 @@ function absenceRoute(m, c) {
     D.filter(s => s.employe === c.employe).forEach(s => {
       let a = S.absences.find(x => x.service === s.id);
       if (!a) { a = { id: S.prochainAbs++, employe: c.employe, date: d, service: s.id, de: s.de, a: s.a, remplacant: null, remplacantService: null, externe: null }; S.absences.push(a); }
-      Object.assign(a, { motif: c.motif, payee, certificat: !!c.certificat, du: c.du, au: c.au }); n++;
-      if (!payee) { D.splice(D.indexOf(s), 1); }
+      const jour = Math.round((dU(d) - dU(c.du)) / 864e5) + 1, pay = payee && !(c.motif === 'maladie' && jour > 30);   // le salaire garanti : 30 jours
+      Object.assign(a, { motif: c.motif, payee: pay, certificat: !!c.certificat, du: c.du, au: c.au, jour }); n++;
+      if (!pay) { D.splice(D.indexOf(s), 1); }
       const r = remps[d];
       if (r && r.externe) { a.externe = { nom: r.externe.nom, taux: +r.externe.taux }; nr++; }
       else if (r && r.employe) { a.remplacant = r.employe; a.remplacantService = creerService(r.employe, d, s.de, s.a); nr++; }
@@ -293,7 +294,7 @@ function personneFiche(id) {
   return { id, shop: 4, nom: (prenom + ' ' + nomF).trim(), fonctions: e.fonctions, postes: (S.postes[id] || e.postes).map(pid => ({ id: pid, nom: (posteDe(pid) || {}).nom || '' })),
     actif: true, taux: o.taux != null ? o.taux : e.taux, franchise: false, prenom, nomFamille: nomF, affiche: o.affiche != null ? o.affiche : pr + ' ' + (rest[0] || '').slice(0, 1) + '.',
     langue: o.langue || 'fr', contrat: o.contrat || contratDe(id), role: o.role || 'employee', telephone: '+32 ·· ·· ' + String(id).slice(-2),
-    pin: true, appPrete: id !== 209, roles: [], competences: COMPETENCES[id] || ['Hygiène (HACCP)'], positions: [{ nom: e.fonctions[0], niveau: id === 206 ? 'Niveau 4' : 'Niveau 2' }] };
+    pin: true, appPrete: id !== 209, statut: S.statuts[id] || null, roles: [], competences: COMPETENCES[id] || ['Hygiène (HACCP)'], positions: [{ nom: e.fonctions[0], niveau: id === 206 ? 'Niveau 4' : 'Niveau 2' }] };
 }
 // Le mot suit la note (5 : un compliment, 4 : un détail à reprendre, 3 : ce qui n'allait pas) ; parfois aucun mot.
 const MOTS = {
@@ -326,7 +327,7 @@ function ventes(id) {
 function fiche(m, p, id, c) {
   const P = personneFiche(id);
   if (!P) { return err(404, 'cette personne n’est pas de l’équipe du magasin', { motif: 'employe_inconnu' }); }
-  const choix = { contrats: CONTRATS, roles: ROLES, langues: { fr: 'Français', nl: 'Néerlandais', en: 'Anglais', pl: 'Polonais' } };
+  const choix = { contrats: CONTRATS, roles: ROLES, langues: { fr: 'Français', nl: 'Néerlandais', en: 'Anglais', pl: 'Polonais' }, statuts: { employe: 'Employé·e', ouvrier: 'Ouvrier·ère' } };
   if (p === '/dashboard/equipe/personne' && m === 'GET') { return { personne: P, detailLu: true, choix }; }
   if (p === '/dashboard/equipe/personne' && m === 'PATCH') { S.fiches[id] = Object.assign(S.fiches[id] || {}, c.champs || {}); const e = EQUIPE.find(x => x.id === id); if (c.champs && c.champs.taux != null) { e.taux = c.champs.taux; } return { ok: true, personne: personneFiche(id), detailLu: true, choix }; }
   if (p === '/dashboard/equipe/personne/evaluations' && m === 'GET') { return evaluations(id); }
@@ -339,6 +340,7 @@ module.exports = function (m, p, q, c) {
   if (!p.startsWith('/dashboard/equipe')) { return undefined; }
   c = (c && typeof c === 'object') ? c : {};
   if (p === '/dashboard/equipe/absence') { return absenceRoute(m, c); }
+  if (p === '/dashboard/equipe/statut' && m === 'POST') { if (!['employe', 'ouvrier'].includes(c.statut)) { return err(422, 'statut : employe ou ouvrier'); } S.statuts[c.employe] = c.statut; return { ok: true, employe: c.employe, statut: c.statut }; }
   if (p === '/dashboard/equipe/carte' && m === 'GET') { return carte(); }
   // La fiche d'une personne (24/11/2026, panel/src/equipe_fiche.php) : identité, évaluations, ventes des 12 semaines.
   if (p.startsWith('/dashboard/equipe/personne')) { const id = +(m === 'GET' ? q.get('id') : c.id); const r = fiche(m, p, id, c); if (r !== undefined) { return r; } }

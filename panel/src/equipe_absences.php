@@ -25,6 +25,14 @@ declare(strict_types=1);
  *   DELETE /dashboard/equipe/absence {shop, ids, remplacants} — annule : la ligne s'efface, un service retiré revient au
  *          panel ; avec `remplacants`, les services des remplaçants sont retirés du panel.
  * Le planning (GET /dashboard/equipe/planning) rend, jour par jour, ses absences (eqaJours) et le contrat de chacun.
+ *
+ * LE SALAIRE GARANTI (27/11/2026, Sam : « oui ») : une maladie est payée par le magasin les 30 premiers jours, comptés
+ * depuis le début de la période ; ensuite la mutuelle paie : du 31e jour, le service quitte le panel (son coût sort
+ * partout) et l'absence est notée « mutuelle ». Entre-temps, la part du magasin suit le STATUT de la personne, que le
+ * panel ne connaît pas (table panel_equipe_statut, dans sa fiche) : employé·e, 100 % les 30 jours ; ouvrier·ère, 100 %
+ * la première semaine, 85,88 % la deuxième, 25,88 % ensuite (la part du magasin, la mutuelle complète). Le panel garde
+ * le service jusqu'au 30e jour : son coût y compte entier ; l'écran de Mon équipe compte la part du magasin.
+ *   POST /dashboard/equipe/statut {shop, employe, statut: employe | ouvrier} — le statut d'une personne du magasin.
  */
 
 const EQA_MOTIFS = [
@@ -37,6 +45,8 @@ const EQA_MOTIFS = [
 const EQA_SANS_CONTRAT = ['civil_law_contract', 'b2b', 'temporary_work', 'internship', 'volunteer'];
 const EQA_JOURS_MAX = 62;      // une absence couvre deux mois au plus d'un coup
 const EQA_TAUX_MAX = 200.0;    // le taux horaire d'un extérieur, au plus
+const EQA_SALAIRE_GARANTI = 30; // une maladie : les 30 premiers jours payés par le magasin, puis la mutuelle
+const EQA_STATUTS = ['employe' => 'Employé·e', 'ouvrier' => 'Ouvrier·ère'];
 
 function ensureEquipeAbsences(): void
 {
@@ -64,12 +74,68 @@ function ensureEquipeAbsences(): void
         . 'UNIQUE KEY u_service (shop_id, service_id),'
         . 'KEY k_jour (shop_id, jour)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS panel_equipe_statut ('
+        . 'shop_id VARCHAR(16) NOT NULL,'
+        . 'employe_id INT UNSIGNED NOT NULL,'
+        . 'statut VARCHAR(8) NOT NULL,'              // employe, ouvrier (le salaire garanti d'une maladie)
+        . 'maj_le DATETIME NOT NULL,'
+        . 'maj_par VARCHAR(120) NULL,'
+        . 'PRIMARY KEY (shop_id, employe_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     $fait = true;
+}
+
+/** Les statuts du magasin : employé → employe | ouvrier ; sans table, aucun (compté employé·e). */
+function eqaStatuts(int $shop): array
+{
+    $out = [];
+    try {
+        ensureEquipeAbsences();
+        foreach (Db::rows('SELECT employe_id, statut FROM panel_equipe_statut WHERE shop_id = ?', [(string) $shop]) as $r) {
+            if (isset(EQA_STATUTS[(string) $r['statut']])) { $out[(int) $r['employe_id']] = (string) $r['statut']; }
+        }
+    } catch (Throwable $e) { /* sans table : aucun statut */ }
+    return $out;
+}
+
+/** Le jour d'une absence dans sa période (le premier jour vaut 1). */
+function eqaJourDe(string $date, string $du): int
+{
+    return (int) round((strtotime($date) - strtotime($du)) / 86400) + 1;
+}
+
+/** Une maladie au-delà du salaire garanti : la mutuelle paie, plus le magasin. */
+function eqaMutuelle(string $motif, string $date, string $du): bool
+{
+    return $motif === 'maladie' && eqaJourDe($date, $du) > EQA_SALAIRE_GARANTI;
+}
+
+/** POST /dashboard/equipe/statut {shop, employe, statut} — le statut d'une personne du magasin (sa fiche). */
+function wr_equipe_statut(): array
+{
+    $b = body();
+    $shop = eqpShop($b);
+    if ($shop <= 0) { return eqpErreur(400, 'shop manquant'); }
+    $emp = $b['employe'] ?? null; $statut = $b['statut'] ?? null;
+    if (!is_int($emp) || $emp < 1) { return eqpErreur(422, 'employe : un identifiant'); }
+    if (!is_string($statut) || !isset(EQA_STATUTS[$statut])) { return eqpErreur(422, 'statut : employe ou ouvrier'); }
+    if (function_exists('eqfPersonneDuMagasin')) {
+        [, $err] = eqfPersonneDuMagasin($shop, $emp);
+        if ($err !== null) { return $err; }
+    }
+    try {
+        ensureEquipeAbsences();
+        Db::exec('INSERT INTO panel_equipe_statut (shop_id, employe_id, statut, maj_le, maj_par) VALUES (?, ?, ?, NOW(), ?) ON DUPLICATE KEY UPDATE statut = VALUES(statut), maj_le = NOW(), maj_par = VALUES(maj_par)',
+            [(string) $shop, $emp, $statut, eqpQui()]);
+    } catch (Throwable $e) { return eqpErreur(500, 'le statut n’a pas été gardé'); }
+    try { journalAdd('Magasin ' . $shop, 'Planning', null, 'Mon équipe : statut de l’employé ' . $emp . ' : ' . EQA_STATUTS[$statut]); } catch (Throwable $e) { /* le journal ne bloque pas */ }
+    return ['ok' => true, 'employe' => $emp, 'statut' => $statut];
 }
 
 /** Ses routes, appelées par eqpRoute ; null : pas une route des absences. */
 function eqaRoute(string $method, string $path): ?array
 {
+    if ($path === '/dashboard/equipe/statut' && $method === 'POST') { return wr_equipe_statut(); }
     if ($path !== '/dashboard/equipe/absence') { return null; }
     if ($method === 'POST') { return wr_equipe_absence(); }
     if ($method === 'DELETE') { return wr_equipe_absence_annuler(); }
@@ -88,6 +154,7 @@ function eqaLigne(array $r): array
     return ['id' => (int) $r['id'], 'employe' => (int) $r['employe_id'], 'date' => (string) $r['jour'], 'service' => (int) $r['service_id'],
         'de' => (string) $r['de'], 'a' => (string) $r['a'], 'motif' => (string) $r['motif'], 'payee' => (bool) (int) $r['payee'],
         'certificat' => (bool) (int) $r['certificat'], 'du' => (string) $r['periode_du'], 'au' => (string) $r['periode_au'],
+        'jour' => eqaJourDe((string) $r['jour'], (string) $r['periode_du']),
         'remplacant' => $r['remplacant_id'] !== null ? (int) $r['remplacant_id'] : null,
         'remplacantService' => $r['remplacant_service'] !== null ? (int) $r['remplacant_service'] : null,
         'externe' => $r['externe_nom'] !== null && $r['externe_nom'] !== '' ? ['nom' => (string) $r['externe_nom'], 'taux' => (float) $r['externe_taux']] : null];
@@ -118,23 +185,25 @@ function eqaJours(int $shop, array $jours): array
  * Rend ['lignes' => [{date, service, de, a, id?}], 'retirer' => [id…], 'creer' => [{date, employe, de, a, pour}],
  *       'externes' => [{date, service, nom, taux}], 'erreurs' => [texte…]].
  */
-function eqaPlan(array $parJour, int $emp, bool $payee, array $existants, array $remps, array $equipe): array
+function eqaPlan(array $parJour, int $emp, bool $payee, array $existants, array $remps, array $equipe, string $motif = '', string $du = ''): array
 {
     $P = ['lignes' => [], 'retirer' => [], 'creer' => [], 'externes' => [], 'erreurs' => []];
+    // Payée ce jour-là : une maladie au-delà du salaire garanti ne l'est plus (la mutuelle).
+    $payeeLe = static fn (string $date) => $payee && !($du !== '' && eqaMutuelle($motif, $date, $du));
     $absJour = [];   // date → services absents de la personne ce jour-là
     foreach ($parJour as $date => $services) {
         foreach ($services as $s) {
             if ($s['employe'] !== $emp || $s['id'] < 1) { continue; }
             $ex = $existants[$s['id']] ?? null;
-            $P['lignes'][] = ['date' => $date, 'service' => $s['id'], 'de' => $s['de'], 'a' => $s['a'], 'id' => $ex['id'] ?? null];
-            if (!$payee) { $P['retirer'][] = $s['id']; }
+            $P['lignes'][] = ['date' => $date, 'service' => $s['id'], 'de' => $s['de'], 'a' => $s['a'], 'id' => $ex['id'] ?? null, 'payee' => $payeeLe($date)];
+            if (!$payeeLe($date)) { $P['retirer'][] = $s['id']; }
             $absJour[$date][] = $s + ['ligne' => $ex];
         }
     }
     // Une absence non payée déjà posée (son service n'est plus au panel) : elle reste ce qu'elle est.
     foreach ($existants as $ex) {
         if ($ex['payee'] || !isset($parJour[$ex['date']])) { continue; }
-        if ($payee) { $P['erreurs'][] = 'une absence non payée est déjà posée le ' . $ex['date'] . ' : annulez-la d’abord (« Elle travaille »)'; continue; }
+        if ($payeeLe($ex['date'])) { $P['erreurs'][] = 'une absence non payée est déjà posée le ' . $ex['date'] . ' : annulez-la d’abord (« Elle travaille »)'; continue; }
         $absJour[$ex['date']][] = ['id' => $ex['service'], 'employe' => $emp, 'de' => $ex['de'], 'a' => $ex['a'], 'ligne' => $ex];
     }
     if ($P['lignes'] === [] && $absJour === []) { $P['erreurs'][] = 'aucun service de cette personne au planning sur ces jours : rien à marquer'; }
@@ -152,7 +221,7 @@ function eqaPlan(array $parJour, int $emp, bool $payee, array $existants, array 
             $qui = (int) ($r['employe'] ?? 0); $p = $equipe[$qui] ?? null;
             if ($p === null) { $P['erreurs'][] = 'le ' . $date . ' : le remplaçant n’est pas de l’équipe du magasin'; continue; }
             if (!$p['actif']) { $P['erreurs'][] = 'le ' . $date . ' : ' . $p['nom'] . ' est désactivé(e)'; continue; }
-            if ($qui === $emp) { $P['erreurs'][] = 'le ' . $date . ' : elle ne peut pas se remplacer elle-même'; continue; }
+            if ($qui === $emp) { $P['erreurs'][] = 'le ' . $date . ' : une personne ne se remplace pas elle-même'; continue; }
             $de = (int) eqpMinutes($s['de']); $a = (int) eqpMinutes($s['a']);
             $prevus = array_merge($parJour[$date] ?? [], array_map(static fn ($c) => ['id' => -1, 'employe' => $c['employe'], 'de' => $c['de'], 'a' => $c['a']], array_filter($P['creer'], static fn ($c) => $c['date'] === $date)));
             if (($x = eqpChevauche($prevus, $qui, $de, $a)) !== null) { $P['erreurs'][] = 'le ' . $date . ' : ' . $p['nom'] . ' travaille déjà de ' . $x['de'] . ' à ' . $x['a']; continue; }
@@ -229,7 +298,7 @@ function wr_equipe_absence(): array
         }
     } catch (Throwable $e) { return eqpErreur(500, 'les absences ne se lisent pas : rien n’est enregistré'); }
     $payee = eqaPayee($c['motif'], $contrats[$emp] ?? null);
-    $P = eqaPlan($parJour, $emp, $payee, $existants, $c['remps'], $equipe);
+    $P = eqaPlan($parJour, $emp, $payee, $existants, $c['remps'], $equipe, $c['motif'], $c['du']);
     if ($P['erreurs'] !== []) { return eqpErreur(422, $P['erreurs'][0], ['erreurs' => $P['erreurs']]); }
 
     @set_time_limit(180);
@@ -250,11 +319,11 @@ function wr_equipe_absence(): array
     // 2. Les lignes : une par service absent.
     $poses = 0;
     foreach ($P['lignes'] as $l) {
-        if (!$payee && !isset($retires[$l['service']])) { continue; }
+        if (!$l['payee'] && !isset($retires[$l['service']])) { continue; }
         Db::exec('INSERT INTO panel_equipe_absence (shop_id, employe_id, jour, service_id, de, a, motif, payee, certificat, periode_du, periode_au, maj_le, maj_par)'
             . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?) ON DUPLICATE KEY UPDATE de = VALUES(de), a = VALUES(a), motif = VALUES(motif), payee = VALUES(payee),'
             . ' certificat = VALUES(certificat), periode_du = VALUES(periode_du), periode_au = VALUES(periode_au), maj_le = NOW(), maj_par = VALUES(maj_par)',
-            [(string) $shop, $emp, $l['date'], $l['service'], $l['de'], $l['a'], $c['motif'], $payee ? 1 : 0, $c['certificat'] ? 1 : 0, $c['du'], $c['au'], $qui]);
+            [(string) $shop, $emp, $l['date'], $l['service'], $l['de'], $l['a'], $c['motif'], $l['payee'] ? 1 : 0, $c['certificat'] ? 1 : 0, $c['du'], $c['au'], $qui]);
         $poses++;
     }
     // 3. Les remplaçants de l'équipe : un vrai service au panel, aux mêmes heures ; il est noté sur l'absence.
@@ -285,7 +354,8 @@ function wr_equipe_absence(): array
             . ($remplaces ? ', ' . $remplaces . ' remplacement' . ($remplaces > 1 ? 's' : '') : ''));
     } catch (Throwable $e) { /* le journal ne bloque pas */ }
     if ($poses === 0 && $remplaces === 0) { return eqpErreur($arret !== null ? 403 : 502, $arret ?? 'le panel a tout refusé : rien n’est enregistré', ['echecs' => $echecs]); }
-    return ['ok' => true, 'absences' => $poses, 'payee' => $payee, 'remplacements' => $remplaces, 'echecs' => $echecs, 'arret' => $arret];
+    $mutuelle = count(array_filter($P['lignes'], static fn ($l) => $payee && !$l['payee']));
+    return ['ok' => true, 'absences' => $poses, 'payee' => $payee, 'mutuelle' => $mutuelle, 'remplacements' => $remplaces, 'echecs' => $echecs, 'arret' => $arret];
 }
 
 /** DELETE /dashboard/equipe/absence {shop, ids, remplacants} — voir l'en-tête. */

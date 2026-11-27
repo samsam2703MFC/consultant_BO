@@ -701,5 +701,23 @@ $jrs[2]['absences'] = [['id' => 1, 'employe' => 201, 'service' => 11, 'motif' =>
 $html = eqpPlanningPdfHtml(['jours' => $jrs, 'employes' => [['id' => 201, 'nom' => 'Camille Roussel', 'actif' => true, 'postes' => [], 'secteurs' => []], ['id' => 208, 'nom' => 'Inès Fontaine', 'actif' => true, 'postes' => [], 'secteurs' => []]], 'secteurs' => []], 'magasin', 'Magasin démo');
 verifie('le planning imprimé : « Maladie » à la place de ses heures, son remplaçant le dit', str_contains($html, '<span class="sv abs">Maladie</span>') && str_contains($html, 'remplace Camille') && substr_count($html, '6,5 h') >= 1 && !str_contains($html, '13 h'), '');
 
+// Le salaire garanti (27/11/2026) : une maladie, 30 jours depuis le début de la période, puis la mutuelle.
+verifie('le jour d’une absence dans sa période', eqaJourDe('2026-11-01', '2026-11-01') === 1 && eqaJourDe('2026-12-01', '2026-11-01') === 31);
+verifie('la mutuelle : une maladie au 31e jour, pas au 30e ; jamais un congé', !eqaMutuelle('maladie', '2026-11-30', '2026-11-01') && eqaMutuelle('maladie', '2026-12-01', '2026-11-01') && !eqaMutuelle('cp', '2026-12-15', '2026-11-01'));
+$PJm = ['2026-11-30' => [['id' => 61, 'employe' => 201, 'de' => '07:00', 'a' => '13:00']], '2026-12-01' => [['id' => 62, 'employe' => 201, 'de' => '07:00', 'a' => '13:00']]];
+$Pl = eqaPlan($PJm, 201, true, [], [], $EQ, 'maladie', '2026-11-01');
+verifie('une maladie du 1er novembre : le 30, payée (le service reste) ; le 1er décembre, la mutuelle (le service quitte le panel)',
+    $Pl['lignes'][0]['payee'] === true && $Pl['lignes'][1]['payee'] === false && $Pl['retirer'] === [62] && $Pl['erreurs'] === [], json_encode($Pl));
+$EX = [62 => ['id' => 9, 'service' => 62, 'date' => '2026-12-01', 'de' => '07:00', 'a' => '13:00', 'payee' => false, 'remplacantService' => null, 'externe' => null]];
+verifie('la même maladie reposée : le jour à la mutuelle déjà posé n’est pas une erreur', eqaPlan(['2026-12-01' => []], 201, true, $EX, [], $EQ, 'maladie', '2026-11-01')['erreurs'] === []);
+PanelApi::$reponses['/shops/1/employees?include=positions'] = PanelApi::$reponses['/shops/1/employees'];
+$CORPS = ['shop' => 1, 'employe' => 201, 'statut' => 'ouvrier']; Db::$exec = [];
+$r = wr_equipe_statut();
+verifie('le statut d’une personne du magasin : gardé au cockpit', ($r['ok'] ?? false) && $r['statut'] === 'ouvrier' && count(array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'INSERT INTO panel_equipe_statut') && $x[1][2] === 'ouvrier')) === 1, json_encode($r));
+$CORPS = ['shop' => 1, 'employe' => 201, 'statut' => 'cadre'];
+verifie('un statut inconnu : refusé', isset(wr_equipe_statut()['error']));
+$CORPS = ['shop' => 1, 'employe' => 300, 'statut' => 'employe'];
+verifie('une personne d’un autre magasin : refusée', isset(wr_equipe_statut()['error']));
+
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);

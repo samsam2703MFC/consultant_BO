@@ -12,6 +12,8 @@
 {# Un délai : en heures sous deux jours, en jours au-delà. #}
 {% macro delai(m) %}{% import _self as moi %}{% if m >= 2880 %}{{ (m / 1440)|round(0, 'floor') }} j{% else %}{{ moi.duree(m) }}{% endif %}{% endmacro %}
 {% import _self as f %}
+{# Le motif d'une absence (27/11/2026, panel/src/equipe_absences.php). #}
+{% set ABS = {maladie: T.absence_maladie ?? 'Maladie', cp: T.absence_cp ?? 'Congé payé', circ: T.absence_circ ?? 'Congé de circonstance', nonpaye: T.absence_nonpaye ?? 'Absence'} %}
 
 {% block title %}{{ T.schedule ?? 'Planning' }}{% endblock %}
 {% block page_title %}{{ T.schedule ?? 'Planning' }}{% endblock %}
@@ -53,6 +55,10 @@
   .pl-rent i{font-size:12px}
   .pl-heros .pl-rent{margin-top:10px;font-size:13.5px}
   .pl-shop{font:500 11px var(--s-police);color:var(--s-accent);background:var(--s-accent-doux);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+  /* Une absence (27/11/2026) : à la place du service, hachurée ; un remplacement, marqué. */
+  .pl-abs .sb-l1 b{color:var(--s-second)}
+  .pl-axe.abs i{background:repeating-linear-gradient(135deg,#C7C7CC 0 4px,#E5E5EA 4px 8px)}
+  .pl-rp{color:#248A3D;background:rgba(52,199,89,.14)}
 </style>
 {% endblock %}
 
@@ -107,11 +113,18 @@
     <div class="pl-date"><small>{{ jour(j.date) }}</small><b>{{ j.date|date('j') }}</b></div>
     <div class="pl-corps"{% if not j.services %} style="padding-top:12px"{% endif %}>
       {% for s in j.services %}
+      {% if s.absence %}
+      <div class="pl-svc pl-abs" data-absence="{{ s.absence }}">
+        <div class="sb-l1"><b>{{ ABS[s.absence] ?? (T.absence_nonpaye ?? 'Absence') }}</b><span class="pl-duree">{{ s.debut }} – {{ s.fin }}</span></div>
+        <div class="pl-axe abs"><i style="left:{{ s.gauche }}%;width:{{ s.largeur }}%"></i></div>
+      </div>
+      {% else %}
       <div class="pl-svc">
-        <div class="sb-l1"><b>{{ s.debut }} – {{ s.fin }}{% if s.autreShop %}<span class="pl-shop">{% if s.shopNom %}{{ (T.shift_at_shop ?? 'à {n}')|replace({'{n}': s.shopNom}) }}{% else %}{{ (T.shift_other_shop ?? 'magasin {n}')|replace({'{n}': s.shop}) }}{% endif %}</span>{% endif %}</b><span class="pl-duree">{{ f.duree(s.duree) }}</span></div>
+        <div class="sb-l1"><b>{{ s.debut }} – {{ s.fin }}{% if s.remplacement %}<span class="pl-shop pl-rp" data-remplacement>{{ T.replacement ?? 'remplacement' }}</span>{% endif %}{% if s.autreShop %}<span class="pl-shop">{% if s.shopNom %}{{ (T.shift_at_shop ?? 'à {n}')|replace({'{n}': s.shopNom}) }}{% else %}{{ (T.shift_other_shop ?? 'magasin {n}')|replace({'{n}': s.shop}) }}{% endif %}</span>{% endif %}</b><span class="pl-duree">{{ f.duree(s.duree) }}</span></div>
         <div class="pl-axe"><i style="left:{{ s.gauche }}%;width:{{ s.largeur }}%"></i>{% if loop.first and j.maintenant is not null %}<em style="left:{{ j.maintenant }}%"></em>{% endif %}</div>
         <div class="pl-rent" data-rentabilite><i class="bi bi-graph-up-arrow"></i>{{ T.shift_profit ?? 'Rentabilité du service' }} · {{ T.coming_soon ?? 'à venir' }}</div>
       </div>
+      {% endif %}
       {% else %}
       <span class="pl-repos">{{ T.day_off ?? 'Repos' }}</span>
       {% endfor %}

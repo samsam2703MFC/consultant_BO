@@ -1,4 +1,8 @@
 {
+  "absence_circ": "Congé de circonstance",
+  "absence_cp": "Congé payé",
+  "absence_maladie": "Maladie",
+  "absence_nonpaye": "Absence",
   "back_this_week": "revenir à cette semaine",
   "coming_soon": "à venir",
   "day_off": "Repos",
@@ -11,6 +15,7 @@
   "no_shift_week": "Aucun service cette semaine.",
   "on_shift": "En service",
   "prev_week": "Semaine précédente",
+  "replacement": "remplacement",
   "scale": "La barre : la journée, de {a} h à {b} h.",
   "schedule": "Planning",
   "schedule_unavailable": "Le planning ne se lit pas pour l’instant.",

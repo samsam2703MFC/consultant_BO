@@ -75,7 +75,7 @@ function verifie(nom, cond, detail) {
     verifie('envoyé : maladie, certificat, du 18 au 20, Inès le 18', e[0] === 'POST' && e[1].motif === 'maladie' && e[1].certificat === true && e[1].du === '2026-11-18' && e[1].au === '2026-11-20' && JSON.stringify(e[1].remplacements) === '[{"date":"2026-11-18","employe":208}]', JSON.stringify(e));
     verifie('le message', /Camille malade du mer 18 au ven 20 : 2 services, ses heures restent payées, 1 remplacement/.test(f), f);
     const cam = (await p.textContent('tr:has-text("Camille Roussel")')).replace(/\s+/g, ' ');
-    verifie('la semaine : Camille malade mercredi (Inès la remplace) et vendredi (à remplacer)', /Malade · payée→ Inès la remplace/.test(cam) && /Malade · payéeÀ remplacer/.test(cam), cam);
+    verifie('la semaine : Camille malade mercredi (Inès la remplace) et vendredi (à remplacer)', /Malade · payée→ Inès remplace/.test(cam) && /Malade · payéeÀ remplacer/.test(cam), cam);
     verifie('Inès : un service mercredi, marqué « remplace Camille »', /remplace Camille/.test(await p.textContent('tr:has-text("Inès Fontaine") td[data-eqp-cell="2026-11-18"]')));
     const pct1 = (await p.textContent('.eqp-rs-pct')).trim();
     verifie('le budget de la semaine monte du coût du remplaçant (Camille reste payée)', pct0 !== pct1, pct0 + ' → ' + pct1);
@@ -133,6 +133,31 @@ function verifie(nom, cond, detail) {
     e = ecrits.pop();
     verifie('envoyé : DELETE de son absence, avec son remplaçant', e[0] === 'DELETE' && e[1].ids.length === 1 && e[1].remplacants === true, JSON.stringify(e));
     verifie('Fanny de nouveau présente jeudi, Lucie retirée', !(await p.$('tr:has-text("Fanny Leroy") [data-eqp-abs]')) && /—/.test(await p.textContent('tr:has-text("Lucie Bernard") td[data-eqp-cell="2026-11-19"]')));
+
+    console.log('6. Le salaire garanti : Antoine ouvrier, malade tout novembre');
+    await p.click('[data-eqp-fiche="202"]');
+    await p.waitForSelector('[data-eqp-fp-statut]', { timeout: 15000 });
+    await p.selectOption('[data-eqp-fp-statut]', 'ouvrier');
+    await p.waitForFunction(() => /Statut enregistré/.test((document.querySelector('.eqp-flash') || {}).textContent || ''), null, { timeout: 15000 });
+    await shot('ecran-7-fiche-statut', false);
+    e = ecrits.pop();
+    await p.click('.eqp-fp-x[data-eqp-fp-fermer], button[data-eqp-fp-fermer]');
+    await p.waitForSelector('section.eqp-tab table tbody tr', { timeout: 15000 }); await p.waitForTimeout(600);
+    await p.click('[data-eqp-abs-nouv]');
+    await p.waitForSelector('[data-eqp-ab-emp]');
+    await p.selectOption('[data-eqp-ab-emp]', '202');
+    await p.waitForTimeout(800);   // jeudi 19, Antoine ne travaille pas : la fenêtre le dit, sans tableau
+    await date('[data-eqp-ab-du]', '2026-11-01'); await p.waitForTimeout(300);
+    await date('[data-eqp-ab-au]', '2026-11-29'); await attendreTable();
+    await p.click('[data-eqp-ab-motif="maladie"]'); await attendreTable();
+    const ligne = async j => (await p.textContent(`.eqp-ab-t tbody tr:has-text("${j}")`)).replace(/\s+/g, ' ');
+    const d1 = await ligne('Dim 1'), d8 = await ligne('Dim 8'), d15 = await ligne('Dim 15');
+    verifie('ouvrier : 100 % la première semaine, 85,88 % la deuxième, 25,88 % ensuite', /Malade · payée/.test(d1) && /Malade · 85,88 %/.test(d8) && /Malade · 25,88 %/.test(d15), [d1, d8, d15].join(' | '));
+    verifie('la note du salaire garanti', /Salaire garanti : ouvrier·ère \(sa fiche\)/.test(await p.textContent('.eqp-ab-sg')));
+    await fenetre('ecran-8-salaire-garanti-ouvrier');
+    f = await enregistrer();
+    const ant = (await p.textContent('tr:has-text("Antoine Morel") td[data-eqp-cell="2026-11-16"]')).replace(/\s+/g, ' ');
+    verifie('la semaine : Antoine, lundi 16, 25,88 % payés', /Malade · 25,88 %/.test(ant), ant);
     verifie('sans erreur de page', err.length === 0, err.join(' | '));
   } catch (e) { echec = e; console.log(e.message); }
   finally { await b.close(); php.kill(); fs.rmSync(site, { recursive: true, force: true }); }
