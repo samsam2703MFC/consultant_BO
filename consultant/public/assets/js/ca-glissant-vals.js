@@ -200,7 +200,9 @@ export function valsCaGlissant(app, r){
     return out.map(s => s.map(q => q.x + ',' + q.y).join(' '));
   };
   const grad = [];
-  for (let v = lo; v <= hi + 0.5; v += pas) { grad.push({ y: yv(v).toFixed(1), t: kE(v) }); }
+  // L'axe garde la décimale de son pas : 22,5 k€, pas « 23 k€ » (un pas de 2,5 k€ arrondi au millier mentait).
+  const kAxe = v => (v / 1000).toLocaleString('fr-BE', { maximumFractionDigits: pas % 1000 ? 1 : 0 }) + ' k€';
+  for (let v = lo; v <= hi + 0.5; v += pas) { grad.push({ y: yv(v).toFixed(1), t: kAxe(v) }); }
 
   // Les étiquettes directes : le dernier mois et le plus haut des douze, pas un chiffre par point.
   const iDernier = pts.map(p => p.ca != null).lastIndexOf(true);
