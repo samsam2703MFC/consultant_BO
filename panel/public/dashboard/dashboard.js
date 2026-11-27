@@ -6576,9 +6576,14 @@
   const fdDepuis = j => j == null ? '—' : (j === 0 ? 'aujourd’hui' : (j === 1 ? 'hier' : 'il y a ' + j + ' j'));
   function fdLegende(a, b) { return `<div class="fd-leg"><span><i style="background:${a.c}"></i>${esc(a.lib)}</span><span><i style="background:var(--color-text-muted)"></i>${esc(b)}</span></div>`; }
   /* La part des tickets scannés (12/11/2026, Sam : « une grosse vignette sur le % de clients scannés sur l'ensemble des
-   * clients ; en dessous une échelle de 0 à 90 % : noir, rouge, orange, jaune, vert, vert foncé, or »). Un ticket compte
-   * comme scanné quand la caisse a reconnu le client (carte ou commande) ; la part se lit sur la mémoire des profils. */
-  const FD_ECHELLE = [[0, '#1d1d1f', 'noir'], [10, '#c62828', 'rouge'], [20, '#ef6c00', 'orange'], [35, '#f2c200', 'jaune'], [50, '#43a047', 'vert'], [65, '#1b5e20', 'vert foncé'], [80, '#c9a227', 'or']];
+   * clients ; en dessous une échelle de 0 à 90 % »). Un ticket compte comme scanné quand la caisse a reconnu le client (carte
+   * ou commande) ; la part se lit sur la mémoire des profils.
+   * 27/11/2026 (DESIGN_SYSTEM.md §7.13, « une échelle par mesure ») : le résumé de l'onglet (chrResume), la valeur à l'encre
+   * (700, le seul gras) et son état en mots ; l'échelle de sept couleurs (noir, rouge, orange, jaune, vert, vert foncé, or)
+   * devient trois jetons : sous 20 % --stop « faible », 20 à 50 % --prize « moyenne », 50 % et plus --green « bonne ».
+   * Onglet de lecture : pas d'« À corriger ». */
+  const FD_ECHELLE = [[0, 'stop', 'faible'], [20, 'prize', 'moyenne'], [50, 'green', 'bonne']];
+  const FD_ECH_C = { stop: 'var(--stop)', prize: 'var(--prize)', green: 'var(--green)' };
   function fdScan() {
     const k = cleFDS(), d = S.aux[k];
     if (S.err[k] || (d && d.error)) { return `<div class="db-err">Part des tickets scannés : ${esc(S.err[k] || d.error)}</div>`; }
@@ -6587,17 +6592,20 @@
     const bande = v => FD_ECHELLE.reduce((b, x) => (v >= x[0] ? x : b), FD_ECHELLE[0]);
     const J = d.jour || {}, v = J.part == null ? 0 : J.part, pos = Math.min(v, max) / max * 100;
     const segs = FD_ECHELLE.map((x, i) => { const fin = i + 1 < FD_ECHELLE.length ? FD_ECHELLE[i + 1][0] : max;
-      return `<i style="left:${x[0] / max * 100}%;width:${(fin - x[0]) / max * 100}%;background:${x[1]}" title="${x[0]} à ${fin} % : ${x[2]}"></i>`; }).join('');
+      return `<i style="left:${x[0] / max * 100}%;width:${(fin - x[0]) / max * 100}%;background:${FD_ECH_C[x[1]]}" title="${x[0]} à ${fin} % : ${x[2]}"></i>`; }).join('');
     const reperes = FD_ECHELLE.map(x => x[0]).concat([max]).map(n => `<span style="left:${n / max * 100}%">${n} %</span>`).join('');
-    // Le mois et l'année : leur part sur l'échelle (un repère discret chacun) et en chiffres sous la barre.
+    // Le mois et l'année : leur part sur l'échelle (un repère discret chacun) et, à droite, en chiffres et en mots.
     const autres = [['mois', 'Ce mois-ci', d.mois], ['annee', 'Cette année', d.annee]].filter(x => x[2] && x[2].part != null);
     const marques = autres.map(x => `<em class="fd-scan-m" style="left:${Math.min(x[2].part, max) / max * 100}%" title="${x[1]} : ${nf(x[2].part, 1)} %"></em>`).join('');
-    const moyennes = autres.map(x => `<div class="fd-scan-a"><span>${x[1]}</span><b style="color:${bande(x[2].part)[1]}">${nf(x[2].part, 1)} %</b><small>${nf(x[2].identifies, 0)} sur ${nf(x[2].tickets, 0)} tickets</small></div>`).join('');
-    return `<div class="db-card fd-scan"><div class="fd-scan-h"><b style="color:${bande(v)[1]}">${J.part == null ? '—' : nf(v, 1) + ' %'}</b>
-        <div><span class="fd-scan-t">des tickets d’aujourd’hui ont un client scanné</span><span class="fd-scan-s">${nf(J.identifies || 0, 0)} tickets sur ${nf(J.tickets || 0, 0)} à l’heure qu’il est</span></div></div>
-      <div class="fd-scan-e"><div class="fd-scan-b">${segs}${marques}<em style="left:${pos}%" title="Aujourd’hui : ${nf(v, 1)} %"></em></div><div class="fd-scan-r">${reperes}</div></div>
-      ${moyennes ? `<div class="fd-scan-moy">${moyennes}</div>` : ''}
-      ${d.aLire ? `<p class="fd-note">Lecture en cours : ${nf(d.aLire, 0)} journée(s) de l’année restent à lire ; la moyenne de l’année se complète à la prochaine ouverture.</p>` : ''}</div>`;
+    const lev = autres.map(x => { const b = bande(x[2].part);
+      return `<span class="chr-lh">${x[1]} ${nf(x[2].part, 1)} %<span class="chr-et fd-scan-et"><i class="ac-ic ac-${b[1]}" aria-hidden="true"></i>${b[2]}</span></span><span>${nf(x[2].identifies, 0)} sur ${nf(x[2].tickets, 0)} tickets</span>`; }).join('');
+    const B = bande(v);
+    return chrResume({ aria: 'Résumé de la fidélité',
+      v: J.part == null ? '—' : nf(v, 1) + ' %', et: J.part == null ? null : { sig: B[1], mot: B[2] },
+      q: 'des tickets d’aujourd’hui ont un client scanné', q2: `${nf(J.identifies || 0, 0)} tickets sur ${nf(J.tickets || 0, 0)} à l’heure qu’il est`,
+      jauge: `<div class="fd-scan-e"><div class="fd-scan-b">${segs}${marques}<em style="left:${pos}%" title="Aujourd’hui : ${nf(v, 1)} %"></em></div><div class="fd-scan-r">${reperes}</div></div>`,
+      meta: 'sous 20 % faible · 20 à 50 % moyenne · 50 % et plus bonne' + (marques ? ' · les traits fins : le mois et l’année' : ''), lev }).replace('class="db-card chr"', 'class="db-card chr fd-scan"')
+      + (d.aLire ? `<p class="fd-note">Lecture en cours : ${nf(d.aLire, 0)} journée(s) de l’année restent à lire ; la moyenne de l’année se complète à la prochaine ouverture.</p>` : '');
   }
 
   /* La tendance du profil choisi (12/11/2026, Sam : « un troisième graphique : l'augmentation ou la diminution du nombre
@@ -6661,10 +6669,23 @@
     if (d.error) { return h + `<div class="db-err">Cartes de fidélité : ${esc(d.error)}</div>`; }
     const Pa = d.participants || {}, C = d.cartes || [], defs = d.definitions || [];
     const presque = C.reduce((a, c) => a + (c.presque || 0), 0), pretes = C.reduce((a, c) => a + (c.pretes || 0), 0);
-    const base = d.reconnusCaisse90 || Pa.unique_customers || 1;
-    const et = [[d.reconnusCaisse90, 'clients reconnus en caisse', '90 derniers jours'], [Pa.unique_customers, 'inscrits à une carte', d.reconnusCaisse90 != null ? nf(Math.max(0, d.reconnusCaisse90 - (Pa.unique_customers || 0)), 0) + ' à inscrire' : ''],
-      [Pa.active_in_period, 'ont gagné sur leur carte', 'sur la période'], [presque, 'à 1 ou 2 timbres du cadeau', presque ? 'à relancer' : ''], [pretes, 'récompenses prêtes', pretes ? 'à offrir en caisse' : '']].filter(e => e[0] != null);
-    h += `<div class="db-card fdc-fun">${et.map(([v, l, e]) => `<div><b>${nf(v, 0)}</b><span>${esc(l)}</span><i class="fdc-bar"><i style="width:${Math.max(v ? 1 : 0, Math.min(100, 100 * v / base)).toFixed(1)}%"></i></i>${e ? `<em>${esc(e)}</em>` : ''}</div>`).join('')}</div>`;
+    // Le résumé (27/11/2026, DESIGN_SYSTEM.md §7.13) à la place des cinq tuiles de l'entonnoir : le chiffre clé (les inscrits),
+    // d'où ils viennent (les clients reconnus en caisse, ceux à inscrire), ce qu'ils ont fait sur la période ; puis « À
+    // corriger » : les récompenses prêtes (le filtre « Récompense prête » de la liste) et, carte par carte, les clients à 1 ou
+    // 2 timbres du cadeau (le détail de la carte, ses clients du plus avancé au moins avancé). Rien de calculé en plus.
+    const pl = (n, a, b) => nf(n, 0) + ' ' + (n > 1 ? b : a);
+    const AC = [];
+    if (pretes) { AC.push({ sig: 'prize', txt: `${pl(pretes, 'récompense prête', 'récompenses prêtes')} à offrir en caisse`, attr: 'data-fdac="pret" title="la liste des clients, filtrée sur « Récompense prête »"' }); }
+    C.filter(c => c.presque).forEach(c => AC.push({ sig: 'prize', txt: `${esc(c.nom)} : ${pl(c.presque, 'client', 'clients')} à 1 ou 2 timbres, à relancer`, attr: `data-fdacc="${esc(c.id)}" title="le détail de la carte et ses clients"` }));
+    if (Pa.unique_customers != null) {
+      const aIns = d.reconnusCaisse90 != null ? Math.max(0, d.reconnusCaisse90 - (Pa.unique_customers || 0)) : null;
+      // Sans jauge : la colonne de la jauge se retire (fd-chr-c), la phrase garde sa largeur.
+      h += chrResume({ aria: 'Résumé des cartes de fidélité', v: nf(Pa.unique_customers, 0),
+        q: (Pa.unique_customers > 1 ? 'clients inscrits' : 'client inscrit') + ' à une carte',
+        q2: d.reconnusCaisse90 != null ? `sur ${pl(d.reconnusCaisse90, 'client reconnu', 'clients reconnus')} en caisse ces 90 derniers jours · ${nf(aIns, 0)} à inscrire` : '',
+        lev: Pa.active_in_period != null ? `<span class="chr-lh">${pl(Pa.active_in_period, 'a gagné', 'ont gagné')} sur leur carte</span><span>sur la période choisie</span>` : '',
+        L: AC, ok: 'Rien à corriger : aucune récompense en attente, aucun client à relancer.' }).replace('class="db-card chr"', 'class="db-card chr fd-chr-c fdc-fun"'); // fdc-fun : le nom de l'ancien entonnoir (vidéos 18)
+    }
     h += `<div class="db-sec">${C.length > 1 ? 'Les cartes' : 'La carte'}<small>où en sont les clients · soldes actuels, tous magasins</small></div>`;
     h += C.length ? `<div class="db-card">${C.map(c => {
       const def = c.definition || {}, col = def.couleur || '#8D1D2C', R = c.repartition || [], mx = Math.max(1, ...R);
@@ -6672,7 +6693,7 @@
         : (c.pointsSoldes || []).length ? `<div class="fdc-mini-t">${c.pointsSoldes.length} comptes de points · solde médian ${nf(c.pointsSoldes[Math.floor(c.pointsSoldes.length / 2)], 0)} pts</div>` : '';
       const sous = [def.timbres ? def.timbres + ' timbres' : (def.points ? 'points' : ''), def.recompense, def.au ? 'jusqu’au ' + def.au.slice(8, 10) + '/' + def.au.slice(5, 7) : ''].filter(Boolean).join(' · ');
       const ouverte = String(S.fdCarte) === String(c.id);
-      return `<div class="fdc-row${ouverte ? ' on' : ''}" data-fdcarte="${esc(c.id)}" title="${ouverte ? 'Fermer le détail' : 'Voir le détail de la carte'}"><div class="fdc-t"><i class="fdc-ic g" style="background:${esc(col)}"></i><div>${esc(c.nom)}<small>${esc(sous)}</small></div></div><div>${viz}</div>
+      return `<div class="fdc-row${ouverte ? ' on' : ''}" id="fdc-carte-${esc(c.id)}" data-fdcarte="${esc(c.id)}" title="${ouverte ? 'Fermer le détail' : 'Voir le détail de la carte'}"><div class="fdc-t"><i class="fdc-ic g" style="background:${esc(col)}"></i><div>${esc(c.nom)}<small>${esc(sous)}</small></div></div><div>${viz}</div>
         <div class="fdc-v"><b>${nf(c.clients, 0)}</b><span>clients</span></div><div class="fdc-v"><b>${nf(c.timbresIci || c.pointsIci, 0)}</b><span>${c.timbresIci ? 'timbres gagnés ici' : 'points gagnés ici'}</span></div><div class="fdc-v"><b class="ok">${nf(c.pretes, 0)}</b><span>prêtes</span></div></div>${ouverte ? fdCarteDetail(c, d) : ''}`;
     }).join('')}</div>` : '<div class="db-alerte">Aucun client de ce magasin n’est inscrit à une carte pour l’instant.</div>';
     const rc = d.reconnaissances || {};
@@ -6683,7 +6704,7 @@
     const lignes = L.map(c => `<tr data-fdc="${esc(c.id)}" data-fdct="${esc(c.nom.toLowerCase())}" data-fdcp="${c.pretes ? 1 : 0}" data-fdci="${c.achats ? 0 : 1}"><td>${esc(c.nom)}${c.bloque ? '<small>bloqué</small>' : ''}</td><td>${c.cartes.map(p => fdCarteChip(p, defs)).join('')}</td>
       <td class="n">${nf(c.achats, 0)}<small>${fU(c.montant)}</small></td><td>${esc(fdJour(c.dernierAchat))}</td><td class="n"><span class="db-lien">Sa fiche ›</span></td></tr>`).join('');
     const reseau = (d.reseau || []).map(m => `<tr class="${String(m.id) === String(S.shop) ? 'moi' : ''}"><td>${esc(m.nom)}</td><td class="n">${nf(m.inscrits, 0)}</td><td class="n">${nf(m.actifs, 0)}</td><td class="n">${nf(m.timbres || m.points, 0)}</td><td class="n">${fU(m.ventes)}</td></tr>`).join('');
-    h += `<div class="fdc-g2"><div><div class="db-sec">Par client<small>${nf(d.clientsTotal || L.length, 0)} inscrits · chercher un client pour vérifier sa carte</small></div>
+    h += `<div class="fdc-g2"><div><div class="db-sec" id="fdc-clients">Par client<small>${nf(d.clientsTotal || L.length, 0)} inscrits · chercher un client pour vérifier sa carte</small></div>
       <div class="db-card"><div class="fdc-filtre"><input type="search" class="db-sel" data-fdcq="1" placeholder="Rechercher un client…" value="${esc(S.fdCQ)}">${filtres}</div>
       ${L.length ? `<table class="fd-t"><thead><tr><th>Client</th><th>Sa carte et où il en est</th><th class="n">Achats</th><th>Dernier achat</th><th></th></tr></thead><tbody>${lignes}</tbody></table><p class="fd-dd-rien" hidden>Aucun client ne correspond.</p>` : '<p class="fd-dd-rien">Aucun client inscrit.</p>'}
       ${d.erreurClients ? `<p class="fd-note">Liste incomplète : ${esc(d.erreurClients)}</p>` : ''}</div></div>
@@ -6882,6 +6903,9 @@
     $.querySelectorAll('[data-fdong]').forEach(b => b.addEventListener('click', () => { S.fdOnglet = b.dataset.fdong; charger(false); }));
     $.querySelectorAll('[data-fdper]').forEach(b => b.addEventListener('click', () => { S.fdPer = b.dataset.fdper; charger(false); }));
     $.querySelectorAll('[data-fdcarte]').forEach(b => b.addEventListener('click', () => { S.fdCarte = String(S.fdCarte) === b.dataset.fdcarte ? null : b.dataset.fdcarte; charger(false); }));
+    // « À corriger » (27/11/2026) : les gestes qui existent — le filtre « Récompense prête », le détail d'une carte ouvert.
+    $.querySelectorAll('[data-fdac="pret"]').forEach(b => b.addEventListener('click', () => { S.fdCF = 'pret'; $.querySelectorAll('[data-fdcf]').forEach(x => x.classList.toggle('on', x.dataset.fdcf === 'pret')); filtrerCartes(); acMontrer(document.getElementById('fdc-clients')); }));
+    $.querySelectorAll('[data-fdacc]').forEach(b => b.addEventListener('click', () => { S.fdCarte = b.dataset.fdacc; charger(false); acMontrer(document.getElementById('fdc-carte-' + b.dataset.fdacc)); }));
     const filtrerCartes = () => {
       const q = (S.fdCQ || '').trim().toLowerCase(); let n = 0;
       $.querySelectorAll('tr[data-fdct]').forEach(tr => { const ok = (!q || tr.dataset.fdct.includes(q)) && (S.fdCF !== 'pret' || tr.dataset.fdcp === '1') && (S.fdCF !== 'inactif' || tr.dataset.fdci === '1'); tr.hidden = !ok; n += ok ? 1 : 0; });
@@ -8142,7 +8166,8 @@
     // Les primes (24/11/2026) : un onglet de Mon équipe, sous son titre, comme Responsabilités et Planning.
     // Tâches et Temps morts reprennent la barre de titre (26/11/2026) : le magasin en kicker, le titre de l'onglet, la date.
     // Puis Année, Promotions et Concurrence (26/11/2026, le groupe Vendre au même style) : leur titre maison devient une ligne.
-    const propre = ['tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
+    // Puis Mon catalogue (27/11/2026) : la barre commune ; le catalogue garde ses actions et le nom du catalogue ouvert.
+    const propre = ['tresorerie', 'actions', 'campagne'].includes(S.vue);
     // Les vignettes (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles, sous le
     // titre, six vignettes égales sur toute la largeur ; le titre et la date au-dessus, s'il y en a.
     const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();

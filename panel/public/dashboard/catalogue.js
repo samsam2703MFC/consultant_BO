@@ -547,6 +547,8 @@
     return noms.length === refs.length && noms.length ? noms : (src.label ? [src.label] : noms);
   }
   function clic(S, ev) {
+    const m = ev.target.closest('[data-cmac]');
+    if (m && S.el.contains(m)) { montrer(S, m.dataset.cmac); return; }
     const b = ev.target.closest('[data-cm]');
     if (!b || b.disabled || !S.el.contains(b)) { return; }
     const a = b.dataset.cm, v = b.dataset.v;
@@ -724,9 +726,11 @@
   }
 
   function rendreAssistant(S) {
-    const titre = S.etape === 1 ? 'Mon catalogue' : S.cat ? 'Mon catalogue — « ' + esc(S.cat.title) + ' »' : 'Nouveau catalogue';
+    // Le titre de la page est celui de la barre commune (27/11/2026, DESIGN_SYSTEM.md §7.13 : « MAGASIN DÉMO » + « Mon
+    // catalogue ») : ici, seulement le catalogue ouvert, sur une ligne, et les actions.
+    const titre = S.etape === 1 ? '' : S.cat ? '« ' + esc(S.cat.title) + ' »' : 'Nouveau catalogue';
     const suivant = { 2: ['3', 'Présentation ›'], 3: ['4', 'Validation ›'], 4: null, 5: null }[S.etape];
-    let h = '<div class="cm-hd"><div><div class="k">Espace boutique · ' + esc(S.nom || '') + '</div><h2>' + titre + '</h2></div><span class="sp"></span>';
+    let h = '<div class="cm-hd">' + (titre ? '<h2>' + titre + '</h2>' : '') + '<span class="sp"></span>';
     if (S.etape === 1) {
       h += '<button class="cm-btn" data-cm="relire">↻ Relire</button><button class="cm-btn" data-cm="nouveau">＋ Nouveau catalogue</button></div>';
     } else {
@@ -1358,10 +1362,11 @@
     if (S.listeErr) { h += bandeauErreur(S.listeErr, 'Mes catalogues n’ont pas pu être lus'); }
     if (S.recusErr) { h += bandeauErreur(S.recusErr, 'Les catalogues de la marque n’ont pas pu être lus'); }
     if (!S.liste && !S.listeErr) { return h + '<div class="db-card"><div class="cm-vide">Lecture de mes catalogues…</div></div>'; }
-    (S.recus || []).filter(c => c.reception && c.reception.status === 'nouveau').forEach(c => { h += carteRecu(S, c); });
     const lignes = [];
     (S.recus || []).filter(c => c.reception && c.reception.status !== 'adapte').forEach(c => lignes.push({ c, marque: true }));
     (S.liste || []).forEach(c => lignes.push({ c, marque: false }));
+    h += resumeListe(S, lignes);
+    (S.recus || []).filter(c => c.reception && c.reception.status === 'nouveau').forEach(c => { h += carteRecu(S, c); });
     if (!lignes.length) {
       return h + '<div class="db-card"><div class="cm-vide">Aucun catalogue pour l’instant.<br><br><button class="cm-btn pri" data-cm="nouveau">＋ Créer mon premier catalogue</button></div></div>';
     }
@@ -1383,12 +1388,46 @@
     });
     return h + '</tbody></table></div>';
   }
+  /* Le résumé de la liste (27/11/2026, DESIGN_SYSTEM.md §7.13 ; les règles de .ac, sous le préfixe du module) : le chiffre clé
+   * (les catalogues de ma boutique, 700 : le seul gras), d'où ils viennent ; puis « À corriger » — ce que la colonne État dit
+   * déjà : un catalogue de la marque à regarder, un brouillon à finir, un PDF prêt ou un catalogue pris tel quel pas encore
+   * imprimé. Chaque bouton fait le geste du tableau (« Le feuilleter », « Continuer », « Vérifier et imprimer »,
+   * « Imprimer ») ; le catalogue reçu mène à sa carte, mise en évidence. Rien : une phrase verte. */
+  function resumeListe(S, lignes) {
+    if (!lignes.length) { return ''; }
+    const pl = (n, a, b) => n + ' ' + (n > 1 ? b : a);
+    const imprime = ({ c, marque }) => marque ? !!(c.print && c.print.quantity) : c.status === 'imprime';
+    const nM = lignes.filter(l => l.marque).length, nI = lignes.filter(imprime).length;
+    const A = [];
+    lignes.forEach(({ c, marque }) => {
+      const t = '« ' + esc(c.title) + ' » · ';
+      if (marque && c.reception.status === 'nouveau') { A.push({ txt: t + 'nouveau de la marque : le prendre ou l’adapter', attr: 'data-cmac="cm-recu-' + esc(c.id) + '"' }); }
+      else if (marque && !imprime({ c, marque })) { A.push({ txt: t + 'pris tel quel, pas encore imprimé', attr: 'data-cm="ouvrirM" data-v="' + esc(c.id) + '" data-e="5"' }); }
+      else if (!marque && c.status === 'brouillon') { A.push({ txt: t + 'brouillon à finir', attr: 'data-cm="ouvrir" data-v="' + esc(c.id) + '" data-e="2"' }); }
+      else if (!marque && c.status === 'pret') { A.push({ txt: t + 'PDF prêt, pas encore imprimé', attr: 'data-cm="ouvrir" data-v="' + esc(c.id) + '" data-e="4"' }); }
+    });
+    const l2 = A.length ? '<span class="cm-res-t">À corriger</span><span class="cm-res-l">' + A.map(x => '<button type="button" class="btn btn--sm cm-res-b" ' + x.attr + '><i class="cm-res-ic" aria-hidden="true"></i>' + x.txt + '</button>').join('') + '</span>'
+      : '<p class="cm-res-ok">Rien à corriger : tous mes catalogues sont imprimés.</p>';
+    return '<section class="cm-res" aria-label="Résumé de mes catalogues"><div class="cm-res-l1"><span class="cm-res-v">' + lignes.length + '</span>'
+      + '<span class="cm-res-q">' + (lignes.length > 1 ? 'catalogues' : 'catalogue') + ' pour ma boutique<small>' + pl(nM, 'de la marque', 'de la marque') + ' · ' + pl(lignes.length - nM, 'de ma boutique', 'de ma boutique') + ' · ' + pl(nI, 'imprimé', 'imprimés') + '</small></span></div>'
+      + '<div class="cm-res-l2"' + (A.length ? ' role="region" aria-label="À corriger"' : '') + '>' + l2 + '</div></section>';
+  }
+  /** Le geste d'un point qui mène à un bloc : le bloc à l'écran, encadré un instant. */
+  function montrer(S, id) {
+    const el = S.el.querySelector('#' + id);
+    if (!el) { return; }
+    const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.style.scrollMarginTop = '16px';
+    el.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+    el.classList.remove('cm-vu'); void el.offsetWidth; el.classList.add('cm-vu');
+    clearTimeout(el._cmT); el._cmT = setTimeout(() => el.classList.remove('cm-vu'), 1800);
+  }
   /** « Nouveau · de la marque » : la proposition, ses deux pages, « Le prendre tel quel » ou « L'adapter ». */
   function carteRecu(S, c) {
     const doc = S.doc['r' + c.id];
     const vign = doc ? [0, Math.min(2, doc.pages.length - 1)].map(i => feuille(doc, i, 128, true)).join('') : '<div class="cm-vide" style="padding:20px">Lecture…</div>';
     const n = c.pageCount || 0;
-    return '<section class="cm-recu"><div class="cm-recu__pages">' + vign + '</div><div class="cm-recu__txt">'
+    return '<section class="cm-recu" id="cm-recu-' + esc(c.id) + '"><div class="cm-recu__pages">' + vign + '</div><div class="cm-recu__txt">'
       + '<div class="cm-lig"><span class="cm-tag vif">Nouveau · de la marque</span><span class="cm-cpt">reçu le ' + esc(date(c.reception.receivedAt)) + '</span></div>'
       + '<h3>La marque a préparé votre catalogue « ' + esc(c.title) + ' »</h3>'
       + '<p>Déjà à vos prix, avec votre adresse, vos horaires et votre QR. Vous le prenez tel quel ou vous l’adaptez.</p>'

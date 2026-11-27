@@ -551,7 +551,8 @@ Décidé par Sam le 26/11/2026 (« adapte ce style à tout le dashboard ») à p
   le pourcentage arrondi qu'on lit ; une période en cours se hachure (pas encore jugée), une case de calendrier prend le fond
   teinté de son état. Une intensité sans état (carte de chaleur) : une rampe d'une seule teinte (`--chart-real`, `--green`).
   Crédit utilisé d'un client B2B (Clients, 26/11/2026) : sous 80 % `--green`, 80–100 % `--prize` « proche de la limite », 100 % et
-  plus `--stop` « dépassé » ; le mot est écrit dans la colonne.
+  plus `--stop` « dépassé » ; le mot est écrit dans la colonne. Part des tickets scannés (Fidélité, 27/11/2026, à la place de
+  l'échelle de sept couleurs du 12/11) : sous 20 % `--stop` « faible », 20–50 % `--prize` « moyenne », 50 % et plus `--green` « bonne ».
 - **Position face au marché** (Concurrence, 26/11/2026) : plus de 5 % au-dessus de la médiane des boulangeries `--prize` (texte `--prize-ink`) « au-dessus », plus de 5 % en dessous `--green` « en dessous », entre les deux sans couleur « au prix du marché » ; le chiffre de l'écart reste à l'encre (le mot est dans la colonne Verdict). L'évolution d'une catégorie (Produits) suit l'écart au N-1 : `--green` « se développe », `--prize-ink` « recule ».
 - **« Prête »** (Commandes) : bleu-gris `#4A6478` (5,5:1 sur son fond), distinct du bleu d'identification du Webshop.
 - **Petits textes sur fond teinté** : sur `--table-head` ou `--paper`, `--muted` ne fait que 4,45:1 (sous 4,5:1) ; un
