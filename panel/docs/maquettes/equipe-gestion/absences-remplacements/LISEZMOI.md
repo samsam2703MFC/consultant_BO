@@ -62,14 +62,42 @@ la part des absences depuis `/dashboard/equipe/planning`, et dessine les deux fe
   `schedule_uuid` ; l'employé n'a pas d'heures de contrat). Elles vivraient au cockpit : une table `panel_equipe_absence`
   (magasin, employé, jour, de, à, motif, payée, certificat, service remplaçant, qui l'a posée), créée comme
   `panel_equipe_matrice` dans `panel/src/equipe.php`.
-- **Le service de l'absente** : retiré du panel (`DELETE /schedule/{id}` : l'app employés et le planning du panel ne la
-  montrent plus au travail) et gardé au cockpit avec ses heures et son motif. Le remplaçant : un vrai service au panel
+- **Le service de l'absente** (prévu ainsi, changé à la construction : voir « Construit et mis en ligne ») : retiré du panel
+  (`DELETE /schedule/{id}`) et gardé au cockpit avec ses heures et son motif. Le remplaçant : un vrai service au panel
   (`POST /schedule`), lié à l'absence.
 - **Le calcul** (`calculJour`, `equipe.js`) : les absences payées comptent dans le coût, pas dans la présence ; le résumé,
   la tête des jours et « À corriger » comme la maquette ; le jour, le mois et le planning imprimé montrent « Malade »,
   « Congé payé » dans la case.
 - **« Retirer de l'horaire de la semaine »** devient « Absente toute la semaine » dans la même fenêtre (le coût reste).
 - **Dans le module principal**, pas en option : c'est faire ses horaires (le but premier de Mon équipe).
+
+## Construit et mis en ligne (27/11/2026)
+
+Sam : « go construit et mets en ligne ». `panel/src/equipe_absences.php` (la table `panel_equipe_absence`, les routes
+`POST|DELETE /dashboard/equipe/absence`), `panel/public/dashboard/equipe.js` et `equipe.css` (la semaine, le jour, le mois, la fenêtre
+d'un service, la fenêtre « Absence ou congé »), le planning imprimé (`eqpPlanningPdfHtml`). Tests : `php panel/bin/tests_equipe.php`
+(25 cas des absences) ; l'écran, joué de bout en bout et vérifié : `node …/absences-remplacements/ecran/capturer.cjs` (22 vérifications).
+
+**Une décision, prise en construisant** : le coût du personnel du Résultat vient du panel TF Buddy, qui le calcule sur son propre
+planning. Supprimer le service d'une personne absente l'aurait donc fait disparaître du Résultat. Une absence payée **garde son
+service au panel** (son coût reste partout) et n'est notée qu'au cockpit ; seule l'absence non payée retire le service du panel.
+
+**Ce qui diffère de la maquette** : une seule fenêtre pour une absence d'un jour et pour une période (le tableau jour par jour de la
+maquette 3, avec « Remplacer par » dans chaque jour, chaque nom avec son coût, ceux du même rôle d'abord) ; « Étendre » quelqu'un déjà
+là n'est pas construit (on étire son service dans la fenêtre d'un service, comme avant) ; le solde des congés n'est pas montré.
+
+| Capture | L'écran construit (Magasin démo, données fictives) |
+|---|---|
+| `ecran-1-absente-et-remplacer.png` | « Absente ou en congé » depuis le service de Camille : maladie du mercredi au vendredi, certificat ; Inès proposée mercredi (+81 €) ; l'effet |
+| `ecran-2-conge-paye.png` | « Absence ou congé » (la barre) : Fanny en congé payé jeudi, Lucie la remplace |
+| `ecran-3-remplacer-par-un-exterieur.png` | l'absence posée se rouvre : mercredi déjà remplacé, vendredi un intérimaire à 24,50 €/h (+153 €) |
+| `ecran-4-semaine.png` | la semaine : les absences hachurées, les remplaçants, la ligne des extérieurs, la part des absences (309 €) et le budget sans elles |
+| `ecran-5-jour.png` | le vendredi : Camille hachurée, l'intérim parmi les extérieurs, le comptoir tenu |
+| `ecran-6-mois.png` | le mois : les absences en lettres (M, CP) |
+
+**Pas encore fait** : l'app employés (`/employee`) montre encore le service d'une personne absente comme un service ; l'Opérationnel
+(qui est en poste) et la condition d'heures des primes lisent le planning du panel, où le service d'une absence payée reste ; les
+vidéos de Mon équipe (la barre a un bouton de plus) sont à retourner.
 
 ## À vérifier ou à décider
 

@@ -347,3 +347,4 @@
 2026-11-27T06:50:22Z Références et pertes : un prix tenu par le tarif d'un fournisseur intégré (403 SUPPLIER_MANAGED_PRICE) n'est plus une erreur ; la référence reprend ce tarif et les autres magasins s'y alignent
 2026-11-27T08:53:31Z Dashboard magasin : le nouveau style dans toutes les sections (résumé, « À corriger », têtes collées, échelles de couleur unifiées sur les jetons d'état, DESIGN_SYSTEM.md §7.13) ; correctif des onglets de Clients ; scénarios des vidéos à jour (vidéos à retourner)
 2026-11-27T11:47:02Z Demandes des franchisés : les demandes que le panel écrit en polonais (conflit de n° de TVA du webshop) passent en français
+2026-11-27T13:58:03Z Mon équipe : absences, congés et remplacements — sous contrat de travail, une absence payée (maladie, congé payé, circonstance) garde son coût et sort de la présence ; remplaçant aux mêmes heures (équipe ou extérieur) avec son coût ; table panel_equipe_absence

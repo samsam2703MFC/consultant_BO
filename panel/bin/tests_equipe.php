@@ -93,6 +93,7 @@ require __DIR__ . '/../src/temps_morts.php';
 require __DIR__ . '/../../shared/src/checklists_codes.php';
 require __DIR__ . '/../src/equipe.php';
 require __DIR__ . '/../src/equipe_fiche.php';
+require __DIR__ . '/../src/equipe_absences.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -630,6 +631,75 @@ verifie('l’équipe : panier et pièces de tout le magasin', $A['equipe']['pani
 verifie('le rang au panier : 30 tickets au moins pour compter', $A['rang'] === ['position' => 1, 'sur' => 2], json_encode($A['rang']));
 verifie('un jour pas lu : compté dans la couverture, pas inventé', $A['couverture'] === ['jours' => 84, 'ventes' => 83, 'lignes' => 83] && $A['semaines'][11]['jours'] === 6, json_encode($A['couverture']));
 verifie('une semaine sans ticket : panier nul, pas zéro', eqfVentesAgreger(99, $sem, $V, $Lg)['semaines'][0]['panier'] === null);
+
+echo "Les absences, les congés et les remplacements\n";
+verifie('maladie sous contrat de travail : payée (le coût reste)', eqaPayee('maladie', 'employment_contract'));
+verifie('congé payé, contrat à préciser : payé', eqaPayee('cp', null));
+verifie('intérim, stage, B2B : une absence ne coûte rien', !eqaPayee('maladie', 'temporary_work') && !eqaPayee('cp', 'internship') && !eqaPayee('circ', 'b2b'));
+verifie('absence non payée : le coût sort, même sous contrat', !eqaPayee('nonpaye', 'employment_contract'));
+$EQ = [201 => ['id' => 201, 'nom' => 'Camille R', 'actif' => true], 203 => ['id' => 203, 'nom' => 'Chloé V', 'actif' => true],
+    208 => ['id' => 208, 'nom' => 'Inès F', 'actif' => true], 210 => ['id' => 210, 'nom' => 'Lucie B', 'actif' => false]];
+$PJ = ['2026-11-18' => [['id' => 11, 'employe' => 201, 'de' => '12:45', 'a' => '19:15'], ['id' => 12, 'employe' => 203, 'de' => '05:30', 'a' => '11:00']],
+    '2026-11-19' => [],
+    '2026-11-20' => [['id' => 13, 'employe' => 201, 'de' => '13:00', 'a' => '19:15'], ['id' => 14, 'employe' => 208, 'de' => '14:45', 'a' => '19:15']]];
+$Pl = eqaPlan($PJ, 201, true, [], ['2026-11-18' => ['employe' => 208]], $EQ);
+verifie('payée : ses deux services marqués, rien retiré du panel', count($Pl['lignes']) === 2 && $Pl['retirer'] === [] && $Pl['erreurs'] === [], json_encode($Pl));
+verifie('le remplaçant aux mêmes heures, lié au service absent', $Pl['creer'] === [['date' => '2026-11-18', 'employe' => 208, 'de' => '12:45', 'a' => '19:15', 'pour' => 11]], json_encode($Pl['creer']));
+$Pl = eqaPlan($PJ, 201, true, [], ['2026-11-20' => ['employe' => 208]], $EQ);
+verifie('un remplaçant qui travaille déjà à ces heures : refusé', $Pl['erreurs'] !== [] && str_contains($Pl['erreurs'][0], 'travaille déjà'), json_encode($Pl['erreurs']));
+verifie('un remplaçant désactivé, ou la personne elle-même : refusés',
+    eqaPlan($PJ, 201, true, [], ['2026-11-18' => ['employe' => 210]], $EQ)['erreurs'] !== [] && eqaPlan($PJ, 201, true, [], ['2026-11-18' => ['employe' => 201]], $EQ)['erreurs'] !== []);
+verifie('un jour sans service absent : pas de remplacement', eqaPlan($PJ, 201, true, [], ['2026-11-19' => ['employe' => 203]], $EQ)['erreurs'] !== []);
+$Pl = eqaPlan($PJ, 201, false, [], ['2026-11-20' => ['externe' => ['nom' => 'Intérim', 'taux' => 24.5]]], $EQ);
+verifie('non payée : ses services quittent le panel ; un extérieur noté au cockpit', $Pl['retirer'] === [11, 13] && $Pl['externes'] === [['date' => '2026-11-20', 'service' => 13, 'nom' => 'Intérim', 'taux' => 24.5]], json_encode($Pl));
+$EX = [13 => ['id' => 5, 'service' => 13, 'date' => '2026-11-20', 'de' => '13:00', 'a' => '19:15', 'payee' => true, 'remplacantService' => 14, 'externe' => null]];
+verifie('un service déjà remplacé (le service du remplaçant est au planning) : refusé', eqaPlan($PJ, 201, true, $EX, ['2026-11-20' => ['employe' => 203]], $EQ)['erreurs'] !== []);
+$EX = [13 => ['id' => 5, 'service' => 13, 'date' => '2026-11-20', 'de' => '13:00', 'a' => '19:15', 'payee' => true, 'remplacantService' => 99, 'externe' => null]];
+verifie('son remplaçant retiré du planning depuis : on peut en mettre un autre', eqaPlan($PJ, 201, true, $EX, ['2026-11-20' => ['employe' => 203]], $EQ)['erreurs'] === []);
+$EX = [77 => ['id' => 6, 'service' => 77, 'date' => '2026-11-19', 'de' => '07:00', 'a' => '12:00', 'payee' => false, 'remplacantService' => null, 'externe' => null]];
+verifie('une absence non payée déjà posée, puis une payée : annuler d’abord', eqaPlan($PJ, 201, true, $EX, [], $EQ)['erreurs'] !== []);
+verifie('personne au planning : rien à marquer', eqaPlan(['2026-11-19' => []], 201, true, [], [], $EQ)['erreurs'] !== []);
+
+// La route, le panel en doublure : la personne malade demain et après-demain, un remplaçant demain.
+$j1 = date('Y-m-d', strtotime('+1 day')); $j2 = date('Y-m-d', strtotime('+2 days'));
+PanelApi::$reponses = [
+    '/shops/1/employees' => [['id' => 201, 'id_shop' => 1, 'name' => 'Camille', 'surname' => 'R', 'employment_type' => 'employment_contract', 'money_per_hour' => 15.8],
+        ['id' => 208, 'id_shop' => 1, 'name' => 'Inès', 'surname' => 'F', 'employment_type' => 'internship', 'money_per_hour' => 12.4],
+        ['id' => 300, 'id_shop' => 2, 'name' => 'Autre', 'surname' => 'Magasin']],
+    '/shops/1/schedule?date=' . $j1 => [['id_schedule' => 21, 'id_employee' => 201, 'work_date' => $j1, 'start_hour' => '12:45:00', 'end_hour' => '19:15:00', 'id_shop' => 1]],
+    '/shops/1/schedule?date=' . $j2 => [['id_schedule' => 22, 'id_employee' => 201, 'work_date' => $j2, 'start_hour' => '13:00:00', 'end_hour' => '19:15:00', 'id_shop' => 1]],
+];
+PanelApi::$ecrits = []; PanelApi::$code = 201; Db::$exec = [];
+$CORPS = ['shop' => 1, 'employe' => 201, 'du' => $j1, 'au' => $j2, 'motif' => 'maladie', 'certificat' => true, 'remplacements' => [['date' => $j1, 'employe' => 208]]];
+$r = wr_equipe_absence();
+$ins = array_values(array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'INSERT INTO panel_equipe_absence')));
+$upd = array_values(array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'UPDATE panel_equipe_absence SET remplacant_id')));
+verifie('malade sous contrat : deux absences payées, le service reste au panel', ($r['ok'] ?? false) && $r['absences'] === 2 && $r['payee'] === true && count($ins) === 2 && !array_filter(PanelApi::$ecrits, static fn ($e) => $e[0] === 'DELETE'), json_encode($r));
+verifie('le remplaçant : un service au panel aux mêmes heures, noté sur l’absence',
+    PanelApi::$ecrits === [['POST', '/schedule', ['id_employee' => 208, 'work_date' => $j1, 'start_hour' => '12:45:00', 'end_hour' => '19:15:00']]] && count($upd) === 1 && $upd[0][1][0] === 208 && $upd[0][1][1] === 77 && $upd[0][1][4] === 21, json_encode([PanelApi::$ecrits, $upd]));
+PanelApi::$ecrits = []; PanelApi::$code = 204; Db::$exec = [];
+$CORPS = ['shop' => 1, 'employe' => 201, 'du' => $j1, 'au' => $j1, 'motif' => 'nonpaye'];
+$r = wr_equipe_absence();
+verifie('non payée : le service quitte le panel, l’absence garde ses heures', ($r['ok'] ?? false) && $r['payee'] === false && PanelApi::$ecrits === [['DELETE', '/schedule/21', null]]
+    && count(array_filter(Db::$exec, static fn ($x) => str_starts_with($x[0], 'INSERT INTO panel_equipe_absence') && $x[1][4] === '12:45' && $x[1][7] === 0)) === 1, json_encode([$r, PanelApi::$ecrits]));
+PanelApi::$ecrits = []; Db::$exec = [];
+$CORPS = ['shop' => 1, 'employe' => 208, 'du' => $j1, 'au' => $j1, 'motif' => 'maladie'];
+verifie('quelqu’un sans service ces jours-là : rien n’est écrit', isset(wr_equipe_absence()['error']) && PanelApi::$ecrits === [] && Db::$exec === []);
+$CORPS = ['shop' => 1, 'employe' => 300, 'du' => $j1, 'au' => $j1, 'motif' => 'maladie'];
+verifie('une personne d’un autre magasin : 404', isset(wr_equipe_absence()['error']) && http_response_code() === 404);
+foreach ([['motif' => 'vacances'], ['au' => date('Y-m-d', strtotime('+200 days'))], ['du' => $j2, 'au' => $j1], ['remplacements' => [['date' => $j1, 'externe' => ['nom' => 'Intérim', 'taux' => 0]]]],
+    ['remplacements' => [['date' => date('Y-m-d', strtotime('+9 days')), 'employe' => 208]]]] as $k => $x) {
+    $CORPS = array_merge(['shop' => 1, 'employe' => 201, 'du' => $j1, 'au' => $j2, 'motif' => 'maladie'], $x);
+    verifie('refusé avant toute écriture : ' . ['un motif inconnu', 'trop loin', 'une période à l’envers', 'un extérieur sans taux', 'un remplacement hors période'][$k], isset(wr_equipe_absence()['error']) && PanelApi::$ecrits === []);
+}
+
+// Le planning imprimé : l'absente porte son motif (pas ses heures), le remplaçant « remplace … ».
+$jrs = [];
+foreach (range(0, 6) as $i) { $jrs[] = ['date' => date('Y-m-d', strtotime('2026-11-16 +' . $i . ' days')), 'services' => [], 'absences' => []]; }
+$jrs[2]['services'] = [['id' => 11, 'employe' => 201, 'de' => '12:45', 'a' => '19:15'], ['id' => 31, 'employe' => 208, 'de' => '12:45', 'a' => '19:15']];
+$jrs[2]['absences'] = [['id' => 1, 'employe' => 201, 'service' => 11, 'motif' => 'maladie', 'payee' => true, 'remplacant' => 208, 'remplacantService' => 31]];
+$html = eqpPlanningPdfHtml(['jours' => $jrs, 'employes' => [['id' => 201, 'nom' => 'Camille Roussel', 'actif' => true, 'postes' => [], 'secteurs' => []], ['id' => 208, 'nom' => 'Inès Fontaine', 'actif' => true, 'postes' => [], 'secteurs' => []]], 'secteurs' => []], 'magasin', 'Magasin démo');
+verifie('le planning imprimé : « Maladie » à la place de ses heures, son remplaçant le dit', str_contains($html, '<span class="sv abs">Maladie</span>') && str_contains($html, 'remplace Camille') && substr_count($html, '6,5 h') >= 1 && !str_contains($html, '13 h'), '');
 
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);
