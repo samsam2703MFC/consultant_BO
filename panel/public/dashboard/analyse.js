@@ -9,6 +9,10 @@
  *                      les autres, comment a-t-il évolué depuis l'ouverture ;
  *   la famille (F)     la même chose pour une famille : son poids, sa tendance, qui la porte, ce qui monte ou baisse, ce
  *                      qu'elle perd, à quelle heure elle se vend, les autres magasins, les mois depuis l'ouverture.
+ * 27/11/2026, « je dois pouvoir analyser avec 12 semaines par catégorie principale » : la période « 12 semaines » (les 12
+ * dernières semaines closes) et, dans l'entrée, les catégories principales (les familles) semaine par semaine — chiffre,
+ * pièces, marge réalisée ou part du chiffre, tendance des 4 dernières semaines, courbe des lignes cochées (carteTranches) ;
+ * dans la page d'une famille, ses catégories de même (ses produits quand elle n'en a qu'une).
  * Lectures :
  *   GET …/dashboard/analyse/periode?shop=&du=&au=&prec= la période choisie : chaque produit tranche par tranche, la période
  *                                                       d'avant, son prix et sa recette (semaine, mois, trimestre, année, 13 semaines, du … au)
@@ -49,7 +53,9 @@
   const I = { chercher: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35', retour: 'M15 18l-6-6 6-6' };
 
   /* --- la période (15/11/2026, « on doit pouvoir choisir mois, semaine, trimestre, année et range ») ------------------- */
-  const TYPES = [['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['sem13', '13 semaines'], ['plage', 'Du … au']];
+  // « 12 semaines » (27/11/2026, « je dois pouvoir analyser avec 12 semaines par catégorie principale ») : les 12 dernières
+  // semaines closes, du lundi au dimanche, sans la semaine en cours ; « 13 semaines » garde la semaine en cours, à date.
+  const TYPES = [['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['sem12', '12 semaines'], ['sem13', '13 semaines'], ['plage', 'Du … au']];
   const MOISL = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const jd = s => new Date(s + 'T12:00:00');
   const plus = (s, n) => { const t = jd(s); t.setDate(t.getDate() + n); return iso(t); };
@@ -64,6 +70,7 @@
     if (p.type === 'trimestre') { const q = Math.floor(m / 3); return { du: premier(an, 3 * q), au: dernier(an, 3 * q + 2), prec: premier(an, 3 * q - 3), lib: (q + 1) + (q ? 'e' : 'er') + ' trimestre ' + an, sur: 'sur le trimestre', avant: 'le trimestre d’avant', face: 'face au trimestre d’avant' }; }
     if (p.type === 'annee') { return { du: an + '-01-01', au: an + '-12-31', prec: (an - 1) + '-01-01', lib: 'année ' + an, sur: 'en ' + an, avant: String(an - 1), face: 'face à ' + (an - 1) }; }
     if (p.type === 'plage') { const n = nbJours(p.du, p.au); return { du: p.du, au: p.au, prec: plus(p.du, -n), lib: 'du ' + dfr(p.du) + ' au ' + dfr(p.au), sur: 'sur la période', avant: 'les ' + n + ' jours d’avant', face: 'face aux ' + n + ' jours d’avant' }; }
+    if (p.type === 'sem12') { const du = plus(lundi(a), -84), au = plus(lundi(a), -1); return { du, au, prec: plus(du, -84), lib: '12 semaines, du ' + dfr(du) + ' au ' + dfr(au), sur: 'sur 12 semaines', avant: 'les 12 semaines d’avant', face: 'face aux 12 semaines d’avant' }; }
     const du = plus(lundi(a), -84); return { du, au: a, prec: plus(du, -91), lib: '13 semaines, du ' + dfr(du) + ' au ' + dfr(a), sur: 'sur 13 semaines', avant: 'les 13 semaines d’avant', face: 'face aux 13 semaines d’avant' };
   }
   /** La période d'à côté : ‹ (−1) ou › (+1). */
@@ -74,6 +81,7 @@
     else if (p.type === 'trimestre') { p.ancre = premier(an, m + 3 * sens); }
     else if (p.type === 'annee') { p.ancre = (an + sens) + a.slice(4); }
     else if (p.type === 'plage') { const n = nbJours(p.du, p.au); p.du = plus(p.du, n * sens); p.au = plus(p.au, n * sens); }
+    else if (p.type === 'sem12') { p.ancre = plus(a, 84 * sens); }
     else { p.ancre = plus(a, 91 * sens); }
   }
   const PER = () => bornesPer(st.per);
@@ -134,8 +142,9 @@
   }
 
   /* --- l'état et les lectures --------------------------------------------------------------------------------------- */
+  // semM : la mesure du tableau des catégories (v chiffre, q pièces, m marge, p part) ; semVus : les lignes de sa courbe, par page.
   const st = { shop: null, api: '../api/cockpit', el: null, vue: 'accueil', pid: null, groupe: null, jourF: 6, d: {}, err: {}, enCours: {}, prep: null, frais: false, cleBarre: null,
-    per: { type: 'sem13', ancre: iso(new Date()), du: null, au: null } };
+    semM: 'v', semVus: {}, per: { type: 'sem13', ancre: iso(new Date()), du: null, au: null } };
 
   function lire(p) {
     return fetch(st.api + p, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
@@ -280,6 +289,103 @@
   /** Le seuil des listes « monte / baisse » : 60 pièces sur 13 semaines, à la longueur de la période (10 au moins). */
   const seuilQ = P => Math.max(10, Math.round(60 * P.jours / 91));
 
+  /* --- les catégories principales, tranche par tranche (27/11/2026) ---------------------------------------------------- */
+  // Demande : « je dois pouvoir analyser avec 12 semaines par catégorie principale ». Les catégories principales sont les
+  // groupes du catalogue TF Buddy (Boulangerie, Viennoiserie, Pâtisserie…), les familles de cette page ; la page d'une famille
+  // les détaille en catégories (ses produits quand elle n'en a qu'une). Une ligne par catégorie, une colonne par tranche de la
+  // période (12 sur « 12 semaines »), la mesure au choix, et une courbe des lignes cochées.
+  const MESURES = [['v', 'Chiffre TTC'], ['q', 'Pièces'], ['m', 'Marge réalisée'], ['p', 'Part']];
+  /** La marge réalisée, le CA HT où elle est connue (couv) et tout le CA HT (ht), tranche par tranche : chaque produit garde la
+   * méthode de sa période (à la pièce, ou au taux de la recette, margeDe), pour que ses tranches s'additionnent en sa marge. */
+  function margesTranches(P, L) {
+    const m = new Array(P.n).fill(0), couv = new Array(P.n).fill(0), ht = new Array(P.n).fill(0);
+    L.forEach(p => {
+      if (!p.prix || !p.prixHt) { return; }
+      for (let i = 0; i < P.n; i++) {
+        const caHt = (p.v[i] || 0) * p.prixHt / p.prix;
+        ht[i] += caHt;
+        if (p.cout == null) { continue; }
+        couv[i] += caHt;
+        if (p.q13) { m[i] += p.taux ? caHt * (1 - p.cout / p.prixHt) : caHt - (p.q[i] || 0) * p.cout; }
+      }
+    });
+    return { m, couv, ht };
+  }
+  /** Une ligne du tableau : ses tranches (chiffre, pièces, marge), sa période d'avant, ses produits ; attr : le clic. */
+  const ligneT = (P, x, L, coul, attr) => ({ nom: x.nom, n: x.n, coul, v: x.v, q: x.q, vp: x.vp || 0, qp: x.qp || 0, attr: attr || '', ...margesTranches(P, L) });
+  /** Les catégories d'une famille : celles du serveur (daCumuls), sinon refaites depuis les produits (une réponse gardée en
+   * cache d'avant le 27/11/2026 n'en a pas ; les références arrêtées y manquent alors à la période d'avant). */
+  function categoriesDe(P, groupe) {
+    if (Array.isArray(P.D.categories)) { return P.D.categories.filter(c => c.groupe === groupe); }
+    const C = {};
+    P.produits.filter(p => p.groupe === groupe).forEach(p => {
+      const c = C[p.cat] = C[p.cat] || { nom: p.cat, groupe, n: 0, v: new Array(P.n).fill(0), q: new Array(P.n).fill(0), vp: 0, qp: 0 };
+      c.n++; c.vp += p.vp || 0; c.qp += p.qp || 0;
+      for (let i = 0; i < P.n; i++) { c.v[i] += p.v[i] || 0; c.q[i] += p.q[i] || 0; }
+    });
+    return Object.values(C).sort((a, b) => somme(b.v) - somme(a.v));
+  }
+  /**
+   * La carte : o = { ctx (la page, pour les lignes cochées), titre, lignes, total ({nom, v, q, vp, qp, m, couv}), partDe (« du
+   * chiffre du magasin »), clic (la phrase du clic sur une ligne) }. Chaque case se teinte de --chart-real selon la tranche face à
+   * la meilleure de sa ligne, au jour (une semaine coupée aux bornes de la période se compare à une semaine entière) ; la
+   * tranche en cours se hachure et ne compte ni pour la teinte ni pour la tendance.
+   */
+  function carteTranches(P, o) {
+    const M = st.semM, T = o.total, L = o.lignes, n = P.n, libs = P.sem.tranches, B = P.sem.bornes;
+    const J = B.map(t => nbJours(t[0], t[1])), enc = i => P.D.enCours && i === n - 1;
+    const C = B.map((t, i) => i).filter(i => !enc(i));
+    const val = (l, i) => M === 'v' ? l.v[i] : M === 'q' ? l.q[i] : M === 'm' ? (l.couv[i] > 0 || !l.v[i] ? l.m[i] : null) : (T.v[i] ? 100 * l.v[i] / T.v[i] : null);
+    const fmt = M === 'q' ? n0 : M === 'p' ? pc : k1;
+    // Sur des tranches W : le total (la part : du chiffre de W), et le rythme au jour (la part ne se ramène pas au jour).
+    const surW = (l, W) => M === 'p' ? (somme(W.map(i => T.v[i])) ? 100 * somme(W.map(i => l.v[i])) / somme(W.map(i => T.v[i])) : null) : somme(W.map(i => val(l, i)));
+    const auJour = (l, W) => { const t = surW(l, W), d = somme(W.map(i => J[i])); return t == null ? null : M === 'p' ? t : d ? t / d : null; };
+    // La tendance : les 4 dernières semaines closes face aux 4 d'avant, au jour (des semaines seulement, 8 closes au moins).
+    const tend = P.D.pas === 'semaine' && C.length >= 8, A4 = C.slice(-8, -4), B4 = C.slice(-4);
+    const pts = v => { if (v == null || isNaN(v)) { return '<span class="an-f mu">—</span>'; } const r = Math.round(v * 10) / 10, [cl, f] = r >= 1 ? ['up', '▲'] : r > -1 ? ['flat', '▶'] : ['warn', '▼']; return `<span class="an-f ${cl}">${f} ${r > 0 ? '+' : r < 0 ? '−' : ''}${n1(Math.abs(r))} pt</span>`; };
+    const tendDe = l => { if (!tend) { return ''; } const a = auJour(l, A4), b = auJour(l, B4); return M === 'p' ? pts(a != null && b != null ? b - a : null) : fleche(a && b != null ? 100 * (b / a - 1) : null); };
+    const jp = P.D.precedent.jours, tous = B.map((t, i) => i);
+    const partAvant = l => T.vp ? 100 * l.vp / T.vp : null;
+    const faceDe = l => {
+      if (M === 'm') { const c = somme(l.couv); const z = zoneMarge(c ? 100 * somme(l.m) / c : null); return c ? `<span class="mz ${z ? z.cl : 'mu'}">${pc(100 * somme(l.m) / c)}</span>` : '—'; }
+      if (P.rienAvant) { return '<span class="an-f mu">—</span>'; }
+      if (M === 'p') { const a = partAvant(l), b = surW(l, tous); return pts(a != null && b != null ? b - a : null); }
+      const x = M === 'v' ? somme(l.v) : somme(l.q), xp = M === 'v' ? l.vp : l.qp;
+      return fleche(xp > 0 && jp ? 100 * ((x / P.jours) / (xp / jp) - 1) : null);
+    };
+    // La teinte d'une case : sa valeur au jour face à la meilleure tranche close de la ligne.
+    const teinte = (l, i) => {
+      if (enc(i)) { return ''; }
+      const r = auJour(l, [i]), max = Math.max(0, ...C.map(k => auJour(l, [k]) || 0));
+      return r > 0 && max > 0 ? ` style="background:color-mix(in srgb, var(--chart-real, #B03048) ${Math.round(32 * r / max)}%, #fff)"` : '';
+    };
+    const tete = libs.map((lb, i) => `<th class="n" title="du ${esc(dfr(B[i][0]))} au ${esc(dfr(B[i][1]))}">${esc(lb)}${enc(i) ? '*' : ''}${P.D.pas === 'semaine' ? `<small>${esc(dfr(B[i][0]))}</small>` : ''}</th>`).join('');
+    // Les colonnes de synthèse : le total, et dessous le rythme (par semaine ou par jour) — pour la part, la part de la période
+    // d'avant ; la tendance ; l'évolution face à la période d'avant (la marge : son taux, sur l'échelle de la marge brute).
+    const h1 = M === 'p' ? 'Sur la période<small>avant</small>' : (M === 'm' ? 'Marge' : 'Total') + `<small>${P.unite}</small>`;
+    const h4 = M === 'p' ? 'Écart<small>face à avant</small>' : M === 'm' ? 'Marge brute<small>du CA HT</small>' : 'Évolution<small>face à avant</small>';
+    const queue = l => `<td class="n d1">${fmt(surW(l, tous))}<small>${M === 'p' ? pc(partAvant(l)) : fmt(P.rythme(surW(l, tous) || 0))}</small></td>${tend ? `<td class="n">${tendDe(l)}</td>` : ''}<td class="n">${faceDe(l)}</td>`;
+    const cases = (l, chaud) => tous.map(i => { const v = val(l, i); return `<td class="c${enc(i) ? ' enc' : ''}"${chaud ? teinte(l, i) : ''}>${v == null ? '—' : fmt(v)}</td>`; }).join('');
+    const corps = L.map(l => `<tr ${l.attr}><td class="nm"><span><i style="background:${l.coul}"></i>${esc(l.nom)}</span>${l.n ? `<small>${l.n} réf.</small>` : ''}</td>${cases(l, true)}${queue(l)}</tr>`).join('');
+    const totL = `<tr class="tot"><td class="nm"><span>${esc(T.nom)}</span></td>${M === 'p' ? tous.map(i => `<td class="c${enc(i) ? ' enc' : ''}">${T.v[i] ? '100 %' : '—'}</td>`).join('') + `<td class="n d1">100 %<small>100 %</small></td>${tend ? '<td></td>' : ''}<td></td>` : cases(T, false) + queue(T)}</tr>`;
+    // La courbe des lignes cochées (les trois plus grosses d'abord) : douze courbes ensemble ne se lisent pas.
+    const vus = (st.semVus[o.ctx] || L.slice(0, 3).map(l => l.nom)).filter(nm => L.some(l => l.nom === nm));
+    const chips = `<div class="an-chips" role="group" aria-label="Les lignes de la courbe">${L.map(l => `<button type="button" data-semvu="${esc(l.nom)}" aria-pressed="${vus.includes(l.nom)}" class="${vus.includes(l.nom) ? 'on' : ''}"><i style="background:${l.coul}"></i>${esc(l.nom)}</button>`).join('')}</div>`;
+    const series = L.filter(l => vus.includes(l.nom)).map(l => ({ vals: tous.map(i => val(l, i)), coul: l.coul, ep: 2.2, points: true }));
+    const nomM = M === 'p' ? 'Part ' + o.partDe : (MESURES.find(x => x[0] === M) || [])[1];
+    const couv = somme(T.ht) ? 100 * somme(T.couv) / somme(T.ht) : null;
+    const notes = [esc(P.lib), 'la teinte : la tranche face à la meilleure de sa ligne, au jour']
+      .concat(P.D.enCours ? [`* ${esc(libs[n - 1])} : en cours, hachurée, hors teinte et hors tendance`] : [])
+      .concat(tend ? ['tendance : les 4 dernières semaines closes face aux 4 d’avant, au jour'] : [])
+      .concat(M === 'm' ? [`marge : CA HT − pièces × coût de la recette${couv != null ? `, connue sur ${n0(couv)} % du CA HT` : ''}`] : M === 'p' ? [`avant : la même part, ${esc(P.avant)} · écart et tendance en points de part, ▲ +1 pt et plus, ▼ −1 pt et moins`] : [esc(P.face) + ', au jour']);
+    return `<section class="an-carte an-sem" data-semctx="${esc(o.ctx)}"><div class="an-sem-h"><h3>${esc(o.titre)}, ${parTranche(P)} <small>${esc(nomM)}${o.clic ? ' · ' + esc(o.clic) : ''}</small></h3>
+        <div class="an-seg an-seg--m" role="group" aria-label="La mesure">${MESURES.map(([k, lb]) => `<button type="button" data-semm="${k}" class="${M === k ? 'on' : ''}" aria-pressed="${M === k}">${esc(k === 'p' ? 'Part ' + o.partDe : lb)}</button>`).join('')}</div></div>
+      <div class="an-defile"><table class="an-t an-t--g an-t--sem"><thead><tr><th>${esc(o.entete)}</th>${tete}<th class="n d1">${h1}</th>${tend ? '<th class="n">Tendance<small>4 sem. / 4 d’avant</small></th>' : ''}<th class="n" title="${esc(P.face)}">${h4}</th></tr></thead>
+        <tbody>${corps}${totL}</tbody></table></div>
+      <p class="an-src">${notes.join(' · ')}${M === 'm' ? ' · ' + LEGENDE_M : M === 'p' ? '' : ' · ' + LEGENDE_F}</p>
+      ${chips}${series.length ? courbes({ w: 900, h: 240, libelles: libs, fmt, titre: nomM + ' ' + parTranche(P), series }) : '<p class="an-src">Cochez une ou plusieurs lignes pour les voir en courbe.</p>'}</section>`;
+  }
+
   /* --- A · l'entrée -------------------------------------------------------------------------------------------------- */
   function vueAccueil(P) {
     const T = P.tot, libs = P.sem.tranches;
@@ -323,7 +429,10 @@
     const parMarge = P.produits.filter(p => p.marge != null).sort((a, b) => b.marge - a.marge).slice(0, 8);
     const montent = P.produits.filter(p => p.evo && p.evo.verdict === 'monte' && p.q13 >= seuilQ(P)).sort((a, b) => b.evo.pct - a.evo.pct).slice(0, 8);
     const baissent = P.produits.filter(p => p.evo && p.evo.verdict === 'baisse' && p.q13 >= seuilQ(P)).sort((a, b) => a.evo.pct - b.evo.pct).slice(0, 8);
-    return kp + `<div class="an-g2">${fam}${courbe}</div><div class="an-g2 an-g2--top">${top('Les plus gros chiffres', parCA, p => k1(p.v13))}${top('Ce qui rapporte le plus', parMarge, p => k1(p.marge))}
+    const semCat = carteTranches(P, { ctx: 'accueil', titre: 'Les catégories principales', entete: 'Catégorie principale', partDe: 'du chiffre', clic: 'un clic sur une ligne ouvre la catégorie',
+      lignes: P.groupes.map(g => ligneT(P, g, g.produits, g.coul, `data-groupe="${esc(g.nom)}" class="an-lien"`)),
+      total: { ...ligneT(P, { nom: 'Le magasin', v: P.D.total.v, q: P.D.total.q, vp: P.D.total.vp, qp: P.D.total.qp }, P.produits, '') } });
+    return kp + `<div class="an-g2">${fam}${courbe}</div>${semCat}<div class="an-g2 an-g2--top">${top('Les plus gros chiffres', parCA, p => k1(p.v13))}${top('Ce qui rapporte le plus', parMarge, p => k1(p.marge))}
       ${top('Ce qui monte', montent, p => k1(p.v13))}${top('Ce qui baisse', baissent, p => k1(p.v13))}</div>
       <p class="an-src">Un clic sur un produit ouvre sa fiche · « ce qui monte / baisse » : produits vendus au moins ${seuilQ(P)} fois, ±8 % et plus ${esc(P.face)}, au jour.</p>`;
   }
@@ -331,7 +440,7 @@
   /* --- E · le produit ------------------------------------------------------------------------------------------------- */
   function vueProduit(P) {
     const p = P.produits.find(x => String(x.id) === String(st.pid));
-    if (!p) { return `<section class="an-carte"><p class="an-rep">Ce produit n’a pas été vendu sur les 13 dernières semaines.</p></section>`; }
+    if (!p) { return `<section class="an-carte"><p class="an-rep">Ce produit n’a pas été vendu ${esc(P.sur)}.</p></section>`; }
     const libs = P.sem.tranches;
     const ht = p.prixHt, cout = p.cout, mu = ht != null && cout != null ? ht - cout : null;
     const rang = (cle, x) => P.produits.filter(y => y[cle] != null).sort((a, b) => b[cle] - a[cle]).indexOf(x) + 1;
@@ -440,7 +549,7 @@
   /* --- F · la famille ------------------------------------------------------------------------------------------------- */
   function vueFamille(P) {
     const fam = P.groupes.find(g => g.nom === st.groupe);
-    if (!fam) { return `<section class="an-carte"><p class="an-rep">Cette famille n’a pas de vente sur les 13 dernières semaines.</p></section>`; }
+    if (!fam) { return `<section class="an-carte"><p class="an-rep">Cette famille n’a pas de vente ${esc(P.sur)}.</p></section>`; }
     const Lp = fam.produits.slice().sort((a, b) => b.v13 - a.v13), libs = P.sem.tranches;
     const partCA = 100 * fam.v13 / P.tot.v, partM = fam.marge && P.tot.marge ? 100 * fam.marge / P.tot.marge : null;
     const cleR = 'res|g' + fam.nom + '|' + PK(), R = st.d[cleR];
@@ -462,7 +571,7 @@
     let cum = 0; const par = Lp.map(x => { cum += x.v13; return { ...x, part: 100 * x.v13 / fam.v13, cum: 100 * cum / fam.v13 }; });
     const k3 = Math.min(3, par.length), n3 = par[k3 - 1].cum, vus = par.slice(0, 9);
     const q3 = Q(3, 'Quels produits la portent ?', `<b>${par.slice(0, k3).map(x => esc(x.nom)).join(', ')}</b> : ${n0(n3)} % du chiffre de la famille${k3 > 1 ? ' à eux ' + (k3 === 2 ? 'deux' : 'trois') : ''}.`,
-      `<table class="an-t an-t--g"><thead><tr><th>Produit</th><th class="n">Chiffre</th><th>Part de la famille</th><th class="n">Marge</th><th class="n">6 sem. / 6 d’avant</th></tr></thead><tbody>
+      `<table class="an-t an-t--g"><thead><tr><th>Produit</th><th class="n">Chiffre</th><th>Part de la famille</th><th class="n">Marge</th><th class="n">Face à avant</th></tr></thead><tbody>
         ${vus.map(x => `<tr data-pid="${x.id}" class="an-lien"><td>${esc(x.nom)}</td><td class="n">${k1(x.v13)}</td><td><span class="an-bv">${barre(x.part, par[0].part)}<b>${pc(x.part)}</b></span></td><td class="n">${x.margePct == null ? '—' : pc(x.margePct)}</td><td class="n">${fleche(x.evo && x.evo.pct)}</td></tr>`).join('')}
         ${par.length > 9 ? `<tr class="tot"><td>Les ${par.length - 9} autres</td><td class="n">${k1(somme(par.slice(9).map(x => x.v13)))}</td><td>${pc(100 - par[8].cum)}</td><td></td><td></td></tr>` : ''}</tbody></table><p class="an-src">Un clic sur un produit ouvre sa fiche.</p>`);
     if (k3 > 1) { L.push(`<b>${k3} produits font ${n0(n3)} % de son chiffre</b> : ${par.slice(0, k3).map(x => esc(x.nom)).join(', ')}. Ce sont eux qu’il ne faut jamais manquer.`); }
@@ -542,14 +651,22 @@
     const res = resume({ aria: 'Résumé de la famille', v: k1(fam.v13), et: P.rienAvant ? null : etatEvo(evH),
       q: 'de chiffre TTC ' + esc(P.sur), q2: `${pc(partCA)} du chiffre du magasin` + (zF ? ` · marge brute ${pc(fam.margePct)} : ${zF.mot}` : ''),
       retenir: L });
-    return res + `<div class="an-qs">${q1}${q2}${q3}${q4}${q5}${q6}${q7}${q8}</div>`;
+    const cats = categoriesDe(P, fam.nom);
+    const lignesF = cats.length >= 2
+      ? cats.map((c, i) => ligneT(P, c, fam.produits.filter(x => x.cat === c.nom), COUL[i % COUL.length]))
+      : Lp.slice(0, 12).map((x, i) => ligneT(P, x, [x], COUL[i % COUL.length], `data-pid="${esc(x.id)}" class="an-lien"`));
+    const semF = carteTranches(P, { ctx: 'f|' + fam.nom, titre: cats.length >= 2 ? 'Ses catégories' : 'Ses produits', entete: cats.length >= 2 ? 'Catégorie' : 'Produit',
+      partDe: 'de la famille', clic: cats.length >= 2 ? '' : (Lp.length > 12 ? 'les 12 plus gros chiffres · ' : '') + 'un clic sur une ligne ouvre le produit',
+      lignes: lignesF, total: ligneT(P, { nom: 'La famille', v: fam.v, q: fam.q, vp: fam.vp, qp: fam.qp }, fam.produits, '') });
+    return res + semF + `<div class="an-qs">${q1}${q2}${q3}${q4}${q5}${q6}${q7}${q8}</div>`;
   }
 
   /* --- la page --------------------------------------------------------------------------------------------------------- */
   /** Le choix de la période (15/11/2026) : le type, ‹ et › pour la période d'avant ou d'après, les deux dates d'une plage. */
   function choixPeriode() {
     const b = PER(), auj = iso(new Date()), p = st.per;
-    const suivante = (() => { const x = { ...p }; const g = st.per; st.per = x; decaler(1); const du = PER().du; st.per = g; return du <= auj; })();
+    // La période d'après existe si elle a commencé ; « 12 semaines » ne prend que des semaines closes : elle doit être finie.
+    const suivante = (() => { const x = { ...p }; const g = st.per; st.per = x; decaler(1); const B = PER(); st.per = g; return p.type === 'sem12' ? B.au < auj : B.du <= auj; })();
     return `<div class="an-pers"><div class="an-seg an-seg--p" role="group" aria-label="La période">${TYPES.map(([t, l]) => `<button type="button" data-per="${t}" class="${p.type === t ? 'on' : ''}">${l}</button>`).join('')}</div>
       ${p.type === 'plage' ? `<label class="an-date">du <input type="date" data-plage="du" value="${esc(p.du)}" max="${auj}"></label><label class="an-date">au <input type="date" data-plage="au" value="${esc(p.au)}" max="${auj}"></label>` : ''}
       <span class="an-nav"><button type="button" class="an-btn an-btn--p" data-pas="-1" aria-label="La période d’avant">‹</button><b>${esc(b.lib)}</b><button type="button" class="an-btn an-btn--p" data-pas="1" aria-label="La période d’après"${suivante ? '' : ' disabled'}>›</button></span>
@@ -592,8 +709,15 @@
   }
   function brancher(el) {
     el.addEventListener('click', e => {
-      const t = e.target.closest('[data-pid],[data-groupe],[data-retour],[data-jour],[data-per],[data-pas]');
+      const t = e.target.closest('[data-pid],[data-groupe],[data-retour],[data-jour],[data-per],[data-pas],[data-semm],[data-semvu]');
       if (!t || !el.contains(t)) { return; }
+      if (t.dataset.semm) { st.semM = t.dataset.semm; rendre(); return; }
+      if (t.dataset.semvu != null) {
+        const c = t.closest('[data-semctx]').dataset.semctx, nm = t.dataset.semvu;
+        const vus = st.semVus[c] || [...t.parentNode.querySelectorAll('[data-semvu].on')].map(b => b.dataset.semvu);
+        st.semVus[c] = vus.includes(nm) ? vus.filter(x => x !== nm) : vus.concat(nm);
+        rendre(); return;
+      }
       if (t.dataset.per) {
         const p = st.per; if (p.type === t.dataset.per) { return; }
         // Une plage part de la période affichée ; les autres types gardent la date du jour comme repère.

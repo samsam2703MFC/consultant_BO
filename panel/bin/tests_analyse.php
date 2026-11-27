@@ -59,5 +59,25 @@ echo "Famille\n";
 verifie('premier segment du groupe', daGroupeDe('Viennoiserie Ind.', ['Viennoiserie Ind.' => 'Viennoiserie · Individuelle']) === 'Viennoiserie');
 verifie('catégorie inconnue : Autres', daGroupeDe('?', []) === 'Autres');
 
+echo "Cumuls par famille et par catégorie\n";
+$X = [
+    1 => ['cat' => 'Pain', 'groupe' => 'Boulangerie', 'v' => [100.0, 110.0, 120.0], 'q' => [40.0, 44.0, 48.0], 'vp' => 300.0, 'qp' => 120.0],
+    2 => ['cat' => 'Petite Boulangerie', 'groupe' => 'Boulangerie', 'v' => [50.0, 50.0, 50.0], 'q' => [100.0, 100.0, 100.0], 'vp' => 150.0, 'qp' => 300.0],
+    3 => ['cat' => 'Pain', 'groupe' => 'Boulangerie', 'v' => [0.0, 0.0, 0.0], 'q' => [0.0, 0.0, 0.0], 'vp' => 60.0, 'qp' => 20.0],
+    4 => ['cat' => 'Viennoiserie Ind.', 'groupe' => 'Viennoiserie', 'v' => [200.0, 210.0, 190.0], 'q' => [150.0, 160.0, 140.0], 'vp' => 600.0, 'qp' => 450.0],
+];
+$G = daCumuls($X, 'groupe', 3, 21, 21);
+verifie('les familles, du plus gros chiffre au plus petit', array_column($G, 'nom') === ['Viennoiserie', 'Boulangerie'], json_encode(array_column($G, 'nom')));
+verifie('une famille : ses tranches additionnées', $G[1]['v'] === [150.0, 160.0, 170.0] && $G[1]['q'] === [140.0, 144.0, 148.0], json_encode($G[1]));
+verifie('une famille : la référence arrêtée compte avant, pas dans n', $G[1]['vp'] === 510.0 && $G[1]['n'] === 2, json_encode($G[1]));
+verifie('une famille : 480 € face à 510 €, en baisse de 5,9 %', abs($G[1]['evo']['pct'] - (-5.9)) < 0.05, json_encode($G[1]['evo']));
+$C = daCumuls($X, 'cat', 3, 21, 21);
+$pain = array_values(array_filter($C, static fn ($c) => $c['nom'] === 'Pain'))[0] ?? null;
+verifie('une catégorie garde sa famille', $pain !== null && $pain['groupe'] === 'Boulangerie' && !isset($G[0]['groupe']), json_encode($pain));
+verifie('une catégorie : 330 € face à 360 € (dont 60 € d’une référence arrêtée)', $pain !== null && $pain['vp'] === 360.0 && abs($pain['evo']['pct'] - (-8.3)) < 0.05, json_encode($pain));
+verifie('trois catégories, sans ligne vide', count($C) === 3);
+$C = daCumuls([5 => ['cat' => 'Noël', 'groupe' => 'Fêtes & Occasions', 'v' => [0.0, 0.0], 'q' => [0.0, 0.0], 'vp' => 80.0, 'qp' => 4.0]], 'cat', 2, 14, 14);
+verifie('une catégorie vendue seulement avant : pas de ligne', $C === []);
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

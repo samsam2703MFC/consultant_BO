@@ -15,7 +15,8 @@ declare(strict_types=1);
  *   GET /dashboard/analyse/reseau?shop=4&du=…&au=…&pid=1610006 | &groupe=Viennoiserie
  *   GET /dashboard/analyse/mois?shop=4&pids=1610006,1610004
  *   GET /dashboard/analyse/jours?shop=4&pid=1610006[&au=…]
- * La période : semaine, mois, trimestre, année, 13 semaines ou du … au ; elle se compare à la période d'avant (prec), au jour.
+ * La période : semaine, mois, trimestre, année, 12 semaines closes (27/11/2026), 13 semaines ou du … au ; elle se compare à la
+ * période d'avant (prec), au jour.
  *
  * Les autres magasins n'y ont ni nom, ni identifiant, ni volume ni chiffre : seulement des pièces rapportées à leur
  * chiffre (« pour 10 k€ ») et des évolutions. De quoi se comparer à taille égale, pas de quoi lire le chiffre d'un voisin.
@@ -124,10 +125,41 @@ function daEvoPeriode(float $v, float $q, int $j, float $vp, float $qp, int $jp,
 }
 
 /**
+ * Les produits de la période cumulés par famille ($cle = 'groupe') ou par catégorie ('cat', avec sa famille), tranche par
+ * tranche, et leur évolution face à la période d'avant (daEvoPeriode). Les produits vendus seulement sur la période d'avant
+ * y comptent : une référence arrêtée fait baisser sa catégorie. n : les références vendues sur la période. Une ligne sans
+ * chiffre sur la période n'est pas rendue ; du plus gros chiffre au plus petit.
+ * $X : [pid => ['cat', 'groupe', 'v' => [n], 'q' => [n], 'vp', 'qp']].
+ */
+function daCumuls(array $X, string $cle, int $n, int $j, int $jp): array
+{
+    $G = [];
+    foreach ($X as $x) {
+        $k = (string) $x[$cle];
+        if (!isset($G[$k])) {
+            $G[$k] = ['nom' => $k] + ($cle === 'cat' ? ['groupe' => (string) $x['groupe']] : [])
+                + ['n' => 0, 'v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0), 'vp' => 0.0, 'qp' => 0.0];
+        }
+        if (array_sum($x['v']) > 0 || array_sum($x['q']) > 0) { $G[$k]['n']++; }
+        for ($i = 0; $i < $n; $i++) { $G[$k]['v'][$i] += $x['v'][$i]; $G[$k]['q'][$i] += $x['q'][$i]; }
+        $G[$k]['vp'] += $x['vp']; $G[$k]['qp'] += $x['qp'];
+    }
+    $out = [];
+    foreach ($G as $g) {
+        if (array_sum($g['v']) <= 0) { continue; }
+        $out[] = array_merge($g, ['v' => array_map(static fn ($a) => round($a, 2), $g['v']), 'q' => array_map(static fn ($a) => round($a, 1), $g['q']),
+            'vp' => round($g['vp'], 2), 'qp' => round($g['qp'], 1), 'evo' => daEvoPeriode(array_sum($g['v']), array_sum($g['q']), $j, $g['vp'], $g['qp'], $jp, $g['v'])]);
+    }
+    usort($out, static fn ($a, $b) => array_sum($b['v']) <=> array_sum($a['v']));
+    return $out;
+}
+
+/**
  * GET /dashboard/analyse/periode?shop=4&du=2026-10-01&au=2026-10-31[&prec=2026-09-01] — le magasin sur une période :
  * chaque produit vendu (sa catégorie, sa famille), ses pièces et son chiffre tranche par tranche (des jours, des semaines
  * ou des mois, daDecoupe), ses totaux sur la période d'avant, son évolution (daEvoPeriode), son prix et sa recette du
- * catalogue ; les familles et le magasin entier de même. Aucun autre magasin n'est lu.
+ * catalogue ; les familles (les catégories principales du catalogue), les catégories (27/11/2026, la page d'une famille
+ * semaine par semaine) et le magasin entier de même (daCumuls). Aucun autre magasin n'est lu.
  */
 function ep_dashboard_analyse_periode(): array
 {
@@ -159,36 +191,28 @@ function ep_dashboard_analyse_periode(): array
         foreach ($p as $id => $x) { $id = (int) $id; $ajoute($id, $x); $X[$id]['v'][$i] += (float) ($x[3] ?? 0); $X[$id]['q'][$i] += (float) ($x[2] ?? 0); }
     }
     foreach (is_array($prec) ? $prec : [] as $id => $x) { $id = (int) $id; $ajoute($id, $x); $X[$id]['vp'] += (float) ($x[3] ?? 0); $X[$id]['qp'] += (float) ($x[2] ?? 0); }
-    $produits = []; $G = []; $tot = ['v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0), 'vp' => 0.0, 'qp' => 0.0];
+    $produits = []; $tot = ['v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0), 'vp' => 0.0, 'qp' => 0.0];
     foreach ($X as $id => $x) {
         $v = array_sum($x['v']); $q = array_sum($x['q']);
-        $g = $x['groupe'];
-        $G[$g] = $G[$g] ?? ['nom' => $g, 'n' => 0, 'v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0), 'vp' => 0.0, 'qp' => 0.0];
-        if ($v > 0 || $q > 0) { $G[$g]['n']++; }
-        for ($i = 0; $i < $n; $i++) { $G[$g]['v'][$i] += $x['v'][$i]; $G[$g]['q'][$i] += $x['q'][$i]; $tot['v'][$i] += $x['v'][$i]; $tot['q'][$i] += $x['q'][$i]; }
-        $G[$g]['vp'] += $x['vp']; $G[$g]['qp'] += $x['qp']; $tot['vp'] += $x['vp']; $tot['qp'] += $x['qp'];
+        for ($i = 0; $i < $n; $i++) { $tot['v'][$i] += $x['v'][$i]; $tot['q'][$i] += $x['q'][$i]; }
+        $tot['vp'] += $x['vp']; $tot['qp'] += $x['qp'];
         if ($v <= 0 && $q <= 0) { continue; }
         $c = $prix[$id] ?? null;
-        $produits[] = ['id' => $id, 'nom' => $x['nom'], 'cat' => $x['cat'], 'groupe' => $g,
+        $produits[] = ['id' => $id, 'nom' => $x['nom'], 'cat' => $x['cat'], 'groupe' => $x['groupe'],
             'v' => array_map(static fn ($a) => round($a, 2), $x['v']), 'q' => array_map(static fn ($a) => round($a, 1), $x['q']),
             'vp' => round($x['vp'], 2), 'qp' => round($x['qp'], 1), 'evo' => daEvoPeriode($v, $q, $j, $x['vp'], $x['qp'], $jp, $x['v']),
             'prix' => $c !== null && $c['ttc'] !== null ? round($c['ttc'], 2) : null, 'prixHt' => $c !== null && $c['ht'] !== null ? round($c['ht'], 2) : null,
             'cout' => $c !== null && $c['cout'] !== null ? round($c['cout'], 3) : null];
     }
     usort($produits, static fn ($a, $b) => array_sum($b['v']) <=> array_sum($a['v']));
-    $groupes = [];
-    foreach ($G as $g) {
-        if (array_sum($g['v']) <= 0) { continue; }
-        $groupes[] = ['nom' => $g['nom'], 'n' => $g['n'], 'v' => array_map(static fn ($a) => round($a, 2), $g['v']), 'q' => array_map(static fn ($a) => round($a, 1), $g['q']),
-            'vp' => round($g['vp'], 2), 'qp' => round($g['qp'], 1), 'evo' => daEvoPeriode(array_sum($g['v']), array_sum($g['q']), $j, $g['vp'], $g['qp'], $jp, $g['v'])];
-    }
-    usort($groupes, static fn ($a, $b) => array_sum($b['v']) <=> array_sum($a['v']));
+    $groupes = daCumuls($X, 'groupe', $n, $j, $jp);
+    $categories = daCumuls($X, 'cat', $n, $j, $jp);
     return ['shop' => $sid, 'du' => $du, 'au' => $au, 'jours' => $j, 'pas' => $pas, 'enCours' => $au === date('Y-m-d'),
         'tranches' => array_map(static fn ($t) => [$t[0], $t[1]], $T), 'muettes' => $muettes,
         'precedent' => ['du' => $pDu, 'au' => $pAu, 'jours' => $jp, 'lu' => is_array($prec)],
         'total' => ['v' => array_map(static fn ($a) => round($a, 2), $tot['v']), 'q' => array_map(static fn ($a) => round($a, 1), $tot['q']), 'vp' => round($tot['vp'], 2), 'qp' => round($tot['qp'], 1),
             'evo' => daEvoPeriode(array_sum($tot['v']), array_sum($tot['q']), $j, $tot['vp'], $tot['qp'], $jp, $tot['v'])],
-        'groupes' => $groupes, 'produits' => $produits,
+        'groupes' => $groupes, 'categories' => $categories, 'produits' => $produits,
         'regle' => 'évolution : la période face à la période d’avant, au jour ; en hausse à + 8 % et plus, en baisse à − 8 % et moins',
         'source' => 'ventes du panel (product-category-groups) du magasin, tranche par tranche ; prix et recette : products/available'];
 }

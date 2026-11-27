@@ -58,14 +58,16 @@ const arr = (L, f) => L.map(v => f(v));
 
 function periode(q) {
   const L = lirePeriode(q), { n, parT, prec, j, jp } = L;
-  const produits = [], G = {}, tot = { v: Array(n).fill(0), q: Array(n).fill(0), vp: 0, qp: 0 };
+  const produits = [], G = {}, C = {}, tot = { v: Array(n).fill(0), q: Array(n).fill(0), vp: 0, qp: 0 };
   V.P.forEach(p => {
     const v = parT.map(x => (x[p.pid] || {}).v || 0), qq = parT.map(x => (x[p.pid] || {}).q || 0), vp = (prec[p.pid] || {}).v || 0, qp = (prec[p.pid] || {}).q || 0;
     const g = G[p.groupe] || (G[p.groupe] = { nom: p.groupe, n: 0, v: Array(n).fill(0), q: Array(n).fill(0), vp: 0, qp: 0 });
+    // Les catégories (daCumuls 'cat' du serveur, 27/11/2026) : la même chose, avec leur famille.
+    const c = C[p.cat] || (C[p.cat] = { nom: p.cat, groupe: p.groupe, n: 0, v: Array(n).fill(0), q: Array(n).fill(0), vp: 0, qp: 0 });
     const sv = v.reduce((a, x) => a + x, 0), sq = qq.reduce((a, x) => a + x, 0);
-    if (sv > 0 || sq > 0) { g.n++; }
-    for (let i = 0; i < n; i++) { g.v[i] += v[i]; g.q[i] += qq[i]; tot.v[i] += v[i]; tot.q[i] += qq[i]; }
-    g.vp += vp; g.qp += qp; tot.vp += vp; tot.qp += qp;
+    if (sv > 0 || sq > 0) { g.n++; c.n++; }
+    for (let i = 0; i < n; i++) { g.v[i] += v[i]; g.q[i] += qq[i]; c.v[i] += v[i]; c.q[i] += qq[i]; tot.v[i] += v[i]; tot.q[i] += qq[i]; }
+    g.vp += vp; g.qp += qp; c.vp += vp; c.qp += qp; tot.vp += vp; tot.qp += qp;
     if (sv <= 0 && sq <= 0) { return; }
     produits.push({ id: p.pid, nom: p.nom, cat: p.cat, groupe: p.groupe, v: arr(v, r2), q: arr(qq, r1), vp: r2(vp), qp: r1(qp), evo: evo(sv, sq, j, vp, qp, jp, v),
       prix: p.prix, prixHt: V.prixHt(p), cout: V.cout(p) });
@@ -74,10 +76,12 @@ function periode(q) {
   produits.sort((a, b) => somme(b.v) - somme(a.v));
   const groupes = Object.values(G).filter(g => somme(g.v) > 0).map(g => ({ nom: g.nom, n: g.n, v: arr(g.v, r2), q: arr(g.q, r1), vp: r2(g.vp), qp: r1(g.qp),
     evo: evo(somme(g.v), somme(g.q), j, g.vp, g.qp, jp, g.v) })).sort((a, b) => somme(b.v) - somme(a.v));
+  const categories = Object.values(C).filter(c => somme(c.v) > 0).map(c => ({ nom: c.nom, groupe: c.groupe, n: c.n, v: arr(c.v, r2), q: arr(c.q, r1), vp: r2(c.vp), qp: r1(c.qp),
+    evo: evo(somme(c.v), somme(c.q), j, c.vp, c.qp, jp, c.v) })).sort((a, b) => somme(b.v) - somme(a.v));
   return { shop: +D.SHOP, du: L.du, au: L.au, jours: j, pas: L.pas, enCours: L.au === D.AUJ, tranches: L.T, muettes: [],
     precedent: { du: L.pDu, au: L.pAu, jours: jp, lu: true },
     total: { v: arr(tot.v, r2), q: arr(tot.q, r1), vp: r2(tot.vp), qp: r1(tot.qp), evo: evo(somme(tot.v), somme(tot.q), j, tot.vp, tot.qp, jp, tot.v) },
-    groupes, produits,
+    groupes, categories, produits,
     regle: 'évolution : la période face à la période d’avant, au jour ; en hausse à + 8 % et plus, en baisse à − 8 % et moins',
     source: 'ventes du panel (product-category-groups) du magasin, tranche par tranche ; prix et recette : products/available' };
 }

@@ -48,6 +48,11 @@ l'API dit, route par route, le fichier et la fonction qui la servent.
   autres magasins à taille
   égale, sans nom ni volume (`/dashboard/analyse/reseau`), les produits mois par mois depuis l'ouverture (`/mois`), un produit
   jour par jour avec ses invendus (`/jours`) ; la règle de marge commune (`daMarge`). Écran : `panel/public/dashboard/analyse.js`.
+  Le 27/11/2026 (« je dois pouvoir analyser avec 12 semaines par catégorie principale ») : la période « 12 semaines » (les 12
+  dernières semaines closes, lundi → dimanche) ; les catégories principales — les groupes du catalogue TF Buddy, les familles
+  de la page — semaine par semaine dans l'entrée (chiffre, pièces, marge réalisée, part ; tendance des 4 dernières semaines
+  face aux 4 d'avant ; courbe des lignes cochées), et dans la page d'une famille ses catégories, que `/periode` rend
+  désormais (`categories`, cumulées par `daCumuls` comme les familles).
   Tests : `php bin/tests_analyse.php`.
 
 ## Les vidéos d'instruction (23/11/2026)

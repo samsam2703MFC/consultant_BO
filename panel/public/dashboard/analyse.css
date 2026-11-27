@@ -83,6 +83,33 @@
 .an-racine .an-t--mo td { padding: 7px 6px; font-size: 12.5px; }
 .an-racine .an-t--mo td:first-child { color: var(--muted-2); white-space: nowrap; }
 
+/* les catégories principales, tranche par tranche (27/11/2026, « analyser avec 12 semaines par catégorie principale ») :
+   une ligne par catégorie, une colonne par tranche ; la case teintée de --chart-real (une intensité sans état, §7.13), la
+   tranche en cours hachurée ; la première colonne reste en place quand le tableau défile de côté. Pas de filet vertical
+   (§7.8) : les colonnes de synthèse se détachent par leur marge. */
+.an-racine .an-sem-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-bottom: 10px; }
+.an-racine .an-sem-h h3 { margin: 0; }
+.an-racine .an-seg--m { margin: 0; }
+.an-racine .an-t--sem { min-width: 940px; font-size: 11.5px; }
+.an-racine .an-t--sem th { padding: 7px 5px; white-space: nowrap; vertical-align: bottom; }
+.an-racine .an-t--sem th small { display: block; margin-top: 2px; font-size: 10px; letter-spacing: 0; text-transform: none; color: var(--muted-2); }
+.an-racine .an-t--sem td { padding: 6px 5px; }
+.an-racine .an-t--sem td.d1 small { display: block; font-size: 10.5px; color: var(--muted-2); }
+.an-racine .an-t--sem td.c { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.an-racine .an-t--sem td.enc { background: repeating-linear-gradient(135deg, transparent 0 4px, rgba(34, 34, 34, 0.09) 4px 5px); color: var(--muted-2); }
+.an-racine .an-t--sem .d1 { padding-left: 14px; }
+.an-racine .an-t--sem td.nm span { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.an-racine .an-t--sem td.nm i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.an-racine .an-t--sem th:first-child, .an-racine .an-t--sem td:first-child { position: sticky; left: 0; z-index: 1; min-width: 140px; background: #fff; }
+.an-racine .an-t--sem th:first-child { background: var(--table-head); }
+.an-racine .an-t--sem tr.tot td:first-child { background: var(--total-line); }
+.an-racine .an-t--sem tr.an-lien:hover td:first-child { background: #fbf6f7; }
+.an-racine .an-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 8px; }
+.an-racine .an-chips button { display: inline-flex; align-items: center; gap: 7px; margin: 0; padding: 5px 10px; border: 1px solid rgba(34, 34, 34, 0.14); border-radius: 8px; background: #fff; font: inherit; font-size: 12px; color: var(--muted-2); cursor: pointer; }
+.an-racine .an-chips button i { width: 9px; height: 9px; border-radius: 2px; flex: none; opacity: 0.35; }
+.an-racine .an-chips button.on { padding: 4px 9px; border: 2px solid var(--accent); background: rgba(141, 29, 44, 0.05); color: var(--ink); }
+.an-racine .an-chips button.on i { opacity: 1; }
+
 /* les flèches d'évolution, à la place des mini-graphiques */
 .an-racine .an-f { white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 12px; }
 /* L'écart à la période d'avant (§7.13) : vert au-dessus, or en dessous (le texte or : --prize-ink, lisible à 12 px). */
