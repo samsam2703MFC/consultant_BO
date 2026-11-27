@@ -1769,6 +1769,106 @@
       "tourne_le": "2026-11-26"
     },
     {
+      "id": "equipe-absences",
+      "genre": "tuto",
+      "depuis": "2026-11-27",
+      "niveau": "onglet",
+      "parent": "equipe-horaires",
+      "titre": "Absences, congés et remplacements",
+      "resume": "Sous contrat de travail, une absence payée (maladie, congé payé, congé de circonstance) garde son coût et sort de la présence ; un remplaçant aux mêmes heures ajoute le sien.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-19-absences.mp4",
+      "debut": 0,
+      "fin": 4.91,
+      "affiche": "equipe-absences.jpg",
+      "duree": "5 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "panel/src/equipe_absences.php"
+      ],
+      "tourne_sur": "21ea5f583fc9e8c0b098f8ee57640bbf91e55f4b",
+      "tourne_le": "2026-11-27"
+    },
+    {
+      "id": "equipe-absente",
+      "genre": "tuto",
+      "depuis": "2026-11-27",
+      "niveau": "fonction",
+      "parent": "equipe-absences",
+      "titre": "Absente ou en congé",
+      "resume": "Depuis son service : le motif, la période, et qui la remplace aux mêmes heures, chacun avec ce qu’il ajoute au budget.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-19-absences.mp4",
+      "debut": 4.91,
+      "fin": 70.02,
+      "affiche": "equipe-absente.jpg",
+      "duree": "1 min 05",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "panel/src/equipe_absences.php"
+      ],
+      "tourne_sur": "21ea5f583fc9e8c0b098f8ee57640bbf91e55f4b",
+      "tourne_le": "2026-11-27"
+    },
+    {
+      "id": "equipe-conge",
+      "genre": "tuto",
+      "depuis": "2026-11-27",
+      "niveau": "fonction",
+      "parent": "equipe-absences",
+      "titre": "Poser un congé payé",
+      "resume": "« Absence ou congé » dans la barre : la personne, du … au … ; chaque jour où elle travaillait devient congé payé, avec son remplaçant.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-19-absences.mp4",
+      "debut": 70.02,
+      "fin": 102.23,
+      "affiche": "equipe-conge.jpg",
+      "duree": "32 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "panel/src/equipe_absences.php"
+      ],
+      "tourne_sur": "21ea5f583fc9e8c0b098f8ee57640bbf91e55f4b",
+      "tourne_le": "2026-11-27"
+    },
+    {
+      "id": "equipe-exterieur",
+      "genre": "tuto",
+      "depuis": "2026-11-27",
+      "niveau": "fonction",
+      "parent": "equipe-absences",
+      "titre": "Un remplaçant extérieur",
+      "resume": "Un intérimaire ou un extra : son nom et son taux horaire ; son coût s’ajoute au budget, sa facture passe par les frais.",
+      "vues": [
+        "equipe"
+      ],
+      "fichier": "02-19-absences.mp4",
+      "debut": 102.23,
+      "fin": 140.37,
+      "affiche": "equipe-exterieur.jpg",
+      "duree": "38 s",
+      "sources": [
+        "panel/public/dashboard/equipe.js",
+        "panel/public/dashboard/equipe.css",
+        "panel/src/equipe.php",
+        "panel/src/equipe_absences.php"
+      ],
+      "tourne_sur": "21ea5f583fc9e8c0b098f8ee57640bbf91e55f4b",
+      "tourne_le": "2026-11-27"
+    },
+    {
       "id": "formation-horaires",
       "genre": "formation",
       "titre": "Formation : construire le planning de la semaine",
