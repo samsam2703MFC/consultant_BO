@@ -735,6 +735,8 @@ verifie('les primes : les heures d’un service d’absence payée sont écarté
     str_contains($sql, 'NOT EXISTS') && str_contains($sql, 'eqa.employe_id = s.id_employee') && str_contains($sql, 'eqa.jour = s.work_date') && str_contains($sql, 'eqa.de = LEFT(s.start_hour, 5)') && str_contains($sql, 'eqa.payee = 1'), $sql);
 $src = (string) file_get_contents(__DIR__ . '/../src/primes.php');
 verifie('les primes : les trois lectures des heures passent par la clause', substr_count($src, "' . \$sansAbs . '") === 3);
+$srcV = (string) file_get_contents(__DIR__ . '/../../consultant/src/ventes.php');
+verifie('le consultant : les heures du CA par heure passent par la clause', substr_count($srcV, "' . \$sansAbs . '") === 1 && str_contains($srcV, "eqaSansAbsencesSql('franchisee_employee_schedule')"));
 $ep = (string) file_get_contents(__DIR__ . '/../../shared/src/endpoints.php');
 verifie('l’Opérationnel : une absence ne compte ni en poste ni dans le partage des ventes ni dans les heures, son coût reste',
     str_contains($ep, "if (empty(\$q9['absence']) && \$q9['hD']") && str_contains($ep, "!empty(\$p9['absence']) || \$p9['hD']") && str_contains($ep, "if (empty(\$p9['absence'])) { \$hPlan += \$p9['h']; }") && str_contains($ep, '$labPlan += $cout;'));

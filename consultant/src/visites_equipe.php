@@ -9,6 +9,10 @@ declare(strict_types=1);
  * /shops/{id}/schedule?date=, la même que l'Opérationnel du dashboard ; ses postes de travail viennent de
  * /shops/{id}/employees. Si le panel ne répond pas : la table synchronisée (franchisee_employee_schedule), marquée comme
  * telle. Le consultant note chaque personne vue ; la note se garde sur la visite (con_visite.personnel, viPersonnel).
+ *
+ * Les absences de Mon équipe (27/11/2026, Sam : « fais aussi le consultant » ; panel/src/equipe_absences.php) : le service
+ * d'une absence payée reste au planning du panel ; la personne n'est pas là. Elle est rendue avec son motif (`absence`) et
+ * sans créneau de présence, montrée à part, pas à noter.
  */
 
 /** Les trois contrôles éclair de chaque personne : clé, libellé, ce qu'on regarde. */
@@ -49,7 +53,7 @@ function viEquipeJour(int $shop, string $date): array
                 if ($nom === '') { $nom = trim(((string) ($r['name'] ?? '')) . ' ' . ((string) ($r['surname'] ?? ''))); }
                 $emp = (int) ($r['id_employee'] ?? 0);
                 $personnes[] = ['emp' => $emp, 'nom' => $nom !== '' ? $nom : 'Employé ' . $emp, 'debut' => substr((string) ($r['start_hour'] ?? ''), 0, 5),
-                    'fin' => substr((string) ($r['end_hour'] ?? ''), 0, 5), 'postes' => $postes[$emp] ?? []];
+                    'fin' => substr((string) ($r['end_hour'] ?? ''), 0, 5), 'postes' => $postes[$emp] ?? [], 'sid' => (int) ($r['id_schedule'] ?? $r['id'] ?? 0)];
             }
         } else { $erreur = 'planning du panel indisponible'; }
     }
@@ -64,16 +68,22 @@ function viEquipeJour(int $shop, string $date): array
             }
         } catch (Throwable $e) { $erreur = $erreur ?? 'planning illisible'; }
     }
-    // Une personne à deux services dans la journée : une seule ligne, ses deux créneaux.
+    // Les absences payées du jour (Mon équipe) : par service, sinon par personne et heure de début.
+    $abs = function_exists('eqaAbsencesDuJour') ? eqaAbsencesDuJour([$shop], $date) : ['id' => [], 'cle' => []];
+    // Une personne à deux services dans la journée : une seule ligne, ses deux créneaux ; un service d'absence n'est pas
+    // un créneau de présence, il devient son motif (et ses heures, `absHeures`).
     $par = [];
     foreach ($personnes as $p) {
         if ($p['debut'] === '' || $p['fin'] === '') { continue; }
         $k = $p['emp'] > 0 ? 'e' . $p['emp'] : 'n' . $p['nom'];
-        if (isset($par[$k])) { $par[$k]['creneaux'][] = [$p['debut'], $p['fin']]; continue; }
-        $par[$k] = ['emp' => $p['emp'], 'nom' => $p['nom'], 'postes' => $p['postes'], 'creneaux' => [[$p['debut'], $p['fin']]]];
+        $par[$k] ??= ['emp' => $p['emp'], 'nom' => $p['nom'], 'postes' => $p['postes'], 'creneaux' => []];
+        $motif = $abs['id'][(int) ($p['sid'] ?? 0)] ?? ($abs['cle'][(string) $shop][$p['emp'] . '|' . $p['debut']] ?? null);
+        if ($motif !== null) { $par[$k]['absence'] = $motif; $par[$k]['absHeures'][] = [$p['debut'], $p['fin']]; continue; }
+        $par[$k]['creneaux'][] = [$p['debut'], $p['fin']];
     }
+    foreach ($par as $k => $p) { if ($p['creneaux'] !== []) { unset($par[$k]['absence'], $par[$k]['absHeures']); } }   // présente à un autre service : présente
     $v = ['source' => $source, 'erreur' => $source === null ? $erreur : null, 'personnes' => array_values($par)];
-    usort($v['personnes'], static fn ($a, $b) => [$a['creneaux'][0][0], $a['nom']] <=> [$b['creneaux'][0][0], $b['nom']]);
+    usort($v['personnes'], static fn ($a, $b) => [isset($a['absence']), ($a['creneaux'][0][0] ?? $a['absHeures'][0][0] ?? ''), $a['nom']] <=> [isset($b['absence']), ($b['creneaux'][0][0] ?? $b['absHeures'][0][0] ?? ''), $b['nom']]);
     if (function_exists('motCacheEcrire')) { motCacheEcrire($cle, ['t' => time(), 'v' => $v]); }
     return $v;
 }

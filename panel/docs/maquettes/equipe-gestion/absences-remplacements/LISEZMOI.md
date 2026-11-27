@@ -106,6 +106,14 @@ reste au planning du panel ; ces deux écrans ne le comptent plus comme du trava
   CA par heure moyen) écartent les services d'une absence payée (`eqaSansAbsencesSql`) : la condition d'heures et le CA par
   heure se comptent sur les heures travaillées.
 
+**Le consultant** (27/11/2026, Sam : « fais aussi le consultant et mets en ligne ») :
+- **L'équipe de la visite** (`viEquipeJour`, `consultant/src/visites_equipe.php` ; `visites.js`) : une personne en absence payée
+  n'a plus de créneau de présence ; elle est rendue avec son motif (`absence`, `absHeures`), rangée en dernier, montrée sous
+  « Aussi au planning aujourd'hui » (« en congé payé », « absente ce jour (Mon équipe) ») et pas à noter ; présente à un autre
+  service du jour, elle reste présente. Traduit en néerlandais (`visites-nl.js`).
+- **Les ventes** (`consultant/src/ventes.php`) : les heures du CA par heure (et des quatre créneaux) écartent les services d'une
+  absence payée (`eqaSansAbsencesSql`).
+
 ## La suite (27/11/2026) : l'app employés, le salaire garanti
 
 Sam : « fais l'app employés aussi » ; sur le coût d'une maladie qui dépend du statut et de la durée : « oui » ; sur le solde des
