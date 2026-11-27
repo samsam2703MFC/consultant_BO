@@ -952,6 +952,10 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   Vendre et deviennent le troisième onglet de Mon équipe (Responsabilités, Planning, Primes) ; Commandes entre dans La
   journée, Clients dans Vendre. Parties 2 et 35 ; SOP 5.4 (le chemin des Primes, même geste). Captures dash-entete,
   dash-frise, dash-primes. NL à relire. Pas de partie pour Commandes, Clients ni la fiche d'une personne : à décider.
+- **27/11/2026 — rien à encoder** (dashboard jusqu'à `312efae6` du 26/11, 56 commits depuis `555a9c3d`) : vidéos
+  d'instruction, Clients › Bureaux, connexion TF Buddy, Coffre-fort, corrections (Mois : le dernier jour du mois compte ;
+  Concurrence : changer de sujet ferme le relevé ; Opérationnel : pluriels, étiquettes) sans effet sur le texte.
+  ART-PIL-01 v1.11 et SOP-PIL-01 v1.8 inchangées.
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
