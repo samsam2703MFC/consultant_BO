@@ -117,7 +117,7 @@ textarea.of-in { resize: vertical; line-height: 1.45; }
 .doc-a4 .doc__totals { width: 46%; margin: 14px 0 0 auto; }
 .doc-a4 .doc__totals td { border: 0; padding: 4px 8px; }
 .doc-a4 .doc__totals .is-due td { padding-top: 9px; border-top: 1px solid #e6e0d8; font-size: 13px; font-weight: 700; color: #8D1D2C; }
-.doc-a4 .doc__box { border-left: 3px solid #8D1D2C; padding: 2px 0 2px 12px; margin: 24px 0 0; }
+.doc-a4 .doc__box { border: 1px solid #e6e0d8; border-radius: 6px; padding: 10px 12px; margin: 24px 0 0; }
 .doc-a4 .doc__sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 4px; }
 .doc-a4 .doc__sign div { height: 44px; border-bottom: 1px solid #e6e0d8; font-size: 8.5px; letter-spacing: 0.07em; text-transform: uppercase; color: #7a736a; }
 .doc-a4 .doc__foot { position: absolute; left: 54px; right: 54px; bottom: 34px; padding-top: 9px; border-top: 1px solid #e6e0d8; font-size: 8.5px; color: #7a736a; line-height: 1.6; display: flex; justify-content: space-between; gap: 24px; }
