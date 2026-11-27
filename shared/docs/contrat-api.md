@@ -4559,6 +4559,62 @@ maquette `consultant/docs/maquettes/fiche-matiere`. Décision du 14/11 : **tout 
   `/materials/{id}/vat-rates` (ligne du pays `BE` : `country_code`, `vat_rate`) : `POST` avec la ligne lue, son seul taux
   changé, puis relue ; « Annuler » repose l'ancien taux. Si la route ne répond pas, la TVA reste en lecture.
 
+### `/verification/recettes/references` et `/pertes-lignes` — références et pertes des matières, pour tout le réseau (26/11/2026)
+
+Recettes à corriger › Matières premières › *Références et pertes (réseau)* (`consultant/src/verification_references.php`,
+écran `verification-refs-*.js` ; l'écran : `consultant/docs/maquettes/matieres-reference/LISEZMOI.md`). Lien direct :
+`#/verification/recettes?vue=refs&recette={nom ou numéro}`.
+
+    GET  /verification/recettes/references[?rid=|?q=]   → {ok, rid, nom, lignes, compteurs, …} | {ok:false, motif, choix?:[{rid, nom}]}
+         chaque matière de la recette (sous-recettes dépliées), ou de toutes les recettes déjà lues : son prix dans chaque
+         magasin, sa référence et sa perte au panel, et la proposition — prix = la moyenne des magasins qui la chiffrent
+         (prix local ou fournisseur, pas une référence), sinon le prix de marché de consultant/src/data/prix_reference_be.json ;
+         perte = celle du fichier, sinon une perte courante par famille de matière, sinon l'actuelle
+    POST /verification/recettes/references {lignes:[{mid, prix (€ par kg, l ou pièce), perte (%), aligner?}], rid?, apercu?, sansEffet?, compte?}
+         → apercu : {apercu:true, resume, ecritures:[{resume, route, corps}], erreurs}
+         → sinon  : {ok, ecritures, effet (food cost relu avant / après par magasin), pertes, erreurs}
+         PATCH /materials/{id} {reference_unit_price_net, waste_amount_perc}, relu, noté au registre des corrections
+         (« Annuler » remet l'avant) ; `aligner` : un magasin dont le prix propre s'écarte de la référence la reprend
+         (POST /materials/{id}/manual-price, geste `prix`, au registre) ; `sansEffet` : sans relire les coûts (lots de
+         toute la carte). « Rien à changer » quand le panel porte déjà ces prix et ces pertes.
+    POST /verification/recettes/pertes-lignes {depuis, lot (15), apercu?, compte?}
+         → {ok, apercu, total, depuis, fin, suivant: N | null, …}
+         une tranche des recettes de la carte (GET /recipes) : dans chaque recette et sous-recette, la ligne d'une matière
+         qui porte une perte au panel prend cette perte (le coût d'une recette ne lit que la perte de sa ligne) ; l'écran
+         enchaîne les tranches jusqu'à `suivant: null`.
+
+`compte: "admin"` : le compte administrateur du cockpit (Paramètres › ERP ; case de l'écran), ou un jeton administrateur du panel dans `X-Panel-Jeton`. Les prix d'achat des magasins ne sont jamais
+écrasés par la référence : au panel, le prix d'un magasin passe avant elle.
+
+### `/autocontrole/*` — l'autocontrôle qualité des produits : la tablette, les grilles, la fiche produit, la visite (24 et 26/11/2026)
+
+`consultant/src/autocontrole.php` (règles testées par `php consultant/bin/tests_autocontrole.php`). Pages : la tablette
+`autocontrole/?shop=` (`&produit=` ouvre un produit, `&essai=1` enregistre à part, `&role=` : `equipe`, `manager`,
+`franchise`, `consultant`), le siège `autocontrole/grilles.html`, l'onglet **Qualité** de la fiche produit du cockpit,
+l'étape « Le contrôle qualité de 3 produits » de la visite du consultant (la tablette dans un cadre, `&visite=&cadre=1`).
+Accès : `/autocontrole/magasin/…` au franchisé (son magasin) ; le reste au siège.
+
+    GET  /autocontrole/magasin/produits?shop=            les produits du magasin et leur grille
+    GET  /autocontrole/magasin/produit?shop=&produit=    la grille du produit, ses étapes, son planogramme, son historique, ses défauts récurrents
+    POST /autocontrole/magasin/controles {shop, produit, fournee, pieces, auteur, role?, visite?, reponses, photos{etape: data-URL},
+         decision, prevenir, reclamer, essai, client_id?}
+         le bilan et la décision suggérée sont recalculés au serveur sur la grille publiée ; 422 s'il reste un critère
+         obligatoire sans réponse ou une photo obligatoire manquante ; `visite` : la visite doit être celle de ce magasin
+         (404 inconnue, 422 autre magasin), le rôle vaut alors `consultant` par défaut ; un même `client_id` rejoué rend le
+         contrôle déjà enregistré (`deja: true`)
+    GET  /autocontrole/magasin/visite?shop=&visite=      {visite: {id, le} | null, controles} — les contrôles d'une visite (26/11/2026)
+    GET  /autocontrole/magasin/photos/{id}               une photo de contrôle (au magasin du contrôle et au siège)
+    GET|PUT /autocontrole/grilles · POST /autocontrole/grilles/publication   le brouillon des grilles, sa publication aux tablettes
+    GET  /autocontrole/controles?shop=&jours=30&essais=0 les contrôles du réseau ou d'un magasin (92 jours au plus, 500 lignes), et les défauts récurrents
+    GET  /autocontrole/produits/{pid}                    l'onglet Qualité (26/11/2026) : la grille du produit (par mots-clés ou forcée),
+         ses critères mesurés (valeurs de la grille et du produit), son standard, sa photo de référence qualité et celle du
+         catalogue, ses contrôles des 30 derniers jours (hors essais)
+    PUT  /autocontrole/produits/{pid} {categorie: '' | clé, surcharges: {clé: {cible, tolerance, minimum}}, photo: data-URL | null | absent}
+         le réglage du produit, effectif tout de suite (une cible va avec sa tolérance ; photo rangée dans
+         uploads/autocontrole/, null la retire) ; noté au Journal
+
+Tables `con_aq_controle` (dont `visite_id`, 26/11/2026) et `con_aq_photo`. Les contrôles d'une visite entrent dans son rapport.
+
 ### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
 
 Code : `consultant/src/verification_flux.php` ; écrans `#/verification/flux` et `#/verification/fuites`
@@ -6390,6 +6446,31 @@ catalogue ; le dossier de formation (formation continue) reste à un clic. `form
 est dans `ACCES_FRANCHISE`. La page cherche dans le navigateur (sans accents ni capitales : titres, codes, objectifs,
 étapes) ; un document s'ouvre en tiroir par la route publique de la tablette (`GET /formation/sop/tablette/sop/{id}`).
 Tests : `php formation/bin/tests_formation_recherche.php`.
+
+## Formation · Médiathèque : les vidéos filmées (26/11/2026, formation/src/mediatheque.php, table `for_mediatheque_video`)
+
+Le catalogue des manuels (`#/videos`) range les vidéos en collections : *Utilisation du dashboard* (le registre
+`panel/public/dashboard/videos/videos.json`, rien ici), puis les quatre collections des vidéos filmées : `production`
+(Production), `vente` (Vente et comptoir), `hygiene` (Hygiène et sécurité), `ouverture` (Ouverture et fermeture), noms
+en FR et NL. Une vidéo filmée s'ajoute dans le portail de formation, rail › **Médiathèque** › Gérer les vidéos : en
+fichier (MP4, MOV ou WebM, 2 Go au plus, vérifié par sa signature) ou en lien (YouTube, Vimeo, Google Drive, adresse
+https d'un fichier vidéo). Le rail du portail mène aussi à chaque collection du catalogue (« Toute la médiathèque ↗ »,
+« Production ↗ »…). Adresses du catalogue : `#/videos/c/<collection>[/<catégorie>]` (`dashboard` pour la première),
+`#/videos/v/<id>` (une vidéo filmée : `m<id>`), `#/videos/<page du dashboard>`.
+
+| Route | Qui | Corps | Réponse |
+|---|---|---|---|
+| `GET /formation/mediatheque/liste` | magasins et siège | — | `{ok, collections:[{cle, nom:{fr,nl}}], adresse, videos}` — les vidéos publiées |
+| `GET /formation/mediatheque` | siège | — | la même chose, brouillons compris |
+| `POST /formation/mediatheque/videos` · `PUT …/videos/{id}` | siège | `{collection, categorie, titre, titreNl?, resume?, resumeNl?, source: fichier \| lien, fichier?, url?, affiche? (JPEG en data-URL, 3 Mo), dureeS?, publie?, ordre?}` ; en modification, une clé absente reste inchangée | `{ok, video}` ; 422 : collection inconnue, titre manquant, source autre que fichier ou lien |
+| `DELETE /formation/mediatheque/videos/{id}` | siège | — | la vidéo, son fichier et son affiche |
+| `POST /formation/mediatheque/envoi` | siège | `{nom, taille}` | `{jeton}` — un fichier temporaire, hors du site |
+| `PUT /formation/mediatheque/envoi/{jeton}?depuis=N` | siège | les octets (4 Mo au plus par morceau) | `{recu}` |
+| `POST /formation/mediatheque/envoi/{jeton}/fin` | siège | — | `{fichier, taille}` — rangé dans `uploads/formation/videos/`, servi tel quel par Apache |
+
+Une vidéo rendue : `{id, collection, categorie, titre, titreNl, resume, resumeNl, source, fichier, taille, url, lien:
+{type: youtube | vimeo | drive | fichier, id} | null, affiche, dureeS, duree, publie, ordre, creeLe, majLe, par}`.
+Tests : `php formation/bin/tests_mediatheque.php`.
 
 ## Formation · Examens théoriques (26/11/2026, formation/src/examens.php, tables `for_exam_*`)
 
