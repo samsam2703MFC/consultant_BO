@@ -221,3 +221,11 @@ de la semaine ; éteinte, une option ne se montre pas et ses routes sont refusé
 | `ecran-2-planning-jour.png` | le jour, avec la ligne « Tâches des creux » (posées en couleur, à heure fixe en pointillé) |
 | `ecran-24-retirer-de-l-horaire.png` | « Retirer de l’horaire de la semaine » dans la fenêtre d’un service (absent, en congé : tous ses services de la semaine, après confirmation) ; les badges en rectangles aux coins arrondis (« change les badges par des rectangles avec des coins arrondis ») |
 
+
+## Absences, congés et remplacements (maquette, 27/11/2026)
+
+Sam : « lorsqu'une personne est engagée sous un contrat de travail, lorsqu'elle est absente ou en maladie, les frais
+doivent rester et on doit pouvoir, aux mêmes heures, rajouter une tierce personne avec les frais supplémentaires que ça
+apporte. Et congé payé. » Dossier `absences-remplacements/` (son `LISEZMOI.md`) : la semaine avec les absences payées
+(le coût reste, la présence non) et leurs remplaçants, la fenêtre « Absente » et ses remplacements chiffrés, le congé payé
+sur une période. Les absences n'existent pas au panel TF Buddy : elles vivraient au cockpit (`panel_equipe_absence`).
