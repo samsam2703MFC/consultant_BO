@@ -3,7 +3,7 @@
  * wr_bureaux_dev_*) et panel/src/tfb_magasin.php (la connexion du compte TF Buddy du magasin).
  *   GET  /dashboard/clients/particuliers | entreprises | fiche | analyse | bureaux?chemin=…
  *   POST /dashboard/clients/client {action} | tva | bureaux {methode, chemin, corps} | bureaux/pdf
- *   GET|POST /dashboard/bureaux-dev[/questionnaire|/valider|/refuser|/renvoyer|/tournees]
+ *   GET|POST /dashboard/bureaux-dev[/questionnaire|/valider|/refuser|/renvoyer|/effacer|/tournees]
  *   POST /dashboard/tfb/connexion | confirmer | sms | renouveler | deconnexion ; GET /dashboard/tfb/etat
  * Le compte TF Buddy du magasin : la fausse API ne voit pas l'en-tête X-TFB-Jeton ; « connecté » est son état à elle,
  * posé par /dashboard/tfb/confirmer et retiré par /deconnexion. Connecté : les routes du panel répondent (entreprises
@@ -350,7 +350,10 @@ function devEcrire(p, b) {
       personnes: +d.personnes || 0, jours: [], remarque: d.remarque || '', clientId: nextId++, societeId: d.tva ? nextId++ : null,
       bon: promo ? { code: 'BUREAU-' + (4200 + nextDev), texte: promo.description || promo.nom } : null, erreurs: [], officeId: null, traite: null };
     DEV.push(x);
-    return { ok: true, demande: JSON.parse(JSON.stringify(x)) };
+    // « Créer le bureau » depuis une demande hors zone : elle passe « reprise » (bdvHorsZoneReprendre).
+    const hz = b.hors_zone ? DEV.find(y => y.id === +b.hors_zone && y.source === 'hors_zone' && y.statut === 'hors_zone') : null;
+    if (hz) { hz.statut = 'reprise'; hz.d = Object.assign({}, hz.d, { _reprise: x.id }); hz.traite = '2026-11-19 15:41'; }
+    return { ok: true, demande: JSON.parse(JSON.stringify(x)), reprise: !!hz };
   }
   if (p === '/dashboard/bureaux-dev/questionnaire') {
     if (b.promo != null && !PROMOS.some(x => x.id === +b.promo)) { return err(422, 'cette promotion n’a pas de bon dans ce magasin'); }
@@ -361,6 +364,10 @@ function devEcrire(p, b) {
   const x = DEV.find(y => y.id === +b.id);
   if (!x) { return err(404, 'demande introuvable'); }
   if (p === '/dashboard/bureaux-dev/renvoyer') { if (x.d) { x.d._tfbuddy = 'ok'; x.erreurs = []; } return { ok: true, tfbuddy: 'ok' }; }
+  if (p === '/dashboard/bureaux-dev/effacer') {
+    if (x.source !== 'hors_zone') { return err(404, 'demande hors zone introuvable'); }
+    DEV.splice(DEV.indexOf(x), 1); return { ok: true };
+  }
   if (p === '/dashboard/bureaux-dev/refuser') { x.statut = 'refuse'; x.traite = '2026-11-19 15:42'; return { ok: true }; }
   if (p === '/dashboard/bureaux-dev/valider') {
     if (x.statut !== 'a_valider') { return err(409, 'cette demande est déjà traitée'); }

@@ -50,6 +50,8 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   atelierby.be, landing du webshop) part dans TF Buddy (`delivery-interest`) ; une copie reste dans `panel_bureau_dev`
   (source `hors_zone`, route publique `POST /bureau-hors-zone`), au magasin le plus proche choisi par le visiteur. La base
   des zones est celle des tournées que le webshop publie (`/webshop/shops/{n}/delivery-zones`), montrées dans « Ce que voient vos clients ».
+  Sur chaque demande : « Créer le bureau » (« Nouveau bureau en développement » pré-rempli ; la demande passe `reprise`) et
+  la poubelle (`POST /dashboard/bureaux-dev/effacer` : la copie seule, l'original reste dans TF Buddy).
 - **Vidéos d'instruction** (23/11/2026) : le carré du rail, à côté d'Assistant IA (`public/dashboard/tutos.js`), le registre
   `public/dashboard/videos/videos.json`, le tournage `panel/tools/videos/` (données fictives). Une nouvelle fonction du
   dashboard peut y annoncer sa vidéo (genre `nouveau`) ; un écran filmé qui change se retourne. Détail : `src/LISEZMOI.md`.

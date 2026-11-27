@@ -27,6 +27,7 @@
     plus: 'M12 5v14M5 12h14', x: 'M18 6L6 18M6 6l12 12', alerte: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
     camion: 'M1 5h13v11H1zM14 9h4l4 4v3h-8M5.5 18.5a1.8 1.8 0 1 0 0-.01M17.5 18.5a1.8 1.8 0 1 0 0-.01', g: 'M15 18l-6-6 6-6', d: 'M9 18l6-6-6-6',
     cadenas: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4', doc: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
+    corbeille: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14',
   };
   const TYPES = [['standard', 'Standard'], ['vip', 'VIP'], ['restaurant', 'Restaurant'], ['hotel', 'Hôtel'], ['wholesale', 'Gros'], ['other', 'Autre']];
   const MODES = [['delivery', 'Livraison'], ['pickup', 'Magasin'], ['both', 'Les deux']];
@@ -508,26 +509,38 @@
           <td>${esc(t.limite || '—')}${t.preavis ? `<span class="sub">préavis minimum ${nf(t.preavis)} h</span>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return `<div class="pcl-tz">${titre}<div class="pcl-aide">Les tournées que le webshop publie pour ce magasin. La page Livraison au bureau d’atelierby.be et celle du webshop n’affichent que celles-ci.</div>${corps}</div>`;
   }
+  const ORI_HZ = { landing: 'page atelierby.be', webshop: 'page du webshop' };
   /** Les demandes hors zone (27/11/2026, Sam : « une copie de toutes les demandes sur le cockpit ») : chaque « Ma zone
    *  n'est pas dans la liste » des deux pages, rangée à la boutique la plus proche choisie par le visiteur. TF Buddy reçoit
-   *  l'original ; une copie qu'il n'a pas prise se renvoie d'ici. */
-  function blocHorsZone(H) {
-    const B = st.b, ORI = { landing: 'page atelierby.be', webshop: 'page du webshop' };
+   *  l'original ; une copie qu'il n'a pas prise se renvoie d'ici. Deux actions par demande (Sam : « deux actions, Créer
+   *  le bureau et la poubelle ») : « Créer le bureau » (la fenêtre « Nouveau bureau en développement », pré-remplie ; la
+   *  demande passe alors « reprise » et quitte la liste) et la poubelle (la copie effacée du cockpit). */
+  function blocHorsZone(Htout) {
+    const B = st.b, R = Htout.filter(x => x.statut === 'reprise'), H = Htout.filter(x => x.statut !== 'reprise');
     const msg = B.hzMsg ? `<p class="${B.hzMsg.err ? 'error' : 'pcl-ok'}" style="margin:6px 0">${esc(B.hzMsg.err || B.hzMsg.texte)}</p>` : '';
     const tete = `<div class="pcl-lien-titre">Demandes hors zone${H.length ? ` <span class="page-tabs__count">${nf(H.length)}</span>` : ''}</div>
       <div class="pcl-aide">Les bureaux qui ne trouvent pas leur zone sur une page Livraison au bureau et choisissent ce magasin comme le plus proche. L’original part dans TF Buddy ; la copie reste ici 90 jours.</div>`;
-    if (!H.length) { return `<div class="pcl-tz">${tete}${msg}</div>`; }
+    const voirR = R.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="hz-reprises">${B.hzReprises ? 'masquer' : 'voir'} ${R.length > 1 ? 'les ' + nf(R.length) + ' demandes reprises' : 'la demande reprise'}</button></div>` : '';
+    if (!H.length && !(B.hzReprises && R.length)) { return `<div class="pcl-tz">${tete}${msg}${voirR}</div>`; }
     const km = v => v != null ? String(v).replace('.', ',') + ' km du magasin' : '';
+    const occupe = x => B.hzBusy === x.id ? ' disabled' : '';
+    const poubelle = x => `<button type="button" class="btn btn--sm btn--icon btn--ghost" data-act="hz-effacer" data-id="${x.id}" aria-label="Effacer la demande" title="Effacer la demande"${occupe(x)}>${SVG(ICO.corbeille)}</button>`;
+    const actions = x => {
+      const d = x.d || {};
+      if (x.statut === 'reprise') { return `<span class="pcl-hz-acts"><span class="chip chip--ok">reprise</span>${d._reprise ? `<button type="button" class="btn btn--sm" data-act="dev-sel" data-id="${esc(d._reprise)}">Ouvrir la demande</button>` : ''}${poubelle(x)}</span>`; }
+      return `<span class="pcl-hz-acts">${d._tfbuddy === 'ok' ? '' : `<button type="button" class="btn btn--sm" data-act="hz-renvoyer" data-id="${x.id}"${occupe(x)}>Renvoyer</button>`}<button type="button" class="btn btn--sm" data-act="hz-creer" data-id="${x.id}"${occupe(x)}>Créer le bureau</button>${poubelle(x)}</span>`;
+    };
     const ligne = x => {
       const d = x.d || {}, ok = d._tfbuddy === 'ok';
-      return `<tr><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(ORI[d.origine] || '')}</span></td>
+      return `<tr${x.statut === 'reprise' ? ' class="pcl-hz-reprise"' : ''}><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(ORI_HZ[d.origine] || '')}</span></td>
         <td>${esc([x.cp, x.ville].filter(Boolean).join(' '))}${d.distance != null ? `<span class="sub">${esc(km(d.distance))}</span>` : ''}</td>
         <td>${esc(x.societe || '—')}${x.personnes ? `<span class="sub">${nf(x.personnes)} personnes</span>` : ''}</td>
         <td>${x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ''}</td>
         <td>${ok ? '<span class="chip chip--ok">reçue</span>' : `<span class="tag-warn" title="${esc(x.erreurs.join(' · '))}">pas reçue</span>`}</td>
-        <td class="num">${ok ? '' : `<button type="button" class="btn btn--sm" data-act="hz-renvoyer" data-id="${x.id}"${B.hzBusy === x.id ? ' disabled' : ''}>Renvoyer</button>`}</td></tr>`;
+        <td class="num">${actions(x)}</td></tr>`;
     };
-    return `<div class="pcl-tz">${tete}${msg}<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Reçue</th><th>Code postal · commune</th><th>Société</th><th>E-mail</th><th>TF Buddy</th><th></th></tr></thead><tbody>${H.map(ligne).join('')}</tbody></table></div></div>`;
+    const L = H.concat(B.hzReprises ? R : []);
+    return `<div class="pcl-tz">${tete}${msg}<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Reçue</th><th>Code postal · commune</th><th>Société</th><th>E-mail</th><th>TF Buddy</th><th></th></tr></thead><tbody>${L.map(ligne).join('')}</tbody></table></div>${voirR}</div>`;
   }
   /** Le tiroir d'une demande : ce qu'elle a créé dans TF Buddy, et la validation (le bureau créé, la personne reliée). */
   function tiroirDemande() {
@@ -829,7 +842,8 @@
     }
     if (m.type === 'dev-nouveau') {
       const q = st.b.dev && st.b.dev.questionnaire, promo = q && q.promo ? (st.b.dev.promos.find(p => p.id === q.promo) || null) : null;
-      return fenetre('Nouveau bureau en développement', `<p class="pcl-aide" style="margin:0 0 6px">La personne et la société se créent dans TF Buddy tout de suite ; le bureau s’ouvre ensuite à la validation.</p>
+      const hz = !!m.f.horsZone;
+      return fenetre(hz ? 'Créer le bureau depuis une demande hors zone' : 'Nouveau bureau en développement', `<p class="pcl-aide" style="margin:0 0 6px">${hz ? 'Complétez après avoir appelé le prospect : la demande ne donne ni nom, ni téléphone, ni adresse. ' : ''}La personne et la société se créent dans TF Buddy tout de suite ; le bureau s’ouvre ensuite à la validation.</p>
         <div class="pcl-form2">${champ('prenom', 'Prénom', { requis: true })}${champ('nom', 'Nom', { requis: true })}${champ('email', 'E-mail', { requis: true, type: 'email' })}${champ('tel', 'Téléphone', { requis: true, type: 'tel' })}
           ${champ('fonction', 'Fonction', { plein: true })}${champ('societe', 'Société', { requis: true })}${champ('tva', 'TVA', { aide: 'BE0123456789' })}
           ${champ('address', 'Adresse du bureau', { requis: true, plein: true, ou: 'm', aide: 'Commencez à taper : TF Buddy propose les adresses' })}${geoBloc('m', m.f)}${champ('postal_code', 'Code postal', { ou: 'm' })}${champ('city', 'Ville', { requis: true, ou: 'm', liste: 'pcl-villes-m' })}${villes('m')}
@@ -966,6 +980,14 @@
       case 'w-logo-retirer': B.w.logo = null; B.w.logoErr = null; rendre(); break;
       case 'geo-place': geoChoisir(a.dataset.cle, a.dataset.id); break;
       case 'dev-traitees': B.devTraitees = !B.devTraitees; rendre(); break;
+      case 'hz-reprises': B.hzReprises = !B.hzReprises; rendre(); break;
+      case 'hz-creer': { const x = B.dev && B.dev.demandes.find(y => y.id === id); if (!x) { break; } const d = x.d || {};
+        ouvrir('dev-nouveau', { prenom: '', nom: '', email: x.email, tel: '', fonction: '', societe: x.societe, tva: '', address: '', postal_code: x.cp, city: x.ville, personnes: x.personnes || '',
+          remarque: 'Demande hors zone reçue le ' + fD(x.le.slice(0, 10)) + (ORI_HZ[d.origine] ? ' (' + ORI_HZ[d.origine] + ')' : ''), bon: true, horsZone: x.id }); break; }
+      case 'hz-effacer': if (window.confirm('Effacer cette demande hors zone ? La copie du cockpit disparaît ; l’original reste dans TF Buddy.')) {
+        B.hzBusy = id; B.hzMsg = null; rendre();
+        envoyer('/dashboard/bureaux-dev/effacer', { id }).then(() => { B.hzMsg = { texte: 'Demande effacée du cockpit.' }; return lireDev(); })
+          .catch(e => { B.hzMsg = { err: e.message }; }).finally(() => { B.hzBusy = null; rendre(); }); } break;
       case 'hz-renvoyer': B.hzBusy = id; B.hzMsg = null; rendre();
         envoyer('/dashboard/bureaux-dev/renvoyer', { id }).then(() => { B.hzMsg = { texte: 'Demande remise à TF Buddy.' }; return lireDev(); })
           .catch(e => { B.hzMsg = { err: e.message }; }).finally(() => { B.hzBusy = null; rendre(); }); break;
@@ -987,7 +1009,7 @@
           .then(d => { B.dev = d; st.mo = null; rendre(); }).catch(e => { if (st.mo) { m.busy = false; m.err = e.message; } rendre(); }); break; }
       case 'dev-nouveau': ouvrir('dev-nouveau', { prenom: '', nom: '', email: '', tel: '', fonction: '', societe: '', tva: '', address: '', postal_code: '', city: '', personnes: '', remarque: '', bon: true }); break;
       case 'dev-nouveau-ok': { const f = m.f; m.busy = true; m.err = null; rendre();
-        envoyer('/dashboard/bureaux-dev', { bon: !!f.bon, donnees: { prenom: f.prenom, nom: f.nom, email: f.email, tel: f.tel, fonction: f.fonction, societe: f.societe, tva: f.tva, adresse: f.address, cp: f.postal_code, ville: f.city, personnes: f.personnes, remarque: f.remarque } })
+        envoyer('/dashboard/bureaux-dev', { bon: !!f.bon, hors_zone: f.horsZone || null, donnees: { prenom: f.prenom, nom: f.nom, email: f.email, tel: f.tel, fonction: f.fonction, societe: f.societe, tva: f.tva, adresse: f.address, cp: f.postal_code, ville: f.city, personnes: f.personnes, remarque: f.remarque } })
           .then(d => { st.mo = null; return lireDev().then(() => { B.devSel = d.demande.id; B.entre = true; B.devMsg = d.demande.erreurs.length ? { err: 'Créé au cockpit, avec des soucis dans TF Buddy : voir en tête.' } : { texte: 'La personne' + (d.demande.societeId ? ', la société' : '') + (d.demande.bon ? ' et son bon' : '') + ' sont dans TF Buddy. Validez pour créer le bureau.' }; if (B.d && B.d.ok) { lireOptions().then(rendre); } rendre(); }); })
           .catch(e => { if (st.mo) { m.busy = false; m.err = e.message; } rendre(); }); break; }
       case 'w-creer': creerBureau(); break;
