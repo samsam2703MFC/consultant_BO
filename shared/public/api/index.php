@@ -271,6 +271,13 @@ try {
         echo json_encode(bdvPublic($method, $m[1], isset($m[2]) ? 'tva' : ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
+    // Une demande « Ma zone n'est pas dans la liste » (27/11/2026) : PUBLIC, les deux pages Livraison au bureau (la landing
+    // atelierby.be, la landing du webshop) y laissent leur copie ; depuis la landing, le cockpit la transmet à TF Buddy
+    // (panel/src/bureaux_dev.php : limite par IP et par magasin, champ piège). Le webshop l'envoie en text/plain (sendBeacon).
+    if ($method === 'POST' && $path === '/bureau-hors-zone') {
+        echo json_encode(bdvPublicHorsZone(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
     // Le flux ICS d'un consultant : Google Agenda le relit sans session — le jeton de l'adresse est sa clé.
     if ($method === 'GET' && preg_match('#^/consultants/([\w-]+)/visites\.ics$#', $path, $m)) {
         vcIcsSortie($m[1]);      // sort en text/calendar, puis exit

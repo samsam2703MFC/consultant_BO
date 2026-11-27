@@ -94,6 +94,12 @@
   /** Les bureaux en développement (bureaux_dev.php) : les demandes, le questionnaire du magasin, les promotions à bon. */
   function lireDev() {
     const B = st.b;
+    // Les tournées que le webshop publie (27/11/2026) : lues une fois par magasin, relues avec « relire ».
+    if (!B.tour || B.tour.shop !== st.shop) {
+      const shop = st.shop; B.tour = { shop, lecture: true };
+      lire('/dashboard/bureaux-dev/tournees').then(d => { B.tour = Object.assign({ shop }, d); })
+        .catch(e => { B.tour = { shop, ok: false, motif: e.message, tournees: [] }; }).finally(rendre);
+    }
     return lire('/dashboard/bureaux-dev').then(d => { B.dev = d; B.devErr = null; }).catch(e => { B.devErr = e.message; }).finally(rendre);
   }
   function lireOptions() {
@@ -122,7 +128,7 @@
   function charger(frais) {
     if (st.onglet === 'b2c') { return lireParticuliers(frais); }
     if (st.onglet === 'b2b') { if (!st.b.d && !st.b.lecture) { lireBureaux(); } return lireEntreprises(frais); }
-    if (st.onglet === 'bur') { st.b.det = {}; lireDev(); return lireBureaux(); }
+    if (st.onglet === 'bur') { st.b.det = {}; if (frais) { st.b.tour = null; } lireDev(); return lireBureaux(); }
     return lireAnalyse();
   }
 
@@ -342,9 +348,11 @@
   function resumeBureaux() {
     const B = st.b, d = B.d, D = B.dev, ok = d && d.ok;
     const A = D ? D.demandes.filter(x => x.statut === 'a_valider') : [], Bx = ok ? d.data.bureaux : [];
+    const Hko = D ? D.demandes.filter(x => x.source === 'hors_zone' && (x.d || {})._tfbuddy !== 'ok') : [];
     if (!D && !ok) { return ''; }
     const L = A.map(x => x.erreurs.length ? { sig: 'stop', txt: `${esc(x.bureau)} : à reprendre dans TF Buddy`, titre: x.erreurs.join(' · '), attr: `data-act="dev-sel" data-id="${x.id}"` }
       : { sig: 'prize', txt: `${esc(x.bureau)} : à valider`, titre: 'Ouvrir la demande : créer le bureau dans TF Buddy', attr: `data-act="dev-sel" data-id="${x.id}"` })
+      .concat(Hko.map(x => ({ sig: 'stop', txt: `Demande hors zone ${esc([x.cp, x.ville].filter(Boolean).join(' '))} : pas reçue par TF Buddy`, titre: 'La renvoyer à TF Buddy', attr: `data-act="hz-renvoyer" data-id="${x.id}"` })))
       .concat(Bx.filter(b => !b.sites).map(b => ({ sig: 'prize', txt: `${esc(b.nom)} : pas de site`, titre: 'Aucune tournée ne peut livrer ce bureau tant qu’il n’a pas de point de livraison : ouvrez-le, « Ajouter un site ».', attr: `data-act="b-sel" data-id="${b.id}"` })));
     const nAct = Bx.filter(b => b.statut === 'active').length, nAtt = Bx.filter(b => b.statut === 'pending').length;
     return resume(ok ? { aria: 'Résumé des bureaux', v: nf(nAct), q: 'bureaux actifs, livrés par une tournée', q2: `sur ${nf(Bx.length)} bureaux${nAtt ? ' · ' + nf(nAtt) + ' en attente' : ''}${D ? ' · ' + nf(A.length) + ' demande' + (A.length > 1 ? 's' : '') + ' en développement à valider' : ''}`, L, ok: 'Rien à corriger : aucune demande à valider, chaque bureau a son site.' }
@@ -471,7 +479,8 @@
   function blocDev() {
     const B = st.b, D = B.dev;
     if (!D) { return B.devErr ? note('Les bureaux en développement ne se lisent pas : ' + esc(B.devErr), 'pcl-note-doux') : ''; }
-    const A = D.demandes.filter(x => x.statut === 'a_valider'), T = D.demandes.filter(x => x.statut !== 'a_valider'), q = D.questionnaire;
+    const H = D.demandes.filter(x => x.source === 'hors_zone'), R = D.demandes.filter(x => x.source !== 'hors_zone');
+    const A = R.filter(x => x.statut === 'a_valider'), T = R.filter(x => x.statut !== 'a_valider'), q = D.questionnaire;
     const promo = q.promo ? (D.promos.find(p => p.id === q.promo) || null) : null;
     const tab = L => `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Bureau</th><th>Personne</th><th>Reçu</th><th>Bon</th><th>Statut</th><th></th></tr></thead><tbody>${L.map(x => `<tr class="pcl-ligne${B.devSel === x.id ? ' is-sel' : ''}" data-act="dev-sel" data-id="${x.id}">
       <td>${esc(x.bureau)}${x.erreurs.length ? ' <span class="tag-warn" title="' + esc(x.erreurs.join(' · ')) + '">à reprendre</span>' : ''}<span class="sub">${esc([x.societe, x.tva, x.ville].filter(Boolean).join(' · '))}</span></td>
@@ -481,7 +490,44 @@
     return `<section class="card pcl-carte pcl-dev" id="pcl-dev"><div class="pcl-dev-tete"><div><div class="pcl-dev-titre">Bureaux en développement</div>
         <div class="pcl-aide">Chaque inscription crée le compte webshop de la personne${promo ? ', son bon' : ''} et la société dans TF Buddy ; si le bureau de sa société existe déjà, elle le rejoint aussitôt. Sinon, le bureau attend ici votre validation.</div></div>
         <span class="pcl-sp"></span><button type="button" class="btn btn--sm btn--primary" data-act="dev-nouveau">${SVG(ICO.plus)}Nouveau bureau en développement</button></div>
-      ${blocLien()}${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}</section>`;
+      ${blocLien()}${blocTournees()}${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}${blocHorsZone(H)}</section>`;
+  }
+  /** Ce que voient vos clients (27/11/2026, Sam : « la base sont les tournées webshop ») : les tournées que le webshop
+   *  publie pour ce magasin. Les deux pages Livraison au bureau (celle d'atelierby.be, celle du webshop) n'affichent
+   *  qu'elles : jours, créneau et heure limite viennent de TF Buddy, sans aucun chiffre écrit ailleurs. */
+  function blocTournees() {
+    const T = st.b.tour, titre = '<div class="pcl-lien-titre">Ce que voient vos clients</div>';
+    if (!T || T.lecture) { return `<div class="pcl-tz">${titre}<div class="pcl-aide">Lecture des tournées publiées…</div></div>`; }
+    const L = T.tournees || [];
+    const jours = t => t.jours.length ? `<span class="pcl-jours7">${JOURS.map(j => `<i class="${t.jours.includes(j[0]) ? 'on' : ''}">${j[1]}</i>`).join('')}</span>` : '<span class="muted">—</span>';
+    const corps = !T.ok ? `<div class="pcl-aide">${esc(T.motif || 'TF Buddy ne donne pas les tournées.')}</div>`
+      : !L.length ? `<div class="pcl-manque">${SVG(ICO.alerte)}<div><b>Aucune tournée publiée.</b> Ce magasin n’apparaît pas dans la liste des zones des pages Livraison au bureau : un bureau de votre région ne peut que laisser une demande « Ma zone n’est pas dans la liste ». Les tournées se créent dans TF Buddy.</div></div>`
+      : `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Tournée</th><th>Jours livrés</th><th>Créneaux de livraison</th><th>Heure limite de commande</th></tr></thead><tbody>${L.map(t => `<tr>
+          <td>${esc(t.nom)}${t.zone ? `<span class="sub">${esc(t.zone)}</span>` : ''}</td><td>${jours(t)}</td>
+          <td>${esc((t.creneaux.length ? t.creneaux.join(' / ') : t.de && t.a ? t.de + '–' + t.a : '') || '—')}</td>
+          <td>${esc(t.limite || '—')}${t.preavis ? `<span class="sub">préavis minimum ${nf(t.preavis)} h</span>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="pcl-tz">${titre}<div class="pcl-aide">Les tournées que le webshop publie pour ce magasin. La page Livraison au bureau d’atelierby.be et celle du webshop n’affichent que celles-ci.</div>${corps}</div>`;
+  }
+  /** Les demandes hors zone (27/11/2026, Sam : « une copie de toutes les demandes sur le cockpit ») : chaque « Ma zone
+   *  n'est pas dans la liste » des deux pages, rangée à la boutique la plus proche choisie par le visiteur. TF Buddy reçoit
+   *  l'original ; une copie qu'il n'a pas prise se renvoie d'ici. */
+  function blocHorsZone(H) {
+    const B = st.b, ORI = { landing: 'page atelierby.be', webshop: 'page du webshop' };
+    const msg = B.hzMsg ? `<p class="${B.hzMsg.err ? 'error' : 'pcl-ok'}" style="margin:6px 0">${esc(B.hzMsg.err || B.hzMsg.texte)}</p>` : '';
+    const tete = `<div class="pcl-lien-titre">Demandes hors zone${H.length ? ` <span class="page-tabs__count">${nf(H.length)}</span>` : ''}</div>
+      <div class="pcl-aide">Les bureaux qui ne trouvent pas leur zone sur une page Livraison au bureau et choisissent ce magasin comme le plus proche. L’original part dans TF Buddy ; la copie reste ici 90 jours.</div>`;
+    if (!H.length) { return `<div class="pcl-tz">${tete}${msg}</div>`; }
+    const km = v => v != null ? String(v).replace('.', ',') + ' km du magasin' : '';
+    const ligne = x => {
+      const d = x.d || {}, ok = d._tfbuddy === 'ok';
+      return `<tr><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(ORI[d.origine] || '')}</span></td>
+        <td>${esc([x.cp, x.ville].filter(Boolean).join(' '))}${d.distance != null ? `<span class="sub">${esc(km(d.distance))}</span>` : ''}</td>
+        <td>${esc(x.societe || '—')}${x.personnes ? `<span class="sub">${nf(x.personnes)} personnes</span>` : ''}</td>
+        <td>${x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ''}</td>
+        <td>${ok ? '<span class="chip chip--ok">reçue</span>' : `<span class="tag-warn" title="${esc(x.erreurs.join(' · '))}">pas reçue</span>`}</td>
+        <td class="num">${ok ? '' : `<button type="button" class="btn btn--sm" data-act="hz-renvoyer" data-id="${x.id}"${B.hzBusy === x.id ? ' disabled' : ''}>Renvoyer</button>`}</td></tr>`;
+    };
+    return `<div class="pcl-tz">${tete}${msg}<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Reçue</th><th>Code postal · commune</th><th>Société</th><th>E-mail</th><th>TF Buddy</th><th></th></tr></thead><tbody>${H.map(ligne).join('')}</tbody></table></div></div>`;
   }
   /** Le tiroir d'une demande : ce qu'elle a créé dans TF Buddy, et la validation (le bureau créé, la personne reliée). */
   function tiroirDemande() {
@@ -920,6 +966,9 @@
       case 'w-logo-retirer': B.w.logo = null; B.w.logoErr = null; rendre(); break;
       case 'geo-place': geoChoisir(a.dataset.cle, a.dataset.id); break;
       case 'dev-traitees': B.devTraitees = !B.devTraitees; rendre(); break;
+      case 'hz-renvoyer': B.hzBusy = id; B.hzMsg = null; rendre();
+        envoyer('/dashboard/bureaux-dev/renvoyer', { id }).then(() => { B.hzMsg = { texte: 'Demande remise à TF Buddy.' }; return lireDev(); })
+          .catch(e => { B.hzMsg = { err: e.message }; }).finally(() => { B.hzBusy = null; rendre(); }); break;
       case 'dev-sel': B.devSel = id; B.entre = true; B.devMsg = null; B.sel = null; rendre(); if (B.d && B.d.ok) { lireOptions().then(rendre); } break;
       case 'dev-fermer': B.devSel = null; B.devMsg = null; rendre(); break;
       case 'dev-bureau': B.devSel = null; B.sel = id; B.entre = true; rendre(); break;

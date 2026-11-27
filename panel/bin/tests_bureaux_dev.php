@@ -26,7 +26,7 @@ $GLOBALS['cible'] = 'clients';
 function pmMienne(int $shop, int $id): ?array { return $id === 321 ? ['panelId' => 321, 'nom' => '−20 % le premier lunch', 'description' => 'une fois', 'statut' => 'en_caisse', 'bon' => ['campagne' => 900]] : null; }
 function pmMiennes(int $shop): array { return [[pmMienne($shop, 321), ['panelId' => 4, 'nom' => 'Sans bon', 'statut' => 'en_caisse', 'bon' => null]], null]; }
 function pbLire(int $camp, array $c = []): ?array { return ['campagne' => $camp, 'cible' => $GLOBALS['cible'], 'code' => $GLOBALS['cible'] === 'code' ? 'BUREAU10' : null]; }
-function body(): array { return []; }
+function body(): array { return $GLOBALS['corps'] ?? []; }
 
 require __DIR__ . '/../src/bureaux_dev.php';
 
@@ -99,6 +99,39 @@ $M = ['2' => 'Corbais', '3' => 'Gosselies', '5' => 'Sombreffe'];
 verifie('?m=2 → Corbais', bdvMagasinDuLien('2', $M) === '2' && bdvMagasinDuLien('5', $M) === '5');
 verifie('un numéro qui n’est pas un magasin ouvert : rien', bdvMagasinDuLien('4', $M) === null && bdvMagasinDuLien('0', $M) === null && bdvMagasinDuLien('02', $M) === null);
 verifie('pas un numéro : rien', bdvMagasinDuLien('corbais', $M) === null && bdvMagasinDuLien('', $M) === null && bdvMagasinDuLien('2 OR 1', $M) === null);
+
+echo "Les demandes hors zone\n";
+[$d, $e] = bdvHorsZoneNettoyer(['cp' => ' 1348 ', 'commune' => 'Louvain-la-Neuve', 'societe' => 'Horizon', 'effectif' => '25', 'email' => 'Ana@Horizon.BE',
+    'origine' => 'webshop', 'distance' => '9.46', 'tfbuddy' => 'ok', 'request_key' => 'a1b2c3d4e5f60718', 'langue' => 'nl', 'prenom' => 'Ana']);
+verifie('une demande complète passe, mise en forme', $e === [] && $d['cp'] === '1348' && $d['email'] === 'ana@horizon.be' && $d['personnes'] === 25 && $d['distance'] === 9.5
+    && $d['origine'] === 'webshop' && $d['_tfbuddy'] === 'ok' && $d['request_key'] === 'a1b2c3d4e5f60718' && $d['langue'] === 'nl' && !array_key_exists('prenom', $d), json_encode($d));
+[$d2] = bdvHorsZoneNettoyer(['postalCode' => '1300', 'city' => 'Wavre', 'company' => 'X', 'headcount' => 12, 'email' => 'a@b.be']);
+verifie('les noms du webshop sont admis ; origine landing par défaut', $d2['cp'] === '1300' && $d2['ville'] === 'Wavre' && $d2['societe'] === 'X' && $d2['personnes'] === 12 && $d2['origine'] === 'landing');
+[$d3, $e3] = bdvHorsZoneNettoyer(['email' => 'pas-un-mail', 'request_key' => 'a_b%c', 'effectif' => '-3', 'tfbuddy' => 'peut-être']);
+verifie('vide : le code postal et l’e-mail, dits en clair', $e3 === ['le code postal', 'un e-mail valide']);
+verifie('une clé avec joker remplacée, un effectif faux à zéro, un état inconnu vide', preg_match('/^[a-f0-9]{32}$/', $d3['request_key']) === 1 && $d3['personnes'] === 0 && $d3['_tfbuddy'] === '' && $d3['distance'] === null);
+$c = bdvHorsZoneCorpsTfb($d);
+verifie('le corps de TF Buddy : celui de la landing du webshop', $c === ['request_key' => 'a1b2c3d4e5f60718', 'postalCode' => '1348', 'city' => 'Louvain-la-Neuve', 'company' => 'Horizon', 'headcount' => 25, 'email' => 'ana@horizon.be']);
+verifie('sans effectif : headcount nul', bdvHorsZoneCorpsTfb($d2 + ['personnes' => 0])['headcount'] === 12 && bdvHorsZoneCorpsTfb(['personnes' => 0] + $d2)['headcount'] === null);
+verifie('TF Buddy : reçue (saved vrai ou absent), sinon refusée avec le code', bdvHorsZoneLireTfb(200, ['saved' => true])[0] === 'ok' && bdvHorsZoneLireTfb(201, null)[0] === 'ok'
+    && bdvHorsZoneLireTfb(200, ['saved' => false])[0] === 'refus' && bdvHorsZoneLireTfb(429, ['description' => 'DELIVERY_INTEREST_RATE_LIMIT'])[1] === 'TF Buddy n’a pas pris la demande (HTTP 429 DELIVERY_INTEREST_RATE_LIMIT)'
+    && bdvHorsZoneLireTfb(0, null) === ['refus', 'TF Buddy ne répond pas']);
+Db::$exec = [];
+$GLOBALS['corps'] = ['site_web' => 'http://spam', 'shop' => '2', 'cp' => '1348', 'email' => 'a@b.be'];
+verifie('le champ piège : réponse polie, rien d’écrit', bdvPublicHorsZone() === ['ok' => true, 'saved' => true] && !array_filter(Db::$exec, static fn ($x) => str_contains($x[0], 'INSERT')));
+$GLOBALS['corps'] = ['shop' => '99', 'cp' => '1348', 'email' => 'a@b.be'];
+$r = bdvPublicHorsZone();
+verifie('un magasin inconnu : refusé, rien d’écrit', ($r['manque'] ?? null) === ['la boutique'] && !array_filter(Db::$exec, static fn ($x) => str_contains($x[0], 'INSERT')));
+$GLOBALS['corps'] = [];
+
+echo "Les tournées publiées\n";
+$t = bdvTourneeLigne(['id' => 1, 'tour' => 'LLN', 'zoneSecondary' => '', 'zonePrincipal' => 'Atelier by Berlo - Corbais'],
+    ['tour' => 'LLN', 'delivery_hours_start' => '11:30:00', 'delivery_hours_end' => '12:30:00', 'delivery_cutoff_hour' => 10, 'delivery_cutoff_minute' => 30,
+        'delivery_lead_hours' => 0, 'days' => [1, 2, 3, 4, 5, 9], 'slots' => ['11:30–12:30']]);
+verifie('la tournée de Corbais telle que le webshop la publie', $t === ['id' => 1, 'nom' => 'LLN', 'zone' => '', 'principale' => 'Atelier by Berlo - Corbais', 'detail' => true,
+    'jours' => [1, 2, 3, 4, 5], 'de' => '11:30', 'a' => '12:30', 'limite' => '10:30', 'preavis' => 0, 'creneaux' => ['11:30–12:30']], json_encode($t, JSON_UNESCAPED_UNICODE));
+$t = bdvTourneeLigne(['id' => 4, 'tour' => 'Halle'], null);
+verifie('sans détail : le nom seulement, rien d’inventé', $t['detail'] === false && $t['jours'] === [] && $t['limite'] === '' && $t['de'] === '' && $t['creneaux'] === []);
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

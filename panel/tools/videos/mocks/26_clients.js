@@ -3,7 +3,7 @@
  * wr_bureaux_dev_*) et panel/src/tfb_magasin.php (la connexion du compte TF Buddy du magasin).
  *   GET  /dashboard/clients/particuliers | entreprises | fiche | analyse | bureaux?chemin=…
  *   POST /dashboard/clients/client {action} | tva | bureaux {methode, chemin, corps} | bureaux/pdf
- *   GET|POST /dashboard/bureaux-dev[/questionnaire|/valider|/refuser]
+ *   GET|POST /dashboard/bureaux-dev[/questionnaire|/valider|/refuser|/renvoyer|/tournees]
  *   POST /dashboard/tfb/connexion | confirmer | sms | renouveler | deconnexion ; GET /dashboard/tfb/etat
  * Le compte TF Buddy du magasin : la fausse API ne voit pas l'en-tête X-TFB-Jeton ; « connecté » est son état à elle,
  * posé par /dashboard/tfb/confirmer et retiré par /deconnexion. Connecté : les routes du panel répondent (entreprises
@@ -323,6 +323,16 @@ const DEV = [
     personne: 'Arthur Wauters', fonction: '', email: 'arthur.wauters@exemple.be', tel: '+32 400 63 00 01', adresse: 'Rue Haute 1', cp: '5000', ville: 'Val-Fleuri',
     personnes: 0, jours: [], remarque: '', clientId: 8411, societeId: null, bon: null, erreurs: [], officeId: null, traite: '2026-11-05 08:10' },
 ];
+// Les demandes hors zone (27/11/2026) : la copie de « Ma zone n'est pas dans la liste », rangée à ce magasin (fictives).
+DEV.push(
+  { id: 15, source: 'hors_zone', statut: 'hors_zone', le: '2026-11-19 11:05', bureau: '', societe: 'Imprimerie du Val', tva: '', personne: '', fonction: '', email: 'contact@exemple.be', tel: '',
+    adresse: '', cp: '5003', ville: 'Val-Fleuri', personnes: 22, jours: [], remarque: '', clientId: null, societeId: null, bon: null, erreurs: [], officeId: null, traite: '2026-11-19 11:05',
+    d: { origine: 'landing', distance: 7.4, _tfbuddy: 'ok' } },
+  { id: 16, source: 'hors_zone', statut: 'hors_zone', le: '2026-11-19 14:31', bureau: '', societe: 'Cabinet Bois-Joli', tva: '', personne: '', fonction: '', email: 'accueil@exemple.be', tel: '',
+    adresse: '', cp: '5004', ville: 'Bois-Joli', personnes: 0, jours: [], remarque: '', clientId: null, societeId: null, bon: null, erreurs: ['TF Buddy n’a pas pris la demande (HTTP 429 DELIVERY_INTEREST_RATE_LIMIT)'], officeId: null, traite: '2026-11-19 14:31',
+    d: { origine: 'webshop', distance: 12.9, _tfbuddy: 'refus' } });
+// Les tournées que le webshop publie pour ce magasin (GET /dashboard/bureaux-dev/tournees, ep_bureaux_dev_tournees).
+const TOURNEES = [{ id: 1, nom: 'Val-Fleuri centre', zone: 'Val-Fleuri, Bois-Joli', principale: 'Magasin démo', detail: true, jours: [1, 2, 3, 4, 5], de: '11:30', a: '12:30', limite: '10:30', preavis: 0, creneaux: ['11:30–12:30'] }];
 const devEtat = () => ({ shop: String(SHOP), demandes: DEV.slice().sort((a, b) => (b.statut === 'a_valider') - (a.statut === 'a_valider') || b.id - a.id).map(x => JSON.parse(JSON.stringify(x))),
   questionnaire: Object.assign({}, QUEST), promos: PROMOS });
 function devEcrire(p, b) {
@@ -350,6 +360,7 @@ function devEcrire(p, b) {
   }
   const x = DEV.find(y => y.id === +b.id);
   if (!x) { return err(404, 'demande introuvable'); }
+  if (p === '/dashboard/bureaux-dev/renvoyer') { if (x.d) { x.d._tfbuddy = 'ok'; x.erreurs = []; } return { ok: true, tfbuddy: 'ok' }; }
   if (p === '/dashboard/bureaux-dev/refuser') { x.statut = 'refuse'; x.traite = '2026-11-19 15:42'; return { ok: true }; }
   if (p === '/dashboard/bureaux-dev/valider') {
     if (x.statut !== 'a_valider') { return err(409, 'cette demande est déjà traitée'); }
@@ -414,6 +425,7 @@ module.exports = function (m, p, q, c) {
   }
   /* Les bureaux en développement */
   if (p === '/dashboard/bureaux-dev' && m === 'GET') { return devEtat(); }
+  if (p === '/dashboard/bureaux-dev/tournees' && m === 'GET') { return { ok: true, tournees: JSON.parse(JSON.stringify(TOURNEES)) }; }
   if (p.startsWith('/dashboard/bureaux-dev') && m === 'POST') { return devEcrire(p, c); }
   if (!p.startsWith('/dashboard/clients')) { return undefined; }
   if (m === 'GET') {
