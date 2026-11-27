@@ -202,6 +202,19 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .rm-s6ch{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:10px}.rm-s6ch .ch{background:var(--color-background-secondary);border-radius:7px;padding:6px 8px;font-size:10.5px;display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;min-width:0;overflow:hidden}.rm-s6ch .ch>span{min-width:0;overflow:hidden;text-overflow:ellipsis;line-height:1.25}.rm-s6ch .ch>span>span{display:block;font-size:10px}.rm-s6ch .ch b{font-family:var(--font-ui)}.rm-s6ch .ch em.sans{background:transparent;color:var(--color-text);padding-right:0}.rm-s6ch .ch em{font-style:normal;font-weight:400;padding:1px 6px;border-radius:8px;color:#fff;font-size:10.5px;flex:none}
 .rm-s6t{display:grid;grid-template-rows:1fr 1fr 1fr;gap:8px}.rm-s6t .t{background:var(--color-background-secondary);border-radius:8px;padding:8px 11px;display:flex;flex-direction:column;justify-content:center;min-width:0}.rm-s6t .t .k{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}.rm-s6t .t .v{font-family:var(--font-display);font-size:21px;line-height:1.1;margin:2px 0}.rm-s6t .t .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.35}.rm-s6t .t.good .v{color:var(--green)}.rm-s6t .t.bad .v{color:var(--stop)}
 @media (max-width:900px){.rm-s6{grid-template-columns:1fr}.rm-s6ch{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Résultat › Mois : le CA du réseau sur douze mois glissants (ca-glissant-tpl.js, 27/11/2026) — trois chiffres à
+   gauche, la courbe à droite ; la bulle du mois survolé se pose à côté du trait (à droite sur le premier semestre,
+   à gauche sur le second) pour ne jamais cacher le point lu, et ne capte pas la souris (elle effacerait le survol). */
+.rg-carte{background:var(--color-background-secondary);border-radius:10px;padding:12px 14px 10px;margin-bottom:14px}
+.rg-corps{display:grid;grid-template-columns:210px minmax(0,1fr);gap:18px;align-items:start}
+.rg-kpis{display:flex;flex-direction:column;gap:8px}.rg-kpi{background:var(--color-surface);border-radius:9px;padding:9px 12px}
+.rg-zone{min-width:0}.rg-plot{position:relative}.rg-svg{width:100%;height:auto;display:block}
+.rg-bulle{position:absolute;top:4px;z-index:5;pointer-events:none;min-width:196px;background:var(--color-surface);border:1px solid var(--color-border-secondary);border-radius:9px;padding:9px 11px;box-shadow:0 6px 18px rgba(28,26,23,.10);font-size:11.5px}
+.rg-bulle--g{transform:translateX(16px)}.rg-bulle--d{transform:translateX(calc(-100% - 16px))}
+.rg-l{display:flex;justify-content:space-between;gap:14px;padding:2px 0;white-space:nowrap}.rg-l b{font-weight:400;font-variant-numeric:tabular-nums}
+.rg-l em{font-style:normal;margin-left:4px}.rg-l--mag{color:var(--color-text-muted)}.rg-sep{height:1px;background:var(--color-border-tertiary);margin:5px 0 4px}
+.rg-pt{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--chart-real);margin-right:6px;vertical-align:0}.rg-pt--n1{background:transparent;border:2px dashed #9A9288;width:6px;height:6px}
+@media (max-width:900px){.rg-corps{grid-template-columns:1fr}.rg-kpis{flex-direction:row;flex-wrap:wrap}.rg-kpi{flex:1 1 160px}}
 @media (max-width:1200px){.rm-kp{grid-template-columns:repeat(4,minmax(0,1fr))}.rm-3{grid-template-columns:1fr}}
 /* Objectifs produits d'une campagne (écran mktObjectifs). */
 .mko{display:flex;flex-direction:column;gap:14px;max-width:1240px}
