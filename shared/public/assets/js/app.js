@@ -14,6 +14,7 @@ import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsParamProduits } from './produit-parametrage-vals.js';
 import { valsHelpdesk, nbDemandesOuvertes, valsATraiter } from './helpdesk-vals.js';
+import { valsCaGlissant } from './ca-glissant-vals.js';
 import { valsFil, nbFilsOuverts } from './fil-vals.js';
 import { valsBenchmark } from './benchmark-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
@@ -10501,7 +10502,7 @@ class App {
     common.rpErreurTxt = r && r.indispo ? r.motif
       : 'La lecture de /exploitation/periode a échoué — voir Diagnostic API.';
     common.rpMois = vue === 'mois'; common.rpSemaine = vue === 'semaine';
-    common.rpLignes = []; common.rpDetail = null; common.rpTuiles = []; common.rpJours = []; common.rpReseau = null;
+    common.rpLignes = []; common.rpDetail = null; common.rpTuiles = []; common.rpJours = []; common.rpReseau = null; common.rpGlissant = null;
     common.rpMaj = S.rpMaj === 'en-cours' ? 'lecture…' : (S.rpMaj ? 'lu à ' + S.rpMaj : '');
     common.rpRefresh = () => { this.rpCharge(true, undefined, true); if (vue === 'mois' && r && r.du) { this.levCharge(+r.du.slice(0, 4), +r.du.slice(5, 7), true); } };
     common.rpRegler = () => this.setState({ screen: 'budgetparam' });
@@ -10509,6 +10510,8 @@ class App {
     common.rpChargementTxt = vue === 'semaine' ? 'Lecture de la semaine…' : 'Lecture du mois…';
     if (!r || common.rpErreur) { return; }
     if (vue === 'mois' && r.du) { common.lev = this.valsLeviers(r.du); }
+    // Sous les tuiles du mois : le CA du réseau sur les douze derniers mois clos, face au N-1 (27/11/2026).
+    if (vue === 'mois') { common.rpGlissant = valsCaGlissant(this, r); }
 
     const seuils = r.seuils || { food: 40, labour: 17, overhead: 13.5 };   // repli : les cibles food cost et personnel du réseau
     const fE = n => this.fE(n);
