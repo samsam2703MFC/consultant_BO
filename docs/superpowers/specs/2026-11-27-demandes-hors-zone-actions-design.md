@@ -31,3 +31,16 @@ petite poubelle) », puis « deux actions, « Créer le bureau » et la poubelle
 
 ## Laissé au constructeur
 Libellés exacts, l'icône (tracé de la corbeille de `boite.js`), la mise en page des boutons dans la cellule.
+
+## Révision du 27/11/2026 (Sam : « la création du bureau doit être cet assistant : Ajouter un bureau » ; « le bouton Nouveau bureau en développement, en tant que bouton, n'a pas de sens » ; puis « A »)
+- **Créer le bureau** ouvre l'assistant « Ajouter un bureau » (sept étapes), pré-rempli : nom du bureau = société, segment
+  Entreprise, e-mail du responsable, code postal et commune du premier site ; la société est choisie si son nom est déjà
+  dans les entreprises B2B du magasin (avec sa TVA). Grisé sans le compte TF Buddy du magasin (comme « Ajouter un bureau »).
+- **Étape 1 : « Ajouter la société »** (option A) : la fenêtre « Ajouter une entreprise » s'ouvre par-dessus l'assistant,
+  pré-remplie (société, e-mail, code postal, commune) ; une fois créée, elle est choisie dans l'assistant (et sa TVA).
+- **Après création** : `POST /dashboard/bureaux-dev/reprendre {shop, id, office_id}` passe la demande hors zone `reprise`
+  avec `office_id` ; la ligne reprise montre « Ouvrir le bureau ». Le paramètre `hors_zone` de `POST /dashboard/bureaux-dev`
+  disparaît (plus de fenêtre pour l'envoyer).
+- **Le bouton « Nouveau bureau en développement » et sa fenêtre sont retirés.** La route `POST /dashboard/bureaux-dev`
+  reste (aucun appelant d'écran) ; le chapitre de la vidéo « Bureaux » qui le montrait sort du scénario et du registre.
+- Non changé : la validation des inscriptions du formulaire (« Valider » dans le tiroir).

@@ -61,3 +61,16 @@
 - [ ] **Step 4: vérifier.** `node --check panel/public/dashboard/clients.js` ; un rendu dans Chromium (Playwright) de `blocHorsZone` avec une demande ouverte et une reprise : les trois boutons, le lien des reprises, la fenêtre pré-remplie au clic.
 - [ ] **Step 5: doc et index.** Les deux routes dans `shared/docs/contrat-api.md` (bloc hors zone) ; une phrase dans `panel/src/LISEZMOI.md` et `panel/CLAUDE.md` ; `python3 panel/tools/dashboard-api-index.py` ; une ligne datée dans `shared/deploy.trigger`.
 - [ ] **Step 6:** les quatre commandes de test de la Task 1 → vertes ; commit « Bureaux › demandes hors zone : « Créer le bureau » (fenêtre pré-remplie) et la poubelle ».
+
+---
+
+## Révision : l'assistant « Ajouter un bureau » (même exécution, en ligne)
+
+### Task 3: le serveur — `reprendre` avec le bureau créé
+- Tests (`panel/bin/tests_bureaux_dev.php`) : `bdvHorsZoneReprendre('2', 9, 957)` → un `UPDATE` avec `statut = "reprise"`, `office_id = ?` (957), `AND statut = "hors_zone"`, id 9 ;
+  `wr_bureaux_dev_reprendre` : sans `office_id` → 422 `le numéro du bureau créé manque` ; demande pas ouverte → 404 `demande hors zone introuvable ou déjà reprise` ; sinon `['ok' => true, 'officeId' => 957]`.
+- Code : `bdvHorsZoneReprendre(string $shop, int $hzId, int $officeId): bool` (office_id, plus de `_reprise`) ; `wr_bureaux_dev_reprendre(): array` ; route `/dashboard/bureaux-dev/reprendre` ; `wr_bureaux_dev_creer` sans `hors_zone`.
+### Task 4: l'écran, la vidéo, la doc
+- `hz-creer` → assistant pré-rempli (`w.horsZone`, `w.pre`) ; étape 1 « Ajouter la société » (`w-societe` → modale `e-ajouter` avec `depuisAssistant`) ; `creerBureau` → `reprendre` ; ligne reprise « Ouvrir le bureau » (`dev-bureau`, `officeId`) ; retrait de `dev-nouveau` (bouton, fenêtre, actions).
+- Mock `26_clients.js` (`/reprendre`, plus de `hors_zone`), scénario `26-03-bureaux.js` et `videos.json` sans `clients-bureau-dev`, docs, index des API, `deploy.trigger`.
+- Vérification Chromium : pré-remplissage, « Ajouter la société » puis société choisie, création, « Ouvrir le bureau », « À corriger », poubelle, bouton retiré.
