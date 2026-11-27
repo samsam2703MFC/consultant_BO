@@ -184,7 +184,7 @@
 .bx-bascule input { position: absolute; opacity: 0; width: 0; height: 0; }
 .bx-bascule i { position: absolute; inset: 0; border-radius: 999px; background: var(--chip); transition: background 0.15s; }
 .bx-bascule i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); transition: left 0.15s; }
-.bx-bascule input:checked + i { background: var(--green); }
+.bx-bascule input:checked + i { background: var(--prize); }
 .bx-bascule input:checked + i::after { left: 18px; }
 .bx-t-j { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
 .bx-t-j td { padding: 7px 10px; border-top: 1px solid var(--row-line); color: var(--ink); vertical-align: top; }

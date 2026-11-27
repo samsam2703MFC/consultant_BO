@@ -46,7 +46,7 @@
 .par-vide,.par-attente{padding:14px 10px;font-size:12px;color:var(--muted)}
 .par-sw{flex:0 0 auto;width:36px;height:21px;border:0;border-radius:6px;background:var(--chip);position:relative;cursor:pointer;padding:0}
 .par-sw::after{content:'';position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:4px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .12s}
-.par-sw.on{background:var(--green)}.par-sw.on::after{left:18px}
+.par-sw.on{background:var(--prize)}.par-sw.on::after{left:18px}
 .par-sw:disabled{opacity:.5;cursor:default}
 .par-ton,.par-heure{flex:0 0 auto;height:30px;max-width:140px;padding:0 8px;border:1px solid var(--line);border-radius:7px;background:#fff;font:inherit;font-size:12px;color:var(--ink)}
 
