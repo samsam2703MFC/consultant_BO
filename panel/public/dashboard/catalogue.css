@@ -3,7 +3,9 @@
 
 /* Polices de l'imprimé (celles des brochures du Marketing), jamais celles de l'interface. */
 @font-face { font-family: 'CmPrint'; src: url('../assets/ds/fonts/Gotham_Light.otf') format('opentype'); font-weight: 300; font-display: block; }
-@font-face { font-family: 'CmPrint'; src: url('../assets/ds/fonts/Gotham_Regular.otf') format('opentype'); font-weight: 400; font-display: block; }
+/* 400 = Gotham Book, comme le Marketing (GothamPrint, src/views/brochure/Pages.tsx, 27/11/2026) : Gotham_Regular.otf est en
+   réalité du Gotham Black, le texte courant des aperçus sortait plus gras que le PDF. */
+@font-face { font-family: 'CmPrint'; src: url('../assets/ds/fonts/Gotham_Book.otf') format('opentype'); font-weight: 400; font-display: block; }
 @font-face { font-family: 'CmPrint'; src: url('../assets/ds/fonts/Gotham_Medium.otf') format('opentype'); font-weight: 500; font-display: block; }
 @font-face { font-family: 'CmVank'; src: url('../assets/ds/fonts/GC_Vank.ttf') format('truetype'); font-weight: 400; font-display: block; }
 /* La police manuscrite de la marque (Playwrite DE VA, livrée avec le design system) : la catégorie « en lettres manuscrites ». */
@@ -924,3 +926,33 @@ button.cm-pas{cursor:pointer}
 .cm-vu{outline:2px solid var(--accent);outline-offset:3px;animation:cm-vu 1.8s ease-out forwards}
 @keyframes cm-vu{0%,55%{outline-color:var(--accent)}100%{outline-color:transparent}}
 @media (prefers-reduced-motion:reduce){.cm-vu{animation:none}}
+
+/* ---------- gamme par gamme (Marketing v1.23, 27/11/2026) : la présentation avec `design` et la page libre ----------
+ * Recopié de src/views/catalogue/catalogue-pages.css du Marketing (mêmes classes, mêmes mesures). */
+.cat-pd { position: absolute; inset: 0; display: flex; flex-direction: column; gap: calc(var(--u) * 6mm); padding: calc(var(--u) * 12mm) calc(var(--u) * 11mm) calc(var(--u) * 11mm); }
+.cat-pd__bg { position: absolute; inset: calc(-1 * var(--b)); overflow: hidden; }
+.cat-pd__bg > img { width: 100%; height: 100%; object-fit: cover; }
+.cat-pd__bg > i { position: absolute; inset: 0; }
+.cat-pd__bg .cat-pd__ph { width: 100%; height: 100%; border-radius: 0; }
+.cat-pd__photos { position: relative; flex: 0 0 58%; min-height: 0; display: grid; gap: calc(var(--u) * 2.4mm); }
+.cat-pd--une .cat-pd__photos { grid-template-columns: 1fr; }
+.cat-pd--deux .cat-pd__photos { grid-template-columns: 1fr 1fr; }
+.cat-pd--mosaique .cat-pd__photos { grid-template-columns: 1.45fr 1fr; grid-template-rows: 1fr 1fr; }
+.cat-pd--mosaique .cat-pd__ph--0 { grid-row: 1 / span 2; }
+.cat-pd--liste .cat-pd__photos { flex-basis: 34%; }
+.cat-pd__ph { position: relative; overflow: hidden; min-height: 0; border-radius: calc(var(--u) * 1.6mm); background: rgba(36, 28, 26, 0.06); }
+.cat-pd__ph.is-empty { border: 0.3mm dashed rgba(36, 28, 26, 0.22); background: rgba(255, 255, 255, 0.35); }
+.cat-pd__ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cat-pd__head { position: relative; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: calc(var(--u) * 2.2mm); overflow: hidden; }
+.cat-pd--pleine .cat-pd__head { flex: 0 0 auto; margin: auto calc(-1 * var(--u) * 11mm) calc(-1 * var(--u) * 11mm); padding: calc(var(--u) * 7mm) calc(var(--u) * 11mm) calc(var(--u) * 10mm); }
+.cat-pd--liste .cat-pd__head { justify-content: flex-start; }
+.cat-pd__kicker { font-weight: 400; overflow-wrap: anywhere; }
+.cat-pd__title { overflow-wrap: anywhere; max-height: 2.5em; overflow: hidden; padding-top: 0.16em; }
+.cat-pd__text { white-space: pre-line; overflow: hidden; }
+.cat-pd__list { margin-top: calc(var(--u) * 2mm); }
+.cat-free { position: absolute; inset: 0; }
+.cat-free .cat-filler { position: absolute; inset: 0; border-radius: 0; background: transparent; }
+.cat-free--photo .cat-filler { inset: calc(-1 * var(--b)); }
+.cat-free--photo .cat-filler img { width: 100%; height: 100%; object-fit: cover; }
+.cat-free--illustration .cat-filler { display: grid; place-items: center; }
+.cat-free--illustration .cat-filler img { width: 58%; height: auto; max-height: 52%; object-fit: contain; opacity: 0.9; }

@@ -70,7 +70,9 @@ declare(strict_types=1);
 const CM_CHAMPS_CREER = ['title', 'source', 'format', 'pageCount', 'langs', 'products', 'pages', 'offers', 'showAvailability'];
 /** Les conditions du bon de commande que la boutique règle (25/11/2026). */
 const CM_CHAMPS_CONDITIONS = ['minDelay', 'depositPct', 'holidayDeadlines', 'pickup', 'delivery', 'note'];
-const CM_CHAMPS_MODIFIER = ['title', 'format', 'pageCount', 'langs', 'products', 'pages', 'status', 'printQty', 'offers', 'showAvailability'];
+/** Gamme par gamme (Marketing v1.23, 27/11/2026) : `gammeBlocks`, `gammesOk`, `presentations` passent aussi (le
+ * Marketing les valide ; le dashboard ne les envoie pas encore, il les garde en ne les envoyant pas). */
+const CM_CHAMPS_MODIFIER = ['title', 'format', 'pageCount', 'langs', 'products', 'pages', 'status', 'printQty', 'offers', 'showAvailability', 'gammeBlocks', 'gammesOk', 'presentations'];
 
 /** Une erreur au format du standard (celui du Marketing), pour ce que le cockpit dit lui-même. */
 function cmErreur(int $http, string $code, string $message): array
