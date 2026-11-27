@@ -1,7 +1,8 @@
 /* Cockpit CEO — gabarit du CA du réseau sur douze mois glissants, Résultat › Mois (valeurs : ca-glissant-vals.js).
  * Une seule échelle, des traits fins (2 px), le réalisé en `--chart-real`, le N-1 en pointillé gris (une référence,
  * pas une série de même rang), des étiquettes choisies (le dernier mois, le plus haut) et la bulle au survol :
- * le mois, le réseau face au N-1, puis chaque magasin. */
+ * le mois, le réseau face au N-1, puis chaque magasin. Au-dessus, la rangée des six cases (tout le CA, puis les
+ * catégories principales) : une case est un bouton, celle choisie est cernée — c'est elle que la section dessine. */
 
 export function tplCaGlissant(g, x){
   const { esc } = x;
@@ -12,8 +13,13 @@ export function tplCaGlissant(g, x){
       <div style="${cap}">${esc(g.titre)}</div>
       ${g.periode ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(g.periode)}</div>` : ''}
     </div>`;
-  if (g.vide) {
-    return `<div class="rg-carte">${tete}<div style="font-size:12px;color:var(--color-text-muted)">${esc(g.motif)}</div></div>`;
+  const cases = `<div class="rg-cases" role="tablist">${(g.cases || []).map(c => `<button type="button" role="tab" aria-selected="${c.on}" ${x.A(c.go)} class="rg-case${c.on ? ' is-on' : ''}"${c.titre ? ` title="${esc(c.titre)}"` : ''}>
+      <span style="${cap}">${esc(c.nom)}</span>
+      <span class="rg-case__v">${esc(c.v)}</span>
+      <span class="rg-case__s">${c.evo ? `<em style="color:${c.evoCol}">${esc(c.evo)}</em>` : ''}${c.evo && c.s ? ' · ' : ''}${esc(c.s || '')}</span>
+    </button>`).join('')}</div>${g.casesNote ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin:-6px 0 12px">${esc(g.casesNote)}</div>` : ''}`;
+  if (g.attente) {
+    return `<div class="rg-carte">${tete}${cases}<div style="display:flex;align-items:center;font-size:12px;color:var(--color-text-muted);padding:26px 4px">${g.enCours ? '<i class="rj-ring"></i>' : ''}${esc(g.attente)}</div></div>`;
   }
   const S = g.svg;
   const svg = `<svg viewBox="0 0 ${S.W} ${S.H}" preserveAspectRatio="xMidYMid meet" class="rg-svg" role="img" aria-label="${esc(g.titre)}">
@@ -38,6 +44,7 @@ export function tplCaGlissant(g, x){
     </div>`;
   return `<div class="rg-carte">
       ${tete}
+      ${cases}
       <div class="rg-corps">
         <div class="rg-kpis">${g.kpis.map(k => `<div class="rg-kpi"><div style="${cap}">${esc(k.k)}</div>
           <div style="font-family:var(--font-display);font-size:21px;line-height:1.15;margin-top:3px;${num}${k.col ? ';color:' + k.col : ''}">${esc(k.v)}</div>
@@ -45,7 +52,7 @@ export function tplCaGlissant(g, x){
         <div ${x.EN(g.sortir)} class="rg-zone">
           <div class="rg-plot">${svg}${bulle}</div>
           <div class="rm-leg" style="margin-top:2px;padding-left:${(100 * S.ML / S.W).toFixed(1)}%">
-            <span><i style="background:var(--chart-real);border-radius:50%"></i>CA du réseau, mois par mois</span>
+            <span><i style="background:var(--chart-real);border-radius:50%"></i>${esc(g.serieNom)}, mois par mois</span>
             ${g.avecN1 ? `<span><i style="width:16px;height:0;border-top:2px dashed #9A9288;border-radius:0;vertical-align:3px"></i>N-1 — les mêmes mois un an plus tôt</span>` : ''}
             <span style="margin-left:auto">survoler un mois pour le détail par magasin</span>
           </div>
