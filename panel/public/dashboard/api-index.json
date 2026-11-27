@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-27T20:24:25Z",
+ "genere": "2026-11-27T20:40:22Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1060,7 +1060,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1010"
+    "clients.js:1013"
    ],
    "magasin": true,
    "routes": [
@@ -1081,7 +1081,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1029"
+    "clients.js:1032"
    ],
    "magasin": true,
    "routes": [
@@ -1102,7 +1102,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1024"
+    "clients.js:1027"
    ],
    "magasin": true,
    "routes": [
@@ -1123,7 +1123,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1013"
+    "clients.js:1016"
    ],
    "magasin": true,
    "routes": [
@@ -1144,7 +1144,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:780"
+    "clients.js:783"
    ],
    "magasin": true,
    "routes": [
@@ -1186,7 +1186,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1020"
+    "clients.js:1023"
    ],
    "magasin": true,
    "routes": [
@@ -1273,11 +1273,11 @@
    "fichiers": [
     "clients.js:108",
     "clients.js:127",
-    "clients.js:404",
-    "clients.js:415",
-    "clients.js:426",
-    "clients.js:776",
-    "clients.js:916",
+    "clients.js:406",
+    "clients.js:417",
+    "clients.js:428",
+    "clients.js:779",
+    "clients.js:919",
     "clients.js:92"
    ],
    "magasin": true,
@@ -1299,7 +1299,7 @@
     "POST"
    ],
    "fichiers": [
-    "clients.js:910"
+    "clients.js:913"
    ],
    "magasin": true,
    "routes": [
@@ -1320,7 +1320,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:894"
+    "clients.js:897"
    ],
    "magasin": true,
    "routes": [
@@ -1404,7 +1404,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:900"
+    "clients.js:903"
    ],
    "magasin": true,
    "routes": [

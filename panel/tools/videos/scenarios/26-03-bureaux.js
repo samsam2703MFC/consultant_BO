@@ -32,11 +32,11 @@ module.exports = async function () {
     id: 'clients-bureaux', titre: 'Les bureaux',
     resume: 'Les bureaux en développement à valider, puis les bureaux livrés : statut, catalogue, offres, sites ; la fiche d’un bureau dans un tiroir.',
     accroche: 'Du questionnaire à la tournée',
-    programme: ['Régler le questionnaire', 'Saisir un bureau en développement', 'Valider une demande', 'Refuser une demande',
+    programme: ['Régler le questionnaire', 'Valider une demande', 'Refuser une demande',
       'Ajouter un bureau', 'Modifier la livraison', 'Ajouter un site', 'Inviter des personnes'],
   });
   await f.montrer('.pcl-dev', 'En développement');
-  await f.dire('En tête, les <b>bureaux en développement</b> : 2 demandes à valider, du questionnaire du magasin ou saisies ici.', 5400);
+  await f.dire('En tête, les <b>bureaux en développement</b> : 2 demandes à valider, venues du questionnaire du magasin.', 5400);
   await f.montrer('.pcl-dev .pcl-ligne[data-id="13"]', 'Une demande');
   await f.dire('Chaque demande : le bureau, la personne, le jour, et le <b>bon de bienvenue</b> qu’elle a reçu.', 4600);
   await f.cacher(150); await f.taire(150);

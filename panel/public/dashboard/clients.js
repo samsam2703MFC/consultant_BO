@@ -186,10 +186,12 @@
       ${st.mo && st.mo.err ? `<p class="error">${esc(st.mo.err)}</p>` : ''}${st.mo && st.mo.ok ? `<p class="pcl-ok">${esc(st.mo.ok)}</p>` : ''}
       ${pied ? `<div class="confirm__actions">${pied}</div>` : ''}</div></div>`;
   }
-  /** Un champ d'un formulaire : sa valeur vit dans st.mo.f[k] (ou l'objet `o`), écrite à la saisie sans rendre. */
+  /** Un champ d'un formulaire : sa valeur vit dans st.mo.f[k] (ou l'objet `o`), écrite à la saisie sans rendre. Un champ
+   *  de l'assistant (`src`) garde le préfixe « f » même sous une fenêtre ouverte : deux champs au même id, et le focus rendu
+   *  après un rendu partait dans le champ caché de l'assistant (relecture du 27/11/2026). */
   function champ(k, l, o) {
     o = o || {}; const src = o.src || (st.mo && st.mo.f) || {}, v = src[k] == null ? '' : src[k];
-    const attr = `id="pcl-c-${esc(o.ou || (st.mo ? 'm' : 'f'))}-${esc(k)}" data-f="${esc(k)}"${o.ou ? ` data-ou="${esc(o.ou)}"` : ''}${o.liste ? ` list="${esc(o.liste)}"` : ''}`;
+    const attr = `id="pcl-c-${esc(o.ou || (o.src || !st.mo ? 'f' : 'm'))}-${esc(k)}" data-f="${esc(k)}"${o.ou ? ` data-ou="${esc(o.ou)}"` : ''}${o.liste ? ` list="${esc(o.liste)}"` : ''}`;
     let w;
     if (o.choix) { w = `<select ${attr}>${o.choix.map(([cv, cl]) => `<option value="${esc(cv)}"${String(v) === String(cv) ? ' selected' : ''}>${esc(cl)}</option>`).join('')}</select>`; }
     else if (o.type === 'case') { return `<label class="pcl-case${o.plein ? ' plein' : ''}"><input type="checkbox" ${attr}${v ? ' checked' : ''}> ${esc(l)}</label>`; }
@@ -1063,7 +1065,12 @@
     const ou = t.dataset.ou;
     if (ou && ev.type === 'input') { if (t.dataset.f === 'address') { geoChercher(ou, val); } else if (t.dataset.f === 'postal_code') { geoCodePostal(ou, val); } }
     if (ou && ou[0] === 's' && st.b.w) { const s = st.b.w.sites[+ou.slice(1)]; if (s) { s[t.dataset.f] = val; } majResume(); return; }
-    if (st.onglet === 'bur' && st.b.w && !st.mo) { st.b.w.f[t.dataset.f] = val; majResume(); return; }
+    if (st.onglet === 'bur' && st.b.w && !st.mo) {
+      st.b.w.f[t.dataset.f] = val;
+      // Une société choisie à la main : sa TVA suit (la TVA d'une société choisie d'office ne doit pas rester).
+      if (t.dataset.f === 'id_company_client' && val) { choisirSociete(st.b.w, val); rendre(); return; }
+      majResume(); return;
+    }
     if (st.mo) { st.mo.f[t.dataset.f] = val; }
   }
   document.addEventListener('keydown', ev => {
