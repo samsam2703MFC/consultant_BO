@@ -7,7 +7,7 @@ declare(strict_types=1);
  * magasin) qui crée directement aussi un voucher ».
  *
  * Une DEMANDE de bureau naît de deux façons : le questionnaire public du magasin (une page sans session, son adresse
- * porte le jeton du magasin), ou « Nouveau bureau en développement » dans le dashboard. Elle crée tout de suite dans
+ * porte le jeton du magasin), ou « Nouveau bureau en développement » dans le dashboard (bouton retiré le 27/11/2026). Elle crée tout de suite dans
  * TF Buddy, avec les comptes du cockpit (pclTf : les routes /shops/{s}/clients et les bons leur répondent) :
  *   - la personne : un client particulier du magasin (POST /shops/{s}/clients ; nom et téléphone obligatoires) ;
  *   - la société, si un numéro de TVA est donné : un client B2B (POST /shops/{s}/clients {vat_number}, VIES complète) ;

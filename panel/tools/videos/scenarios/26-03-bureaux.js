@@ -3,7 +3,6 @@
  *                                           son filtre, le tiroir d'un bureau (livraison, sites, catalogue, offres,
  *                                           personnes, invitation, documents ; précédent, suivant)
  *   fonction  clients-questionnaire         le questionnaire du magasin : le lien et son QR, le message, le bon
- *   fonction  clients-bureau-dev            « Nouveau bureau en développement » : la personne, la société, le bon
  *   fonction  clients-valider-demande       une demande validée : le bureau créé dans TF Buddy
  *   fonction  clients-refuser-demande       une demande refusée
  *   fonction  clients-ajouter-bureau        « Ajouter un bureau » : l'assistant en sept étapes (POST …/offices/onboard)
@@ -82,28 +81,6 @@ module.exports = async function () {
   await f.cliquer('.pcl-fen [data-act="dev-questionnaire-ok"]', { apres: 1400 });
   await f.dire('Enregistré. Chaque réponse crée la personne, son bon et la société dans TF Buddy ; le bureau attend ici.', 5200);
   await f.taire(200);
-
-  /* Nouveau bureau en développement */
-  await fonction(f, { id: 'clients-bureau-dev', titre: 'Saisir un bureau en développement',
-    resume: 'Une personne et son futur bureau, saisis au magasin : la personne, la société et le bon se créent tout de suite dans TF Buddy ; le bureau, à la validation.',
-    points: ['« Nouveau bureau en développement »', 'La personne, la société', 'L’adresse proposée par TF Buddy', '« Créer et valider »'] });
-  await f.cliquer('.pcl-dev [data-act="dev-nouveau"]', { apres: 900 });
-  await ecrire(f, '#pcl-c-m-prenom', 'Manon');
-  await ecrire(f, '#pcl-c-m-nom', 'Piron');
-  await ecrire(f, '#pcl-c-m-email', 'manon.piron@exemple.be', { delai: 35 });
-  await ecrire(f, '#pcl-c-m-tel', '+32 400 27 18 28', { delai: 40 });
-  await ecrire(f, '#pcl-c-m-societe', 'Kinésithérapie du Val');
-  await ecrire(f, '#pcl-c-m-tva', 'BE0000.989.898', { delai: 45 });
-  await ecrire(f, '#pcl-c-m-address', 'Rue Haute', { delai: 80, apres: 1300 });
-  await f.montrer('#pcl-geo-m', 'Les adresses de TF Buddy');
-  await f.dire('L’adresse : <b>TF Buddy propose</b> les adresses dès trois lettres ; une adresse choisie remplit le code postal et la ville.', 5600);
-  await f.cacher(150); await f.taire(150);
-  await f.cliquer('#pcl-geo-m [data-act="geo-place"][data-id="g9"]', { apres: 1100 });
-  await ecrire(f, '#pcl-c-m-personnes', '8');
-  await f.cliquer('.pcl-fen [data-act="dev-nouveau-ok"]', { apres: 2000 });
-  await f.montrer(TIR + ' .pcl-tir-corps', 'La demande');
-  await f.dire('La personne, la société et son bon sont dans <b>TF Buddy</b>. Le bureau, lui, attend la validation.', 5000);
-  await f.cacher(300); await f.taire(200);
 
   /* Valider une demande */
   await fonctionPreparee(f, { id: 'clients-valider-demande', titre: 'Valider une demande',

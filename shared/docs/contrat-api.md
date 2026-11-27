@@ -3490,8 +3490,8 @@ une société B2B, donc un numéro de TVA.
                                              rien d'autre ne sort : ni si la société est cliente, ni ses contacts)
     GET  /dashboard/bureaux-dev?shop=        → {demandes: [{id, source, statut: a_valider|cree|refuse|hors_zone|reprise, personne, donnees, clientId, societeId, bon, erreurs, officeId, le}],
                                                 questionnaire: {jeton, actif, promo, titre, message}, promos: [{id, nom}], lienCourt: "2"}
-    POST /dashboard/bureaux-dev              {shop, donnees, bon, hors_zone?}   une demande saisie au dashboard (l'accord n'y est pas demandé)
-                                             → {ok, demande, reprise} ; hors_zone : l'id d'une demande hors zone ouverte, qui passe « reprise »
+    POST /dashboard/bureaux-dev              {shop, donnees, bon}   une demande saisie au dashboard (l'accord n'y est pas demandé) ; sans
+                                             appelant d'écran depuis le 27/11/2026 (le bouton « Nouveau bureau en développement » est retiré)
     POST /dashboard/bureaux-dev/questionnaire {shop, actif, promo, titre, message, regenerer}   (regenerer : un nouveau jeton, l'ancien lien meurt)
     POST /dashboard/bureaux-dev/valider      {shop, id, statut: active|pending, nom, tva, route_id}
                                              → {ok, officeId} | 422 (TVA manquante) | 409 (déjà traitée) | refus du compte du magasin
@@ -3503,9 +3503,11 @@ pas dans la liste » des deux pages Livraison au bureau (landing atelierby.be, l
 (`POST /webshop/shops/{n}/delivery-interest {request_key, postalCode, city, company, headcount, email}`) ; le cockpit en
 garde une copie dans `panel_bureau_dev` (source et statut `hors_zone`, traitée dès l'arrivée : effacée après 90 jours), au
 magasin que le visiteur a choisi (la boutique la plus proche, calculée sur la page). Deux actions par demande (27/11/2026,
-Sam : « deux actions, Créer le bureau et la poubelle ») : « Créer le bureau » ouvre « Nouveau bureau en développement »
-pré-rempli (société, e-mail, code postal, commune, effectif, une remarque datée) ; une fois la demande créée, la demande hors
-zone passe au statut `reprise` (`donnees._reprise` = l'id créé) et quitte la liste. La poubelle efface la copie.
+Sam : « deux actions, Créer le bureau et la poubelle », puis « la création du bureau doit être cet assistant : Ajouter un
+bureau ») : « Créer le bureau » ouvre l'assistant « Ajouter un bureau » (sept étapes) pré-rempli (nom du bureau = société,
+segment Entreprise, e-mail du responsable, code postal et commune du site ; la société choisie si elle est déjà cliente,
+sinon « Ajouter la société » à l'étape 1) ; le bureau créé, la demande hors zone passe au statut `reprise` (`office_id`)
+et quitte la liste (« Ouvrir le bureau »). La poubelle efface la copie.
 
     POST /bureau-hors-zone                   PUBLIC {shop, cp*, commune, societe, effectif, email*, origine: landing|webshop, distance (km),
                                              tfbuddy: ok|refus (webshop), request_key ([A-Za-z0-9]{8,64}), langue, site_web (piège)}
@@ -3514,6 +3516,8 @@ zone passe au statut `reprise` (`donnees._reprise` = l'id créé) et quitte la l
                                              déjà envoyé à TF Buddy et poste la copie en text/plain (navigator.sendBeacon, sans lire la réponse).
                                              Le même request_key dans la journée met à jour la même copie.
     POST /dashboard/bureaux-dev/renvoyer     {shop, id}   une copie que TF Buddy n'a pas prise, renvoyée (même request_key) → {ok, tfbuddy} | 502
+    POST /dashboard/bureaux-dev/reprendre    {shop, id, office_id}   le bureau créé par l'assistant : la demande hors zone ouverte passe
+                                             « reprise » → {ok, officeId} | 422 (office_id manquant) | 404 (pas ouverte, ou d'un autre magasin)
     POST /dashboard/bureaux-dev/effacer      {shop, id}   la poubelle : la copie effacée du cockpit (l'original reste dans TF Buddy) → {ok} | 404
                                              (une ligne qui n'est pas une demande hors zone de ce magasin)
     GET  /dashboard/bureaux-dev/tournees?shop= → {ok, tournees: [{id, nom, zone, principale, detail, jours[1–7], de, a, limite, preavis, creneaux[]}]}

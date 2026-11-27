@@ -321,3 +321,5 @@
 /* Les actions d'une demande hors zone (27/11/2026) : Renvoyer, Créer le bureau, la poubelle ; une demande reprise, en retrait. */
 .pcl-hz-acts { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: nowrap; }
 .pcl-hz-reprise td { color: var(--muted); }
+/* L'étape 1 de l'assistant : « Ajouter la société », sous la liste des sociétés (27/11/2026). */
+.pcl-w-societe { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: -4px; }

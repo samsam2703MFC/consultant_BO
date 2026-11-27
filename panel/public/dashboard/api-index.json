@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-27T20:01:33Z",
+ "genere": "2026-11-27T20:24:25Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1039,7 +1039,6 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1012",
     "clients.js:104"
    ],
    "magasin": true,
@@ -1050,7 +1049,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:817",
+     "source": "panel/src/bureaux_dev.php:827",
      "resume": ""
     }
    ]
@@ -1061,7 +1060,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:989"
+    "clients.js:1010"
    ],
    "magasin": true,
    "routes": [
@@ -1071,7 +1070,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:817",
+     "source": "panel/src/bureaux_dev.php:827",
      "resume": ""
     }
    ]
@@ -1082,7 +1081,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1008"
+    "clients.js:1029"
    ],
    "magasin": true,
    "routes": [
@@ -1092,7 +1091,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:817",
+     "source": "panel/src/bureaux_dev.php:827",
      "resume": ""
     }
    ]
@@ -1103,7 +1102,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1003"
+    "clients.js:1024"
    ],
    "magasin": true,
    "routes": [
@@ -1113,7 +1112,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:817",
+     "source": "panel/src/bureaux_dev.php:827",
      "resume": ""
     }
    ]
@@ -1124,7 +1123,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:992"
+    "clients.js:1013"
    ],
    "magasin": true,
    "routes": [
@@ -1134,7 +1133,28 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:817",
+     "source": "panel/src/bureaux_dev.php:827",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/bureaux-dev/reprendre",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "clients.js:780"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/bureaux-dev…",
+     "handler": "bdvRoute",
+     "source": "panel/src/bureaux_dev.php:827",
      "resume": ""
     }
    ]
@@ -1155,7 +1175,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:817",
+     "source": "panel/src/bureaux_dev.php:827",
      "resume": ""
     }
    ]
@@ -1166,7 +1186,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:999"
+    "clients.js:1020"
    ],
    "magasin": true,
    "routes": [
@@ -1176,7 +1196,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:817",
+     "source": "panel/src/bureaux_dev.php:827",
      "resume": ""
     }
    ]
@@ -1253,11 +1273,11 @@
    "fichiers": [
     "clients.js:108",
     "clients.js:127",
-    "clients.js:403",
-    "clients.js:414",
-    "clients.js:425",
-    "clients.js:759",
-    "clients.js:905",
+    "clients.js:404",
+    "clients.js:415",
+    "clients.js:426",
+    "clients.js:776",
+    "clients.js:916",
     "clients.js:92"
    ],
    "magasin": true,
@@ -1279,7 +1299,7 @@
     "POST"
    ],
    "fichiers": [
-    "clients.js:899"
+    "clients.js:910"
    ],
    "magasin": true,
    "routes": [
@@ -1300,7 +1320,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:883"
+    "clients.js:894"
    ],
    "magasin": true,
    "routes": [
@@ -1384,7 +1404,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:889"
+    "clients.js:900"
    ],
    "magasin": true,
    "routes": [
