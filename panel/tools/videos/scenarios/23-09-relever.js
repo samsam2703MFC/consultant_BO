@@ -40,7 +40,7 @@ module.exports = async function () {
   await f.montrer('.cf2-mod .cf2-pas', 'Déjà passée');
   await f.dire('La prise d’effet, passée, n’est pas cochée.', 3000);
   await f.montrer('.cf2-mod .cf2-rq', 'À vérifier');
-  await f.dire('En orange, ce qu’il <b>signale</b> : ici, une clause à relire avec votre consultant.', 4200);
+  await f.dire('Sur fond or, ce qu’il <b>signale</b> : ici, une clause à relire avec votre consultant.', 4200);
   await f.cacher(150); await f.taire(150);
   await f.cliquer(f.p.locator('.cf2-mod label.cf2-pp input[type=checkbox]').nth(0), { apres: 500 });
   await f.cliquer(f.p.locator('.cf2-mod label.cf2-pp input[type=checkbox]').nth(1), { apres: 700 });

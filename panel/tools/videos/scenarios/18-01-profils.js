@@ -1,6 +1,6 @@
 /* Fidélité, l'onglet « Profils des clients » (?vue=fidelite), 26/11/2026 :
  *   onglet    fidelite-profils   ouvert par défaut : la part des tickets scannés (aujourd'hui, le mois, l'année, l'échelle
- *                                de 0 à 90 %), les six profils du moins fidèle au plus fidèle, un profil choisi (ses
+ *                                en trois paliers : < 20, 20–50, ≥ 50 %), les six profils du moins fidèle au plus fidèle, un profil choisi (ses
  *                                radars face à la moyenne, son évolution sur 30, 90 ou 180 jours), les clients qui
  *                                reviennent (la liste dépliée, la recherche)
  * Aucune fonction en chapitre : la page se lit (choisir un profil, la période de l'évolution, déplier et chercher sont
@@ -23,9 +23,9 @@ module.exports = async function () {
   await f.montrer('.fd-ong', 'Deux onglets');
   await f.dire('Fidélité s’ouvre sur <b>Profils des clients</b> ; à côté, Cartes de fidélité.', 3800);
   await f.montrer('.fd-scan', 'Les tickets scannés');
-  await f.dire('D’abord, la part des <b>tickets d’aujourd’hui</b> qui ont un client scanné ; dessous, le mois et l’année.', 5200);
-  await f.montrer('.fd-scan-e', 'De 0 à 90 %');
-  await f.dire('L’échelle va de 0 à 90 % : du noir au rouge, à l’orange, au jaune, au vert, puis à l’<b>or</b>.', 4800);
+  await f.dire('D’abord, la part des <b>tickets d’aujourd’hui</b> qui ont un client scanné, et son état en mots ; à droite, le mois et l’année.', 5400);
+  await f.montrer('.fd-scan .chr-g', 'Trois paliers');
+  await f.dire('Trois paliers : sous 20 %, <b>faible</b> ; de 20 à 50 %, moyenne ; 50 % et plus, <b>bonne</b>. Les traits fins : le mois et l’année.', 5600);
   await f.cacher(300); await f.taire(150);
 
   await f.montrer('.fd-tuiles', 'Six profils');

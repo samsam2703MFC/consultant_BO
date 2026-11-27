@@ -15,8 +15,8 @@ module.exports = async function () {
   await f.chapitre({ n: 1, total: 3, titre: 'Les profils des clients', texte: 'Les clients reconnus en caisse, rangés selon le rythme de leurs passages.', ms: 3400 });
   await f.etape('1 · Les profils');
   await f.montrer('.fd-scan', 'Les tickets scannés');
-  await f.dire('D’abord, la part des <b>tickets d’aujourd’hui</b> qui ont un client scanné ; dessous, le mois et l’année.', 5000);
-  await f.dire('L’échelle va de 0 à 90 % : du noir au rouge, à l’orange, au jaune, au vert, puis à l’<b>or</b>.', 4600);
+  await f.dire('D’abord, la part des <b>tickets d’aujourd’hui</b> qui ont un client scanné ; à droite, le mois et l’année.', 5000);
+  await f.dire('Trois paliers : sous 20 %, <b>faible</b> ; de 20 à 50 %, moyenne ; 50 % et plus, <b>bonne</b>.', 4600);
   await f.montrer('.fd-tuiles', 'Six profils');
   await f.dire('Les clients reconnus en caisse, rangés par <b>profil</b> : du moins fidèle, à gauche, au plus fidèle.', 4800);
   await f.montrer('.fd-tui[data-fdp="3"]', 'Hebdo');
@@ -55,8 +55,8 @@ module.exports = async function () {
   await f.chapitre({ n: 3, total: 3, titre: 'Les cartes de fidélité', texte: 'Du client reconnu à la récompense, carte par carte et client par client.', ms: 3400 });
   await f.etape('3 · Les cartes');
   await f.cliquer('[data-fdong="c"]', { apres: 1400 });
-  await f.montrer('.fdc-fun', 'Du client reconnu à la récompense');
-  await f.dire('L’onglet <b>Cartes de fidélité</b> : des clients reconnus en caisse aux inscrits, à ceux qui gagnent, aux <b>récompenses prêtes</b>.', 5800);
+  await f.montrer('.fdc-fun', 'Le résumé');
+  await f.dire('L’onglet <b>Cartes de fidélité</b> : les inscrits, sur les clients reconnus en caisse ; ceux qui gagnent ; et, à corriger, les <b>récompenses prêtes</b>.', 5800);
   await f.montrer('.fdc-row[data-fdcarte="1"]', 'Une carte');
   await f.dire('Chaque carte : où en sont ses clients, timbre par timbre ; les timbres gagnés ici ; les récompenses prêtes.', 5000);
   await f.cacher(150);
@@ -71,7 +71,7 @@ module.exports = async function () {
   await f.cacher(150);
   return f.fin({
     titre: 'À vous<br>de fidéliser', accroche: 'Chaque client compte',
-    retenir: ['La part des tickets scannés, du noir à l’or', 'Six profils, du rythme des passages', 'La fiche d’un client : ses habitudes', 'Les récompenses prêtes, à offrir en caisse'],
+    retenir: ['La part des tickets scannés : faible, moyenne, bonne', 'Six profils, du rythme des passages', 'La fiche d’un client : ses habitudes', 'Les récompenses prêtes, à offrir en caisse'],
   });
 };
 

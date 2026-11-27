@@ -1,6 +1,6 @@
 /* Mon coffre-fort › le coffre vide (il s'affiche seul tant qu'aucun document n'est rangé) (26/11/2026) :
  *   onglet    coffre-vide   « Ce que votre coffre doit contenir » : chaque dossier, ses pièces, qui les dépose, avec
- *                           « Déposer » sur les pièces à vous ; l'état du coffre (0 sur 16) et « À traiter »
+ *                           « Déposer » sur les pièces à vous ; le résumé du coffre (0 sur 16) et « À corriger »
  * Pas de fonction : « Déposer » ouvre la fenêtre du dépôt (23-07-deposer). Avant de filmer, le coffre de démo est vidé
  * (mocks/23_coffre.js, demo.vider). Chaque phrase vient de panel/public/dashboard/coffre.js (etat, aFaire, vueVide). */
 const path = require('path');
@@ -22,12 +22,12 @@ module.exports = async function () {
     resume: 'Tant qu’aucun document n’est rangé, le coffre dit ce qu’il doit contenir : chaque dossier, ses pièces, qui les dépose, et « Déposer » sur les vôtres.',
     accroche: 'Ce qu’il doit contenir',
   });
-  await f.montrer('.cf2-etat > div:nth-child(1)', 'Votre coffre');
+  await f.montrerTout('.cf2-rs-v, .cf2-rs-q', 'Votre coffre');
   await f.dire('Un coffre neuf : <b>vide pour l’instant</b>, 0 pièce sur 16.', 3600);
   await f.dire('Votre consultant y dépose le DIP, le contrat, vos rapports de visite ; vous, vos <b>pièces légales</b>.', 5200);
-  await f.montrer('.cf2-etat > div:nth-child(2)', 'À traiter');
-  await f.dire('<b>À traiter</b> : sept pièces légales à déposer ; le contrat et le DIP arriveront de votre consultant.', 5400);
-  await f.montrer('.cf2-proch', 'Grandes dates');
+  await f.montrer('.cf2-rs-l2', 'À corriger');
+  await f.dire('<b>À corriger</b> : sept pièces légales à déposer ; le contrat et le DIP arriveront de votre consultant.', 5400);
+  await f.montrer('.cf2-rs-pr', 'Grandes dates');
   await f.dire('Les grandes dates viendront avec les documents : l’assistant les relève au dépôt.', 4400);
   await f.montrer('.cf2-carte .cf2-ch', 'Ce que votre coffre doit contenir');
   await f.dire('Dessous : <b>ce que votre coffre doit contenir</b>. 7 pièces à déposer par vous, 8 attendues de votre consultant.', 5800);
@@ -43,8 +43,8 @@ module.exports = async function () {
   await f.dire('« <b>Déposer</b> » ouvre la fenêtre du dépôt, la pièce déjà choisie.', 3800);
   await f.cacher(150); await f.taire(150);
   await C.cliquerFixe(f, '.cf2-mod .f [data-cf-depot-ferme]', 900);
-  await f.montrer('.cf2-etat [data-cf-faire="depot:"]', 'Déposer ma première pièce');
-  await f.dire('Ou « <b>Déposer ma première pièce</b> », en haut.', 3200);
+  await f.montrer('.cf2-rs [data-cf-faire="depot:"]', 'Déposer ma première pièce');
+  await f.dire('Ou « <b>Déposer ma première pièce</b> », en haut, dans le résumé.', 3400);
   await f.cacher(300); await f.taire(200);
 
   return f.fin();

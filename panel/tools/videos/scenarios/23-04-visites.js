@@ -15,8 +15,8 @@ module.exports = async function () {
     resume: 'Le rapport envoyé après chaque visite de votre consultant arrive ici tout seul : lu, ou « à lire » ; son aperçu renvoie à « Mon suivi ».',
     accroche: 'Chaque visite, son rapport',
   });
-  await f.montrer('.cf2-af[data-cf-faire="nouveaux"]', 'Nouveaux');
-  await f.dire('Un nouveau rapport de visite ? Il compte dans les <b>nouveaux documents</b>, et sur le rail.', 4400);
+  await f.montrer('.cf2-rs-b[data-cf-faire="nouveaux"]', 'À lire');
+  await f.dire('Un nouveau rapport de visite ? Il compte dans les <b>nouveaux documents</b> à lire, et sur le rail.', 4400);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('.cf2-d[data-cf-dos="visites"]', { apres: 1000 });
   await f.montrer('.cf2-cont .cf2-carte', 'Rapports de visite');
