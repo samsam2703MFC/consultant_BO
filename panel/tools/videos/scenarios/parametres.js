@@ -66,7 +66,7 @@ async function ouvrirFenetre(f, rappel = false) {
   if (rappel) { await cliquerFixe(f, '#db-par [data-pari="rappel"]', 900); }
 }
 /** CONTOURNEMENT, à retirer quand dashboard.js sera corrigé : un réglage du rappel changé dans la fenêtre
- * (parRappelEnvoyer, dashboard.js:7880-7887) ne relit pas Mails et automatisations, ouverte derrière : ses tuiles et sa
+ * (parRappelEnvoyer, dashboard.js:7880-7887) ne relit pas Mails et automatisations, ouverte derrière : son résumé et sa
  * liste gardent l'ancien réglage jusqu'au prochain chargement. Pour le film, on la relit (DashAuto.relire). */
 async function relirePage(f) {
   await f.p.evaluate(() => window.DashAuto && window.DashAuto.relire());

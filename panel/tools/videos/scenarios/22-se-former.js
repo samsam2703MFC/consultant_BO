@@ -54,10 +54,10 @@ module.exports = async function () {
   await f.chapitre({ n: 3, total: 4, titre: 'Mon dossier de formation', texte: 'La formation continue de votre magasin.', ms: 3100 });
   await f.etape('3 · Mon dossier');
   await f.cliquer('.fs-mini', { apres: 1100 });
+  await f.montrer('.fs-res', 'Où j’en suis');
+  await f.dire('Le <b>résumé</b> : validées, à valider chez votre consultant, en cours, en retard ; dessous, ce qui est <b>à corriger</b>.', 5000);
   await f.montrer('.fs-nouv', 'Nouveautés');
   await f.dire('Les <b>nouveautés</b> : les formations continues reçues ces deux derniers mois, la plus récente d’abord.', 4400);
-  await f.montrer('.fs-kpis', 'Où j’en suis');
-  await f.dire('En retard, en cours, à valider chez votre consultant, validées : archivées dans votre coffre-fort.', 4400);
   await f.montrer(f.p.locator('.fs-carte', { has: f.p.locator('.fs-th') }), 'Mon dossier');
   await f.dire('Chaque formation : son statut, son avancement, son échéance.', 3200);
   await f.cacher(150);

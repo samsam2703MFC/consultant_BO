@@ -1,8 +1,8 @@
-/* Mon coffre-fort › « Grandes dates » (?vue=coffre : la barre du haut, le menu de gauche, la carte « Prochaine grande
- * date » ou un point de la frise), et ses fonctions en chapitres (26/11/2026) :
+/* Mon coffre-fort › « Grandes dates » (?vue=coffre : la barre du haut, le menu de gauche, « Prochaine grande date »
+ * dans le résumé, ou un point de la frise), et ses fonctions en chapitres (26/11/2026) :
  *   onglet    coffre-dates          toutes les échéances, par année, avec leur origine ; en or, les 4 prochains mois ;
  *                                   les dates passées repliées (« ▸ 1 date passée », un geste de lecture)
- *   fonction  coffre-date-ajouter   « ＋ Ajouter une date » : la sorte, le titre, la date, la note, « Ajouter »
+ *   fonction  coffre-date-ajouter   « Ajouter une date » : la sorte, le titre, la date, la note, « Ajouter »
  *   fonction  coffre-date-retirer   « × » au bout d'une date rangée par le magasin, puis confirmer
  * Avant de filmer, le bail est déposé et ses grandes dates rangées (comme à la fin de la vidéo 23 : les dates calculées
  * depuis la prise de cours, l'indexation relevée par l'assistant). Données fictives : mocks/23_coffre.js. Chaque phrase
@@ -66,8 +66,8 @@ module.exports = async function () {
 
   /* Ajouter une date */
   await f.fonction({ id: 'coffre-date-ajouter', titre: 'Ajouter une grande date',
-    resume: '« ＋ Ajouter une date » : la sorte, le titre, la date (et « jusqu’au »), le document et une note si besoin, puis « Ajouter ».',
-    points: ['« ＋ Ajouter une date »', 'La sorte, le titre, la date', 'Une note si besoin', '« Ajouter »'] });
+    resume: '« Ajouter une date » : la sorte, le titre, la date (et « jusqu’au »), le document et une note si besoin, puis « Ajouter ».',
+    points: ['« Ajouter une date »', 'La sorte, le titre, la date', 'Une note si besoin', '« Ajouter »'] });
   await f.cliquer('[data-cf-ajout]', { apres: 900 });
   await f.montrer('.cf2-ajout', 'Ajouter une date');
   await f.dire('Une date qu’aucun document ne donne : le contrôle des extincteurs.', 3400);

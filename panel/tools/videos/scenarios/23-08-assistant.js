@@ -4,7 +4,7 @@
  *                                   dates, les grandes dates proposées à cocher ; à gauche, la pièce reconnue, le titre et
  *                                   l'échéance remplis
  *   fonction  coffre-ranger-dates   décocher, corriger une date, puis « Ranger le document et N grandes dates »
- * Avant de filmer, la fenêtre est ouverte (« ＋ Déposer un document », sans pièce choisie) et le bail choisi, daté. Données
+ * Avant de filmer, la fenêtre est ouverte (« Déposer un document », sans pièce choisie) et le bail choisi, daté. Données
  * fictives : mocks/23_coffre.js (la lecture du bail, ses dates calculées comme cofBailDates). Chaque phrase vient de
  * panel/public/dashboard/coffre.js (lancerAssistant, fenetre, rangerDepot) ou de consultant/src/coffre_dates.php. */
 const { Film } = require('../film');
@@ -73,7 +73,7 @@ module.exports = async function () {
   await f.montrer('.cf2-flash', 'Rangé');
   await f.dire('<b>Rangé</b>, avec ses grandes dates.', 3000);
   await f.cacher(150); await C.apresFlash(f);
-  await f.montrer('.cf2-proch', 'Prochaine grande date');
+  await f.montrer('.cf2-rs-pr', 'Prochaine grande date');
   await f.dire('La prochaine grande date : le <b>dernier jour pour donner congé</b>, le 27 novembre, dans 8 jours.', 5000);
   await f.cacher(300); await f.taire(200);
 

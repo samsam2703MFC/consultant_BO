@@ -10,6 +10,7 @@
  * Contournement : l'encadré de l'effet du taux (.eqp-fp-effet) est affiché vide quand le taux n'a pas changé — sa
  * règle display:flex (equipe.css) passe devant l'attribut hidden ; `avant` rétablit display:none pour [hidden]. */
 const { Film } = require('../film');
+const { sousLaTete } = require('./equipe-onglets');
 
 const SOURCES = ['panel/public/dashboard/equipe.js', 'panel/public/dashboard/equipe.css', 'panel/src/equipe_fiche.php'];
 const RETABLIR = p => p.addStyleTag({ content: '.eqp-fp-effet[hidden]{display:none}' });
@@ -61,9 +62,11 @@ module.exports = async function () {
   await f.cacher(150); await f.taire(150);
   await f.cliquer('.eqp-fp-tete [data-eqp-fp-fermer]', { apres: 900 });
   await f.cliquer('[data-eqp-onglet=planning]', { apres: 1500 });
+  await sousLaTete(f, '.eqp-fp-lien[data-eqp-fiche="208"]');
   await f.montrer('.eqp-fp-lien[data-eqp-fiche="208"]', 'Un nom');
   await f.dire('Au planning, à la semaine comme au mois, un clic sur un <b>nom</b> ouvre aussi sa fiche.', 4400);
   await f.cacher(150); await f.taire(150);
+  await sousLaTete(f, '.eqp-fp-lien[data-eqp-fiche="208"]');
   await f.cliquer('.eqp-fp-lien[data-eqp-fiche="208"]', { apres: 1500 });
   await f.montrer('.eqp-fp-tete', 'Inès Fontaine', 1800);
   await f.cacher(150);
@@ -73,6 +76,7 @@ module.exports = async function () {
   await f.fonction({ id: 'equipe-fiche-identite', titre: 'Modifier l’identité et le contrat',
     resume: 'Dans « Identité et contrat » : le nom affiché, la langue, le type de contrat ou le rôle ; rien n’est envoyé avant « Enregistrer », puis c’est écrit dans TF Buddy.',
     points: ['Ouvrir sa fiche', 'Changer un champ', '« Enregistrer »'] });
+  await sousLaTete(f, '.eqp-fp-lien[data-eqp-fiche="208"]');
   await f.cliquer('.eqp-fp-lien[data-eqp-fiche="208"]', { apres: 1500 });
   await f.montrer('.eqp-fp-tete', 'Stage');
   await f.dire('Inès a fini son stage : elle passe à un <b>contrat de travail</b>.', 3600);
@@ -97,6 +101,7 @@ module.exports = async function () {
   await f.fonction({ id: 'equipe-fiche-taux', titre: 'Changer le taux horaire',
     resume: 'Le taux horaire dans « Identité et contrat » : avant d’enregistrer, ce que le mois au planning coûte avec ce taux et la part du personnel dans le CA ; ensuite, les coûts suivent.',
     points: ['Ouvrir sa fiche', '« Taux horaire (€/h) »', 'Lire l’effet sur le mois', '« Enregistrer »'] });
+  await sousLaTete(f, '.eqp-fp-lien[data-eqp-fiche="201"]');
   await f.cliquer('.eqp-fp-lien[data-eqp-fiche="201"]', { apres: 1500 });
   await f.montrer('.eqp-fp-ch:has([data-eqp-fp-champ=taux])', 'Taux horaire');
   await f.dire('Camille est à <b>15,80 €/h</b> au panel ; la moyenne de l’équipe est dessous.', 4000);

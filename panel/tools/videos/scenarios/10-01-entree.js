@@ -1,5 +1,5 @@
 /* Analyse › l'entrée (?vue=analyse), 26/11/2026 :
- *   onglet    analyse-entree   les six chiffres de tête, les familles et leurs flèches, le chiffre tranche par tranche, les
+ *   onglet    analyse-entree   le résumé de tête, les familles et leurs flèches, le chiffre tranche par tranche, les
  *                              quatre classements ; puis la période : Mois, ‹ et ›, « Du … au » — des gestes de lecture,
  *                              montrés ici (la même barre sert à la fiche d'un produit et à la page d'une famille)
  * Aucune fonction en chapitre : l'Analyse ne fait que lire. Données fictives : mocks/00_analyse.js (lib/ventes.js).
@@ -22,18 +22,18 @@ module.exports = async function () {
 
   await f.onglet({
     id: 'analyse-entree', titre: 'L’entrée : l’essentiel',
-    resume: 'La page s’ouvre sur l’essentiel de la période : six chiffres, les familles et leurs flèches, le chiffre tranche par tranche, quatre classements ; la période se choisit en haut.',
+    resume: 'La page s’ouvre sur l’essentiel de la période : le résumé, les familles et leurs flèches, le chiffre tranche par tranche, quatre classements ; la période se choisit en haut.',
     accroche: 'Vos ventes, d’un coup d’œil',
-    programme: ['Les six chiffres de tête', 'Les familles et leurs flèches', 'Le chiffre, tranche par tranche', 'Quatre classements', 'Choisir la période'],
+    programme: ['Le résumé de tête', 'Les familles et leurs flèches', 'Le chiffre, tranche par tranche', 'Quatre classements', 'Choisir la période'],
   });
   await f.montrer('.an-pers', 'La période');
   await f.dire('L’Analyse s’ouvre sur les <b>13 dernières semaines</b>, comparées aux 13 semaines d’avant, au jour.', 4800);
-  await f.montrer('.an-kpis', 'Six chiffres');
-  await f.dire('En tête : le chiffre, les pièces, la <b>marge réalisée</b>, le panier moyen, les références, et les <b>recettes sans coût</b> au panel.', 6000);
+  await f.montrer('.an-res', 'Le résumé');
+  await f.dire('En tête : le chiffre, les pièces, le panier moyen, la <b>marge réalisée</b>, les références ; dessous, « À corriger » : les <b>recettes sans coût</b> au panel.', 6400);
   await f.cacher(150); await f.taire(150);
   await cadre(f, FAM + ':first-child', 'Les familles');
   await f.dire('Les <b>familles</b> : leur chiffre, leur marge réalisée et leur flèche face à la période d’avant.', 4600);
-  await f.dire('▲ vert à +5 % et plus, ▶ gris : stable, ▼ orange de −5 à −15 %, ▼ rouge au-delà.', 4800);
+  await f.dire('▲ vert à +5 % et plus, ▶ gris : stable, ▼ or à −5 % et moins.', 4000);
   await cadre(f, FAM + ':nth-child(2)', 'Le chiffre');
   await f.dire('Le chiffre, semaine par semaine ; <b>jour par jour</b> sur une semaine ou un mois, mois par mois sur une année.', 5400);
   await f.cacher(150); await f.taire(150);
@@ -49,7 +49,7 @@ module.exports = async function () {
   await f.dire('Semaine, mois, trimestre, année, 13 semaines, ou <b>du … au</b> : un clic change la période.', 4600);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('[data-per="mois"]', { apres: 1700 });
-  await f.montrer('.an-kpi:first-child', 'Novembre');
+  await f.montrer('.an-res-v', 'Novembre');
   await f.dire('<b>Mois</b> : novembre jusqu’à aujourd’hui, face aux mêmes jours d’octobre.', 4200);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('[data-pas="-1"]', { apres: 1700 });

@@ -98,17 +98,36 @@
   const chip = (t, cl) => `<span class="au-chip ${cl || ''}">${esc(t)}</span>`;
   const canauxChips = c => c === 'les2' ? chip('e-mail', 'm') + chip('SMS', 's') : c === 'sms' ? chip('SMS', 's') : chip('e-mail', 'm');
 
-  function tuiles() {
-    const r = R(), g = r.reglage, C = r.demain.commandes || [];
-    const prevus = C.filter(c => c.etat === 'prevu' || c.etat === 'envoye').length, sans = C.filter(c => c.etat === 'injoignable').length;
+  /* Le résumé (27/11/2026, DESIGN_SYSTEM.md §7.13) : il remplace les quatre tuiles, qui redisaient la ligne du rappel (allumé,
+   * 17:00), le canal et les commandes de demain. Ligne 1 : les rappels prévus demain (24 px, 700 : le seul gras), l'état du
+   * rappel en mots, sur combien de commandes ; l'horloge et le fournisseur des SMS derrière un filet. Ligne 2 : « À corriger »,
+   * ce que la page compte déjà (une commande de demain sans e-mail ni téléphone, un rappel en échec, personne pour les fiches
+   * des promotions) ; chaque bouton fait défiler jusqu'à la carte et l'encadre un instant. Une page de réglage : sans point,
+   * une phrase verte. */
+  function resume() {
+    const r = R(), g = r.reglage, C = r.demain.commandes || [], E = st.d.equipe || [];
+    const prevus = C.filter(c => c.etat === 'prevu' || c.etat === 'envoye').length, sans = C.filter(c => c.etat === 'injoignable').length, echec = C.filter(c => c.etat === 'erreur').length;
     const sms = st.d.sms === 'smsapi' ? 'SMSAPI' : st.d.sms === 'twilio' ? 'Twilio' : null;
-    const t = (k, v, s, cl) => `<div class="au-tui${cl ? ' ' + cl : ''}"><span class="k">${esc(k)}</span><b>${v}</b><span class="s">${s}</span></div>`;
-    return `<div class="au-tuiles">
-      ${t('Rappel la veille', g.actif ? 'Allumé' : 'Éteint', g.actif ? 'chaque jour à ' + esc(g.heure) : 'à allumer quand il est prêt', g.actif ? 'on' : '')}
-      ${t('Demain, ' + r.demain.lib, r.demain.lu ? C.length + ' commande' + (C.length > 1 ? 's' : '') : '—', r.demain.lu ? prevus + ' rappel' + (prevus > 1 ? 's' : '') + (sans ? ' · ' + sans + ' sans e-mail ni téléphone' : '') : 'le panel ne répond pas')}
-      ${t('Par où', esc(CANAUX.find(x => x[0] === g.canal)[1]), 'SMS : ' + (sms ? esc(sms) : '<span class="au-ko">aucun fournisseur réglé</span>'))}
-      ${t('L’horloge', 'toutes les 10 min', st.d.horloge ? 'dernier passage ' + esc(jm(st.d.horloge.replace('T', ' ')) + ' ' + hm(st.d.horloge.replace('T', ' '))) : 'pas encore de passage')}
-    </div>`;
+    const pl = (n, s, p) => n + ' ' + (n > 1 ? p : s);
+    const A = [];
+    if (r.demain.lu && sans) { A.push({ sig: 'prize', lead: pl(sans, 'commande de demain', 'commandes de demain'), mot: 'sans e-mail ni téléphone', voir: 'au-demain' }); }
+    if (r.demain.lu && echec) { A.push({ sig: 'stop', lead: pl(echec, 'rappel de demain', 'rappels de demain'), mot: 'en échec', voir: 'au-demain' }); }
+    if (!E.length) { A.push({ sig: 'prize', lead: 'Fiches des promotions', mot: 'personne ne les reçoit', voir: 'au-equipe' }); }
+    return `<div class="db-card au-res" role="region" aria-label="Les envois automatiques en bref"><div class="au-res-l1">
+        <div class="au-res-v"><span class="au-res-n">${r.demain.lu ? prevus : '—'}</span><span class="au-res-et"><i class="au-pt ${g.actif ? 'green' : ''}"></i>rappel ${g.actif ? 'allumé' : 'éteint'}</span></div>
+        <div class="au-res-q">${r.demain.lu ? (prevus > 1 ? 'rappels prévus' : 'rappel prévu') + ' pour demain, ' + esc(r.demain.lib) : 'les commandes de demain ne se lisent pas au panel'}<span>${r.demain.lu ? 'sur ' + pl(C.length, 'commande à retirer', 'commandes à retirer') + (g.actif ? '' : ' · rien ne part tant que le rappel est éteint') : 'le rappel partira quand elles se liront'}</span></div>
+        <div class="au-res-h"><span>L’horloge passe toutes les 10 min</span><span>${st.d.horloge ? 'dernier passage ' + esc(jm(st.d.horloge.replace('T', ' ')) + ' ' + hm(st.d.horloge.replace('T', ' '))) : 'pas encore de passage'} · SMS : ${sms ? esc(sms) : '<span class="au-ko">aucun fournisseur réglé</span>'}</span></div></div>
+      <div class="au-res-l2">${A.length ? `<span class="au-res-t">À corriger</span><span class="au-res-l">${A.map(x => `<button type="button" class="btn btn--sm au-res-b" data-au-voir="${x.voir}"><i class="au-pt ${x.sig}" aria-hidden="true"></i><span class="au-res-j">${esc(x.lead)}</span>${esc(x.mot)}</button>`).join('')}</span>`
+        : '<p class="au-res-ok">Rien à corriger : les envois de demain sont prêts.</p>'}</div></div>`;
+  }
+  /** Le geste d'un point : la carte à l'écran, encadrée de bordeaux un instant (défilement doux sauf mouvement réduit). */
+  function montrer(id) {
+    const el = st.el && st.el.querySelector('#' + id); if (!el) { return; }
+    const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.style.scrollMarginTop = '16px';
+    el.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+    el.classList.remove('au-vu'); void el.offsetWidth; el.classList.add('au-vu');
+    clearTimeout(el._auT); el._auT = setTimeout(() => el.classList.remove('au-vu'), 1800);
   }
   function liste() {
     const g = R().reglage;
@@ -154,7 +173,7 @@
     return `<div class="db-card"><div class="ct"><span class="db-lab">Aperçu</span><span class="db-mini">${C.length ? 'avec la première commande de demain' : 'avec une commande d’exemple'}</span></div>
         ${mail ? `<div class="au-mail"><div class="h">Objet <b>${esc(remplir(f.objet, v))}</b></div><div class="c">${esc(remplir(f.corps, v)).replace(/\n/g, '<br>')}</div></div>` : ''}
         ${sms ? `<div class="au-sms"><div class="h">SMS</div><div class="b">${esc(remplir(f.sms, v))}</div></div>` : ''}</div>
-      <div class="db-card"><div class="ct"><span class="db-lab">Demain, ${esc(r.demain.lib)}</span><span class="db-mini">les commandes à retirer · rappel à ${esc(r.reglage.heure)}</span></div>
+      <div class="db-card" id="au-demain"><div class="ct"><span class="db-lab">Demain, ${esc(r.demain.lib)}</span><span class="db-mini">les commandes à retirer</span></div>
         ${!r.demain.lu ? '<p class="au-vide au-ko">Les commandes ne se lisent pas au panel pour l’instant.</p>' : C.length ? `<div class="au-defile"><table class="au-t"><thead><tr><th>Retrait</th><th>Client</th><th class="n">Commande</th><th>Rappel</th><th>État</th></tr></thead><tbody>${C.map(c => `<tr>
           <td>${esc(c.heure)}</td><td>${esc(c.client || '—')}<small>n° ${c.id}${c.webshop ? ' · webshop' : ''}</small></td><td class="n">${eur(c.total)}<small>${c.paye ? 'réglée' : 'à payer au retrait'}</small></td>
           <td>${(c.canaux.email ? chip('e-mail', 'm') : '') + (c.canaux.sms ? chip('SMS', 's') : '') || '<span class="mu">—</span>'}</td><td>${etat(c)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="au-vide">Aucune commande à retirer demain.</p>'}</div>
@@ -163,7 +182,7 @@
   }
   function carteEquipe() {
     const E = st.d.equipe || [];
-    return `<div class="db-sec">L’équipe</div><div class="db-card au-eq"><div class="ct"><span class="db-lab">Qui reçoit les fiches des promotions</span><span class="db-mini">${E.length} personne${E.length > 1 ? 's' : ''} · depuis ${esc(st.d.boite)}</span></div>
+    return `<div class="db-sec">L’équipe</div><div class="db-card au-eq" id="au-equipe"><div class="ct"><span class="db-lab">Qui reçoit les fiches des promotions</span><span class="db-mini">depuis ${esc(st.d.boite)}</span></div>
       <p class="bx-mu" style="margin:10px 16px">Quand un bundle du Coach Vente est lancé (Promotions), sa fiche PDF part à ces adresses : le bundle, les dates, la caisse et les phrases pour le proposer. Ni marge ni coefficient.</p>
       ${E.length ? `<table class="au-t"><tbody>${E.map(x => `<tr><td><b>${esc(x.nom)}</b></td><td>${esc(x.adresse)}</td><td style="text-align:right"><button type="button" class="bx-lien" data-au-eqx="${x.id}"${st.occupe ? ' disabled' : ''}>Retirer</button></td></tr>`).join('')}</tbody></table>` : '<p class="au-vide">Personne pour l’instant.</p>'}
       <div class="au-eq-f"><input class="bx-in" data-au-eq="nom" placeholder="Prénom et initiale (Lina K.)" maxlength="80" value="${esc(st.eq.nom)}">
@@ -180,7 +199,7 @@
     const fl = st.flash ? `<div class="au-flash ${st.flash.ok ? 'ok' : 'ko'}">${esc(st.flash.texte)}</div>` : '';
     return `<div class="au">
       <p class="au-intro">Ce que le magasin envoie tout seul à ses clients, et bientôt à son comptable : depuis sa boîte mail et par SMS, à l’heure dite.</p>
-      ${fl}${tuiles()}${liste()}
+      ${fl}${resume()}${liste()}
       ${carteEquipe()}
       <div class="db-sec">Rappel la veille du retrait</div>
       <div class="au-g2"><div class="au-col">${reglage()}</div><div class="au-col">${apercu()}</div></div></div>`;
@@ -189,6 +208,7 @@
     const on = (sel, ev, fn) => st.el.querySelectorAll(sel).forEach(x => x.addEventListener(ev, fn));
     on('[data-au="boite"]', 'click', () => st.aller && st.aller('boite'));
     on('[data-au="auto-boite"]', 'click', () => st.aller && st.aller('boite'));
+    on('[data-au-voir]', 'click', e => montrer(e.currentTarget.dataset.auVoir));
     on('[data-au-actif]', 'change', e => enregistrer({ actif: e.currentTarget.checked }));
     on('[data-au-canal]', 'click', e => { st.form.canal = e.currentTarget.dataset.auCanal; rendre(); });
     on('[data-au-f]', 'input', e => {

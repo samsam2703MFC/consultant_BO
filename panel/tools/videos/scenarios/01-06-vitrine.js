@@ -22,17 +22,18 @@ module.exports = async function () {
 
   await enHautDe(f, '.vt', 50);
   await dire(f, '.vt .ct', 'La vitrine', 'La <b>vitrine</b> : ce qui va manquer d’ici la fermeture. À droite, la prochaine cuisson.', 4800);
-  await dire(f, '.vt .vt-top', 'À sauver', 'Cinq produits vont manquer : 64 € de <b>ventes à sauver</b>.', 3600);
+  await f.montrerTout('.vt .vt-h .rs', 'À sauver');
+  await f.dire('Cinq produits vont manquer : 64 € de <b>ventes à sauver</b>. En haut de la page, « À corriger » le dit aussi.', 5000);
   await f.montrerTout('.vt .vt-h', 'Trois durées de vie');
   await f.dire('Short life, vendu le jour même ; medium life, deux à trois jours ; long life, une semaine et plus.', 5400);
   await rien(f);
 
   await f.cliquer('[data-vitb="S"]', { apres: 900, dx: 0.1 });
   await f.montrer('.vt-b.on .vt-l', 'Un produit');
-  await f.dire('Chaque produit et sa journée en cases : vert en vitrine, orange basse, rouge vide alors que des clients le demandent.', 6200);
+  await f.dire('Chaque produit et sa journée en cases : vert en vitrine, or basse, rouge vide alors que des clients le demandent.', 6200);
   await f.montrerTout('.vt-b.on .vt-l.ko .mq, .vt-b.on .vt-l.ko .g', 'À sauver, à cuire');
   await f.dire('À droite : les ventes à sauver, et combien ajouter dans la cuisson de 16:30.', 4400);
-  await dire(f, '.vt-b.on .cpt', 'Les filtres', 'Les petits carrés filtrent : <b>rouge</b>, vide maintenant ; <b>orange</b>, va manquer ; <b>vert</b>, en ordre.', 5600);
+  await dire(f, '.vt-b.on .cpt', 'Les filtres', 'Les petits carrés filtrent : <b>rouge</b>, vide maintenant ; <b>or</b>, va manquer ; <b>vert</b>, en ordre.', 5600);
   await rien(f);
   await f.cliquer('[data-vitq="S:ok"]', { apres: 900 });
   await f.dire('Le vert est éteint au départ : un clic ajoute les produits en ordre.', 3800);
@@ -51,7 +52,7 @@ module.exports = async function () {
   await f.montrer('.op-stock .db-stbar', 'Stock', 1400);
   await f.cliquer('.op-stock .db-stbar .dr', { apres: 900 });
   await enHautDe(f, '.op-stock', 90);
-  await dire(f, '.op-stock .db-stbar', 'Stock', 'En bas de page, la barre <b>Stock</b> : les références de l’inventaire sous leur minimum.', 4800);
+  await dire(f, '.op-stock .db-stbar', 'Stock', 'En bas de page, la barre <b>Stock</b> : l’inventaire du magasin ; ce qui est sous le minimum est dans « À corriger ».', 5400);
   await dire(f, '.op-stock .db-stdl', 'La liste', '« <b>la liste</b> » : les références en alerte d’abord, puis tout l’inventaire, par catégorie.', 5200);
   await f.cacher(200);
 

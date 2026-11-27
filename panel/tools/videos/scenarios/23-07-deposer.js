@@ -1,4 +1,4 @@
-/* Mon coffre-fort › « Déposer », étape 1 : le fichier (la fenêtre qu'ouvrent « ＋ Déposer un document », « Déposer » sur
+/* Mon coffre-fort › « Déposer », étape 1 : le fichier (la fenêtre qu'ouvrent « Déposer un document », « Déposer » sur
  * une pièce ou « Déposer la nouvelle »), et sa fonction en chapitre (26/11/2026) :
  *   onglet    coffre-depot      la fenêtre : le fichier (glissé, choisi, ou une photo au téléphone), « C'est quelle
  *                               pièce ? », le titre, la date, l'échéance, la note ; à droite, ce que fera l'assistant
@@ -21,7 +21,7 @@ module.exports = async function () {
     accroche: 'Un document, une place', programme: ['Déposer un document'],
   });
   await f.montrer('.cf2-barre [data-cf-depot]', 'Déposer un document');
-  await f.dire('« <b>＋ Déposer un document</b> », en haut du coffre. « Déposer » sur une pièce ouvre la même fenêtre.', 5000);
+  await f.dire('« <b>Déposer un document</b> », en haut du coffre. « Déposer » sur une pièce ouvre la même fenêtre.', 5000);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('.cf2-barre [data-cf-depot]', { apres: 1100 });
   await C.cadreFixe(f, '.cf2-mod [data-cf-drop]', 'Le fichier');
@@ -40,7 +40,7 @@ module.exports = async function () {
   /* Déposer un document */
   await f.fonction({ id: 'coffre-deposer', titre: 'Déposer un document',
     resume: 'Le fichier, la pièce, le titre et la date, puis « Déposer » : le document est rangé dans le coffre, et l’assistant commence à le lire.',
-    points: ['« ＋ Déposer un document »', 'Choisir le fichier', 'La pièce, le titre, la date', '« Déposer »'] });
+    points: ['« Déposer un document »', 'Choisir le fichier', 'La pièce, le titre, la date', '« Déposer »'] });
   await f.cliquer('.cf2-barre [data-cf-depot]', { apres: 1100 });
   await C.choisirFichier(f, C.pdf('bail-commercial-boutique.pdf', 1235));
   await C.cadreFixe(f, '.cf2-mod [data-cf-drop]', 'Prêt à déposer');

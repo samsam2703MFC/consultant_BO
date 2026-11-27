@@ -31,7 +31,7 @@ module.exports = async function () {
   await f.dire('Dans « <b>Les familles</b> », un clic ouvre la page d’une famille.', 3400);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('.an-fam[data-groupe="Pâtisserie"]', { apres: 1900 });
-  await f.montrer('.an-ret', 'Ce qu’il faut retenir');
+  await f.montrer('.an-res-ret', 'Ce qu’il faut retenir');
   await f.dire('<b>Ce qu’il faut retenir</b> : son poids, sa tendance, les produits qui la portent, ce qu’elle perd.', 4500);
   await f.cacher(150); await f.taire(150);
 
@@ -47,7 +47,7 @@ module.exports = async function () {
   await f.dire('<b>Lesquels montent, lesquels baissent</b> ; les nouveaux et les semaines hors norme, à part.', 4800);
   await f.cacher(150); await f.taire(150);
   await cadre(f, QQ(5), 'Ce qu’elle perd');
-  await f.dire('<b>Où est-ce que je perds de l’argent</b> : les invendus, produit par produit. Vert sous 8 %, orange de 8 à 15 %, rouge au-delà.', 5900);
+  await f.dire('<b>Où est-ce que je perds de l’argent</b> : les invendus, produit par produit. Vert sous 8 %, or de 8 à 15 %, rouge au-delà.', 5900);
   await f.cacher(150); await f.taire(150);
   await f.cliquer(QQ(6) + ' [data-jour="0"]', { apres: 1500 });
   await cadre(f, QQ(6), 'À quelle heure ?');

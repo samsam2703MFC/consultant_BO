@@ -23,12 +23,12 @@ module.exports = async function () {
   await f.etape('1 · L’état du coffre');
   await cadreFixe(f, '#db-rail .db-rail-coffre .sidebar__item', 'Mon coffre-fort');
   await f.dire('<b>Mon coffre-fort</b> est tout en bas du rail. Le chiffre : les nouveaux documents.', 4200);
-  await f.montrer('.cf2-etat > div:nth-child(1)', 'Votre coffre');
-  await f.dire('Les <b>pièces attendues</b> : 14 sur 16 sont là. Il manque 2 pièces à déposer par vous.', 4600);
-  await f.montrer('.cf2-etat > div:nth-child(2)', 'À traiter');
-  await f.dire('<b>À traiter</b> : l’assurance RC à renouveler, les nouveaux documents, les pièces légales à déposer.', 5000);
+  await f.montrer('.cf2-rs-v', 'Votre coffre');
+  await f.dire('Les <b>pièces attendues</b> : 14 sur 16 sont là, le coffre est incomplet. Il manque 2 pièces à déposer par vous.', 5000);
+  await f.montrer('.cf2-rs-l2', 'À corriger');
+  await f.dire('<b>À corriger</b> : l’assurance RC à renouveler, les nouveaux documents, les pièces légales à déposer.', 5000);
   await f.dire('Une pièce passe « à renouveler » <b>60 jours</b> avant son échéance.', 3800);
-  await f.montrer('.cf2-proch', 'Prochaine grande date');
+  await f.montrer('.cf2-rs-pr', 'Prochaine grande date');
   await f.montrer('.cf2-frise', 'Les 12 prochains mois');
   await f.dire('La <b>prochaine grande date</b>, et la frise des 12 prochains mois.', 3800);
   await f.taire(150); await f.cacher();
@@ -81,7 +81,7 @@ module.exports = async function () {
   await f.cliquer('[data-cf-range]', { apres: 1500 });
   await f.montrer('.cf2-flash', 'Rangé');
   await f.dire('<b>Rangé</b>, avec ses grandes dates : le coffre a maintenant 15 pièces sur 16.', 4200);
-  await f.montrer('.cf2-proch', 'Prochaine grande date');
+  await f.montrer('.cf2-rs-pr', 'Prochaine grande date');
   await f.dire('La prochaine grande date : le <b>dernier jour pour donner congé</b> du 1er triennat, dans 11 jours.', 5000);
   await f.taire(150); await f.cacher(150);
   await f.cliquer('.cf2-barre [data-cf-dos="dates"]', { apres: 1200 });

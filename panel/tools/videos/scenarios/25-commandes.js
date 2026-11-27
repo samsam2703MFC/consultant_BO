@@ -18,8 +18,8 @@ module.exports = async function () {
   await f.dire('<b>Commandes</b>, dans La journée : le chiffre dit les commandes <b>à préparer</b> aujourd’hui.', 4200);
   await f.montrer('.pco-barre', 'Le jour, la vue');
   await f.dire('En haut : le jour, la période (jour, semaine, mois) et l’interrupteur <b>Liste · Tournées</b>.', 4600);
-  await f.montrer('.pco-kpis', 'Les canaux');
-  await f.dire('Le bandeau des canaux : <b>19 commandes</b>, dont 9 de bureaux ; 5 à préparer, 10 à livrer, 9 à retirer.', 5200);
+  await f.montrer('.pco-res-l1', 'Les canaux');
+  await f.dire('Le résumé : <b>19 commandes</b>, dont 9 de bureaux ; 5 à préparer, 10 à livrer, 9 à retirer.', 5200);
   await f.cacher(150);
   await f.montrer('.pco-now', 'Maintenant');
   await f.dire('La liste suit l’heure : un filet marque <b>maintenant</b>. Chaque ligne dit sa tournée et son arrêt, ou le retrait au magasin.', 5600);
@@ -52,13 +52,13 @@ module.exports = async function () {
   await f.dire('Un clic sur une tournée mène à sa colonne : départ dans 50 min, ses arrêts dans l’ordre, prêts ou en préparation.', 5600);
   await f.cacher(150); await f.taire(150);
   await f.defiler(-2000);
-  await f.montrer('.pco-alerte', 'À placer');
-  await f.dire('En tête, une alerte : une <b>livraison du webshop</b> n’est dans aucune tournée.', 4400);
+  await f.montrer('.pco-res .pco-corr-b[data-act="cmd"]', 'À placer');
+  await f.dire('En tête, « À corriger » : une <b>livraison du webshop</b> n’est dans aucune tournée.', 4400);
   await f.cacher(150); await f.taire(150);
 
   await f.chapitre({ n: 3, total: 4, titre: 'Placer une commande', texte: 'Une commande s’ouvre d’un clic : sa tournée se choisit, ou le retrait au magasin.' });
   await f.etape('3 · Placer');
-  await f.cliquer('.pco-alerte [data-act="cmd"]', { apres: 900 });
+  await f.cliquer('.pco-res .pco-corr-b[data-act="cmd"]', { apres: 900 });
   await f.montrer('.pco-fen .confirm__box', 'Commande n° 5117');
   await f.dire('La commande : son client, son canal, son montant, son statut, sa note.', 4000);
   await f.dire('« Changer la livraison » : <b>automatique</b> (la tournée de son bureau), une autre tournée, ou le retrait au magasin.', 5600);
@@ -66,7 +66,7 @@ module.exports = async function () {
   await choisir(f, '#pco-aff', '3');
   await f.cliquer('.pco-fen [data-act="aff-ok"]', { apres: 1600 });
   await f.montrer('#pco-col-3', 'Arrêt 3');
-  await f.dire('La commande rejoint <b>Fin de journée</b>, à son heure : l’arrêt 3. L’alerte disparaît.', 4600);
+  await f.dire('La commande rejoint <b>Fin de journée</b>, à son heure : l’arrêt 3. Elle quitte « À corriger ».', 4600);
   await f.cacher(150); await f.taire(150);
 
   await f.chapitre({ n: 4, total: 4, titre: 'La semaine et le mois', texte: 'Les mêmes commandes, jour par jour, face à la période d’avant.' });
@@ -74,7 +74,7 @@ module.exports = async function () {
   await f.defiler(-2000);
   await f.cliquer('.pco-bascule [data-v="liste"]', { apres: 700 });
   await f.cliquer('.pco-per [data-v="semaine"]', { apres: 1400 });
-  await f.montrer('.pco-kpis', 'La semaine');
+  await f.montrer('.pco-res-l1', 'La semaine');
   await f.dire('La <b>semaine</b> : chaque canal face à la semaine d’avant, en mots et en flèche.', 4400);
   await f.montrer('.pco-per-table', 'Jour par jour');
   await f.dire('Puis jour par jour : les commandes, les canaux, les livraisons et le retrait au magasin.', 4600);

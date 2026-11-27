@@ -133,8 +133,8 @@ module.exports = async function () {
   await f.dire('Plafond à <b>32 %</b> : les semaines au-dessus se colorent dans « En % des ventes ».', 4600);
   await f.cacher(150); await f.taire(150);
   await onglet(f, 'plan');
-  await f.montrer(T + '.tr-kpi:nth-child(4)', 'Marchandises');
-  await f.dire('Dans le plan, le repère des marchandises se compare au même plafond.', 4000);
+  await f.montrer(T + '.trs-meta .trs-rep:nth-child(2)', 'Marchandises');
+  await f.dire('Dans le résumé du plan, le repère des marchandises se compare au même plafond.', 4200);
   await f.cacher(300);
 
   return f.fin();

@@ -1,0 +1,105 @@
+/* L'après de Mon équipe › Planning › Semaine (maquette du 26/11/2026) : les jetons du design system seulement
+ * (docs/DESIGN_SYSTEM.md §3), Gotham 400 partout, 700 pour la seule valeur clé. Les paliers du budget passent sur les
+ * jetons d'état : dans la cible --green, au-dessus de la cible --prize, au-dessus de 20 % --stop, au-dessus de 22 %
+ * --ink (à trancher : l'écran en ligne a #D97A1E et #C0281F, hors du design system). */
+
+:root { --ap-ok: var(--green); --ap-orange: var(--prize); --ap-rouge: var(--stop); --ap-noir: var(--ink); }
+
+/* Les marqueurs existants suivent les mêmes jetons (pastilles du jour, de la fenêtre d'un service…). */
+.eqp-m-orange { background: var(--ap-orange); }
+.eqp-m-rouge { background: var(--ap-rouge); }
+
+/* ── 1. Le résumé, deux lignes ─────────────────────────────────────────────────────────────────────── */
+.ap-res { padding: 16px 20px 14px; margin-bottom: 14px; }
+.ap-l1 { display: grid; grid-template-columns: auto minmax(150px, auto) minmax(240px, 1fr) minmax(230px, auto); gap: 26px; align-items: center; }
+.ap-v { display: flex; flex-direction: column; gap: 4px; }
+.ap-pct { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ap-niv { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted-2); white-space: nowrap; }
+.ap-quoi { font-size: 13px; color: var(--ink); line-height: 1.35; }
+.ap-quoi span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ap-lev { display: flex; flex-direction: column; gap: 3px; padding-left: 18px; border-left: 1px solid var(--line); }
+.ap-lev-h { font-size: 13px; color: var(--ink); }
+.ap-lev span + span { font-size: 12px; color: var(--muted); line-height: 1.4; max-width: 34ch; }
+
+/* La jauge reprise de l'écran : plus fine, ses zones au ton des paliers, le curseur à l'encre. */
+.ap-g .eqp-bj-g { width: 100%; }
+.ap-g .eqp-bj-piste { height: 8px; border-radius: 4px; }
+.ap-g .eqp-bj-z.ok { background: rgba(63, 122, 82, 0.22); }
+.ap-g .eqp-bj-z.orange { background: rgba(176, 121, 42, 0.34); }
+.ap-g .eqp-bj-z.rouge { background: rgba(163, 32, 20, 0.30); }
+.ap-g .eqp-bj-z.noir { background: rgba(28, 26, 23, 0.55); }
+.ap-g .eqp-bj-ech span { font-size: 10.5px; color: var(--muted); }
+.ap-g .eqp-bj-ech span.c { color: var(--muted-2); }
+
+.ap-meta { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.ap-l2 { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.ap-ok { margin: 0; font-size: 12.5px; color: var(--green); }
+.ap-corr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ap-corr-t { font-size: 12.5px; color: var(--muted-2); margin-right: 2px; }
+.ap-corr-b { gap: 10px; }
+.ap-corr-b:hover:not(:disabled) { border-color: var(--accent); }
+.ap-corr-j { color: var(--ink); }
+.ap-corr-s { display: inline-flex; align-items: center; gap: 6px; color: var(--muted-2); }
+.ap-corr-s + .ap-corr-s::before { content: ''; width: 1px; height: 12px; background: var(--line); margin-right: 4px; }
+
+/* Les signes d'état : un point (palier), un carré hachuré (trou), toujours suivis d'un mot. */
+.ap-ic { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ap-ok); }
+.ap-ic.ap-orange { background: var(--ap-orange); }
+.ap-ic.ap-rouge { background: var(--ap-rouge); }
+.ap-ic.ap-noir { background: var(--ap-noir); }
+.ap-ic-trou { flex: none; width: 14px; height: 8px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--prize-soft) 0 3px, #EAD3AE 3px 5px); border: 1px solid #E2C597; }
+
+/* ── 2. La tête du tableau : les jours, le ruban des paliers, les linéaires ── collée en haut ─────── */
+.ap-tab, .ap-tab .eqp-table { overflow: visible; }
+section.card.eqp-tab.ap-tab { padding-top: 0; }
+.ap-tab thead { position: sticky; top: 0; z-index: 4; background: var(--table-head); box-shadow: 0 1px 0 var(--line); } /* un filet, pas une ombre : une bordure ne suit pas une tête collée */
+.ap-tab thead tr:first-child th { padding-top: 14px; padding-bottom: 6px; border-bottom: 0; }
+.ap-tab thead th, .ap-tab thead td { background: var(--table-head); }
+.ap-tab thead th.auj, .ap-tab thead td.auj { background: linear-gradient(rgba(141, 29, 44, 0.035), rgba(141, 29, 44, 0.035)), var(--table-head); }
+
+/* Le ruban : une case par jour, 2 px de papier entre deux, la couleur du palier ; le chiffre et son mot dessous. */
+.ap-tab thead tr.ap-pal th { padding: 0 1px 10px; vertical-align: top; text-align: left; font-size: 13px; text-transform: none; letter-spacing: 0; white-space: normal; color: var(--ink); border-bottom: 0; }
+.ap-tab thead tr.ap-pal th.ap-pal-t { padding: 14px 10px 10px 18px; font-size: 12px; color: var(--muted-2); }
+.ap-pal-t span { display: block; margin-top: 3px; font-size: 10.5px; color: var(--muted-2); }
+.ap-rib { display: block; height: 10px; border-radius: 3px; background: rgba(63, 122, 82, 0.38); }
+.ap-rib.ap-orange { background: var(--ap-orange); }
+.ap-rib.ap-rouge { background: var(--ap-rouge); }
+.ap-rib.ap-noir { background: var(--ap-noir); }
+.ap-rib.ap-vide { background: var(--chip); }
+.ap-d-in { display: block; padding: 8px 6px 0; }
+.ap-d-v { display: block; font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ap-d-w { display: block; margin-top: 1px; font-size: 11px; color: var(--muted-2); white-space: nowrap; }
+.ap-d:has(.ap-orange) .ap-d-w, .ap-d:has(.ap-rouge) .ap-d-w, .ap-d:has(.ap-noir) .ap-d-w { color: var(--ink); }
+/* Sur le fond de la tête (--table-head), --muted ne fait que 4,45:1 : les petits textes y passent en --muted-2 (6,7:1). */
+.ap-d-s { display: block; margin-top: 6px; font-size: 10.5px; color: var(--muted-2); white-space: nowrap; }
+.ap-tab thead tr.ap-pal th.ap-d-tot { padding: 18px 10px 10px 6px; font-size: 13px; color: var(--ink); text-align: right; white-space: nowrap; }
+.ap-tab thead tr.ap-pal th.ap-d-tot:last-child { padding-right: 18px; }
+
+/* Les linéaires : une ligne fine par section, sous le ruban. */
+.ap-tab thead tr.ap-lin td { padding: 2px 5px; border-bottom: 0; vertical-align: top; line-height: 1.2; }
+.ap-tab thead tr.ap-lin td:first-child { padding-left: 18px; font-size: 11.5px; color: var(--muted-2); }
+.ap-tab thead tr.ap-lin td:first-child { font-size: 11px; line-height: 13px; padding-top: 1.5px; }
+.ap-tab thead tr.ap-lin.ap-lin-1 td { padding-top: 9px; border-top: 1px solid var(--line); }
+.ap-tab thead tr.ap-lin.ap-lin-1 td:first-child { padding-top: 8.5px; }
+.ap-tab thead tr.ap-lin:last-child td { padding-bottom: 9px; }
+.ap-tab thead tr.ap-lin .eqp-mini.l { height: 8px; margin-top: 2px; }
+.ap-tab thead tr.ap-lin td.ap-trou-c { background: rgba(246, 231, 206, 0.7); }
+.ap-tab thead tr.ap-lin .eqp-tr { margin-top: 1px; font-size: 10.5px; color: var(--prize-ink); }
+
+.ap-tab tbody tr:first-child td { border-top: 0; }
+
+/* ── 3. La ligne d'aide et la légende ──────────────────────────────────────────────────────────────── */
+.ap-note { display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.ap-note .eqp-leg { gap: 14px; }
+
+/* Plus étroit que le tableau (tablette) : il défile de côté comme aujourd'hui, et la tête ne peut plus rester collée
+ * (une boîte qui défile de côté retient la tête collée). À dessiner dans un second temps. */
+@media (max-width: 1365px) {
+  .ap-tab .eqp-table { overflow-x: auto; }
+  .ap-tab thead { position: static; }
+  .ap-l1 { grid-template-columns: auto minmax(140px, auto) minmax(200px, 1fr); }
+  .ap-lev { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 4px 10px; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .ap-lev span + span { max-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) { .ap-corr-b { transition: none; } }

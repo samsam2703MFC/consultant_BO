@@ -11,31 +11,32 @@
 
 /* ---------- l'écran ---------- */
 .cm{display:block}
-.cm-hd{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:4px 0 14px}
+.cm-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}
 .cm-hd .k{font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
-.cm-hd h2{font:400 22px/1.15 var(--font-display);margin:2px 0 0}
+.cm-hd h2{font:400 21px/1.2 var(--font-ui);margin:0;color:var(--ink)} /* le catalogue ouvert : une ligne sous la barre commune */
 .cm-hd .sp{flex:1}
 .cm-btn{border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:8px 14px;font:400 12.5px var(--font-ui);cursor:pointer;color:var(--color-text);white-space:nowrap}
 .cm-btn:hover:not(:disabled){border-color:var(--color-text-secondary,#5c5852)}
 .cm-btn:disabled{opacity:.45;cursor:default}
 .cm-btn.pri{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
 .cm-btn.pri:hover:not(:disabled){filter:brightness(1.08)}
-.cm-btn.dis{color:var(--stop,#b3261e)}
+.cm-btn.dis{color:var(--muted-2);border-color:transparent;background:transparent}
+.cm-btn.dis:hover:not(:disabled){background:rgba(179,38,30,.07);color:var(--danger);border-color:transparent} /* §7.4 : discret, rouge au survol seulement */
 .cm-btn:focus-visible,.cm-seg button:focus-visible,.cm-prod:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .cm-seg{display:inline-flex;background:var(--color-background-secondary);border-radius:10px;padding:3px;gap:2px}
 .cm-seg button{border:none;background:none;border-radius:7px;padding:6px 13px;font:400 12.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
 .cm-seg button.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 0 0 1px var(--color-border-tertiary)}
 .cm-msg{border-radius:12px;padding:11px 15px;margin:0 0 12px;font-size:12.5px;line-height:1.45}
-.cm-msg.err{background:#fbeeee;border:1px solid rgba(179,38,30,.25);color:#7a1a14}
+.cm-msg.err{background:var(--stop-soft);border:1px solid rgba(179,38,30,.25);color:var(--danger)}
 .cm-msg.inf{background:var(--color-background-secondary);color:var(--color-text)}
-.cm-msg.ok{background:#f0f7f2;border:1px solid rgba(63,122,82,.25);color:#2c5a3b}
+.cm-msg.ok{background:rgba(63,122,82,.12);border:1px solid rgba(63,122,82,.25);color:var(--green)}
 .cm-msg ul{margin:6px 0 0 18px;padding:0}
-.cm-msg b{font-weight:700}
+.cm-msg b{font-weight:400}
 .cm-vide{padding:36px 20px;text-align:center;color:var(--color-text-muted)}
 
 /* La liste */
 .cm-tab{width:100%;border-collapse:collapse}
-.cm-tab th{font:400 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);text-align:left;padding:10px 14px;border-bottom:1px solid var(--color-border-tertiary);background:#FBF9F5}
+.cm-tab th{font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);text-align:left;padding:10px 14px;border-bottom:1px solid var(--color-border-tertiary);background:#FBF9F5}
 .cm-tab td{padding:11px 14px;border-bottom:1px solid var(--color-border-tertiary);vertical-align:middle}
 .cm-tab tr:last-child td{border-bottom:none}
 .cm-tab tr.cl{cursor:pointer}.cm-tab tr.cl:hover td{background:#FBF9F5}
@@ -43,10 +44,10 @@
 .cm-tab .s{font-size:11px;color:var(--color-text-muted)}
 .cm-tab .n{font-variant-numeric:tabular-nums;white-space:nowrap}
 .cm-tab .act{text-align:right;white-space:nowrap}
-.cm-et{display:inline-block;width:92px;text-align:center;border-radius:6px;padding:3px 0;font-size:11px}
+.cm-et{display:inline-block;min-width:92px;text-align:center;border-radius:6px;padding:3px 8px;font-size:11px;white-space:nowrap}
 .cm-et.brouillon{background:#EDE7DE;color:#5c5852}
-.cm-et.pret{background:#F6EDEE;color:var(--color-primary)}
-.cm-et.imprime{background:#e3efe6;color:#3f7a52}
+.cm-et.pret{background:rgba(74,100,120,.12);color:#4A6478} /* « prête » (§7.13), plus le bordeaux */
+.cm-et.imprime{background:rgba(63,122,82,.12);color:var(--green)}
 
 /* L'assistant : les quatre étapes */
 .cm-et4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
@@ -65,9 +66,9 @@
 .cm-pan>.h .k{font:400 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
 .cm-pan>.h .sp{flex:1}
 .cm-tag{display:inline-block;border-radius:6px;padding:3px 9px;font-size:11px;background:#EDE7DE;color:#5c5852}
-.cm-tag.vif{background:#F6EDEE;color:var(--color-primary)}
+.cm-tag.vif{background:var(--prize-soft);color:var(--prize-ink)}
 .cm-cote{background:#FBF9F5;border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px;position:sticky;top:12px}
-.cm-cote .k{font:400 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:10px}
+.cm-cote .k{font:400 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2);margin-bottom:10px}
 .cm-cote .note{margin-top:12px;font-size:11.5px;color:var(--color-text-muted);line-height:1.45}
 .cm-pied{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
 .cm-pied .sp{flex:1}
@@ -106,7 +107,7 @@
 .cm-prod .nm{font-size:13px;margin-top:8px;line-height:1.25}
 .cm-prod .px{display:flex;align-items:baseline;gap:6px;margin-top:4px;font-size:11.5px;color:var(--color-text-muted)}
 .cm-prod .px b{margin-left:auto;font-weight:400;font-size:13.5px;color:var(--color-primary);font-variant-numeric:tabular-nums}
-.cm-prod .px b.mu{color:#8A4B00}
+.cm-prod .px b.mu{color:var(--prize-ink)}
 
 /* Étape 3 : la mise en page */
 .cm-pages{display:grid;gap:8px}
@@ -132,7 +133,7 @@
 .cm-cases{display:flex;gap:14px;align-items:center;font-size:12.5px;padding:6px 0}
 .cm-cases label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
 .cm-cpt{font-size:11.5px;color:var(--color-text-muted)}
-.cm-cpt.ko{color:#8A4B00}
+.cm-cpt.ko{color:var(--prize-ink)}
 
 /* Étape 4 : l'aperçu */
 .cm-apercu{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
@@ -221,7 +222,7 @@
 .cm-pl .ph img{width:100%;height:100%;object-fit:cover;display:block}
 .cm-pl .nm{font-size:13px;line-height:1.25}
 .cm-pl b{font-weight:400;font-size:13.5px;color:var(--color-primary);font-variant-numeric:tabular-nums;white-space:nowrap}
-.cm-pl b.mu{color:#8A4B00}
+.cm-pl b.mu{color:var(--prize-ink)}
 .cm-pl.off .nm,.cm-pl.off b{color:var(--color-text-muted)}
 .cm-sw{display:inline-flex;align-items:center;gap:8px;height:27px;margin:0;padding:0;border:0;background:none;font:inherit;cursor:pointer}
 .cm-sw .l{font-size:11.5px;color:var(--color-text-muted);white-space:nowrap}
@@ -556,8 +557,8 @@
 .cm-et5{grid-template-columns:repeat(5,minmax(0,1fr))}
 .cm-st.verrou .no{background:#EDE7DE;color:#7a736a}
 .cm-st.verrou .no svg{width:11px;height:11px}
-.cm-et.vif{background:#F6EDEE;color:var(--color-primary)}
-.cm-recu{display:grid;grid-template-columns:auto minmax(0,1fr) 300px;gap:22px;align-items:center;background:var(--color-surface);border:1.5px solid var(--color-primary);border-radius:14px;padding:20px 22px;margin-bottom:14px}
+.cm-et.vif{background:var(--prize-soft);color:var(--prize-ink)} /* « À regarder » : à vérifier (§7.9) */
+.cm-recu{display:grid;grid-template-columns:auto minmax(0,1fr) 300px;gap:22px;align-items:center;background:var(--color-surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:14px}
 .cm-recu__pages{display:flex;gap:6px}
 .cm-recu__txt h3{font:400 19px/1.25 var(--font-display);margin:8px 0 4px}
 .cm-recu__txt p{margin:0 0 12px;font-size:12.5px;color:var(--color-text-muted)}
@@ -584,7 +585,7 @@ button.cm-pas{cursor:pointer}
 .cm-verif .tx b{font-weight:400;font-size:14px}
 .cm-verif .tx p{margin:3px 0 0;font-size:12.5px;line-height:1.5;color:var(--color-text-muted)}
 .cm-verif .ge{display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:220px}
-.cm-tag.ok{background:#e3efe6;color:#3f7a52}
+.cm-tag.ok{background:rgba(63,122,82,.12);color:var(--green)}
 .cm-mes-pages .cm-vign{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .cm-vg{position:relative;border:0;background:none;padding:0 0 16px;cursor:pointer;display:grid;justify-items:center}
 .cm-vg.on .cm-feuille{box-shadow:0 0 0 2px var(--color-primary)}
@@ -905,3 +906,21 @@ button.cm-pas{cursor:pointer}
 .cm-bapercu .cm-bframe{width:410px;height:580px;overflow:auto;border:1px solid var(--color-border-tertiary);border-radius:8px;background:#EDE7DE}
 .cm-bapercu iframe{width:820px;height:2400px;border:0;transform:scale(.5);transform-origin:0 0;display:block;margin-bottom:-1200px;background:#fff}
 @media (max-width:1100px){.cm-bon,.cm-quoi3{grid-template-columns:1fr}.cm-bapercu .cm-bframe{width:100%}}
+
+/* Le résumé de la liste et « À corriger » (27/11/2026, DESIGN_SYSTEM.md §7.13 ; les règles de .ac, recopiées sous le préfixe
+   du module) : le chiffre clé (700, le seul gras), ce qu'il compte ; sous un filet, un bouton par catalogue à finir. */
+.cm-res{margin:0 0 14px;padding:16px 20px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.cm-res-l1{display:flex;align-items:center;gap:16px}
+.cm-res-v{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);font-variant-numeric:tabular-nums}
+.cm-res-q{font-size:13px;line-height:1.35;color:var(--ink)}
+.cm-res-q small{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.cm-res-l2{display:flex;align-items:flex-start;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.cm-res-t{flex:none;font-size:12.5px;line-height:30px;color:var(--muted-2)}
+.cm-res-l{display:flex;flex-wrap:wrap;gap:8px;min-width:0;flex:1 1 0}
+.cm-res-b{gap:8px}
+.cm-res-b:hover:not(:disabled){border-color:var(--accent)}
+.cm-res-ic{flex:none;width:8px;height:8px;border-radius:50%;background:var(--prize)}
+.cm-res-ok{margin:0;font-size:12.5px;color:var(--green)}
+.cm-vu{outline:2px solid var(--accent);outline-offset:3px;animation:cm-vu 1.8s ease-out forwards}
+@keyframes cm-vu{0%,55%{outline-color:var(--accent)}100%{outline-color:transparent}}
+@media (prefers-reduced-motion:reduce){.cm-vu{animation:none}}

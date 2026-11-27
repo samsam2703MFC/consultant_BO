@@ -345,3 +345,4 @@
 2026-11-26T20:44:48Z Références et pertes : prix de marché des 49 matières sans prix, bouton « Tout faire » (toute la carte en un clic)
 2026-11-27T04:00:48Z Manuels du 27/11 : références et pertes des matières, autocontrôle, médiathèque, examens théoriques, compte TF Buddy du magasin (documentation seulement)
 2026-11-27T06:50:22Z Références et pertes : un prix tenu par le tarif d'un fournisseur intégré (403 SUPPLIER_MANAGED_PRICE) n'est plus une erreur ; la référence reprend ce tarif et les autres magasins s'y alignent
+2026-11-27T08:53:31Z Dashboard magasin : le nouveau style dans toutes les sections (résumé, « À corriger », têtes collées, échelles de couleur unifiées sur les jetons d'état, DESIGN_SYSTEM.md §7.13) ; correctif des onglets de Clients ; scénarios des vidéos à jour (vidéos à retourner)
