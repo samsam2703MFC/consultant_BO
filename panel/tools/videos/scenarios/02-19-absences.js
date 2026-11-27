@@ -1,7 +1,6 @@
 /* Mon équipe › Planning › « Absences, congés et remplacements » (?vue=equipe, 27/11/2026) :
- *   onglet    equipe-absences     sous contrat de travail, une absence payée garde son coût et sort de la présence ;
- *                                 un remplaçant aux mêmes heures ajoute le sien
- *   fonction  equipe-absente      depuis son service : « Absente ou en congé », le motif, la période, le remplaçant
+ *   onglet    equipe-absences     depuis son service : « Absente ou en congé », le motif, la période, le remplaçant ;
+ *                                 l'absence payée garde son coût et sort de la présence, le remplaçant ajoute le sien
  *   fonction  equipe-conge        « Absence ou congé » dans la barre : un congé payé posé d'avance, son remplaçant
  *   fonction  equipe-exterieur    un intérimaire : son nom, son taux ; la ligne des extérieurs
  * Données fictives : mocks/20_equipe.js (semaine du 16 au 22 novembre 2026, jeudi 19 = aujourd'hui). Chaque phrase vient
@@ -22,15 +21,12 @@ module.exports = async function () {
   /* L'onglet */
   await f.onglet({
     id: 'equipe-absences', titre: 'Absences, congés et remplacements',
-    resume: 'Sous contrat de travail, une absence payée (maladie, congé payé, congé de circonstance) garde son coût et sort de la présence ; un remplaçant aux mêmes heures ajoute le sien.',
+    resume: 'Depuis son service, « Absente ou en congé » : sous contrat de travail, l’absence payée (maladie, congé payé, circonstance) garde son coût et sort de la présence ; un remplaçant aux mêmes heures ajoute le sien.',
     accroche: 'Le coût reste, le remplaçant s’ajoute',
     programme: ['Marquer une personne absente', 'La remplacer aux mêmes heures', 'Poser un congé payé', 'Un remplaçant extérieur'],
   });
 
-  /* Absente ou en congé, depuis son service */
-  await f.fonction({ id: 'equipe-absente', titre: 'Absente ou en congé',
-    resume: 'Depuis son service : le motif, la période, et qui la remplace aux mêmes heures, chacun avec ce qu’il ajoute au budget.',
-    points: ['Ouvrir son service', '« Absente ou en congé »', 'Le motif et la période', 'Le remplaçant, puis « Poser l’absence »'] });
+  /* Absente ou en congé, depuis son service (l'onglet lui-même) */
   await E.sousLaTete(f, svc('2026-11-18', 201));
   await f.cliquer(svc('2026-11-18', 201), { apres: 1200 });
   await f.montrer('[data-eqp-absente]', 'Absente ou en congé');
