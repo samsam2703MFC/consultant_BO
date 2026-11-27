@@ -3488,13 +3488,31 @@ une société B2B, donc un numéro de TVA.
                                              fermé avec lui ; il se devine, d'où au plus 40 réponses par jour et par magasin (pour les deux liens)
     POST …/{jeton}/tva, …/m/{shop}/tva       PUBLIC {tva} → {tva, verifiee, valide, societe, rue, numero, cp, ville} (VIES ; 20 par heure et par appareil ;
                                              rien d'autre ne sort : ni si la société est cliente, ni ses contacts)
-    GET  /dashboard/bureaux-dev?shop=        → {demandes: [{id, source, statut: a_valider|cree|refuse, personne, donnees, clientId, societeId, bon, erreurs, officeId, le}],
+    GET  /dashboard/bureaux-dev?shop=        → {demandes: [{id, source, statut: a_valider|cree|refuse|hors_zone, personne, donnees, clientId, societeId, bon, erreurs, officeId, le}],
                                                 questionnaire: {jeton, actif, promo, titre, message}, promos: [{id, nom}], lienCourt: "2"}
     POST /dashboard/bureaux-dev              {shop, donnees}   une demande saisie au dashboard (l'accord n'y est pas demandé)
     POST /dashboard/bureaux-dev/questionnaire {shop, actif, promo, titre, message, regenerer}   (regenerer : un nouveau jeton, l'ancien lien meurt)
     POST /dashboard/bureaux-dev/valider      {shop, id, statut: active|pending, nom, tva, route_id}
                                              → {ok, officeId} | 422 (TVA manquante) | 409 (déjà traitée) | refus du compte du magasin
     POST /dashboard/bureaux-dev/refuser      {shop, id}
+
+**Les demandes hors zone** (27/11/2026, Sam : « la base sont les tournées webshop, et toutes les delivery interest vers TF
+Buddy » ; « il faut une copie de toutes les demandes sur le cockpit (développement bureau) »). La demande « Ma zone n'est
+pas dans la liste » des deux pages Livraison au bureau (landing atelierby.be, landing du webshop) part dans TF Buddy
+(`POST /webshop/shops/{n}/delivery-interest {request_key, postalCode, city, company, headcount, email}`) ; le cockpit en
+garde une copie dans `panel_bureau_dev` (source et statut `hors_zone`, traitée dès l'arrivée : effacée après 90 jours), au
+magasin que le visiteur a choisi (la boutique la plus proche, calculée sur la page).
+
+    POST /bureau-hors-zone                   PUBLIC {shop, cp*, commune, societe, effectif, email*, origine: landing|webshop, distance (km),
+                                             tfbuddy: ok|refus (webshop), request_key ([A-Za-z0-9]{8,64}), langue, site_web (piège)}
+                                             → {ok, saved: true, magasin, shop, tfbuddy: ok|refus} | 422 {error, manque} | 429 (5 / heure / appareil,
+                                             60 / jour / magasin). landing : le cockpit garde la copie puis transmet à TF Buddy ; webshop : la page a
+                                             déjà envoyé à TF Buddy et poste la copie en text/plain (navigator.sendBeacon, sans lire la réponse).
+                                             Le même request_key dans la journée met à jour la même copie.
+    POST /dashboard/bureaux-dev/renvoyer     {shop, id}   une copie que TF Buddy n'a pas prise, renvoyée (même request_key) → {ok, tfbuddy} | 502
+    GET  /dashboard/bureaux-dev/tournees?shop= → {ok, tournees: [{id, nom, zone, principale, detail, jours[1–7], de, a, limite, preavis, creneaux[]}]}
+                                             les tournées que le webshop publie (GET /webshop/shops/{n}/delivery-zones et /{id}) : « Ce que voient
+                                             vos clients » dans Clients › Bureaux
 
 **Le formulaire en six étapes** (26/11/2026, Sam : « faire le formulaire et le générateur de lien par shop dans l'onglet
 bureau » ; maquette `panel/docs/maquettes/bureau-formulaire/`). Le corps public : `prenom, nom, fonction, tel, langue (fr|nl|en),

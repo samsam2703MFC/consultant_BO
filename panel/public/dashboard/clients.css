@@ -312,3 +312,9 @@
   .pcl-carte, .pcl-carte .table-scroll { overflow: visible; }
   .pcl-table thead th { position: sticky; top: 0; z-index: 2; background: var(--table-head); box-shadow: 0 1px 0 var(--line); color: var(--muted-2); }
 }
+
+/* Ce que voient vos clients et les demandes hors zone (27/11/2026) : sous le générateur de liens, dans Bureaux en développement. */
+.pcl-tz { margin: 0 16px 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; }
+.pcl-tz .pcl-aide { margin-bottom: 8px; }
+.pcl-tz .table-scroll { margin: 0 -16px -14px; border-top: 1px solid var(--line); }
+.pcl-tz .pcl-manque { margin-top: 4px; }
