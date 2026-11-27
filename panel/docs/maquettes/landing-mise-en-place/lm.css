@@ -1,0 +1,42 @@
+body { margin: 0; background: #F4EFE8; color: var(--ink); font: 15px 'Gotham', system-ui, sans-serif; }
+.lm { max-width: 1240px; margin: 0 auto; padding: 72px 40px 80px; }
+.lm-k { margin: 0; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.lm-tete { max-width: 760px; margin-bottom: 40px; }
+.lm h2 { margin: 12px 0 14px; font-size: 38px; font-weight: 400; line-height: 1.15; letter-spacing: -.015em; }
+.lm-intro { margin: 0; color: var(--muted); line-height: 1.6; font-size: 16px; }
+.lm-etapes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; counter-reset: e; position: relative; }
+.lm-etapes::before { content: ''; position: absolute; left: 30px; right: 30px; top: 23px; height: 1px; background: var(--line); }
+.lm-etapes li { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 62px 18px 20px; line-height: 1.55; font-size: 13.5px; color: var(--muted-2, #5f584f); }
+.lm-n { position: absolute; top: 4px; left: 16px; width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 15px; box-shadow: 0 0 0 6px #F4EFE8; }
+.lm-quand { position: absolute; top: 14px; right: 16px; font-size: 11px; color: var(--muted); }
+.lm-etapes h3 { margin: 0 0 8px; font-size: 17px; font-weight: 400; color: var(--ink); }
+.lm-etapes p { margin: 0 0 10px; }
+.lm-etapes ul { margin: 0; padding: 0 0 0 16px; font-size: 12.5px; }
+.lm-etapes ul li { border: 0; padding: 0; background: none; margin: 0 0 4px; font-size: 12.5px; }
+.lm-cadeau { background: #FCEEDF !important; border-color: #F2C9A0 !important; }
+.lm-cadeau .lm-n { background: #F2C9A0; color: #7A3E12; }
+.lm-bon { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 12px; border-radius: 14px; background: linear-gradient(150deg, #8D1D2C, #6f1622); color: #fff; }
+.lm-bon span { font-size: 30px; line-height: 1; }
+.lm-bon b { display: block; font-weight: 400; font-size: 13px; }
+.lm-bon small { color: rgba(255,255,255,.75); font-size: 11px; letter-spacing: .04em; }
+.lm-bas { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; margin-top: 18px; }
+.lm-gain { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 24px 26px; }
+.lm-gain ul { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+.lm-gain li { font-size: 13.5px; line-height: 1.5; color: var(--muted); padding-left: 26px; position: relative; }
+.lm-gain li::before { content: ''; position: absolute; left: 0; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--green); box-shadow: inset 0 0 0 4px #E3EFE6; }
+.lm-gain li b { display: block; font-weight: 400; color: var(--ink); font-size: 14.5px; margin-bottom: 2px; }
+.lm-cta { background: var(--accent); color: #fff; border-radius: 18px; padding: 24px 26px; }
+.lm-cta .lm-k { color: #F2C9A0; }
+.lm-cta h3 { margin: 8px 0 6px; font-size: 22px; font-weight: 400; }
+.lm-cta p { margin: 0 0 14px; color: rgba(255,255,255,.8); line-height: 1.5; font-size: 13.5px; }
+.lm-champ { display: grid; gap: 6px; font-size: 12px; color: rgba(255,255,255,.75); margin-bottom: 12px; }
+.lm-in { display: flex; justify-content: space-between; align-items: center; background: #fff; color: var(--ink); border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+.lm-in i { font-style: normal; font-size: 12px; color: var(--green); }
+.lm-btn { display: block; text-align: center; background: #F2C9A0 !important; border-color: #F2C9A0 !important; color: #5a2a0a !important; padding: 13px; font-size: 15px; }
+.lm-cta small { display: block; margin-top: 8px; font-size: 11px; color: rgba(255,255,255,.6); text-align: center; }
+@media (max-width: 900px) {
+  .lm { padding: 44px 18px 56px; } .lm h2 { font-size: 28px; }
+  .lm-etapes { grid-template-columns: 1fr; } .lm-etapes::before { left: 35px; right: auto; top: 30px; bottom: 30px; width: 1px; height: auto; }
+  .lm-etapes li { padding: 18px 16px 16px 72px; } .lm-n { top: 16px; left: 16px; } .lm-quand { position: static; display: block; margin-bottom: 2px; }
+  .lm-bas { grid-template-columns: 1fr; } .lm-gain ul { grid-template-columns: 1fr; }
+}
