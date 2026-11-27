@@ -12,8 +12,10 @@ ob_start(); // http_response_code() des routes, sans en-têtes déjà partis
 final class Db
 {
     public static array $exec = [];
+    /** La ligne que rend row() (null par défaut : aucune ligne en base). */
+    public static ?array $ligne = null;
     public static function rows(string $sql, array $a = []): array { return []; }
-    public static function row(string $sql, array $a = []): ?array { return null; }
+    public static function row(string $sql, array $a = []): ?array { return self::$ligne; }
     public static function exec(string $sql, array $a = []): int { self::$exec[] = [$sql, $a]; return 1; }
 }
 final class ErpApi
@@ -123,6 +125,31 @@ $GLOBALS['corps'] = ['shop' => '99', 'cp' => '1348', 'email' => 'a@b.be'];
 $r = bdvPublicHorsZone();
 verifie('un magasin inconnu : refusé, rien d’écrit', ($r['manque'] ?? null) === ['la boutique'] && !array_filter(Db::$exec, static fn ($x) => str_contains($x[0], 'INSERT')));
 $GLOBALS['corps'] = [];
+
+echo "Effacer et reprendre une demande hors zone\n";
+$hz = ['id' => 9, 'shop_id' => '2', 'source' => 'hors_zone', 'statut' => 'hors_zone', 'donnees' => '{"cp":"1370"}'];
+$sql = static fn (string $mot) => array_values(array_filter(Db::$exec, static fn ($x) => str_contains($x[0], $mot)));
+Db::$exec = []; Db::$ligne = null; $GLOBALS['corps'] = ['shop' => '2', 'id' => 9];
+$r = wr_bureaux_dev_effacer();
+verifie('effacer : inconnue → refusée, rien d’effacé', ($r['error'] ?? '') === 'demande hors zone introuvable' && $sql('DELETE') === []);
+Db::$exec = []; Db::$ligne = ['source' => 'questionnaire', 'statut' => 'a_valider'] + $hz;
+$r = wr_bureaux_dev_effacer();
+verifie('effacer : une inscription du formulaire ne s’efface pas d’ici', ($r['error'] ?? '') === 'demande hors zone introuvable' && $sql('DELETE') === []);
+Db::$exec = []; Db::$ligne = $hz;
+$r = wr_bureaux_dev_effacer();
+$del = $sql('DELETE');
+verifie('effacer : la copie hors zone disparaît', $r === ['ok' => true] && count($del) === 1 && $del[0][1] === [9, '2'] && str_contains($del[0][0], 'source = "hors_zone"'), json_encode($del));
+Db::$exec = []; Db::$ligne = $hz;
+$maj = bdvHorsZoneReprendre('2', 9, 15);
+$up = $sql('UPDATE');
+verifie('reprise : passe « reprise », garde le n° de la nouvelle demande', $maj === true && count($up) === 1 && str_contains($up[0][0], 'statut = "reprise"')
+    && str_contains((string) $up[0][1][0], '"_reprise":15') && end($up[0][1]) === 9, json_encode($up, JSON_UNESCAPED_UNICODE));
+Db::$exec = []; Db::$ligne = ['statut' => 'reprise'] + $hz;
+$a = bdvHorsZoneReprendre('2', 9, 16);
+Db::$ligne = null;
+$b = bdvHorsZoneReprendre('2', 9, 16);
+verifie('reprise : déjà reprise ou absente, rien ne bouge', $a === false && $b === false && $sql('UPDATE') === []);
+Db::$exec = []; Db::$ligne = null; $GLOBALS['corps'] = [];
 
 echo "Les tournées publiées\n";
 $t = bdvTourneeLigne(['id' => 1, 'tour' => 'LLN', 'zoneSecondary' => '', 'zonePrincipal' => 'Atelier by Berlo - Corbais'],
