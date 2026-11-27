@@ -6223,7 +6223,7 @@ jamais de boutique (champs filtrés).
     GET    /dashboard/catalogues/produits?shop=        → …/catalogue-products
     GET    /dashboard/catalogues/medias?shop=&page=&q= → …/catalogue-media?perPage=24&page=&filter[name][like]=q
     POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, pageCount, langs, products, pages, offers, showAvailability}
-    GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, pageCount, langs, products, pages, status, printQty, offers, showAvailability)
+    GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, pageCount, langs, products, pages, status, printQty, offers, showAvailability, gammeBlocks, gammesOk, presentations)
     GET    /dashboard/catalogues/{id}/document?shop=&lang=fr|nl
     POST   /dashboard/catalogues/{id}/impression?shop= {lang} → …/print-links (lien signé 48 h vers la page d'impression du Marketing)
 
@@ -6390,6 +6390,22 @@ sous-titre), `script` (catégorie en lettres manuscrites : `pages[i].script` boo
 (dessin de la famille, pour les vignettes sans photo — plus de cercle vide). Étape 3 : « Catégorie manuscrite Non · Oui »
 par page. Police manuscrite : Playwrite DE VA, déjà livrée avec le design system (`assets/ds/fonts`), déclarée
 `CmScript` dans `catalogue.css`.
+
+**Gamme par gamme** (27/11/2026, contrat du Marketing v1.23) : un catalogue porte `gammeBlocks` (la liste ordonnée des
+gammes, null : pages libres comme avant), `gammesOk` et `presentations` ; le relais laisse passer les trois au `PUT` (le
+dashboard ne les envoie pas : un enregistrement des pages les garde, et le Marketing range les pages par blocs). Au
+document, une page `presentation` porte `design` (photos cadrées `x`/`y`/`zoom`, disposition `une` · `deux` · `mosaique` ·
+`pleine`, `title` / `kicker` / `text` stylés — police, taille en points, graisse, couleur, alignement —, `background`
+couleur ou photo avec voile, `gammeColor`) ; null : la présentation d'avant (gabarits A · B · C). Une page de produits
+`free: true` est une page libre intercalée (la photo ou l'illustration de la gamme voisine, sans titre). Le dashboard les
+dessine comme le Marketing (`presentationDesign`, `pageLibre`, `catalogue.js` ; classes `cat-pd*`, `cat-free*`) ; son
+aperçu local de l'étape 3 reprend le `design` du document par gamme, remplit les pages libres en dernier (`fillBlocks`)
+et donne à une page libre vide l'illustration que le document a choisie. À la mise en page finale, une présentation emmène les
+pages de sa gamme (‹ › et glisser-déposer) ; l'enregistrement envoie alors `gammeBlocks` dans le nouvel ordre (la route
+de la boutique l'accepte) et relit le document. La présentation elle-même (photos, textes, fond) se règle dans le
+Marketing : le dashboard le dit au survol, et ne montre plus les champs de texte d'une présentation gamme par gamme.
+Police des pages : `CmPrint` 400 = Gotham Book (`assets/ds/fonts/Gotham_Book.otf`, comme le Marketing ; Gotham_Regular
+est en réalité du Black).
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `shared/config/config.php` ; jeton `erp_jeton_service` (erp_cles).
