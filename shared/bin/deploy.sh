@@ -373,6 +373,9 @@ Alias /formation/ ${TARGET_DIR}/public/formation/
 # Le portail Commercial à la racine du serveur, comme /formation/ (19/11/2026) : la page (public/commercial) et son
 # API juste à côté d'elle, par le même contrôleur.
 RedirectMatch 301 ^/commercial\$ /commercial/
+# Le site du cockpit sert aussi les fichiers du portail (${ALIAS_PATH}/commercial/, site assemblé), mais pas son API :
+# ouvert là (un favori, 28/11/2026), le portail lisait la page de connexion au lieu de ses données. Retour à /commercial/.
+RedirectMatch 301 ^${ALIAS_PATH}/commercial(/.*)?\$ /commercial\$1
 AliasMatch ^/commercial/api/cockpit(/.*)?\$ ${TARGET_DIR}/public/api/index.php
 # Les pages du portail (la garde de chacune ; la Prospection, /commercial/prospection/, 19/11/2026 : design system,
 # Leaflet) lisent les fichiers communs du cockpit à côté d'elles : /commercial/assets/ est le dossier assets/ du site.
