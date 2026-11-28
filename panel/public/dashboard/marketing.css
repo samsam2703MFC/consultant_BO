@@ -6,7 +6,7 @@
 .mm-kpis > div { display: grid; gap: 2px; padding: 11px 16px; border-left: 1px solid var(--row-line); min-width: 0; }
 .mm-kpis > div:first-child { border-left: 0; }
 .mm-kpis .k { font-size: 11px; color: var(--muted-2); }
-.mm-kpis .v { font-size: 20px; color: var(--ink); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.mm-kpis .v { font-size: 21px; color: var(--ink); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .mm-kpis .s { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .mm-grille { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -65,7 +65,7 @@
 
 .mm-avis { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: start; }
 .mm-note-g { display: grid; gap: 3px; }
-.mm-note-g .v { font-size: 30px; color: var(--ink); line-height: 1; }
+.mm-note-g .v { font-size: 26px; color: var(--ink); line-height: 1; }
 .mm-note-g .s { font-size: 11px; color: var(--muted-2); }
 .mm-rep { display: grid; gap: 3px; font-size: 11px; color: var(--muted-2); }
 .mm-rep > div { display: grid; grid-template-columns: 28px 1fr 26px; align-items: center; gap: 6px; }
@@ -159,7 +159,7 @@
 .mc-pastille svg { width: 22px; height: 22px; fill: #fff; }
 .mc-h-t { flex: 1; min-width: 0; }
 .mc-eyebrow { display: block; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-.mc-h h2 { margin: 2px 0 0; font-size: 20px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
+.mc-h h2 { margin: 2px 0 0; font-size: 21px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
 .mc-h p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted-2); }
 .mc-temps { display: flex; align-items: center; gap: 10px; margin-top: 9px; font-size: 11.5px; color: var(--muted-2); }
 .mc-temps-b { position: relative; width: 220px; max-width: 40%; height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; }
@@ -251,7 +251,7 @@
 .cal-b { position: absolute; top: 8px; height: 18px; border-radius: 4px; overflow: hidden; z-index: 1; opacity: 0.85; }
 .cal-b em { display: block; padding: 0 8px; font-style: normal; font-size: 11px; line-height: 18px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cal-l--c.on .cal-b { opacity: 1; outline: 1px solid var(--ink); outline-offset: 1px; }
-.cal-b--s { background: #d9c08f; opacity: 1; }
+.cal-b--s { background: rgba(176, 121, 42, 0.45); opacity: 1; }   /* une saison : l'or du système, éclairci (28/11/2026) */
 .cal-l--s.on .cal-b--s { background: var(--accent); }
 .cal-l.ouv .cal-b--s { background: var(--accent); }
 .cal-l--s.on .cal-lib b { color: var(--accent); }
