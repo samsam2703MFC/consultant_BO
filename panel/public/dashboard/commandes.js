@@ -48,7 +48,8 @@
     horloge: 'M12 7v5l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9',
     g: 'M15 18l-6-6 6-6', d: 'M9 18l6-6-6-6', plus: 'M12 5v14M5 12h14', haut: 'M18 15l-6-6-6 6', bas: 'M6 9l6 6 6-6', x: 'M18 6L6 18M6 6l12 12',
   };
-  const CANAUX = { webshop: ['Webshop', '#1B6FA8'], comptoir: ['Comptoir', '#8D1D2C'], bureau: ['Bureau', '#3f7a52'] };
+  // Les couleurs d'identification des canaux : celles de .pco (commandes.css), une seule source (28/11/2026).
+  const CANAUX = { webshop: ['Webshop', 'var(--pco-web, #1B6FA8)'], comptoir: ['Comptoir', 'var(--pco-comp, #8D1D2C)'], bureau: ['Bureau', 'var(--pco-bur, #3f7a52)'] };
   const JL = [['1', 'L'], ['2', 'M'], ['3', 'M'], ['4', 'J'], ['5', 'V'], ['6', 'S'], ['7', 'D']];
 
   const st = { shop: null, api: '../api/cockpit', el: null, onCompte: null, date: null, vue: 'liste', canal: '', mode: '', q: '',

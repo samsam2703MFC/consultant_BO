@@ -19,7 +19,7 @@
 /* La barre : le jour, Gérer les tournées, l'interrupteur abricot */
 .pco-barre { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; flex-wrap: wrap; }
 .pco-barre .btn svg { width: 15px; height: 15px; }
-.pco-date { font-size: 17px; }
+.pco-date { font-size: 18px; }   /* 18 px : l’échelle du §4.2 (était 17 px) */
 .pco-ici { font-size: 12.5px; color: var(--muted-2); } /* sur le papier : --muted y est sous 4,5:1 */
 /* L'interrupteur Liste / Tournées : l'Abricot de la marque (#F2C9A0), texte Ruby, comme l'Assistant IA du rail et les
  * boutons abricot du coffre (fond #FFF8F1, filet #F2C9A0, texte #7A3E12 ; allumé #F2C9A0). Pas de gras (§4.3). */
@@ -215,7 +215,7 @@
 .pco-bres button .pco-compte { margin-left: auto; }
 .pco-gerer td { vertical-align: middle; }
 .pco-jours { display: inline-flex; gap: 3px; }
-.pco-jours i { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; font-style: normal; font-size: 9.5px; background: #fff; border: 1px solid var(--line); color: var(--faint); }
+.pco-jours i { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; font-style: normal; font-size: 10px; background: #fff; border: 1px solid var(--line); color: var(--faint); }
 .pco-jours i.is-on { background: var(--green); border-color: var(--green); color: #fff; }
 
 /* La semaine et le mois (24/11/2026) */
@@ -243,7 +243,7 @@
 .pco-bleg span { display: inline-flex; align-items: center; gap: 6px; }
 .pco-bc { text-align: center !important; }
 .pco-bc i, .pco-bleg i { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; font-style: normal; font-size: 11px; }
-.pco-bleg i { width: 16px; height: 16px; font-size: 9.5px; }
+.pco-bleg i { width: 16px; height: 16px; font-size: 10px; }
 i.is-oui { background: var(--green); color: #fff; }
 i.is-non { background: #fff; border: 1px solid var(--line); }
 i.is-hors { border: 1px dashed var(--line); }
@@ -298,7 +298,7 @@ i.is-hors { border: 1px dashed var(--line); }
   .pco-faxe span:not(:nth-child(3n+1)) { display: none; }
   .pco-cal td { height: 64px; padding: 5px; }
   .pco-cal-ca, .pco-cal .pco-mini, .pco-cal th:last-child, .pco-cal td.pco-cal-s { display: none; }
-  .pco-cal th { padding: 6px 4px; font-size: 9px; letter-spacing: 0; }
+  .pco-cal th { padding: 6px 4px; font-size: 10px; letter-spacing: 0; }
   .pco-res-leg { grid-template-columns: minmax(0, 1fr); }
   .pco-fbloc { padding: 2px 4px; }
 }
