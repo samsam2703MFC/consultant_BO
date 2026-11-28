@@ -1,4 +1,4 @@
-/* Mon coffre-fort › le dossier « Légal » (?vue=coffre, « Légal » à gauche, ou « Compléter » dans À traiter), et ses
+/* Mon coffre-fort › le dossier « Légal » (?vue=coffre, « Légal » à gauche, ou « … pièces légales à déposer » dans À corriger), et ses
  * fonctions en chapitres (26/11/2026) :
  *   onglet    coffre-legal        les pièces que le magasin dépose : reçue, à renouveler, à déposer ; ouvrir une pièce
  *   fonction  coffre-renouveler   « Déposer la nouvelle » sur l'assurance RC : le fichier, le titre, « Déposer »,
@@ -21,10 +21,10 @@ module.exports = async function () {
     accroche: 'Vos pièces, à jour',
     programme: ['Renouveler une pièce', 'Écarter une pièce qui ne vous concerne pas', 'Réintégrer une pièce écartée'],
   });
-  await f.montrer('.cf2-af[data-cf-faire="dos:legal"]', 'Compléter');
-  await f.dire('Deux pièces légales manquent : « <b>Compléter</b> » ouvre le dossier Légal.', 4000);
+  await f.montrer('.cf2-rs-b[data-cf-faire="dos:legal"]', 'À corriger');
+  await f.dire('Deux pièces légales manquent : dans « À corriger », leur bouton ouvre le dossier <b>Légal</b>.', 4400);
   await f.cacher(150); await f.taire(150);
-  await f.cliquer('.cf2-af[data-cf-faire="dos:legal"] .go', { apres: 1000 });
+  await f.cliquer('.cf2-rs-b[data-cf-faire="dos:legal"]', { apres: 1000 });
   await f.montrer('.cf2-cont .cf2-ch', 'Légal');
   await f.dire('<b>Légal</b> : vos pièces. Vous les déposez ; votre consultant le peut aussi.', 4000);
   await f.montrer('.cf2-att', 'Pièces attendues · 5 sur 7');
@@ -88,7 +88,7 @@ module.exports = async function () {
   await f.montrer('.cf2-flash', 'Écartée');
   await f.dire('<b>Pièce écartée</b> : elle ne compte plus dans votre coffre.', 3400);
   await f.cacher(150); await C.apresFlash(f);
-  await f.montrer('.cf2-etat > div:nth-child(1)', 'Votre coffre');
+  await f.montrer('.cf2-rs-v', 'Votre coffre');
   await f.dire('Le compte suit : 14 pièces sur 15 attendues.', 3000);
   await f.montrer('.cf2-p.p-exc', 'Pas concernée');
   await f.dire('Elle reste dans la liste : « pas concernée · écartée par Camille R. ».', 3800);

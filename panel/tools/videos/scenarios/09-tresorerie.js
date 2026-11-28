@@ -3,6 +3,7 @@
  * rendPaiements, rendBudget, rendGuide : le mode d'emploi du module) et de panel/src/tresorerie.php.
  * Le plan de démo (mocks/09_tresorerie.js) part du 2 novembre ; le solde du dimanche 15 n'est pas saisi : on le tape. */
 const { Film } = require('../film');
+const { ligne } = require('./tresorerie');
 
 /** Un cadre autour de lignes du plan, coupé au bord de leur tableau (les lignes sont plus larges que la carte, qui défile
  * de côté) : l'écran défile d'abord jusqu'à la première. */
@@ -41,22 +42,22 @@ module.exports = async function () {
   await f.montrer(routine, 'L’écart');
   await f.dire('Juste à côté, l’<b>écart</b> entre le réel et le prévu : − 648 €.', 4000);
   await f.dire('Plus de <b>500 €</b> : on en trouve la cause avant lundi. Un écart qu’on n’explique pas revient toujours, en plus gros.', 6000);
-  await f.montrer('#db-tresorerie .tr-g2 > .tr-carte:nth-child(2)', 'La décision');
+  await f.montrer('#db-tresorerie .trs-lev', 'La décision');
   await f.dire('Puis la <b>décision</b> : le cash prévu des quatre semaines à venir. Ici, il reste au-dessus du coussin.', 5200);
-  await f.dire('Orange : sous le coussin. Rouge : on ne peut pas tout payer. On décide quoi décaler et on prévient avant l’échéance.', 5800);
+  await f.dire('Or : sous le coussin. Rouge : on ne peut pas tout payer. On décide quoi décaler et on prévient avant l’échéance.', 5800);
   await f.cacher();
 
   await f.chapitre({ n: 2, total: 4, titre: 'Le plan, semaine par semaine', texte: 'Ce qui entre, ce qui sort, et le cash de chaque fin de semaine, en € TTC.' });
   await f.etape('2 · Le plan');
-  await f.montrer('#db-tresorerie .tr-kpis', 'Les repères');
+  await f.montrerTout('#db-tresorerie .trs-g, #db-tresorerie .trs-meta', 'Les repères');
   await f.dire('Les repères : le <b>point bas</b> du cash, les semaines sous le <b>coussin</b>, les ventes prévues, marchandises et personnel en % des ventes.', 6000);
   await f.cacher(150);
   await f.montrer('#db-tresorerie .tr-carte:has(.tr-graph)', 'Cash fin de semaine');
-  await f.dire('Le cash de chaque fin de semaine : gris au-dessus du coussin, <b>orange</b> en dessous, rouge à découvert. En janvier, il passe sous le coussin.', 6600);
-  await lignes(f, '#db-tresorerie .tr-carte-t .tr-grille > .tr-r:nth-child(4)', 'Les ventes');
+  await f.dire('Le cash de chaque fin de semaine : vert au-dessus du coussin, <b>or</b> en dessous, rouge à découvert. En janvier, il passe sous le coussin.', 6600);
+  await lignes(f, await ligne(f, 'Encaissements (ventes)'), 'Les ventes');
   await f.dire('Le plan : une colonne par lundi. Une semaine close prend les <b>ventes réelles</b> de la caisse ; les autres partent du budget, marquées ≈.', 6400);
   await f.dire('On tape sa prévision par-dessus.', 2400);
-  await lignes(f, '#db-tresorerie .tr-carte-t .tr-grille > .tr-r:nth-child(8)', 'Les calculs');
+  await lignes(f, await ligne(f, 'Marchandises (fournisseurs)'), 'Les calculs');
   await f.dire('Marchandises, gérant, personnel, frais : calculés depuis les onglets. <b>Double-clic</b> sur une case : le montant de cette semaine seulement.', 6400);
   // Les trois dernières lignes du plan : cash fin de semaine (prévu), cash réel en banque (dimanche), écart réel − prévu.
   await lignes(f, '#db-tresorerie .tr-carte-t .tr-grille > .tr-r:nth-last-child(-n+3)', 'Le bas du plan');
@@ -95,7 +96,7 @@ module.exports = async function () {
   await f.taire(150);
   await f.cacher(200);
   await f.cliquer('#db-tresorerie [data-tra="onglet:frais"]', { apres: 1600 });
-  await f.montrer('#db-tresorerie .fx-tuiles', 'Frais');
+  await f.montrer('#db-tresorerie .fx .ac', 'Frais');
   await f.dire('<b>Frais</b> : les frais du mois saisis au panel, et la TVA qu’ils contiennent, que le P&L retire.', 5000);
   await f.taire(150);
   await f.cacher(200);

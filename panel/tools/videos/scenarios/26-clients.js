@@ -46,8 +46,8 @@ module.exports = async function () {
   await f.chapitre({ n: 3, total: 5, titre: 'Les entreprises B2B', texte: 'Celles à compléter en tête, les filtres, la fiche : le crédit, les bureaux, les factures.' });
   await f.etape('3 · Les entreprises');
   await f.cliquer('.pcl-tabs [data-act="onglet"][data-v="b2b"]', { apres: 1200 });
-  await f.montrer('.pcl-alerte', 'À compléter');
-  await f.dire('En tête : les entreprises aux <b>données incomplètes</b> — TVA, adresse, ou ni e-mail ni téléphone. Leurs factures ne peuvent pas partir.', 6000);
+  await f.montrer('.pcl-res', 'À compléter');
+  await f.dire('En tête, « À corriger » : les entreprises aux <b>données incomplètes</b> — TVA, adresse, ou ni e-mail ni téléphone. Leurs factures ne peuvent pas partir.', 6000);
   await f.cacher(150); await f.taire(150);
   await f.montrer('.pcl-filtres', 'Les filtres');
   await f.dire('Les filtres : le <b>score</b>, le chiffre sur 12 mois, le nombre de commandes.', 4000);
@@ -85,11 +85,11 @@ module.exports = async function () {
   await f.cliquer('.pcl-tir [data-act="b-fermer"]', { apres: 700 });
   await f.defiler(-3000);
 
-  await f.chapitre({ n: 5, total: 5, titre: 'L’analyse B2B', texte: 'Un mois : six chiffres face au mois d’avant et à l’an dernier, puis l’année.' });
+  await f.chapitre({ n: 5, total: 5, titre: 'L’analyse B2B', texte: 'Un mois : ses ventes B2B face au mois d’avant et à l’an dernier, puis l’année.' });
   await f.etape('5 · L’analyse');
   await f.cliquer('.pcl-tabs [data-act="onglet"][data-v="an"]', { apres: 1300 });
-  await f.montrer('.pcl-kpi6', 'Six chiffres');
-  await f.dire('Six chiffres : ventes, tickets, panier, clients uniques, <b>part B2B du CA</b>, factures — face au mois d’avant et à l’an dernier.', 6200);
+  await f.montrer('.pcl-res', 'Le résumé');
+  await f.dire('Les <b>ventes B2B</b> du mois ; à côté, tickets, panier, clients uniques, factures — face au mois d’avant et à l’an dernier.', 6200);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('[data-act="a-metrique"][data-v="clients"]', { apres: 900 });
   await f.montrer('.pcl-an2 > section:first-child', 'Mois par mois');

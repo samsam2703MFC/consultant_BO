@@ -21,6 +21,7 @@ import { tplVerifMouvements } from './verification-mouvements-tpl.js';
 import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
 import { tplVisibilite } from './visibilite-tpl.js';
 import { tplStructure } from './structure-gamme-tpl.js';
+import { tplCaGlissant } from './ca-glissant-tpl.js';
 
 /* Icônes linéaires du rail (design system §7.12, tracés du catalogue §8.4) :
    une notion = un tracé, réutilisé d'un module à l'autre. Une entrée sans
@@ -3769,6 +3770,7 @@ function tplResultatPeriode(c, x){
           ${c.rpSemaine ? `<div style="display:flex;gap:5px;margin-top:4px;font-size:10px;color:var(--color-text-muted)">${c.rpJours.map(j => `<span style="flex:1;text-align:center;white-space:nowrap;overflow:hidden">${esc(j.court)}</span>`).join('')}</div>` : ''}
         </div>
       </div>
+      ${c.rpGlissant ? tplCaGlissant(c.rpGlissant, x) : ''}
 
       <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1120px">

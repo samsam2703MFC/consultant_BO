@@ -105,10 +105,46 @@ function planningPersonne(int $emp, string $du, string $au, ?int $maintenant = n
     $noms = planNomsMagasins();
     $services = array_map(static fn ($l) => $l + ['shop_name' => (string) ($noms[$l['id_shop']] ?? '')], array_values($services));
     usort($services, static fn ($a, $b) => [$a['work_date'], $a['start_hour']] <=> [$b['work_date'], $b['start_hour']]);
+    $services = planAbsences($emp, $du, $au, $services, $noms);
     $garde = array_keys(array_filter($mag, static fn ($m) => is_array($m) && !empty($m['garde'])));
     return ['emp' => $emp, 'du' => $du, 'au' => $au, 'services' => $services,
         'source' => $complete || $muets !== [] ? 'panel /shops/{id}/schedule + table locale' : 'panel /shops/{id}/schedule',
         'muets' => $muets, 'garde' => array_map('intval', $garde)];
+}
+
+/**
+ * Les absences (27/11/2026, panel/src/equipe_absences.php), dans l'app : le service d'une absence payée (resté au panel)
+ * porte son motif (`absence` : maladie, cp, circ, nonpaye) ; une absence non payée, dont le service a quitté le panel,
+ * revient comme une entrée marquée ; le service d'un remplaçant porte `remplacement` — sans dire qui il remplace ni
+ * pourquoi (la santé d'un collègue ne regarde pas l'app). Sans table, les services restent tels quels.
+ */
+function planAbsences(int $emp, string $du, string $au, array $services, array $noms = []): array
+{
+    $ids = array_values(array_filter(array_map(static fn ($s) => (int) ($s['id_schedule'] ?? 0), $services)));
+    try {
+        if (function_exists('ensureEquipeAbsences')) { ensureEquipeAbsences(); }
+        $abs = Db::rows('SELECT service_id, shop_id, jour, de, a, motif, payee FROM panel_equipe_absence WHERE employe_id = ? AND jour >= ? AND jour <= ?', [$emp, $du, $au]);
+        $rp = $ids !== [] ? Db::rows('SELECT remplacant_service FROM panel_equipe_absence WHERE remplacant_service IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) : [];
+    } catch (Throwable $e) { return $services; }
+    if ($abs === [] && $rp === []) { return $services; }
+    $parSv = [];
+    foreach ($abs as $a) { $parSv[(int) $a['service_id']] = $a; }
+    $remp = [];
+    foreach ($rp as $r) { $remp[(int) $r['remplacant_service']] = true; }
+    foreach ($services as &$s) {
+        $id = (int) ($s['id_schedule'] ?? 0);
+        if ($id > 0 && isset($parSv[$id])) { $s['absence'] = (string) $parSv[$id]['motif']; unset($parSv[$id]); }
+        if ($id > 0 && isset($remp[$id])) { $s['remplacement'] = true; }
+    }
+    unset($s);
+    foreach ($parSv as $id => $a) {
+        if ((int) $a['payee'] === 1) { continue; }   // payée, son service a quitté le panel depuis : oubliée (comme à l'écran)
+        $sid = (int) $a['shop_id'];
+        $services[] = ['id_schedule' => $id, 'id_employee' => $emp, 'work_date' => (string) $a['jour'], 'start_hour' => (string) $a['de'], 'end_hour' => (string) $a['a'],
+            'id_shop' => $sid, 'shop_name' => (string) ($noms[$sid] ?? ''), 'absence' => (string) $a['motif']];
+    }
+    usort($services, static fn ($a, $b) => [$a['work_date'], $a['start_hour']] <=> [$b['work_date'], $b['start_hour']]);
+    return $services;
 }
 
 /** Le nom court de chaque magasin, actif ou non : « Atelier by Berlo - Corbais » → « Corbais » (comme le cockpit). */

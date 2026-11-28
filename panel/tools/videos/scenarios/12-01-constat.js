@@ -21,11 +21,11 @@ module.exports = async function () {
   });
 
   /* La tête de la page : la lecture du panel */
-  await f.montrer('.pm-tete > div:first-child', 'Relu au panel');
+  await f.montrer('.pm-sous', 'Relu au panel');
   await f.dire('En tête : l’heure de la dernière lecture du panel. La page le relit à chaque ouverture.', 4400);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('[data-pmrelire]', { apres: 1200 });
-  await f.montrer('.pm-tete > div:first-child', 'Relu à l’instant');
+  await f.montrer('.pm-sous', 'Relu à l’instant');
   await f.dire('« <b>↻ relire le panel</b> » le refait : une promotion changée au panel se voit tout de suite.', 4600);
   await f.cacher(300); await f.taire(200);
 
@@ -34,7 +34,7 @@ module.exports = async function () {
   await f.dire('Sous « Où les promotions sont utilisées », le <b>Coach Vente</b> : il crée avec vous un bundle qui monte votre marge.', 5200);
   await f.montrer('.bd-pas', 'Cinq étapes');
   await f.dire('Cinq étapes. La page s’ouvre sur la première : <b>le constat</b>.', 3600);
-  await f.montrer('.bd-k4', 'Le constat');
+  await f.montrer('.bd-rs', 'Le constat');
   await f.dire('Votre <b>marge de base</b> : prix hors TVA moins coût de recette, sur les ventes des 30 derniers jours.', 5000);
   await f.dire('Puis la part des pièces vendues sous cette marge, celle à 78 % de marge et plus, et la période lue.', 4800);
   await f.montrer('.bd-c1 > div:first-child', 'Chaque produit');

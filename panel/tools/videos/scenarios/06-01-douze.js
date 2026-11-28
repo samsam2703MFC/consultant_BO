@@ -22,7 +22,7 @@ module.exports = async function () {
 
   await enHautDe(f, DZ, 20);
   await dire(f, DZ + ' .db-s6', 'Douze semaines', '<b>Les douze dernières semaines</b> closes : les clients de chaque semaine, en pointillé la même semaine un an plus tôt.', 5600);
-  await f.dire('La bande entre les deux : <b>bleue</b> au-dessus de l’an passé, <b>orange</b> en dessous.', 4400);
+  await f.dire('La bande entre les deux : <b>verte</b> au-dessus de l’an passé, <b>or</b> en dessous.', 4400);
   await f.montrerTout(DZ + ' .ch', 'L’écart');
   await f.dire('Dessous, l’<b>écart</b> de chaque semaine face au N-1.', 3400);
   await f.montrerTout(DZ + ' .db-tui', 'Trois tuiles');
@@ -44,7 +44,7 @@ module.exports = async function () {
   await dire(f, '#dash .db-frise', 'Les semaines', 'En haut, la <b>frise</b> : les six semaines d’avant et celle qu’on regarde.', 4200);
   await rien(f);
   await f.cliquer('#dash .db-frise .fr-c[data-fdate="2026-11-08"]', { apres: 2000 });
-  await dire(f, '#dash .qb-jauge', 'La S45, close', 'Un clic ouvre la <b>S45</b>, close : elle se lit face à son objectif.', 4200);
+  await dire(f, '#dash .chr-l1', 'La S45, close', 'Un clic ouvre la <b>S45</b>, close : elle se lit face à son objectif.', 4200);
   await rien(f);
   await enHautDe(f, DZ, 20);
   await dire(f, DZ + ' .db-card', 'Jusqu’à la S45', 'Les douze semaines s’arrêtent à la S45 ; sa tuile la compare à la même semaine de l’an passé.', 5200);

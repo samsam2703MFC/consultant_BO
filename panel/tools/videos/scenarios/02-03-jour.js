@@ -23,10 +23,8 @@ module.exports = async function () {
   await f.dire('Un clic sur un jour l’ouvre en grand : la vue <b>Jour</b>. Le bouton « Jour » aussi.', 4000);
   await f.cacher(150);
   await f.cliquer('[data-eqp-jour="2026-11-19"]', { apres: 1500 });
-  await f.montrer('.eqp-kpis', 'Le jour en chiffres');
-  await f.dire('En tête : qui est au planning, les heures, la part du personnel, les temps morts habituels et les trous.', 5000);
-  await f.montrer('.eqp-bj', 'Le budget du jour');
-  await f.dire('Le <b>budget du jour</b> : aujourd’hui face au CA projeté, un jour passé face à la caisse.', 4400);
+  await f.montrer('.eqp-rs-l1', 'Le budget du jour');
+  await f.dire('En tête, le <b>budget du jour</b> : aujourd’hui face au CA projeté, un jour passé face à la caisse ; les heures et ce qu’il faut retirer.', 5400);
   await f.defilerVers(f.p.locator('.eqp-pg'), 24);
   await f.montrerTout('.eqp-pg .eqp-l:has([data-eqp-tl])', 'Le planogramme');
   await f.dire('Le <b>planogramme</b> : une ligne par personne, groupées par section ; chaque service est une barre.', 4800);
@@ -40,8 +38,8 @@ module.exports = async function () {
   await f.defiler(-3000);
   await f.cliquer('[data-eqp-pas="-1"]', { apres: 1100 });
   await f.cliquer('[data-eqp-pas="-1"]', { apres: 1400 });
-  await f.montrer('.eqp-ins', 'Les constats');
-  await f.dire('Les flèches changent de jour. Mardi, les <b>constats</b> : personne au comptoir de 13 h 45 à 14 h 30.', 5000);
+  await f.montrer('.eqp-rs-l2', 'Ce jour-là');
+  await f.dire('Les flèches changent de jour. Mardi, <b>ce jour-là</b> : le comptoir vide de 13 h 45 à 14 h 30 ; un clic montre sa ligne.', 5000);
   await f.cacher(150); await f.taire(150);
   await f.defiler(-3000);
   await f.cliquer('[data-eqp-auj]', { apres: 1400 });

@@ -1,7 +1,7 @@
 /* Vidéo 16 — « Mon marketing » (mode d'emploi de Marketing › Mon marketing, vue=marketing). Environ 2 min.
- * panel/public/dashboard/marketing.js : le calendrier de l'année (les campagnes du magasin, les saisons des produits et
- * leurs ventes de l'an dernier), puis chaque campagne en cours décrite comme la note du réseau. Données fictives :
- * mocks/16_marketing.js. */
+ * panel/public/dashboard/marketing.js : le résumé (les campagnes en cours, « À corriger »), le calendrier de l'année (les
+ * campagnes du magasin, les saisons des produits et leurs ventes de l'an dernier), puis chaque campagne en cours décrite
+ * comme la note du réseau. Données fictives : mocks/16_marketing.js. */
 const { Film } = require('../film');
 
 module.exports = async function () {
@@ -14,8 +14,10 @@ module.exports = async function () {
   /* 1 · Le calendrier de l'année. */
   await f.chapitre({ n: 1, total: 3, titre: 'Le calendrier de l’année', texte: 'Les campagnes du magasin et les saisons des produits, mois par mois.', ms: 3400 });
   await f.etape('1 · Le calendrier');
+  await f.montrer('.mmr', 'En bref');
+  await f.dire('En tête, le <b>résumé</b> : les campagnes en cours et jusqu’à quand ; dessous, ce qui est <b>à corriger</b> — ici, rien.', 5200);
   await f.montrer('.cal', 'Le calendrier de l’année');
-  await f.dire('En tête, le <b>calendrier de l’année</b> : les campagnes du magasin et les saisons des produits. Le trait, c’est aujourd’hui.', 5400);
+  await f.dire('Puis le <b>calendrier de l’année</b> : les campagnes du magasin et les saisons des produits. Le trait, c’est aujourd’hui.', 5400);
   await f.montrerTout('.cal-l--c', 'Les campagnes');
   await f.dire('Les campagnes du magasin, de janvier à décembre : <b>terminées</b>, <b>en cours</b>, <b>à venir</b>.', 4400);
   await f.montrerTout('.cal-l--s', 'Les saisons des produits');

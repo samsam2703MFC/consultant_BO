@@ -31,7 +31,7 @@ module.exports = async function () {
 
   await enHautDe(f, GR, 20);
   await dire(f, GR, 'La journée type', '<b>La journée type</b> : chaque heure en moyenne par jour ouvert. La barre empile la matière, la rémunération et la marge nette.', 6400);
-  await dire(f, GR + ' .db-gr', 'La marge nette', 'Dessous, la case de la <b>marge nette</b> : rouge sous zéro, orange sous 20 % des ventes, vert au-delà de 40 %.', 5800);
+  await dire(f, GR + ' .db-gr', 'La marge nette', 'Dessous, la case de la <b>marge nette</b> : rouge à perte, or sous 20 % des ventes, vert à 20 % et plus.', 5600);
   await rien(f);
   await f.cliquer(GR + ' [data-mode="tot"]', { apres: 1300 });
   await dire(f, GR, 'Total', '« <b>Total</b> » : la semaine entière, heure par heure, au lieu de la moyenne.', 4200);

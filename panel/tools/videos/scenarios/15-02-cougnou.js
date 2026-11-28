@@ -23,11 +23,10 @@ module.exports = async function () {
     programme: ['Notre cougnou au kilo', 'L’échelle et les relevés', 'Relever le prix d’un cougnou'],
   });
   await f.cliquer('[data-bmf="cougnou"]', { apres: 1300 });
-  await f.montrer('.db-tuiles .db-tui:nth-child(1)', 'Notre cougnou');
+  await f.montrer('#dash .ac-cle', 'Notre cougnou');
   await f.dire('Le cougnou se compare <b>au kilo</b> : notre cougnou de 500 g à 8,90 €, soit 17,80 € le kilo.', 5200);
-  await f.montrerTout('.db-tuiles .db-tui:nth-child(n+2):nth-child(-n+4)', 'Les médianes');
+  await f.montrer('#dash .ac-cle .q small', 'Les médianes');
   await f.dire('Face à la médiane des supermarchés, des artisans, des chaînes et stations ; et notre écart avec chacune.', 5200);
-  await f.montrer('.db-tuiles .db-tui:nth-child(5)', 'Moins chers');
   await f.dire('Combien de relevés sont <b>moins chers que nous</b>, parmi ceux dont la taille est connue.', 4400);
   await f.cacher(300); await f.taire(150);
 

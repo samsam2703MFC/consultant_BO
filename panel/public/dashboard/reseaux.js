@@ -69,15 +69,32 @@
     barre();
   });
 
-  /** La barre : les onglets (le menu de l'espace) et le quota de la semaine. Redessinée seule : le cadre ne bouge pas. */
+  /* Le résumé (27/11/2026, DESIGN_SYSTEM.md §7.13) : le quota de la semaine en chiffre clé (700, le seul gras) et « À
+   * corriger » — les pastilles que l'espace pose sur son menu (ce qui l'attend : commentaires, messages, avis…), un bouton
+   * par page, qui l'ouvre comme son onglet. Rien de calculé ici : le menu et le quota sont ceux que l'espace envoie. Un
+   * chiffre, une place : la pastille et le quota ne restent plus sur les onglets. Tant que l'espace n'a pas parlé, rien. */
+  function resume() {
+    if (!st.menu) { return ''; }
+    const q = st.quota && st.quota.max ? st.quota : null, plein = q && q.used >= q.max;
+    const A = st.menu.filter(x => x.n > 0);
+    const cle = q ? `<div class="rx-res-l1"><span class="rx-res-v">${esc(q.used)}</span>
+        <span class="rx-res-q">post${q.used > 1 ? 's' : ''} cette semaine, sur ${esc(q.max)} permis${plein ? ' <span class="rx-res-et"><i class="rx-ic" aria-hidden="true"></i>quota atteint</span>' : ''}${q.regles ? `<small>${esc(q.regles)}</small>` : ''}</span></div>` : '';
+    const l2 = A.length ? `<span class="rx-res-t">À corriger</span><span class="rx-res-l">${A.map(x => `<button type="button" class="btn btn--sm rx-res-b" data-rxac="${esc(x.k)}"><i class="rx-ic" aria-hidden="true"></i>${esc(x.label)} · ${esc(x.n)} à traiter</button>`).join('')}</span>`
+      : '<p class="rx-res-ok">Rien à traiter dans l’espace boutique.</p>';
+    return `<section class="rx-res" aria-label="Résumé des réseaux sociaux">${cle}<div class="rx-res-l2${cle ? '' : ' seul'}"${A.length ? ' role="region" aria-label="À corriger"' : ''}>${l2}</div></section>`;
+  }
+
+  /** La barre : le résumé et les onglets (le menu de l'espace). Redessinée seule : le cadre ne bouge pas. */
   function barre() {
     const b = st.el && st.el.querySelector('.rx-barre');
     if (!b) { return; }
     const L = st.menu && st.menu.length ? st.menu : DEPART.map(([k, label]) => ({ k, label, n: 0 }));
-    const q = st.quota;
-    // Le quota de la semaine se lit sur l'onglet « Créer un post » : les posts déjà faits sur ceux permis.
-    const quota = x => x.k === 'pub' && q && q.max ? ` <span class="rx-quota${q.used >= q.max ? ' plein' : ''}" title="${esc('Cette semaine : ' + q.used + ' post' + (q.used > 1 ? 's' : '') + ' sur ' + q.max + (q.regles ? ' · ' + q.regles : ''))}">${q.used}/${q.max}</span>` : '';
-    b.innerHTML = `<div class="page-tabs rx-tabs">${L.map(x => `<button type="button" class="page-tabs__tab${st.k === x.k ? ' is-on' : ''}${x.groupe ? ' rx-groupe' : ''}" data-rxk="${esc(x.k)}"${COURT[x.k] ? ` title="${esc(x.label)}"` : ''}>${esc(COURT[x.k] || x.label)}${x.n > 0 ? ` <span class="page-tabs__count">${x.n}</span>` : ''}${quota(x)}</button>`).join('')}</div>`;
+    const r = st.el.querySelector('.rx-resume');
+    if (r) {
+      const h = resume();
+      if (r.innerHTML !== h) { r.innerHTML = h; r.querySelectorAll('[data-rxac]').forEach(x => x.addEventListener('click', () => aller(x.dataset.rxac))); requestAnimationFrame(ajuster); }
+    }
+    b.innerHTML = `<div class="page-tabs rx-tabs">${L.map(x => `<button type="button" class="page-tabs__tab${st.k === x.k ? ' is-on' : ''}${x.groupe ? ' rx-groupe' : ''}" data-rxk="${esc(x.k)}"${COURT[x.k] ? ` title="${esc(x.label)}"` : ''}>${esc(COURT[x.k] || x.label)}</button>`).join('')}</div>`;
     b.querySelectorAll('[data-rxk]').forEach(x => x.addEventListener('click', () => aller(x.dataset.rxk)));
   }
 
@@ -98,7 +115,7 @@
     if (st.err) { corps = `<div class="db-err">L’espace boutique ne s’ouvre pas : ${esc(st.err)} <button type="button" class="db-btn" data-rxrelire="1">Réessayer</button></div>`; }
     else if (!st.url) { corps = '<div class="rx-attente"><div class="db-sk" style="height:44px;margin-bottom:10px"></div><div class="db-sk" style="height:420px"></div></div>'; }
     else { corps = `<iframe class="rx-cadre" src="${esc(st.url)}" data-src="${esc(st.url)}" title="Réseaux sociaux — espace boutique du Marketing"></iframe>`; }
-    st.el.innerHTML = `<div class="rx-barre"></div>${corps}`;
+    st.el.innerHTML = `<div class="rx-resume"></div><div class="rx-barre"></div>${corps}`;
     st.frame = st.el.querySelector('.rx-cadre');
     barre();
     st.el.querySelectorAll('[data-rxrelire]').forEach(b => b.addEventListener('click', () => ouvrir(st.k)));

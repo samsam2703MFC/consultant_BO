@@ -138,7 +138,7 @@
   /* --- le rendu : la barre et son panneau ----------------------------------------------------------------------------- */
   function ligne(r, i) {
     const x = r.x, [go, ou] = lien(x);
-    return `<button type="button" class="sf-l${i === st.sel ? ' sel' : ''}" data-sf-i="${i}"><span class="c"><span class="t">${tgType(x)}<code>${esc(x.code)}</code><b>${surligne(x.titre, r.mots)}</b>${x.acces === 'responsable' ? '<span class="sf-res" title="rangé à part : franchisé et responsable">🔒</span>' : ''}</span>
+    return `<button type="button" class="sf-l${i === st.sel ? ' sel' : ''}" data-sf-i="${i}"><span class="c"><span class="t">${tgType(x)}<code>${esc(x.code)}</code><b>${surligne(x.titre, r.mots)}</b>${x.acces === 'responsable' ? '<span class="sf-res" title="rangé à part : franchisé et responsable"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"/></svg><span>franchisé et responsable</span></span>' : ''}</span>
       <span class="x">${extrait(x, r.mots)}</span><span class="go">${esc(go)} → <small>${esc(ou)}</small></span></span>${x.photo ? `<img class="ph" src="${esc(etapePhoto(x.photo))}" alt="" loading="lazy">` : ''}</button>`;
   }
   function apercu(r) {
@@ -151,8 +151,8 @@
         ${x.etapes.length ? `<ol>${x.etapes.map(e => `<li${e.critique ? ' class="crit"' : ''}>${surligne(e.titre, r.mots)}</li>`).join('')}${x.nbEtapes > x.etapes.length ? `<li class="plus">… ${x.nbEtapes - x.etapes.length} étape${x.nbEtapes - x.etapes.length > 1 ? 's' : ''} encore</li>` : ''}</ol>` : ''}`;
     return `<div class="sf-ap">${tgType(x)}<span class="sf-meta">${esc(meta)}</span><h3>${esc(x.titre)}</h3>${corps}
       <div class="sf-bts"><button type="button" class="db-btn sf-b prim" data-sf-ouvrir="${st.sel}">${esc(go)}</button>
-        ${x.k === 'fo' ? `<a class="db-btn sf-b" href="../formation/#/rfformations/pre/${encodeURIComponent(x.code)}" target="_blank" rel="noopener">Dans le module Formation ↗</a>` : MANUEL[x.cat] ? `<a class="db-btn sf-b" href="${versCatalogue(x.cat)}" target="_blank" rel="noopener">📖 Feuilleter dans le catalogue ↗</a>` : ''}
-        ${st.o.professeur ? `<button type="button" class="db-btn sf-b abr" data-sf-prof="1">🎩 Demander au Professeur</button>` : ''}</div></div>`;
+        ${x.k === 'fo' ? `<a class="db-btn sf-b" href="../formation/#/rfformations/pre/${encodeURIComponent(x.code)}" target="_blank" rel="noopener">Dans le module Formation ↗</a>` : MANUEL[x.cat] ? `<a class="db-btn sf-b" href="${versCatalogue(x.cat)}" target="_blank" rel="noopener">Feuilleter dans le catalogue ↗</a>` : ''}
+        ${st.o.professeur ? `<button type="button" class="db-btn sf-b abr" data-sf-prof="1">Demander au Professeur</button>` : ''}</div></div>`;
   }
   function panneau(R) {
     const tous = st.cat ? (() => { const c = st.cat; st.cat = ''; const T = chercher(); st.cat = c; return T; })() : R;
@@ -225,7 +225,7 @@
         <a class="db-btn sf-b prim" href="../formation/#/rfformations/pre/${encodeURIComponent(x.code)}" target="_blank" rel="noopener">Ouvrir dans le module Formation ↗</a>`;
     } else if (x.k === 'res') {
       corps = `<p class="sf-n">Le domaine ${esc(x.code)} du manuel du réseau et ses sous-catégories ; les standards y sont rangés.</p><ol class="sf-sc">${(x.domaine.souscats || []).map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-        <a class="db-btn sf-b prim" href="${versCatalogue('res')}" target="_blank" rel="noopener">📖 Feuilleter le manuel du réseau ↗</a>`;
+        <a class="db-btn sf-b prim" href="${versCatalogue('res')}" target="_blank" rel="noopener">Feuilleter le manuel du réseau ↗</a>`;
     } else if (L.err) {
       corps = `<div class="sf-err">Le document ne s’ouvre pas : ${esc(L.err)}</div>`;
     } else if (!L.d) {
@@ -235,7 +235,7 @@
       const etapes = (C.sections || []).map(s => `${(C.sections || []).length > 1 && t(s.titre) ? `<div class="sf-sec">${esc(t(s.titre))}</div>` : ''}${(s.etapes || []).map(e => `<div class="sf-et${e.critique ? ' crit' : ''}"><span class="n">${esc(e.numero)}</span><div class="tx">${t(e.titre) ? `<b>${esc(t(e.titre))}</b>` : ''}${esc(t(e.texte)).replace(/\n/g, '<br>')}${e.critique ? '<em>point critique</em>' : ''}${e.video ? `<a class="sf-lien" href="${esc(e.video)}" target="_blank" rel="noopener">▶ la vidéo</a>` : ''}</div>${e.photo ? `<img src="${esc(etapePhoto(e.photo))}" alt="" loading="lazy">` : ''}</div>`).join('')}`).join('');
       const crit = (C.points_critiques || []).length ? `<div class="sf-crit">${C.points_critiques.map(p => `<div><b>Point critique</b>${esc(t(p))}</div>`).join('')}</div>` : '';
       corps = `${t(C.objectif) ? `<p class="sf-obj">${esc(t(C.objectif))}</p>` : ''}${t(C.pour) ? `<p class="sf-n">Pour : ${esc(t(C.pour))}${C.duree ? ' · ' + esc(C.duree) : ''}</p>` : ''}${etapes || '<p class="sf-n">Pas encore d’étape.</p>'}${crit}
-        <div class="sf-bts">${MANUEL[x.cat] ? `<a class="db-btn sf-b" href="${versCatalogue(x.cat)}" target="_blank" rel="noopener">📖 Feuilleter dans le catalogue ↗</a>` : ''}${st.o.professeur ? '<button type="button" class="db-btn sf-b abr" data-sf-prof="l">🎩 Demander au Professeur</button>' : ''}</div>`;
+        <div class="sf-bts">${MANUEL[x.cat] ? `<a class="db-btn sf-b" href="${versCatalogue(x.cat)}" target="_blank" rel="noopener">Feuilleter dans le catalogue ↗</a>` : ''}${st.o.professeur ? '<button type="button" class="db-btn sf-b abr" data-sf-prof="l">Demander au Professeur</button>' : ''}</div>`;
     }
     D.innerHTML = `<div class="sf-ombre" data-sf-lferme="1"></div><aside class="sf-tir" role="dialog" aria-label="${esc(x.titre)}"><div class="h"><span>${tgType(x)} <code>${esc(x.code)}</code><b>${esc(x.titre)}</b></span><button type="button" class="x" data-sf-lferme="1" aria-label="Fermer">×</button></div><div class="c">${corps}</div></aside>`;
     D.querySelectorAll('[data-sf-lferme]').forEach(b => b.addEventListener('click', () => { st.lect = null; rendreLect(); }));

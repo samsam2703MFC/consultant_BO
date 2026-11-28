@@ -148,6 +148,8 @@ function eqpRoute(string $method, string $path): ?array
     }
     // La fiche d'une personne (24/11/2026, panel/src/equipe_fiche.php) : identité, contrat, taux, évaluations, ventes.
     if (function_exists('eqfRoute') && ($c = eqfRoute($method, $path)) !== null) { return $c; }
+    // Les absences, les congés et leurs remplacements (27/11/2026, panel/src/equipe_absences.php).
+    if (function_exists('eqaRoute') && ($c = eqaRoute($method, $path)) !== null) { return $c; }
     if ($method === 'GET' && $path === '/dashboard/equipe/carte') { return ep_equipe_carte(); }
     if ($method === 'POST' && $path === '/dashboard/equipe/postes') { return wr_equipe_postes(); }
     if ($method === 'GET' && $path === '/dashboard/equipe/planning') { return ep_equipe_planning(); }
@@ -260,6 +262,8 @@ function eqpPersonne(array $r): array
         'postes' => array_values($postes),
         'actif' => empty($r['soft_delete']) && (!array_key_exists('active', $r) || (bool) $r['active']),
         'taux' => isset($r['money_per_hour']) && is_numeric($r['money_per_hour']) ? (float) $r['money_per_hour'] : null,
+        // Le contrat (27/11/2026) : sous contrat de travail, une absence payée garde son coût (panel/src/equipe_absences.php).
+        'contrat' => isset($r['employment_type']) && is_string($r['employment_type']) && $r['employment_type'] !== '' ? $r['employment_type'] : null,
         'franchise' => (string) ($r['franchise_role'] ?? '') === 'franchisee'];
 }
 
@@ -617,16 +621,20 @@ function eqpPlanningDonnees(int $shop, string $du, int $n): array
         if ($sid > 0 && (!isset($secteurs[$sid]) || $secteurs[$sid] === '')) { $secteurs[$sid] = (string) ($p['sector_name'] ?? ''); }
     }
     $equipe = [];
+    $statuts = function_exists('eqaStatuts') ? eqaStatuts($shop) : [];   // employé ou ouvrier : le salaire garanti (27/11/2026)
     foreach (analyseListe($res['emp']) as $r) {
         if (!is_array($r)) { continue; }
-        $e = eqpPersonne($r);
+        $e = eqpPersonne($r) + ['statut' => null];
         if ($e['id'] < 1 || ($e['shop'] > 0 && $e['shop'] !== $shop)) { continue; }
+        $e['statut'] = $statuts[$e['id']] ?? null;
         foreach ($e['postes'] as $i => $w) { $e['postes'][$i]['secteur'] = $postes[$w['id']] ?? null; }
         $e['secteurs'] = array_values(array_unique(array_filter(array_map(static fn ($w) => $w['secteur'], $e['postes']))));
         unset($e['shop']);
         $equipe[$e['id']] = $e;
     }
     $obj = function_exists('resObjectifsJours') ? resObjectifsJours($shop, $jours) : ['jours' => [], 'source' => null, 'motif' => 'objectifs indisponibles'];
+    // Les absences de chaque jour (27/11/2026) : le service reste au planning (payée) ou en est retiré (non payée).
+    $abs = function_exists('eqaJours') ? eqaJours($shop, $jours) : [];
     $out = []; $muets = [];
     foreach ($jours as $j) {
         $rep = $res['sch' . $j] ?? null;
@@ -636,12 +644,12 @@ function eqpPlanningDonnees(int $shop, string $du, int $n): array
         foreach ($sv as $s) {
             if ($s['employe'] > 0 && !isset($equipe[$s['employe']])) {
                 $equipe[$s['employe']] = ['id' => $s['employe'], 'nom' => $s['nom'] ?: 'Employé ' . $s['employe'], 'fonctions' => [], 'postes' => [],
-                    'actif' => false, 'taux' => null, 'franchise' => false, 'secteurs' => []];
+                    'actif' => false, 'taux' => null, 'contrat' => null, 'franchise' => false, 'secteurs' => []];
             }
         }
         [$ca, $caSrc] = eqpCaDuJour($shop, $j, $auj, $caCaisse[$j] ?? null, $obj['jours'][$j] ?? null);
         $out[] = ['date' => $j, 'objectif' => $obj['jours'][$j] ?? null, 'ca' => $ca, 'caSource' => $caSrc, 'caEnCours' => $j === $auj ? ($caCaisse[$j] ?? null) : null,
-            'lu' => is_array($rep), 'services' => array_map(static fn ($s) => array_diff_key($s, ['nom' => 1]), $sv)];
+            'lu' => is_array($rep), 'services' => array_map(static fn ($s) => array_diff_key($s, ['nom' => 1]), $sv), 'absences' => $abs[$j] ?? []];
     }
     // Les inactifs ne restent que s'ils ont un service sur l'étendue.
     $auPlanning = [];
@@ -711,7 +719,7 @@ function eqpPdfCss(): string
         . '.pl td{padding:5px;border-bottom:1px solid #eee8e0;vertical-align:top}'
         . '.pl td.n{width:17%}.pl td.h,.pl th.h{width:6%;text-align:right}'
         . '.pl .nm{font-size:10px}.pl .po{display:block;font-size:8px;color:#7a736a}'
-        . '.pl .sv{display:block;white-space:nowrap}.pl .vide{color:#B8B2A8}'
+        . '.pl .sv{display:block;white-space:nowrap}.pl .vide{color:#B8B2A8}.pl .sv.abs{font-style:italic;color:#6B6157}.pl .sv .rp{font-size:.85em;color:#6B6157}'
         . '.pl tr.tot td{background:#F8F4EE;font-size:8.5px;color:#5c5852}'
         . '.pl tr.sec td{padding:9px 5px 4px;border-bottom:1.5px solid #8D1D2C;font-size:10.5px;font-weight:600;color:#1c1a17;letter-spacing:.02em}'
         . '.pl tr.sec td span{font-weight:400;font-size:8.5px;color:#7a736a}'
@@ -742,6 +750,11 @@ function eqpPlanningPdfHtml(array $P, string $presentation, string $magasin): st
         $dates = array_column($sem, 'date');
         $parEmp = [];
         foreach ($sem as $J) { foreach ((array) $J['services'] as $s) { $parEmp[(int) $s['employe']][$J['date']][] = $s; } }
+        // Les absences (27/11/2026) : le service d'une personne absente s'imprime « Maladie », « Congé payé »… et ne compte
+        // pas dans les heures de présence ; celui de son remplaçant, avec « remplace … ».
+        $absSv = []; $remplace = [];
+        foreach ($sem as $J) { foreach ((array) ($J['absences'] ?? []) as $a) { $absSv[(int) $a['service']] = $a; if (!empty($a['remplacantService'])) { $remplace[(int) $a['remplacantService']] = (int) $a['employe']; } } }
+        $nomDe = []; foreach ((array) ($P['employes'] ?? []) as $p0) { $nomDe[(int) $p0['id']] = explode(' ', (string) $p0['nom'])[0]; }
         $gens = array_values(array_filter((array) ($P['employes'] ?? []), static fn ($p) => !empty($p['actif']) || isset($parEmp[(int) $p['id']])));
         // Les sections (23/11/2026, Sam : « impression planning générale, groupé par section ») : les secteurs dans leur
         // ordre, puis le comptoir, les autres postes, « Sans poste » à la fin — l'ordre de l'écran.
@@ -770,9 +783,14 @@ function eqpPlanningPdfHtml(array $P, string $presentation, string $magasin): st
                     foreach ($dates as $d) {
                         $c = '';
                         foreach ($parEmp[$id][$d] ?? [] as $s) {
+                            if (isset($absSv[(int) $s['id']])) {
+                                $motif = (string) $absSv[(int) $s['id']]['motif'];
+                                $c .= '<span class="sv abs">' . $e(defined('EQA_MOTIFS') && isset(EQA_MOTIFS[$motif]) ? EQA_MOTIFS[$motif]['nom'] : 'Absente') . '</span>';
+                                continue;
+                            }
                             $m = (eqpMinutes($s['a']) - eqpMinutes($s['de'])) / 60; $h += $m;
                             $parJour[$d][0]++; $parJour[$d][1] += $m;
-                            $c .= '<span class="sv">' . $e($s['de']) . '–' . $e($s['a']) . '</span>';
+                            $c .= '<span class="sv">' . $e($s['de']) . '–' . $e($s['a']) . (isset($remplace[(int) $s['id']]) ? '<span class="rp"> · remplace ' . $e($nomDe[$remplace[(int) $s['id']]] ?? '') . '</span>' : '') . '</span>';
                         }
                         $rs .= '<td>' . ($c !== '' ? $c : '<span class="vide">—</span>') . '</td>';
                     }
@@ -886,6 +904,7 @@ function wr_equipe_service_supprimer(): array
     foreach ($c['services'] as $x) { if ($x['id'] === $id && $id > 0) { $s = $x; break; } }
     if ($s === null) { return eqpErreur(404, 'ce service n’est pas au planning du magasin ce jour-là', ['motif' => 'service_inconnu']); }
     $r = eqpEcrire('DELETE', '/schedule/' . $id);
+    if ($r['code'] >= 200 && $r['code'] < 300 && function_exists('eqaOublierService')) { eqaOublierService($c['shop'], $id); }
     $nom = ($c['equipe'][$s['employe']]['nom'] ?? null) ?: 'Employé ' . $s['employe'];
     return eqpServiceRendu($r, 'la suppression', $c, 'Service retiré : ' . $nom . ', ' . $c['date'] . ' ' . $s['de'] . '–' . $s['a']);
 }
@@ -920,7 +939,7 @@ function wr_equipe_semaine_retirer(): array
     $ok = 0; $echecs = []; $arret = null;
     foreach ($a as $s) {
         $r = eqpEcrire('DELETE', '/schedule/' . $s['id']);
-        if ($r['code'] >= 200 && $r['code'] < 300) { $ok++; continue; }
+        if ($r['code'] >= 200 && $r['code'] < 300) { $ok++; if (function_exists('eqaOublierService')) { eqaOublierService($shop, $s['id']); } continue; }
         $echecs[] = ['id' => $s['id'], 'date' => $s['date'], 'de' => $s['de'], 'a' => $s['a'], 'motif' => (string) ($r['erreur'] ?? 'refusé')];
         if (in_array($r['code'], [401, 403], true)) { $arret = 'le panel refuse les écritures du planning à ce compte (HTTP ' . $r['code'] . ')'; break; }
     }

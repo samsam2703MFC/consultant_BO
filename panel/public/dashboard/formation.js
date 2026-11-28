@@ -65,6 +65,11 @@
       .catch(e => flash(false, 'La photo n’est pas partie : ' + e.message)).finally(() => { st.occupe = false; rendre(); });
   }
 
+  /* Les icônes linéaires du design system (§7.12, §8.4) : la toque de la formation, une pièce (le document). */
+  const svg = d => `<svg class="fs-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const ICO_FO = svg('M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6');
+  const ICO_DOC = svg('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5');
+
   /* --- morceaux communs ------------------------------------------------------------------------------------------ */
   const tagCat = x => `<span class="fs-tag ${CAT[x.categorie] || ''}"><i></i>${esc(x.categorieLib)}</span>`;
   const statut = x => `<span class="fs-st ${x.retard ? 'ret' : (ST[x.statut] || 'brou')}">${esc(x.statutLib)}</span>`;
@@ -73,7 +78,7 @@
     if (!st.prof) { return ''; }
     return `<aside class="fs-carte fs-prof"><div class="fs-prof-t"><img src="avatars/professeur.svg" alt=""><div><b>Le Professeur</b><span>Il répond à partir de <b>votre dossier de formation</b> — vos formations continues, avec les adaptations faites pour votre magasin — et du Manuel opératoire.</span></div></div>
       <div class="fs-k">Questions toutes prêtes</div>${questions.map((q, i) => `<button type="button" class="fs-qp" data-fs-prof="${i}">${esc(q[0])}<small>${esc(q[1] || '')}</small></button>`).join('')}
-      <div class="fs-q"><input class="db-sel" data-fs-q="1" value="${esc(st.q)}" placeholder="Posez votre question au Professeur…"><button type="button" class="db-btn fs-abr" data-fs-prof="q">Demander</button></div>
+      <div class="fs-q"><input class="db-sel" data-fs-q="1" value="${esc(st.q)}" placeholder="Posez votre question au Professeur…"><button type="button" class="db-btn" data-fs-prof="q">Demander</button></div>
       <p class="fs-n">Il ne voit que le dossier de votre magasin. Il cite la formation et l’étape qu’il a lues.</p></aside>`;
   }
   let questions = [];
@@ -82,9 +87,9 @@
   function accueil() {
     const R = (st.d && st.d.reperes) || {}, nv = ((st.d && st.d.nouveautes) || []).filter(n => n.nouveau).length;
     const k = (v, l, c) => `<span class="k${c ? ' ' + c : ''}"><b>${st.d ? v || 0 : '…'}</b><small>${l}</small></span>`;
-    return `<div class="fs-acc-h"><button type="button" class="fs-mini" data-fs-vue="dossier"><span class="t">🎓 <b>Mon dossier de formation</b>${nv ? `<em class="fs-nv">${nv} nouveau${nv > 1 ? 'x' : ''}</em>` : ''}</span>
-        ${k(R.enRetard, 'en retard', R.enRetard ? 'ac' : '')}${k(R.enCours, 'en cours')}${k(R.aValider, 'à valider')}${k(R.validees, 'validée' + ((R.validees || 0) > 1 ? 's' : ''))}<span class="o">Ouvrir ›</span></button>
-        ${st.prof ? '<button type="button" class="db-btn fs-abr fs-prof-b" data-fs-prof="q">🎩 Demander au Professeur</button>' : ''}</div><div class="fs-sf"></div>`;
+    return `<div class="fs-acc-h"><button type="button" class="fs-mini" data-fs-vue="dossier"><span class="t">${ICO_FO}<b>Mon dossier de formation</b>${nv ? `<em class="fs-nv">${nv} nouveau${nv > 1 ? 'x' : ''}</em>` : ''}</span>
+        ${k(R.enRetard, 'en retard', R.enRetard ? 'ret' : '')}${k(R.enCours, 'en cours')}${k(R.aValider, 'à valider')}${k(R.validees, 'validée' + ((R.validees || 0) > 1 ? 's' : ''))}<span class="o">Ouvrir ›</span></button>
+        ${st.prof ? '<button type="button" class="db-btn fs-abr fs-prof-b" data-fs-prof="q">Demander au Professeur</button>' : ''}</div><div class="fs-sf"></div>`;
   }
   /** Une formation continue trouvée par la méga-barre : celle du dossier du magasin, s'il l'a (sinon le lecteur l'ouvre). */
   function formationContinue(code) {
@@ -93,18 +98,41 @@
     st.vue = 'dossier'; ouvrir(x.id); return true;
   }
 
+  /* --- le résumé et « À corriger » (27/11/2026, DESIGN_SYSTEM.md §7.13) ----------------------------------------------
+   * Le résumé remplace la rangée des quatre repères : le nombre de formations du dossier, son état en mots, puis la
+   * répartition (validées, à valider, en cours, en retard : la seule place de ces nombres). « À corriger » : ce que le
+   * dossier dit déjà — une échéance passée, la photo du jour à faire (la règle de reperes.photoDuJour), une nouveauté pas
+   * encore ouverte ; chaque bouton ouvre la formation (data-fs-ouvrir, le geste qui existe). Rien : une phrase verte. */
+  function aCorriger(D) {
+    const L = D.dossiers || [], A = [], vus = new Set();
+    const pousse = (x, sig, txt) => { if (vus.has(x.id + sig)) { return; } vus.add(x.id + sig); A.push({ id: x.id, sig, titre: x.titre, txt }); };
+    L.filter(x => x.retard).forEach(x => pousse(x, 'stop', 'échéance passée' + (x.echeance ? ' le ' + dm(x.echeance) : '')));
+    L.filter(x => x.statut === 'en_cours' && x.photos && (x.photos.grille || []).some(g => g.etat === 'a_faire')).forEach(x => pousse(x, 'prize', 'photo du jour à faire'));
+    (D.nouveautes || []).filter(n => n.nouveau).forEach(n => pousse(n, 'prize', 'nouvelle, pas encore ouverte'));
+    return A;
+  }
+  function resume(D) {
+    const R = D.reperes || {}, L = D.dossiers || [], A = aCorriger(D);
+    const part = (n, mot, c) => n ? `<span class="fs-res-p"><i class="fs-pt ${c}"></i>${n} ${mot}</span>` : '';
+    const etat = R.enRetard ? ['stop', 'en retard'] : ['green', 'à jour'];
+    return `<section class="fs-res" role="region" aria-label="Mon dossier de formation en bref"><div class="fs-res-l1">
+        <div class="fs-res-v"><span class="fs-res-n">${L.length}</span><span class="fs-res-et"><i class="fs-pt ${etat[0]}"></i>${etat[1]}</span></div>
+        <div class="fs-res-q">${L.length > 1 ? 'formations continues' : 'formation continue'} dans votre dossier<span>la version adaptée pour votre magasin, à suivre avec l’équipe</span></div>
+        <div class="fs-res-rep">${part(R.validees, R.validees > 1 ? 'validées' : 'validée', 'green')}${part(R.aValider, 'à valider chez votre consultant', 'prize')}${part(R.enCours, 'en cours', 'neutre')}${part(R.enRetard, 'en retard', 'stop')}</div></div>
+      <div class="fs-res-l2">${A.length ? `<span class="fs-res-t">À corriger</span><span class="fs-res-l">${A.map(x => `<button type="button" class="btn btn--sm fs-res-b" data-fs-ouvrir="${x.id}" title="Ouvrir la formation"><i class="fs-pt ${x.sig}" aria-hidden="true"></i><span class="fs-res-j">${esc(x.titre)}</span>${esc(x.txt)}</button>`).join('')}</span>`
+        : '<p class="fs-res-ok">Rien à corriger : votre dossier est à jour.</p>'}</div></section>`;
+  }
+
   /* --- la page : Nouveautés, dossier, équipe ---------------------------------------------------------------------- */
   function page() {
-    const D = st.d, R = D.reperes || {}, L = D.dossiers || [];
+    const D = st.d, L = D.dossiers || [];
     const nouv = (D.nouveautes || []).length ? `<section class="fs-nouv"><div class="fs-nouv-h"><b>Nouveautés</b><span>les nouvelles formations continues de votre magasin, la plus récente d’abord</span></div>
       <div class="fs-cartes">${D.nouveautes.map(n => `<button type="button" class="fs-nc" data-fs-ouvrir="${n.id}"><span class="fs-nc-b ${CAT[n.categorie] || ''}">${esc(n.categorieLib)}${n.nouveau ? '<em>NOUVEAU</em>' : ''}</span>
         <span class="fs-nc-c">${tagCat(n)}<b>${esc(n.titre)}</b><span class="d">reçue le ${esc(dfr(n.date))}${n.code ? ' · ' + esc(n.code) : ''}</span><span class="go">Ouvrir la formation →</span></span></button>`).join('')}</div></section>` : '';
-    const kpi = (cls, l, v, s) => `<div class="fs-kpi ${cls}"><span class="l">${l}</span><b>${v}</b><span class="s">${s}</span></div>`;
-    const kpis = `<div class="fs-kpis">${kpi(R.enRetard ? 'ac' : '', 'En retard', R.enRetard || 0, 'échéance passée')}${kpi('', 'En cours', R.enCours || 0, R.photoDuJour ? R.photoDuJour + ' photo(s) du jour à faire' : 'à terminer')}${kpi(R.aValider ? 'or' : '', 'À valider', R.aValider || 0, 'terminées, chez votre consultant')}${kpi(R.validees ? 'ok' : '', 'Validées', R.validees || 0, 'archivées dans votre coffre-fort')}</div>`;
     const ligne = x => `<button type="button" class="fs-l" data-fs-ouvrir="${x.id}"><span class="c"><b>${esc(x.titre)}${x.nouveau ? ' <em class="fs-nv">nouveau</em>' : ''}</b>
         <small>${tagCat(x)}${x.adapte ? ` <span class="fs-tag adapt">adaptée pour votre magasin${x.adaptation.par ? ' par ' + esc(x.adaptation.par) : ''}</span>` : ''}${x.photos.jours ? ' · photos ' + x.photos.conformes + '/' + x.photos.jours : ''}${x.validation ? ' · validée par ' + esc(x.validation.par) + ' le ' + esc(dfr(x.validation.le)) : ''}</small></span>
         <span class="s">${statut(x)}</span>${barre(x.avancement.pct)}<span class="e${x.retard ? ' ret' : ''}">${esc(x.echeance ? dm(x.echeance) : '—')}</span><span class="o">Ouvrir</span></button>`;
-    const dossier = `<section class="fs-carte"><div class="fs-tete-c"><b>Mon dossier de formation</b><span>formation continue · ${L.length}</span></div>
+    const dossier = `<section class="fs-carte"><div class="fs-tete-c"><b>Mon dossier de formation</b><span>formation continue</span></div>
       <div class="fs-th"><span class="c">Formation</span><span class="s">Statut</span><span class="fs-av">Avancement</span><span class="e">Échéance</span><span class="o"></span></div>
       ${L.length ? L.map(ligne).join('') : '<div class="fs-vide">Aucune formation continue pour l’instant : elles arrivent ici dès que le réseau les diffuse.</div>'}</section>`;
     // Le suivi de l'équipe : une ligne par personne, une colonne par formation pas encore validée.
@@ -114,14 +142,14 @@
     const equipe = cols.length ? `<section class="fs-carte fs-eq"><div class="fs-k">Le suivi de l’équipe <i><i class="pt v"></i> vu faire · <i class="pt q"></i> quiz · <i class="pt l"></i> lue · <i class="pt"></i> pas commencé</i></div>
       <table><tr><th></th>${cols.map(x => `<th title="${esc(x.titre)}">${esc(x.titre.length > 22 ? x.titre.slice(0, 21) + '…' : x.titre)}</th>`).join('')}</tr>
       ${pers.map(p => `<tr><td>${esc(p)}</td>${cols.map(x => `<td>${pt(x, p)}</td>`).join('')}</tr>`).join('')}</table></section>` : '';
-    const coffre = st.aller ? `<button type="button" class="fs-coffre" data-fs-coffre="1">📄 <span><b>Mon document de formation</b> — l’archive de chaque formation validée (qui, quand, l’équipe, les photos), dans votre coffre-fort, onglet Formation</span><span class="go">Ouvrir →</span></button>` : '';
+    const coffre = st.aller ? `<button type="button" class="fs-coffre" data-fs-coffre="1">${ICO_DOC}<span><b>Mon document de formation</b> — l’archive de chaque formation validée (qui, quand, l’équipe, les photos), dans votre coffre-fort, onglet Formation</span><span class="go">Ouvrir →</span></button>` : '';
     // Les questions toutes prêtes du Professeur, tirées du dossier.
     const enCours = L.filter(x => x.statut === 'en_cours'), prod = L.find(x => x.categorie === 'nouveau_produit' && x.statut !== 'validee');
     questions = [['Qu’est-ce que je dois terminer en premier ?', 'd’après les échéances de mon dossier']];
     if (enCours[0]) { questions.push(['Résume-moi la formation « ' + enCours[0].titre + ' »', enCours[0].categorieLib]); }
     if (prod) { questions.push(['Quels allergènes et quels points critiques pour « ' + prod.titre + ' » ?', 'Nouveau produit']); }
     if (enCours[1] || enCours[0]) { const x = enCours[1] || enCours[0]; questions.push(['Prépare 3 questions pour vérifier l’équipe sur « ' + x.titre + ' »', x.categorieLib]); }
-    return `<div class="fs-retour"><button type="button" class="db-btn" data-fs-vue="accueil">← Accueil de la formation</button><span>Mon dossier de formation : la formation continue de votre magasin</span></div>${nouv}<div class="fs-lay"><div>${kpis}${dossier}${equipe}${coffre}</div>${professeur(questions)}</div>`;
+    return `<div class="fs-retour"><button type="button" class="db-btn" data-fs-vue="accueil">← Accueil de la formation</button><span>Mon dossier de formation : la formation continue de votre magasin</span></div>${resume(D)}${nouv}<div class="fs-lay"><div>${dossier}${equipe}${coffre}</div>${professeur(questions)}</div>`;
   }
 
   /* --- une formation : sa version, ce qu'il reste à faire --------------------------------------------------------- */
@@ -140,7 +168,7 @@
     const photos = P.jours ? `<div class="fs-bloc"><div class="fs-k">Photo qualité du produit <i>${P.conformes}/${P.jours} conformes${P.fin ? ' · jusqu’au ' + esc(dm(P.fin)) : ''}</i></div>
       <div class="fs-grille">${P.grille.map(g => `<span class="fs-j ${PH[g.etat][0]}" title="${esc(dfr(g.jour) + ' · ' + PH[g.etat][1] + (g.commentaire ? ' · « ' + g.commentaire + ' »' : ''))}">${g.photo ? `<img src="${esc(photoUrl(g.photo))}" alt="" loading="lazy">` : ''}<small>${esc(dm(g.jour))}</small></span>`).join('')}</div>
       ${P.grille.some(g => g.etat === 'a_refaire') ? `<p class="fs-n ko">${P.grille.filter(g => g.etat === 'a_refaire').map(g => esc(dm(g.jour)) + (g.commentaire ? ' : « ' + esc(g.commentaire) + ' »' : '')).join(' · ')} — à refaire.</p>` : ''}
-      ${!fini ? `<label class="db-btn fs-abr fs-photo${st.occupe ? ' occ' : ''}">📷 ${P.grille.some(g => g.etat === 'a_faire') ? 'Envoyer la photo du jour' : (P.grille.some(g => g.jour === new Date().toISOString().slice(0, 10) && g.etat !== 'conforme') ? 'Refaire la photo du jour' : 'Photo du jour envoyée')}<input type="file" accept="image/*" capture="environment" data-fs-photo="1" hidden${P.grille.some(g => g.jour === new Date().toISOString().slice(0, 10) && g.etat === 'conforme') ? ' disabled' : ''}></label>` : ''}
+      ${!fini ? `<label class="db-btn fs-photo${st.occupe ? ' occ' : ''}">${P.grille.some(g => g.etat === 'a_faire') ? 'Envoyer la photo du jour' : (P.grille.some(g => g.jour === new Date().toISOString().slice(0, 10) && g.etat !== 'conforme') ? 'Refaire la photo du jour' : 'Photo du jour envoyée')}<input type="file" accept="image/*" capture="environment" data-fs-photo="1" hidden${P.grille.some(g => g.jour === new Date().toISOString().slice(0, 10) && g.etat === 'conforme') ? ' disabled' : ''}></label>` : ''}
       <p class="fs-n">Une photo par jour, photo obligatoire ; un jour manqué ou une photo à refaire ajoute un jour.</p></div>` : '';
     // L'équipe et la mise en place.
     const eq = `<div class="fs-bloc"><div class="fs-k">Qui la suit <i>déclaré par vous</i></div>

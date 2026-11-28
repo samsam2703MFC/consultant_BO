@@ -264,6 +264,15 @@ passe par le même `ScheduleService::getForMe`. Sans réponse du cockpit, la pag
 l'instant » au lieu d'une semaine de « Repos ». Un service dans un autre magasin que d'habitude porte le nom court de
 ce magasin (« à Corbais », clé `shift_at_shop`), donné par le cockpit ; le numéro seulement s'il manque.
 
+**Les absences (27/11/2026, Mon équipe › Planning, `panel/src/equipe_absences.php`)** : le cockpit
+(`panel/src/planning_moi.php`, `planAbsences`) marque le service d'une absence de son motif (`absence` : `maladie`,
+`cp`, `circ`, `nonpaye`) ; une absence non payée, dont le service a quitté le panel, revient comme une entrée marquée.
+À `/schedule`, le service d'une absence garde sa place dans la journée, hachuré, sous son motif (« Maladie », « Congé
+payé », « Congé de circonstance », « Absence » ; clés `absence_*` de `schedule.json`, en fr, en, it, nl, pl) et ses
+heures. Il ne compte ni dans le total d'heures de la semaine ni dans le nombre de services, et n'est jamais « le
+prochain service » ; l'Accueil (« ton service aujourd'hui ») l'ignore aussi. Le service d'un remplaçant porte la
+pastille verte « remplacement » (clé `replacement`), sans dire qui il remplace ni pourquoi.
+
 ## Mon profil (30/10/2026) : la personne encode elle-même ses données
 
 Demande de Sam (« que l'employé puisse encoder toutes ses données » ; maquette `panel/docs/maquettes/profil-employe`).

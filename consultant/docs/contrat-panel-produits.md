@@ -29,6 +29,10 @@ fournisseur, dans son périmètre, peut modifier le tarif d'un fournisseur inté
 `SUPPLIER_MANAGED_PRICE` mesuré le 14/11, avec le compte consultant comme avec le compte admin. Le prix d'une matière
 SLFood ne se corrige donc pas depuis le cockpit : SLFood republie son tarif, ou TF Buddy le fait.
 
+Depuis le 27/11/2026 (refus mesuré à nouveau ce jour-là), « Références et pertes (réseau) » en tient compte : un prix
+de magasin refusé pour `SUPPLIER_MANAGED_PRICE` est appris et laissé tel quel, la référence de la matière le reprend et
+les autres magasins s'alignent sur lui (même food cost partout). Détail : `consultant/docs/maquettes/matieres-reference/LISEZMOI.md`.
+
 ## Réceptionner une livraison
 
 `POST /orders/{id}/delivery` attend `{*id_employee, *delivered_on (date), *materials: [{*id_material, *supplier_sku,

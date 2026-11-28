@@ -24,7 +24,7 @@ module.exports = async function () {
   await enHautDe(f, CAT, 44);
   await dire(f, CAT + ' .db-cvue', 'Quatre vues', '<b>Ventes par catégorie</b>, hors TVA : la même vente, en quatre vues.', 4000);
   await dire(f, CAT + ' .db-acc .db-ent', 'Liste', 'La <b>liste</b> : chaque groupe, son CA, sa part, sa marge brute, son taux et son coefficient.', 5200);
-  await f.dire('La couleur suit le taux de marge : du noir sous 40 %, à l’or à 70 % et plus.', 4400);
+  await f.dire('La couleur suit le taux de marge : rouge sous 40 %, or de 40 à 60 %, vert à 60 % et plus.', 4400);
   await rien(f);
 
   await f.cliquer('[data-cacc="g:Pâtisserie"]', { apres: 700, dx: 0.04 });

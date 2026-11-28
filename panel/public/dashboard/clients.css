@@ -1,6 +1,8 @@
 /* Dashboard magasin › Vendre › Clients (25/11/2026 ; maquettes panel/docs/maquettes/clients-panel/). Les jetons et les
  * composants communs viennent de ../assets/ds/global.css (.card, .btn, .seg, .page-tabs, .ds-table, .chip, .tag-warn,
- * .confirm…) ; ici, ce qui est propre au module. Pas de gras (§4.3) sauf les chiffres des cartes de l'analyse. */
+ * .confirm…) ; ici, ce qui est propre au module. Pas de gras (§4.3) sauf la valeur clé du résumé.
+ * 26/11/2026 (DESIGN_SYSTEM.md §7.13) : le résumé de chaque onglet (.pcl-res) et « À corriger » ; la tête des tableaux collée ;
+ * les couleurs d'état sur les jetons, avec leurs mots ; pas d'ombre (le tiroir). */
 .pcl { font-size: 13px; color: var(--ink); }
 .pcl-sp { flex: 1; }
 .pcl-attente { padding: 40px 0; text-align: center; color: var(--muted); }
@@ -32,7 +34,6 @@
 .pcl-ligne { cursor: pointer; }
 .pcl-ligne:hover td { background: var(--table-head); }
 .pcl-ligne.is-sel td { background: rgba(141, 29, 44, 0.05); }
-.pcl-ligne.is-sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .pcl-pied { padding: 10px 14px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
 
 /* Les avertissements */
@@ -41,22 +42,25 @@
 .pcl-alerte > div, .pcl-note > div { flex: 1; }
 .pcl-alerte svg, .pcl-note svg { width: 18px; height: 18px; flex: none; }
 .pcl-note { border: 1px solid var(--line); background: #fff; color: var(--muted-2); }
-.pcl-note-doux { background: #FFFBF4; }
+.pcl-note-doux { background: var(--paper); }
 .pcl-refus { display: flex; gap: 16px; align-items: flex-start; margin: 0 0 12px; }
 .pcl-refus svg { width: 26px; height: 26px; flex: none; color: var(--accent); }
 .pcl-refus h3 { margin: 0 0 6px; font-size: 16px; font-weight: 400; }
 .pcl-refus p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.55; }
 
-/* Le score, le crédit */
+/* Le score, le crédit (le crédit utilisé : sous 80 % --green, 80–100 % --prize « proche de la limite », 100 % et plus --stop
+ * « dépassé », DESIGN_SYSTEM.md §7.13) */
 .pcl-score { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; font-size: 12px; vertical-align: middle; }
 .pcl-sA { background: rgba(63, 122, 82, 0.14); color: var(--green); }
-.pcl-sB { background: rgba(27, 111, 168, 0.12); color: #1B5E8C; }
+.pcl-sB { background: var(--chip); color: var(--ink); }   /* 26/11/2026 : le bleu (identification de l'objectif, §3) quitte le score */
 .pcl-sC { background: var(--prize-soft); color: var(--prize-ink); }
-.pcl-sD { background: #F7E0DC; color: #A32014; }
+.pcl-sD { background: var(--stop-soft); color: var(--stop); }
 .pcl-credit { display: grid; gap: 4px; min-width: 120px; }
 .pcl-credit .b { height: 5px; border-radius: 999px; background: var(--chip); overflow: hidden; }
 .pcl-credit .b i { display: block; height: 100%; border-radius: 999px; }
 .pcl-credit .t { font-size: 11px; color: var(--muted); }
+.pcl-credit-m { color: var(--prize-ink); }
+.pcl-credit-m.pcl-credit-danger { color: var(--stop); }
 
 /* La fiche */
 .pcl-fiche { padding: 0; position: sticky; top: 12px; }
@@ -74,7 +78,8 @@
 .pcl-bloc:last-child { border-bottom: 0; }
 .pcl-bloc h4 { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 8px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .pcl-bloc h4 span { letter-spacing: normal; text-transform: none; }
-.pcl-doux { background: #FFFBF4; }
+.pcl-doux { background: var(--paper); }
+.pcl-doux .pcl-aide { color: var(--muted-2); }   /* un petit texte sur fond teinté (§7.13) */
 .pcl-lf { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: 12.5px; }
 .pcl-lf > span:first-child { color: var(--muted); flex: none; }
 .pcl-lf > span:last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
@@ -135,15 +140,8 @@
 .pcl-barre svg { width: 15px; height: 15px; }
 .pcl-date { font-size: 17px; }
 .pcl-ici { font-size: 12.5px; color: var(--muted); }
-.pcl-kpi6 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.pcl-k6 { padding: 14px 16px; }
-.pcl-k6.fort { border: 2px solid var(--accent); padding: 13px 15px; }
-.pcl-k6 .l { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.pcl-k6 .v { margin-top: 6px; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
-.pcl-k6 .t { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 11.5px; color: var(--muted); }
-.pcl-k6 .t span { margin-right: 4px; }
 .pcl-up { color: var(--green); }
-.pcl-down { color: #A32014; }
+.pcl-down { color: var(--prize-ink); }   /* l'écart au mois d'avant, à l'an dernier : vert au-dessus, or en dessous (§7.13) */
 .pcl-an2 { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; margin-top: 12px; }
 .pcl-h2 { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 12px; font-size: 0.95rem; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .pcl-h2 small { letter-spacing: normal; text-transform: none; }
@@ -165,7 +163,6 @@
   .pcl-fiche { position: static; }
 }
 @media (max-width: 700px) {
-  .pcl-kpi6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pcl-form2 { grid-template-columns: minmax(0, 1fr); }
   .pcl-stepper { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .pcl-tete { flex-wrap: wrap; }
@@ -185,7 +182,7 @@
 
 /* Le tiroir d'un bureau (26/11/2026, maquette A « even larger ») : par-dessus la liste, toute la hauteur de l'écran. */
 .pcl-tir-voile { position: fixed; inset: 0; z-index: 30; background: rgba(28, 26, 23, 0.22); }
-.pcl-tir { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(1080px, 94vw); display: flex; flex-direction: column; background: #fff; box-shadow: -24px 0 48px rgba(0, 0, 0, 0.16); }
+.pcl-tir { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(1080px, 94vw); display: flex; flex-direction: column; background: #fff; border-left: 1px solid var(--line); }   /* pas d'ombre (§2) : le voile et le filet */
 /* L'entrée du tiroir, à l'ouverture seulement (pas à chaque rendu). */
 .pcl-tir.pcl-tir-entre { animation: pcl-tir-in 0.18s ease-out; }
 @keyframes pcl-tir-in { from { transform: translateX(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
@@ -248,7 +245,7 @@
 .pcl-bon { display: inline-block; padding: 3px 8px; border: 1px dashed var(--accent); border-radius: 6px; color: var(--accent); font-size: 12px; letter-spacing: 0.06em; }
 .pcl-dv-statut { display: grid; gap: 6px; padding-top: 4px; }
 .pcl-dv-statut label { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink); }
-.pcl-dev-valider { padding: 14px 16px; border-radius: 12px; background: #FFFCF8; border: 1px solid var(--line); }
+.pcl-dev-valider { padding: 14px 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
 .pcl-q-lien { display: flex; gap: 16px; align-items: flex-start; margin: 0 0 10px; }
 .pcl-q-qr { flex: none; width: 128px; height: 128px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .pcl-q-qr svg { width: 100%; height: 100%; display: block; }
@@ -266,3 +263,58 @@
 .pcl-lien-url input { font-size: 13px; color: var(--accent); }
 .pcl-lien .pcl-acts { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 640px) { .pcl-lien { flex-direction: column; } .pcl-lien-qr { width: 120px; height: 120px; } }
+
+/* ── Le résumé d'un onglet (26/11/2026, DESIGN_SYSTEM.md §7.13 ; la forme de .chr et .pco-res, recopiée sous le préfixe) ──
+ * Ligne 1 : la valeur clé (24 px, 700 : le seul gras), son état en mots derrière un point de 8 px ; ce qu'elle mesure ; le
+ * contexte, séparé par un filet. Ligne 2, sous un filet : « À corriger », des boutons du système qui mènent au geste. */
+.pcl-res { margin: 0 0 12px; padding: 16px 20px 14px; }
+.pcl-res-l1 { display: grid; grid-template-columns: auto minmax(200px, 1.2fr) minmax(180px, 1fr) minmax(180px, 1fr); gap: 24px; align-items: center; }
+.pcl-res-l1--court { grid-template-columns: auto minmax(0, 1fr); }
+.pcl-res-v { display: flex; flex-direction: column; gap: 4px; }
+.pcl-res-kv { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pcl-res-et { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted-2); white-space: nowrap; }
+.pcl-res-q { font-size: 13px; line-height: 1.35; color: var(--ink); }
+.pcl-res-q > span { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.pcl-res-c { display: grid; gap: 8px; font-size: 13px; line-height: 1.35; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pcl-res-c p { margin: 0; }
+.pcl-res-c p > span { display: block; margin-top: 1px; font-size: 12px; color: var(--muted); }
+.pcl-res-sep { padding-left: 18px; border-left: 1px solid var(--line); }
+.pcl-pt { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.pcl-pt--stop { background: var(--stop); } .pcl-pt--prize { background: var(--prize); } .pcl-pt--green { background: var(--green); }
+.pcl-res-l2 { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.pcl-res-t { flex: none; font-size: 12.5px; line-height: 30px; color: var(--muted-2); }
+.pcl-res-l { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; flex: 1 1 0; }
+.pcl-res-b { gap: 8px; }
+.pcl-res-b:hover:not(:disabled) { border-color: var(--accent); }
+.pcl-res-reste { font-size: 12px; color: var(--muted); }
+.pcl-res-ok { flex: 1 1 auto; margin: 0; font-size: 12.5px; line-height: 30px; color: var(--green); }
+.pcl-res-l2 .linklike { line-height: 26px; }
+/* Le bloc où mène un point : un liseré bordeaux un instant (pas d'ombre). */
+.pcl-vu { outline: 2px solid var(--accent); outline-offset: 3px; animation: pcl-vu 1.8s ease-out forwards; }
+@keyframes pcl-vu { 0%, 55% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .pcl-vu { animation: none; } .pcl-res-b { transition: none; } }
+/* La part B2B du chiffre, ses écarts sous l'anneau. */
+.pcl-part-e { margin: -2px 0 8px; text-align: center; font-size: 11.5px; color: var(--muted); }
+@media (max-width: 1365px) {
+  .pcl-2 .pcl-res-l1:not(.pcl-res-l1--court) { grid-template-columns: auto minmax(0, 1fr); }
+  .pcl-2 .pcl-res-l1 > .pcl-res-c { grid-column: 1 / -1; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 1100px) {
+  .pcl-res-l1 { grid-template-columns: auto minmax(0, 1fr); }
+  .pcl-res-l1 > .pcl-res-c { grid-column: 1 / -1; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 700px) { .pcl-res-l2 { flex-direction: column; gap: 6px; } }
+
+/* La tête des tableaux collée en haut quand on descend (26/11/2026, §7.13). `sticky` ne tient pas sous une boîte qui défile
+ * ou qui coupe : au-dessus de 1366 px la carte et sa boîte ne coupent plus ; en dessous, la tête défile avec le tableau. Un
+ * filet, pas une bordure (elle ne suit pas une tête collée) ; le petit texte sur --table-head en --muted-2. */
+@media (min-width: 1366px) {
+  .pcl-carte, .pcl-carte .table-scroll { overflow: visible; }
+  .pcl-table thead th { position: sticky; top: 0; z-index: 2; background: var(--table-head); box-shadow: 0 1px 0 var(--line); color: var(--muted-2); }
+}
+
+/* Ce que voient vos clients et les demandes hors zone (27/11/2026) : sous le générateur de liens, dans Bureaux en développement. */
+.pcl-tz { margin: 0 16px 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; }
+.pcl-tz .pcl-aide { margin-bottom: 8px; }
+.pcl-tz .table-scroll { margin: 0 -16px -14px; border-top: 1px solid var(--line); }
+.pcl-tz .pcl-manque { margin-top: 4px; }

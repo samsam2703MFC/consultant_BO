@@ -25,12 +25,12 @@ module.exports = async function () {
   await f.dire('La page s’ouvre sur le <b>top 10 du réseau</b> ; à côté, le cougnou et la galette des rois.', 4600);
   await f.cacher(150); await f.taire(150);
 
-  await f.montrer('.db-tuiles', 'En un coup d’œil');
-  await f.dire('En tête : les pièces vendues par les 4 magasins en 3 mois, puis combien de produits sont au prix du marché, au-dessus, en dessous.', 6600);
-  await f.montrer('.db-tuiles .db-tui:nth-child(2)', 'Au prix du marché');
+  await f.montrer('#dash .ac-cle', 'En un coup d’œil');
+  await f.dire('En tête : combien de nos dix produits sont au prix du marché, au-dessus, en dessous, et les relevés de ce magasin dans TFBuddy.', 6400);
+  await f.montrer('#dash .ac-cle .v', 'Au prix du marché');
   await f.dire('<b>Au prix du marché</b> : à ± 5 % de la médiane des boulangeries.', 3600);
-  await f.montrerTout('.db-tuiles .db-tui:nth-child(n+5)', 'À relever');
-  await f.dire('Les relevés de ce magasin dans TFBuddy, et les produits encore <b>sans relevé</b>, à relever sur le terrain.', 5400);
+  await f.montrer('#dash .ac .ac-l', 'À corriger');
+  await f.dire('« <b>À corriger</b> » : les produits au-dessus du marché, et ceux encore <b>sans relevé</b>, à relever sur le terrain.', 5400);
   await f.cacher(300); await f.taire(150);
 
   await f.montrer('.bm-tab', 'Le tableau');

@@ -102,9 +102,8 @@ module.exports = async function () {
   await f.dire('Un abonnement résilié : <b>×</b>, au bout de la ligne, le retire du plan.', 4000);
   await f.cacher(150); await f.taire(150);
   await f.cliquer(T + '[data-tra="delP:p15"]', { apres: 900 });
-  await defilerCote(f, 400);   // le tableau redessiné revient à gauche : le compte est au bout du pied
-  await f.montrer(T + '.tr-pay .tr-pied .tr-mu', 'Le plan suit');
-  await f.dire('La ligne part : 15 paiements récurrents restent dans le plan.', 3800);
+  await f.montrer(T + '.trs-court .trs-cle', 'Le plan suit');
+  await f.dire('La ligne part : le résumé, en haut, compte 15 paiements récurrents ; le plan suit.', 4400);
   await f.cacher(300);
 
   return f.fin();

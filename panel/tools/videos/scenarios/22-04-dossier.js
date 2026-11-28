@@ -1,6 +1,6 @@
 /* Formations et suivi › Mon dossier de formation, et ses fonctions en chapitres (26/11/2026) :
- *   onglet    former-dossier            le bandeau de l'accueil l'ouvre (lecture) ; les Nouveautés, les quatre nombres,
- *                                       le dossier (statut, avancement, échéance), le suivi de l'équipe ; « Mon document
+ *   onglet    former-dossier            le bandeau de l'accueil l'ouvre (lecture) ; le résumé et « À corriger », les
+ *                                       Nouveautés, le dossier (statut, avancement, échéance), le suivi de l'équipe ; « Mon document
  *                                       de formation » mène au coffre-fort, dossier Formation (lecture) ; le Professeur
  *   fonction  former-ouvrir-formation   une carte des Nouveautés : la formation s'ouvre, « NOUVEAU » s'efface
  *   fonction  former-question-dossier   une question toute prête du Professeur, tirée du dossier : il répond
@@ -18,7 +18,7 @@ module.exports = async function () {
 
   await f.onglet({
     id: 'former-dossier', titre: 'Mon dossier de formation',
-    resume: 'Les Nouveautés, les quatre nombres, le dossier (statut, avancement, échéance), le suivi de l’équipe, le document de formation au coffre-fort, et le Professeur.',
+    resume: 'Le résumé et « À corriger », les Nouveautés, le dossier (statut, avancement, échéance), le suivi de l’équipe, le document de formation au coffre-fort, et le Professeur.',
     accroche: 'La formation continue de votre magasin',
     programme: ['Ouvrir une formation', 'Poser une question au Professeur sur son dossier'],
   });
@@ -26,10 +26,12 @@ module.exports = async function () {
   await f.dire('Le bandeau de l’accueil ouvre <b>votre dossier de formation</b>.', 3200);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('.fs-mini', { apres: 1300 });
+  await f.montrer('.fs-res-l1', 'Où j’en suis');
+  await f.dire('En haut, le <b>résumé</b> : vos formations, l’état du dossier, puis validées, à valider chez votre consultant, en cours, en retard.', 5200);
+  await f.montrer('.fs-res-l2', 'À corriger');
+  await f.dire('<b>À corriger</b> : une échéance passée, la photo du jour, une nouveauté pas encore ouverte. Chaque bouton ouvre la formation.', 5200);
   await f.montrer('.fs-nouv', 'Nouveautés');
   await f.dire('Les <b>nouveautés</b> : les formations continues reçues ces deux derniers mois, la plus récente d’abord.', 4800);
-  await f.montrer('.fs-kpis', 'Où j’en suis');
-  await f.dire('En retard, en cours, à valider chez votre consultant, validées : archivées dans votre coffre-fort.', 4800);
   await f.montrer(f.p.locator('.fs-carte', { has: f.p.locator('.fs-th') }), 'Le dossier');
   await f.dire('Chaque formation : son statut, son avancement, son échéance ; en retard, en rouge.', 4200);
   await f.cacher(150);

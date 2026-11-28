@@ -28,7 +28,7 @@ module.exports = async function () {
   f.chapitres[f.chapitres.length - 1].ecran = Date.now() / 1000;   // l'affiche du chapitre : l'écran de l'étape, pas le bouton qui y mène
   await f.montrer('.bd-c3 > div:first-child', 'Selon son prix');
   await f.dire('Chaque colonne : un prix possible du bundle, de 10 en 10 centimes, et la marge qu’il laisse.', 5000);
-  await f.dire('En rouge, la <b>remise conseillée : de 8 à 12 %</b>. En saumon, plus de 15 % : trop de remise.', 5000);
+  await f.dire('En rouge, la <b>remise conseillée : de 8 à 12 %</b>. En rose pâle, plus de 15 % : trop de remise.', 5000);
   await f.dire('Le pointillé : la marge du cookie chocolat vendu seul. Chaque colonne la dépasse.', 4400);
   await f.montrer('.bd-choix .bd-tuiles', 'À 4,90 €');
   await f.dire('Le prix choisi, ici 4,90 € : ce que gagne le client, la marge du bundle, la <b>marge en plus</b>, et par mois.', 5600);

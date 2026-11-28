@@ -17,8 +17,8 @@ module.exports = async function () {
   await f.etape('1 · Vos offres');
   await f.montrer('.of-onglets .page-tabs', 'Les onglets');
   await f.dire('Les offres se rangent par état : <b>en cours</b>, <b>converties</b> en commande, <b>archivées</b>, et toutes.', 4600);
-  await f.montrer('.of-kpis', 'Les chiffres');
-  await f.dire('En tête : les offres en cours et converties, leur montant, le <b>taux de conversion</b>, le prochain événement.', 4800);
+  await f.montrer('.of-res', 'Les chiffres');
+  await f.dire('En tête : les offres en cours et converties, leur montant, le <b>taux de conversion</b> ; dessous, « À corriger » : le prochain événement.', 5600);
   await f.montrer('.of-g', 'Mes offres');
   await f.dire('La liste : l’offre et son client, le jour de l’événement, le total TTC, l’état. Au-dessus, la recherche.', 5200);
   await f.taire(150); await f.cacher(500);
@@ -32,7 +32,7 @@ module.exports = async function () {
   await f.montrer('.of-d .of-marge-k', 'La marge de l’offre');
   await f.dire('La <b>marge de l’offre</b> : ce que le client paie hors TVA, remises déduites, moins le coût matière des recettes.', 5200);
   await f.montrer('.of-d .of-marge-h', 'La couleur');
-  await f.dire('Les couleurs de Recette & marge : vert à <b>60 %</b> de marge brute et plus, orange entre 40 et 60 %, rouge en dessous.', 5600);
+  await f.dire('Les couleurs de Recette & marge : vert à <b>60 %</b> de marge brute et plus, or entre 40 et 60 %, rouge en dessous.', 5600);
   await f.cacher(450);
   await f.montrer('.of-d .of-marge-o', 'L’objectif du réseau');
   await f.dire('Dessous : l’objectif du réseau pour la matière, ce qu’il faudrait facturer pour l’atteindre, puis le détail ligne par ligne.', 5400);

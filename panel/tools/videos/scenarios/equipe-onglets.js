@@ -70,6 +70,21 @@ async function colonne(f, date) {
   return f.p.evaluate(date => { const td = document.querySelector(`[data-eqp-cell="${date}"]`); return td ? [...td.parentElement.children].indexOf(td) + 1 : 2; }, date);
 }
 
+/** La tête du planning est collée en haut (26/11/2026, §7.13) et haute (le budget du jour, les linéaires) : une case
+ * que f.defilerVers met à 90 px du haut passe dessous, et le clic tombe sur la tête. Fait défiler la page jusqu'à mettre
+ * l'élément juste sous la tête collée, s'il est dessous. */
+async function sousLaTete(f, sel) {
+  const loc = typeof sel === 'string' ? f.p.locator(sel).first() : sel;
+  const dy = await loc.evaluate(el => {
+    const t = el.closest('table'), th = t && t.tHead;
+    if (!th || th.contains(el)) { return 0; }
+    // La tête une fois collée en haut : sa hauteur. L'élément se place 24 px dessous.
+    const h = th.getBoundingClientRect().height, r = el.getBoundingClientRect();
+    return r.top < Math.max(h, th.getBoundingClientRect().bottom) + 8 || r.bottom > innerHeight - 140 ? Math.round(r.top - h - 24) : 0;
+  });
+  if (dy) { await f.defiler(dy); }
+}
+
 const SOURCES = ['panel/public/dashboard/equipe.js', 'panel/public/dashboard/equipe.css', 'panel/src/equipe.php'];
 
-module.exports = { envoyer, options, recharger, planning, assistant, xTrace, tirerBord, tracerLigne, xJour, allumer, sousTitre, colonne, SOURCES };
+module.exports = { envoyer, options, recharger, planning, assistant, xTrace, tirerBord, tracerLigne, xJour, allumer, sousTitre, colonne, sousLaTete, SOURCES };

@@ -70,7 +70,7 @@ const hh = x => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 6
 const bruit = (s, k = 0) => { let h = 2166136261 ^ k; for (const c of s) { h = Math.imul(h ^ c.charCodeAt(0), 16777619); } return ((h >>> 0) % 2001) / 1000 - 1; };
 
 /* ── l'état ── */
-const S = { fiches: {}, evals: {}, services: {}, ca: {}, options: { assistant: false, taches: false, matrice: false, recopie: false }, prochainId: 90001,
+const S = { fiches: {}, evals: {}, services: {}, ca: {}, absences: [], prochainAbs: 1, statuts: {}, options: { assistant: false, taches: false, matrice: false, recopie: false }, prochainId: 90001,
   postes: Object.fromEntries(EQUIPE.map(e => [e.id, e.postes.slice()])), matrice: null,
   roulements: { 201: 'B', 202: 'A', 203: 'A', 204: 'D', 205: 'C', 206: 'D', 207: 'C', 208: 'B', 209: 'C', 210: 'A' } };
 const COMPTOIR_IDS = new Set([201, 204, 205, 206, 208, 210]);
@@ -114,7 +114,7 @@ function caDu(date) {
 const posteDe = id => POSTES.find(p => p.id === id);
 function personnePlanning(e) {
   const postes = S.postes[e.id].map(id => { const p = posteDe(id); return { id: p.id, nom: p.nom, secteur: p.secteur }; });
-  return { id: e.id, nom: e.nom, fonctions: e.fonctions, postes, actif: true, taux: e.taux, franchise: false,
+  return { id: e.id, nom: e.nom, fonctions: e.fonctions, postes, actif: true, taux: e.taux, franchise: false, contrat: contratDe(e.id), statut: S.statuts[e.id] || null,
     secteurs: [...new Set(postes.map(p => p.secteur).filter(Boolean))], lettre: S.options.matrice ? (S.roulements[e.id] || null) : null };
 }
 function carte() {
@@ -155,7 +155,8 @@ function tempsMorts(date) {
 /* ── le planning ── */
 function planning(du, n) {
   const jours = []; for (let i = 0; i < n; i++) { jours.push(plus(du, i)); }
-  const out = jours.map(j => { const c = caDu(j); return { date: j, objectif: c.objectif, ca: c.ca, caSource: c.caSource, caEnCours: c.caEnCours, lu: true, services: servicesDu(j).map(s => Object.assign({}, s)) }; });
+  const out = jours.map(j => { const c = caDu(j); return { date: j, objectif: c.objectif, ca: c.ca, caSource: c.caSource, caEnCours: c.caEnCours, lu: true, services: servicesDu(j).map(s => Object.assign({}, s)),
+    absences: S.absences.filter(a => a.date === j).map(a => Object.assign({}, a)) }; });
   const r = { shop: 4, du: jours[0], au: jours[n - 1], aujourdhui: AUJ, maintenant: MAINTENANT, jours: out,
     employes: EQUIPE.map(personnePlanning), secteurs: SECTEURS.filter(s => s.id !== 4 || true).map(s => ({ id: s.id, nom: s.nom })),
     objectif: { source: 'budget', motif: null }, budget: { cible: 17, rouge: 20, noir: 22, source: 'réglage' }, etp: { heuresMois: 168, caCible: 13000, caCritique: 10000 },
@@ -245,6 +246,43 @@ const OPTIONS_LISTE = [
   { cle: 'recopie', nom: 'Recopier la semaine précédente', dit: 'Dans « Préparer la semaine » : la semaine d’avant reportée de sept jours, aperçu puis création.' },
 ];
 
+/* Les absences (27/11/2026, panel/src/equipe_absences.php) : payée, le service reste au planning ; non payée, il en
+ * sort ; le remplaçant est un service, ou un extérieur noté sur l'absence. Le même plan que le serveur, en plus court. */
+const MOTIFS_PAYES = { maladie: true, cp: true, circ: true, nonpaye: false };
+const SANS_CONTRAT = ['civil_law_contract', 'b2b', 'temporary_work', 'internship', 'volunteer'];
+function contratDe(id) { return (S.fiches[id] || {}).contrat || (id === 208 ? 'internship' : 'employment_contract'); }
+function absenceRoute(m, c) {
+  if (m === 'DELETE') {
+    const L = S.absences.filter(a => (c.ids || []).includes(a.id)); if (!L.length) { return err(404, 'aucune de ces absences n’est de ce magasin'); }
+    L.forEach(a => {
+      if (!a.payee) { creerService(a.employe, a.date, a.de, a.a); }
+      if (c.remplacants && a.remplacantService) { const D = servicesDu(a.date), k = D.findIndex(s => s.id === a.remplacantService); if (k >= 0) { D.splice(k, 1); } }
+      S.absences.splice(S.absences.indexOf(a), 1);
+    });
+    return { ok: true, annulees: L.length, echecs: [] };
+  }
+  if (m !== 'POST') { return undefined; }
+  if (!(c.motif in MOTIFS_PAYES)) { return err(422, 'motif inconnu'); }
+  const payee = MOTIFS_PAYES[c.motif] && !SANS_CONTRAT.includes(contratDe(c.employe)), remps = {};
+  (c.remplacements || []).forEach(r => { remps[r.date] = r; });
+  let n = 0, nr = 0;
+  for (let d = c.du; d <= c.au; d = plus(d, 1)) {
+    const D = servicesDu(d);
+    D.filter(s => s.employe === c.employe).forEach(s => {
+      let a = S.absences.find(x => x.service === s.id);
+      if (!a) { a = { id: S.prochainAbs++, employe: c.employe, date: d, service: s.id, de: s.de, a: s.a, remplacant: null, remplacantService: null, externe: null }; S.absences.push(a); }
+      const jour = Math.round((dU(d) - dU(c.du)) / 864e5) + 1, pay = payee && !(c.motif === 'maladie' && jour > 30);   // le salaire garanti : 30 jours
+      Object.assign(a, { motif: c.motif, payee: pay, certificat: !!c.certificat, du: c.du, au: c.au, jour }); n++;
+      if (!pay) { D.splice(D.indexOf(s), 1); }
+      const r = remps[d];
+      if (r && r.externe) { a.externe = { nom: r.externe.nom, taux: +r.externe.taux }; nr++; }
+      else if (r && r.employe) { a.remplacant = r.employe; a.remplacantService = creerService(r.employe, d, s.de, s.a); nr++; }
+    });
+  }
+  if (!n) { return err(422, 'aucun service de cette personne au planning sur ces jours : rien à marquer'); }
+  return { ok: true, absences: n, payee, remplacements: nr, echecs: [], arret: null };
+}
+
 /* La fiche d'une personne (24/11/2026) : des données fictives, stables d'un tournage à l'autre. */
 const CONTRATS = { employment_contract: 'Contrat de travail', civil_law_contract: 'Contrat civil', b2b: 'B2B', temporary_work: 'Intérim', internship: 'Stage', volunteer: 'Bénévole', other: 'Autre' };
 const ROLES = { employee: 'Employé·e', franchisee: 'Franchisé·e (hors primes)', franchise_partner: 'Associé·e' };
@@ -255,8 +293,8 @@ function personneFiche(id) {
   const prenom = o.prenom != null ? o.prenom : pr, nomF = o.nomFamille != null ? o.nomFamille : rest.join(' ');
   return { id, shop: 4, nom: (prenom + ' ' + nomF).trim(), fonctions: e.fonctions, postes: (S.postes[id] || e.postes).map(pid => ({ id: pid, nom: (posteDe(pid) || {}).nom || '' })),
     actif: true, taux: o.taux != null ? o.taux : e.taux, franchise: false, prenom, nomFamille: nomF, affiche: o.affiche != null ? o.affiche : pr + ' ' + (rest[0] || '').slice(0, 1) + '.',
-    langue: o.langue || 'fr', contrat: o.contrat || (id === 208 ? 'internship' : 'employment_contract'), role: o.role || 'employee', telephone: '+32 ·· ·· ' + String(id).slice(-2),
-    pin: true, appPrete: id !== 209, roles: [], competences: COMPETENCES[id] || ['Hygiène (HACCP)'], positions: [{ nom: e.fonctions[0], niveau: id === 206 ? 'Niveau 4' : 'Niveau 2' }] };
+    langue: o.langue || 'fr', contrat: o.contrat || contratDe(id), role: o.role || 'employee', telephone: '+32 ·· ·· ' + String(id).slice(-2),
+    pin: true, appPrete: id !== 209, statut: S.statuts[id] || null, roles: [], competences: COMPETENCES[id] || ['Hygiène (HACCP)'], positions: [{ nom: e.fonctions[0], niveau: id === 206 ? 'Niveau 4' : 'Niveau 2' }] };
 }
 // Le mot suit la note (5 : un compliment, 4 : un détail à reprendre, 3 : ce qui n'allait pas) ; parfois aucun mot.
 const MOTS = {
@@ -289,7 +327,7 @@ function ventes(id) {
 function fiche(m, p, id, c) {
   const P = personneFiche(id);
   if (!P) { return err(404, 'cette personne n’est pas de l’équipe du magasin', { motif: 'employe_inconnu' }); }
-  const choix = { contrats: CONTRATS, roles: ROLES, langues: { fr: 'Français', nl: 'Néerlandais', en: 'Anglais', pl: 'Polonais' } };
+  const choix = { contrats: CONTRATS, roles: ROLES, langues: { fr: 'Français', nl: 'Néerlandais', en: 'Anglais', pl: 'Polonais' }, statuts: { employe: 'Employé·e', ouvrier: 'Ouvrier·ère' } };
   if (p === '/dashboard/equipe/personne' && m === 'GET') { return { personne: P, detailLu: true, choix }; }
   if (p === '/dashboard/equipe/personne' && m === 'PATCH') { S.fiches[id] = Object.assign(S.fiches[id] || {}, c.champs || {}); const e = EQUIPE.find(x => x.id === id); if (c.champs && c.champs.taux != null) { e.taux = c.champs.taux; } return { ok: true, personne: personneFiche(id), detailLu: true, choix }; }
   if (p === '/dashboard/equipe/personne/evaluations' && m === 'GET') { return evaluations(id); }
@@ -301,6 +339,8 @@ function fiche(m, p, id, c) {
 module.exports = function (m, p, q, c) {
   if (!p.startsWith('/dashboard/equipe')) { return undefined; }
   c = (c && typeof c === 'object') ? c : {};
+  if (p === '/dashboard/equipe/absence') { return absenceRoute(m, c); }
+  if (p === '/dashboard/equipe/statut' && m === 'POST') { if (!['employe', 'ouvrier'].includes(c.statut)) { return err(422, 'statut : employe ou ouvrier'); } S.statuts[c.employe] = c.statut; return { ok: true, employe: c.employe, statut: c.statut }; }
   if (p === '/dashboard/equipe/carte' && m === 'GET') { return carte(); }
   // La fiche d'une personne (24/11/2026, panel/src/equipe_fiche.php) : identité, évaluations, ventes des 12 semaines.
   if (p.startsWith('/dashboard/equipe/personne')) { const id = +(m === 'GET' ? q.get('id') : c.id); const r = fiche(m, p, id, c); if (r !== undefined) { return r; } }

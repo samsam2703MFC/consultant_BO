@@ -4,7 +4,7 @@
  *   fonction  equipe-adapter          mardi, Camille commence à 13 h 45 au lieu de 14 h 30 : le comptoir est comblé
  *   fonction  equipe-ajouter-shift    samedi, Camille ajoutée sur le shift d'Inès (9 h – 13 h)
  *   fonction  equipe-retirer          « Retirer du shift » (Inès, vendredi) et « Retirer de l'horaire de la semaine »
- *                                     (Lucie, absente), fusionnés ; les confirmations du navigateur redessinées
+ *                                     (Lucie ne travaille pas ; une absence se pose avec « Absente ou en congé »), fusionnés ; les confirmations du navigateur redessinées
  *   fonction  equipe-parcourir        la section « Comptoir », ‹ ›, « Enregistrer et suivant »
  *   fonction  equipe-creneau          l'option Matrice allumée : lundi, la carte « Matin » pour Camille
  * Données fictives : mocks/20_equipe.js (semaine du 16 au 22 novembre 2026). Chaque phrase vient de
@@ -25,9 +25,11 @@ module.exports = async function () {
     accroche: 'Un clic, et on adapte',
     programme: ['Adapter les heures d’un service', 'Ajouter une personne sur le même shift', 'Retirer du shift ou de l’horaire', 'Parcourir le jour personne par personne', 'Choisir un créneau de la matrice'],
   });
+  await E.sousLaTete(f, svc('2026-11-20', 201));
   await f.montrer(svc('2026-11-20', 201), 'Vendredi · Camille');
   await f.dire('Un clic sur un service ouvre sa <b>fenêtre</b> : la même au jour, à la semaine et au mois.', 4200);
   await f.cacher(150); await f.taire(150);
+  await E.sousLaTete(f, svc('2026-11-20', 201));
   await f.cliquer(svc('2026-11-20', 201), { apres: 1200 });
   await f.montrer('.eqp-fo-tete', 'Le service');
   await f.dire('La personne, ses postes, le jour, et ses heures au planning.', 3200);
@@ -54,6 +56,7 @@ module.exports = async function () {
   await f.fonction({ id: 'equipe-adapter', titre: 'Adapter les heures d’un service',
     resume: 'Tirer un bord de la ligne du service, lire l’effet sur le comptoir et le budget, puis enregistrer au panel.',
     points: ['Ouvrir le service', 'Tirer un bord de sa ligne', 'Lire l’effet', '« Enregistrer »'] });
+  await E.sousLaTete(f, svc('2026-11-17', 201));
   await f.cliquer(svc('2026-11-17', 201), { apres: 1200 });
   await f.montrer('.eqp-fo-plan .eqp-fo-l.cpt', 'Le comptoir');
   await f.dire('Mardi, le comptoir est vide de <b>13 h 45 à 14 h 30</b>. Camille commence à 14 h 30.', 4200);
@@ -72,6 +75,7 @@ module.exports = async function () {
   await f.fonction({ id: 'equipe-ajouter-shift', titre: 'Ajouter une personne sur le même shift',
     resume: 'Dans « Sur ce shift », choisir quelqu’un de libre : le coût et le budget du jour s’affichent, puis l’ajouter aux mêmes heures.',
     points: ['Ouvrir le service', '« + Ajouter une personne sur ce shift »', 'Lire le coût et le budget', '« Ajouter Prénom HH:MM–HH:MM »'] });
+  await E.sousLaTete(f, svc('2026-11-21', 208));
   await f.cliquer(svc('2026-11-21', 208), { apres: 1200 });
   await E.sousTitre(f, 'haut');
   await f.montrer('.eqp-shift', 'Sur ce shift');
@@ -91,23 +95,25 @@ module.exports = async function () {
 
   /* Retirer du shift, retirer de l'horaire de la semaine (fusionnés) */
   await f.fonction({ id: 'equipe-retirer', titre: 'Retirer du shift ou de l’horaire',
-    resume: 'Retirer une personne d’un shift (son service de ce jour), ou de l’horaire de toute la semaine (absente, en congé), après confirmation.',
-    points: ['Ouvrir le service', '« Retirer Prénom du shift » : ce jour-là', '« Retirer de l’horaire de la semaine » : absent·e', 'Confirmer'] });
-  const ven = `.eqp-tab tr.tot td:nth-child(${await E.colonne(f, '2026-11-20')})`;
+    resume: 'Retirer une personne d’un shift (son service de ce jour), ou de l’horaire de toute la semaine quand elle ne travaille pas, après confirmation. Malade ou en congé : « Absente ou en congé » (son coût reste).',
+    points: ['Ouvrir le service', '« Retirer Prénom du shift » : ce jour-là', '« Retirer de l’horaire de la semaine » : elle ne travaille pas', 'Confirmer'] });
+  const ven = `.eqp-sem tr.eqp-pal th:nth-child(${await E.colonne(f, '2026-11-20')})`;
   await f.montrer(ven, 'Vendredi');
   await f.dire('Vendredi est <b>rouge</b> : trop d’heures pour le CA du jour.', 3200);
   await f.cacher(150); await f.taire(150);
+  await E.sousLaTete(f, svc('2026-11-20', 208));
   await f.cliquer(svc('2026-11-20', 208), { apres: 1200 });
   await f.montrer('[data-eqp-suppr]', 'Retirer du shift');
   await f.dire('« <b>Retirer Inès du shift</b> » : son service de ce jour est supprimé.', 3400);
   await f.cacher(150); await f.taire(150);
   await f.cliquerConfirme('[data-eqp-suppr]', 'Retirer cette personne du shift ?', 'Son service de ce jour est supprimé du planning.', { apres: 1600 });
   await f.montrer(ven, 'Vendredi');
-  await f.dire('Vendredi repasse en orange : le pourcentage se recalcule aussitôt.', 3400);
+  await f.dire('Vendredi repasse en or : le pourcentage se recalcule aussitôt.', 3400);
   await f.cacher(150); await f.taire(150);
+  await E.sousLaTete(f, svc('2026-11-16', 210));
   await f.cliquer(svc('2026-11-16', 210), { apres: 1200 });
-  await f.montrer('[data-eqp-retirer-semaine]', 'Absente toute la semaine');
-  await f.dire('Lucie est absente toute la semaine : « <b>Retirer de l’horaire de la semaine</b> ».', 4000);
+  await f.montrer('[data-eqp-retirer-semaine]', 'Toute la semaine');
+  await f.dire('Lucie ne travaille pas cette semaine : « <b>Retirer de l’horaire de la semaine</b> ». Malade ou en congé, c’est « Absente ou en congé » : son coût reste.', 6000);
   await f.cacher(150); await f.taire(150);
   await f.cliquerConfirme('[data-eqp-retirer-semaine]', 'Retirer Lucie Bernard de l’horaire de la semaine du 16 novembre au 22 novembre ?', '2 services sont supprimés du planning du panel.', { apres: 1800 });
   await f.montrer('.eqp-tab tbody tr:has([data-emp="210"])', 'Lucie · plus aucun service', 1600);
@@ -119,6 +125,7 @@ module.exports = async function () {
   await f.fonction({ id: 'equipe-parcourir', titre: 'Parcourir le jour personne par personne',
     resume: 'Section par section, personne par personne : adapter chacun, puis « Enregistrer et suivant ».',
     points: ['Ouvrir un service', 'Choisir une section', '‹ › ou un clic sur une personne', '« Enregistrer et suivant »'] });
+  await E.sousLaTete(f, svc('2026-11-19', 206));
   await f.cliquer(svc('2026-11-19', 206), { apres: 1200 });
   await f.montrer('.eqp-fo-secs', 'Les sections');
   await f.dire('Jeudi. En haut, les <b>sections</b> du jour, chacune avec ses présents.', 3600);
@@ -145,9 +152,11 @@ module.exports = async function () {
     points: ['Option « Matrice A B C D » allumée', 'Ouvrir le service ou une case vide', 'Cliquer « Matin » ou « Après-midi »', '« Enregistrer » ou « Ajouter le service »'] });
   await E.allumer(f, 'matrice', { dire: 'Les créneaux viennent avec l’option « <b>Matrice A B C D</b> et shift maker ».' });
   const lun = '[data-eqp-cell="2026-11-16"][data-emp="201"]';
+  await E.sousLaTete(f, lun);
   await f.montrer(lun, 'Lundi · Camille');
   await f.dire('Lundi matin, le comptoir est vide. Camille est au repos : un clic sur sa case.', 3700);
   await f.cacher(150); await f.taire(150);
+  await E.sousLaTete(f, lun);
   await f.cliquer(lun, { apres: 1200 });
   await f.montrer('.eqp-fo-cartes', 'Matin · Après-midi');
   await f.dire('En haut, les <b>créneaux</b> de la matrice, chacun avec son effet : le comptoir, le budget, le coût.', 4800);

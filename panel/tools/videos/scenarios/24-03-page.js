@@ -1,6 +1,6 @@
 /* Paramètres › Mails et automatisations, la page complète (?vue=mails, ou « Ouvrir la page complète » dans la fenêtre de
  * la roue), et ses fonctions en chapitres (26/11/2026) :
- *   onglet    param-page              les tuiles, la liste des envois, l'équipe, le rappel (quand, par où, l'e-mail, le
+ *   onglet    param-page              le résumé et « À corriger », la liste des envois, l'équipe, le rappel (quand, par où, l'e-mail, le
  *                                     SMS), son aperçu, les commandes de demain, ce qui est parti
  *   fonction  param-recent            « Pas de rappel pour une commande passée moins de 24 h avant le retrait »
  *   fonction  param-email             l'objet et le texte de l'e-mail, ses variables ; l'aperçu suit ; « Enregistrer »
@@ -34,8 +34,10 @@ module.exports = async function () {
   });
   await P.cadreFixe(f, '#db-rail [data-par]', 'Paramètres');
   await f.dire('La page complète s’ouvre de la fenêtre des Paramètres : « Ouvrir la page complète », ou « L’équipe ».', 5000);
-  await f.montrer('.au-tuiles', 'En un coup d’œil');
-  await f.dire('En tête : le rappel <b>allumé</b>, les commandes de demain, le canal, et l’horloge qui passe <b>toutes les 10 minutes</b>.', 5600);
+  await f.montrer('.au-res-l1', 'En un coup d’œil');
+  await f.dire('En tête, le <b>résumé</b> : les rappels prévus demain, le rappel <b>allumé</b>, et l’horloge qui passe <b>toutes les 10 minutes</b>.', 5600);
+  await f.montrer('.au-res-l2', 'À corriger');
+  await f.dire('<b>À corriger</b> : une commande de demain sans e-mail ni téléphone. Le bouton mène à sa carte.', 4600);
   await f.montrer('.au-liste', 'Les automatisations');
   await f.dire('Les envois du magasin : le <b>rappel la veille du retrait</b>, pour les clients ; la <b>fiche d’une promotion</b>, pour l’équipe.', 5800);
   await f.montrerTout('.au-liste tr.gris', 'À venir');

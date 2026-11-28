@@ -36,7 +36,7 @@ const BDV_MAX_HEURE = 5;
 /** Au plus tant de réponses par jour et par magasin au questionnaire (le lien court se devine : il faut un plafond). */
 const BDV_MAX_JOUR = 40;
 const BDV_GARDE_JOURS = 90;
-const BDV_STATUTS = ['a_valider', 'cree', 'rejoint', 'refuse'];
+const BDV_STATUTS = ['a_valider', 'cree', 'rejoint', 'refuse', 'hors_zone'];
 
 function ensureBureauxDevTables(): void
 {
@@ -441,6 +441,187 @@ function bdvPublicMagasin(string $method, string $id, string $sous = ''): array
     return bdvPublic($method, (string) $q['jeton'], $sous);
 }
 
+/* ── Les demandes hors zone (27/11/2026) ──────────────────────────────────────────────────────────────────────
+ * Sam : « la base sont les tournées webshop, et toutes les delivery interest vers TF Buddy », puis « il faut une copie
+ * de toutes les demandes sur le cockpit (développement bureau) ». La demande « Ma zone n'est pas dans la liste » des deux
+ * pages Livraison au bureau (la landing atelierby.be, la landing du webshop) va dans TF Buddy
+ * (POST /webshop/shops/{n}/delivery-interest : code postal, commune, société, effectif, e-mail) ; le cockpit en garde une
+ * copie dans panel_bureau_dev (source et statut « hors_zone »), au magasin choisi (la boutique la plus proche).
+ *   POST /bureau-hors-zone {shop, cp, commune, societe, effectif, email, origine: landing|webshop, distance, tfbuddy,
+ *                           request_key, langue, site_web}                                        PUBLIC
+ *     - landing : la page est servie par ce serveur ; le cockpit garde la copie, puis la transmet à TF Buddy.
+ *     - webshop : la page a déjà envoyé à TF Buddy (depuis l'adresse du visiteur) ; elle envoie la copie par
+ *       navigator.sendBeacon (text/plain, réponse jamais lue : aucune origine à autoriser), avec `tfbuddy` = ok | refus.
+ *     Le même request_key reçu deux fois (un nouvel essai) met à jour la même copie.
+ *   POST /dashboard/bureaux-dev/renvoyer {shop, id}     une copie que TF Buddy n'a pas reçue, renvoyée (même request_key)
+ *   GET  /dashboard/bureaux-dev/tournees?shop=          les tournées que le webshop publie pour ce magasin (« ce que
+ *                                                       voient vos clients » sur les deux pages)
+ * Une copie est traitée dès son arrivée (traite_le) : comme toute demande traitée, elle s'efface après 90 jours.
+ */
+const BDV_HZ_MAX_HEURE = 5;
+/** Au plus tant de demandes hors zone par jour et par magasin (la route est publique : il faut un plafond). */
+const BDV_HZ_MAX_JOUR = 60;
+
+/** Une demande hors zone rendue propre : [données, ce qui manque]. Les noms du webshop (postalCode, city…) sont admis. */
+function bdvHorsZoneNettoyer(array $in): array
+{
+    $cp = trim(preg_replace('/[^0-9A-Z -]+/', '', strtoupper(bdvTexte($in['cp'] ?? $in['postalCode'] ?? '', 20))));
+    $eff = (int) ($in['effectif'] ?? $in['headcount'] ?? 0);
+    $dist = isset($in['distance']) && is_numeric($in['distance']) ? round(max(0.0, min(1000.0, (float) $in['distance'])), 1) : null;
+    $cle = (string) ($in['request_key'] ?? '');
+    $d = [
+        'cp' => $cp, 'ville' => bdvTexte($in['commune'] ?? $in['city'] ?? '', 80), 'societe' => bdvTexte($in['societe'] ?? $in['company'] ?? '', 160),
+        'personnes' => $eff >= 1 && $eff <= 100000 ? $eff : 0, 'email' => strtolower(bdvTexte($in['email'] ?? '', 160)),
+        'origine' => bdvChoix($in['origine'] ?? '', ['landing', 'webshop'], 'landing'), 'distance' => $dist,
+        'langue' => bdvChoix($in['langue'] ?? 'fr', ['fr', 'nl', 'en', 'pl'], 'fr'),
+        // la clé d'un envoi : des chiffres et des lettres seulement (elle se cherche dans les données, sans joker possible)
+        'request_key' => preg_match('/^[A-Za-z0-9]{8,64}$/', $cle) ? $cle : bin2hex(random_bytes(16)),
+        '_tfbuddy' => bdvChoix($in['tfbuddy'] ?? '', ['ok', 'refus']),
+    ];
+    $e = [];
+    if ($d['cp'] === '') { $e[] = 'le code postal'; }
+    if (!filter_var($d['email'], FILTER_VALIDATE_EMAIL)) { $e[] = 'un e-mail valide'; }
+    return [$d, $e];
+}
+
+/** Le corps de POST /webshop/shops/{n}/delivery-interest, le même que celui de la landing du webshop. */
+function bdvHorsZoneCorpsTfb(array $d): array
+{
+    return ['request_key' => (string) $d['request_key'], 'postalCode' => (string) $d['cp'], 'city' => (string) ($d['ville'] ?? ''),
+        'company' => (string) ($d['societe'] ?? ''), 'headcount' => (int) ($d['personnes'] ?? 0) > 0 ? (int) $d['personnes'] : null, 'email' => (string) $d['email']];
+}
+
+/** La réponse de TF Buddy lue : [ok | refus, motif ou null]. Reçue = 2xx et `saved` qui n'est pas faux. */
+function bdvHorsZoneLireTfb(int $code, $corps): array
+{
+    if ($code >= 200 && $code < 300 && !(is_array($corps) && array_key_exists('saved', $corps) && $corps['saved'] !== true)) { return ['ok', null]; }
+    if ($code === 0) { return ['refus', 'TF Buddy ne répond pas']; }
+    // le code de TF Buddy (DELIVERY_INTEREST_RATE_LIMIT arrive dans `description`, comme le lit la landing du webshop)
+    $c = is_array($corps) ? bdvTexte($corps['description'] ?? $corps['code'] ?? $corps['error'] ?? $corps['message'] ?? '', 80) : '';
+    return ['refus', 'TF Buddy n’a pas pris la demande (HTTP ' . $code . ($c !== '' ? ' ' . $c : '') . ')'];
+}
+
+function bdvHorsZoneTfb(string $shop, array $d): array
+{
+    if (!function_exists('tfbmPost')) { return ['refus', 'le relais TF Buddy n’est pas chargé']; }
+    [$c, $r] = tfbmPost('/webshop/shops/' . (int) $shop . '/delivery-interest', bdvHorsZoneCorpsTfb($d));
+    return bdvHorsZoneLireTfb((int) $c, $r);
+}
+
+/** La copie gardée (ou mise à jour, même request_key), puis, depuis la landing, l'envoi à TF Buddy. Rend la ligne. */
+function bdvHorsZoneEnregistrer(string $shop, array $d, string $ipHash): array
+{
+    $motif = null;
+    if ($d['origine'] === 'landing') {
+        [$d['_tfbuddy'], $motif] = bdvHorsZoneTfb($shop, $d);
+    } elseif ($d['_tfbuddy'] !== 'ok') {
+        $d['_tfbuddy'] = 'refus';
+        $motif = 'la page du webshop n’a pas pu la remettre à TF Buddy';
+    }
+    $deja = Db::row('SELECT id FROM panel_bureau_dev WHERE source = "hors_zone" AND donnees LIKE ? AND cree_le > DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY id DESC LIMIT 1',
+        ['%"request_key":"' . $d['request_key'] . '"%']);
+    $json = json_encode($d, JSON_UNESCAPED_UNICODE);
+    if ($deja !== null) {
+        $id = (int) $deja['id'];
+        Db::exec('UPDATE panel_bureau_dev SET shop_id = ?, donnees = ?, erreurs = ?, traite_le = NOW() WHERE id = ?', [$shop, $json, $motif, $id]);
+    } else {
+        Db::exec('INSERT INTO panel_bureau_dev (shop_id, source, statut, donnees, erreurs, ip_hash, cree_le, traite_le) VALUES (?, "hors_zone", "hors_zone", ?, ?, ?, NOW(), NOW())',
+            [$shop, $json, $motif, $ipHash]);
+        $id = (int) Db::pdo()->lastInsertId();
+        if (function_exists('journalAdd')) {
+            journalAdd('dashboard', 'bureaux', null, 'Magasin ' . $shop . ' : demande hors zone (' . $d['cp'] . ($d['ville'] !== '' ? ' ' . $d['ville'] : '') . ', '
+                . ($d['origine'] === 'webshop' ? 'landing du webshop' : 'landing atelierby.be') . ') — TF Buddy : ' . ($d['_tfbuddy'] === 'ok' ? 'reçue' : 'pas reçue'));
+        }
+    }
+    return bdvLigne(Db::row('SELECT * FROM panel_bureau_dev WHERE id = ?', [$id]) ?? []);
+}
+
+/** POST /bureau-hors-zone (PUBLIC) : la copie d'une demande hors zone, et son envoi à TF Buddy depuis la landing. */
+function bdvPublicHorsZone(): array
+{
+    ensureBureauxDevTables();
+    $in = function_exists('body') ? body() : [];
+    // Le piège : un champ que personne ne voit ; rempli, c'est un robot (réponse polie, rien d'enregistré).
+    if (bdvTexte($in['site_web'] ?? '') !== '') { return ['ok' => true, 'saved' => true]; }
+    $shop = bdvMagasinDuLien((string) ($in['shop'] ?? ''));
+    if ($shop === null) { http_response_code(422); return ['error' => 'Choisissez la boutique la plus proche.', 'manque' => ['la boutique']]; }
+    [$d, $e] = bdvHorsZoneNettoyer($in);
+    if ($e) { http_response_code(422); return ['error' => 'Il manque ' . implode(', ', $e) . '.', 'manque' => $e]; }
+    $ip = hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? '') . '|hors_zone');
+    $n = (int) (Db::row('SELECT COUNT(*) n FROM panel_bureau_dev WHERE ip_hash = ? AND cree_le > DATE_SUB(NOW(), INTERVAL 1 HOUR)', [$ip])['n'] ?? 0);
+    if ($n >= BDV_HZ_MAX_HEURE) { http_response_code(429); return ['error' => 'Trop de demandes depuis cet appareil : réessayez dans une heure.']; }
+    $j = (int) (Db::row('SELECT COUNT(*) n FROM panel_bureau_dev WHERE shop_id = ? AND source = "hors_zone" AND cree_le > DATE_SUB(NOW(), INTERVAL 1 DAY)', [$shop])['n'] ?? 0);
+    if ($j >= BDV_HZ_MAX_JOUR) { http_response_code(429); return ['error' => 'Beaucoup de demandes aujourd’hui : réessayez demain, ou appelez la boutique.']; }
+    bdvPurger();
+    $l = bdvHorsZoneEnregistrer($shop, $d, $ip);
+    $nom = function_exists('accesNomMagasin') ? accesNomMagasin($shop) : 'Magasin ' . $shop;
+    // La demande est gardée : la boutique la voit même si TF Buddy ne l'a pas prise (elle la renvoie du dashboard).
+    return ['ok' => true, 'saved' => true, 'magasin' => $nom, 'shop' => (int) $shop, 'tfbuddy' => (string) ($l['d']['_tfbuddy'] ?? '')];
+}
+
+/** Une lecture publique de TF Buddy (les routes /webshop/… n'attendent aucun jeton) : [code, corps]. */
+function bdvTfGet(string $chemin): array
+{
+    if (!class_exists('PanelApi')) { return [0, null]; }
+    $ch = curl_init(PanelApi::config()['base'] . $chemin);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 12, CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_HTTPHEADER => ['Accept: application/json']]);
+    $raw = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return [$raw === false ? 0 : $code, $raw === false ? null : json_decode((string) $raw, true)];
+}
+
+/**
+ * Une tournée publiée, telle que la montrent les deux landings : la liste (GET …/delivery-zones : id, tour, zoneSecondary,
+ * zonePrincipal) et son détail (GET …/delivery-zones/{id} : jours 1–7, livraison de… à…, heure limite, préavis, créneaux).
+ */
+function bdvTourneeLigne(array $t, ?array $m): array
+{
+    $hm = static fn ($v) => is_string($v) && preg_match('/^\d{2}:\d{2}/', $v) ? substr($v, 0, 5) : '';
+    $h = $m['delivery_cutoff_hour'] ?? null;
+    return [
+        'id' => (int) ($t['id'] ?? 0), 'nom' => bdvTexte($t['tour'] ?? '', 80), 'zone' => bdvTexte($t['zoneSecondary'] ?? '', 160),
+        'principale' => bdvTexte($t['zonePrincipal'] ?? '', 120), 'detail' => $m !== null,
+        'jours' => array_values(array_unique(array_filter(array_map('intval', (array) ($m['days'] ?? [])), static fn ($j) => $j >= 1 && $j <= 7))),
+        'de' => $hm($m['delivery_hours_start'] ?? ''), 'a' => $hm($m['delivery_hours_end'] ?? ''),
+        'limite' => $h !== null && $h !== '' && is_numeric($h) ? sprintf('%02d:%02d', (int) $h, (int) ($m['delivery_cutoff_minute'] ?? 0)) : '',
+        'preavis' => max(0, (int) ($m['delivery_lead_hours'] ?? 0)),
+        'creneaux' => array_values(array_filter(array_map(static fn ($s) => bdvTexte($s, 40), (array) ($m['slots'] ?? [])))),
+    ];
+}
+
+function ep_bureaux_dev_tournees(): array
+{
+    $shop = bdvShop();
+    if ($shop === '') { http_response_code(400); return ['error' => 'shop manquant']; }
+    [$c, $z] = bdvTfGet('/webshop/shops/' . (int) $shop . '/delivery-zones');
+    if ($c < 200 || $c >= 300 || !is_array($z)) {
+        return ['ok' => false, 'motif' => $c === 0 ? 'TF Buddy ne répond pas' : 'TF Buddy ne donne pas les tournées (HTTP ' . $c . ')', 'tournees' => []];
+    }
+    $out = [];
+    foreach (array_slice(array_values(array_filter($z, 'is_array')), 0, 20) as $t) {
+        if ((int) ($t['id'] ?? 0) <= 0) { continue; }
+        [$c2, $m] = bdvTfGet('/webshop/shops/' . (int) $shop . '/delivery-zones/' . (int) $t['id']);
+        $out[] = bdvTourneeLigne($t, $c2 >= 200 && $c2 < 300 && is_array($m) ? $m : null);
+    }
+    return ['ok' => true, 'tournees' => $out];
+}
+
+function wr_bureaux_dev_renvoyer(): array
+{
+    $b = body();
+    $shop = bdvShop($b);
+    $r = bdvDemande($shop, (int) ($b['id'] ?? 0));
+    if ($r === null || $r['source'] !== 'hors_zone') { http_response_code(404); return ['error' => 'demande hors zone introuvable']; }
+    $d = json_decode((string) $r['donnees'], true) ?: [];
+    if (($d['_tfbuddy'] ?? '') === 'ok') { return ['ok' => true, 'tfbuddy' => 'ok']; }
+    [$etat, $motif] = bdvHorsZoneTfb($shop, $d);
+    $d['_tfbuddy'] = $etat;
+    Db::exec('UPDATE panel_bureau_dev SET donnees = ?, erreurs = ?, traite_le = NOW() WHERE id = ?', [json_encode($d, JSON_UNESCAPED_UNICODE), $motif, (int) $r['id']]);
+    if ($etat !== 'ok') { http_response_code(502); return ['error' => ucfirst((string) $motif) . '.']; }
+    return ['ok' => true, 'tfbuddy' => 'ok'];
+}
+
 /* ── Les routes du dashboard ────────────────────────────────────────────────────────────────────────────────── */
 
 function bdvShop(?array $b = null): string
@@ -602,12 +783,14 @@ function bdvRoute(string $method, string $path): ?array
     if ($path !== '/dashboard/bureaux-dev' && !str_starts_with($path, '/dashboard/bureaux-dev/')) { return null; }
     ensureBureauxDevTables();
     if ($method === 'GET' && $path === '/dashboard/bureaux-dev') { return ep_bureaux_dev(); }
+    if ($method === 'GET' && $path === '/dashboard/bureaux-dev/tournees') { return ep_bureaux_dev_tournees(); }
     if ($method === 'POST') {
         switch ($path) {
             case '/dashboard/bureaux-dev': return wr_bureaux_dev_creer();
             case '/dashboard/bureaux-dev/questionnaire': return wr_bureaux_dev_questionnaire();
             case '/dashboard/bureaux-dev/valider': return wr_bureaux_dev_valider();
             case '/dashboard/bureaux-dev/refuser': return wr_bureaux_dev_refuser();
+            case '/dashboard/bureaux-dev/renvoyer': return wr_bureaux_dev_renvoyer();
         }
     }
     http_response_code(404);

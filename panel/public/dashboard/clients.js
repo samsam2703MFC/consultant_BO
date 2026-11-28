@@ -94,6 +94,12 @@
   /** Les bureaux en développement (bureaux_dev.php) : les demandes, le questionnaire du magasin, les promotions à bon. */
   function lireDev() {
     const B = st.b;
+    // Les tournées que le webshop publie (27/11/2026) : lues une fois par magasin, relues avec « relire ».
+    if (!B.tour || B.tour.shop !== st.shop) {
+      const shop = st.shop; B.tour = { shop, lecture: true };
+      lire('/dashboard/bureaux-dev/tournees').then(d => { B.tour = Object.assign({ shop }, d); })
+        .catch(e => { B.tour = { shop, ok: false, motif: e.message, tournees: [] }; }).finally(rendre);
+    }
     return lire('/dashboard/bureaux-dev').then(d => { B.dev = d; B.devErr = null; }).catch(e => { B.devErr = e.message; }).finally(rendre);
   }
   function lireOptions() {
@@ -122,7 +128,7 @@
   function charger(frais) {
     if (st.onglet === 'b2c') { return lireParticuliers(frais); }
     if (st.onglet === 'b2b') { if (!st.b.d && !st.b.lecture) { lireBureaux(); } return lireEntreprises(frais); }
-    if (st.onglet === 'bur') { st.b.det = {}; lireDev(); return lireBureaux(); }
+    if (st.onglet === 'bur') { st.b.det = {}; if (frais) { st.b.tour = null; } lireDev(); return lireBureaux(); }
     return lireAnalyse();
   }
 
@@ -132,10 +138,46 @@
   const ligneF = (k, v) => `<div class="pcl-lf"><span>${esc(k)}</span><span>${v == null || v === '' ? '<span class="muted">—</span>' : v}</span></div>`;
   const seg = (act, on, L) => `<span class="seg">${L.map(([v, l]) => `<button type="button" class="${on === v ? 'is-on' : ''}" data-act="${act}" data-v="${esc(v)}">${l}</button>`).join('')}</span>`;
   const score = s => s ? `<span class="pcl-score pcl-s${esc(s)}">${esc(s)}</span>` : '<span class="muted">—</span>';
+  /** Le crédit utilisé, une échelle (26/11/2026, DESIGN_SYSTEM.md §7.13) : sous 80 % --green, 80–100 % --prize « proche de la
+   *  limite », 100 % et plus --stop « dépassé » ; le mot est écrit dans la colonne (l'alerte vient de TF Buddy : ok, moyen,
+   *  attention, danger ; le bleu de « moyen » quitte l'écran, c'était la couleur d'identification de l'objectif). */
+  const CREDIT = { danger: ['var(--stop)', 'dépassé'], attention: ['var(--prize)', 'proche de la limite'], moyen: ['var(--green)', ''], ok: ['var(--green)', ''] };
   function credit(c) {
     if (!c || c.limite == null) { return '<span class="muted">—</span>'; }
-    const p = c.pct == null ? 0 : c.pct, col = { danger: 'var(--danger)', attention: 'var(--prize)', moyen: '#1B6FA8', ok: 'var(--green)' }[c.alerte] || 'var(--green)';
-    return `<div class="pcl-credit"><div class="b"><i style="width:${Math.min(100, p)}%;background:${col}"></i></div><div class="t">${c.utilise != null ? fE0(c.utilise) + ' / ' : ''}${fE0(c.limite)}${c.pct != null ? ' · ' + nf(c.pct) + ' %' : ''}${p >= 100 ? ' · dépassé' : ''}</div></div>`;
+    const p = c.pct == null ? 0 : c.pct, x = CREDIT[c.alerte] || (p >= 100 ? CREDIT.danger : CREDIT.ok);
+    return `<div class="pcl-credit"><div class="b"><i style="width:${Math.min(100, p)}%;background:${x[0]}"></i></div><div class="t">${c.utilise != null ? fE0(c.utilise) + ' / ' : ''}${fE0(c.limite)}${c.pct != null ? ' · ' + nf(c.pct) + ' %' : ''}${x[1] ? ` · <span class="pcl-credit-m pcl-credit-${esc(c.alerte)}">${x[1]}</span>` : ''}</div></div>`;
+  }
+  /**
+   * Le résumé d'un onglet (26/11/2026, DESIGN_SYSTEM.md §7.13, la forme de .chr et .pco-res recopiée sous le préfixe) : ligne 1,
+   * la valeur clé (700, le seul gras), son état en mots derrière un point, ce qu'elle mesure, le contexte ; ligne 2, sous un
+   * filet, « À corriger » : un bouton par élément, qui mène au geste qui existe déjà (ouvrir la fiche, le tiroir) — ou une
+   * phrase verte. Rien n'y est calculé : chaque onglet passe ce qu'il compte déjà.
+   * o : { aria, v, et: {sig, mot}, q, q2, ctx: [html], L: [{sig, txt, attr, titre}], ok, apres }.
+   */
+  const pt = s => `<i class="pcl-pt pcl-pt--${s}" aria-hidden="true"></i>`;
+  function resume(o) {
+    const L = o.L || [];
+    const l2 = L.length ? `<div class="pcl-res-l2" role="region" aria-label="À corriger"><span class="pcl-res-t">À corriger</span><span class="pcl-res-l">${L.map(x => `<button type="button" class="btn btn--sm pcl-res-b" ${x.attr}${x.titre ? ` title="${esc(x.titre)}"` : ''}>${pt(x.sig)}${x.txt}</button>`).join('')}${o.apres || ''}</span></div>`
+      : o.ok ? `<div class="pcl-res-l2"><p class="pcl-res-ok">${esc(o.ok)}</p>${o.apres || ''}</div>` : '';
+    return `<section class="card pcl-res" aria-label="${esc(o.aria)}"><div class="pcl-res-l1${o.ctx && o.ctx.length ? '' : ' pcl-res-l1--court'}">
+        <div class="pcl-res-v"><span class="pcl-res-kv">${o.v}</span>${o.et ? `<span class="pcl-res-et">${o.et.sig ? pt(o.et.sig) : ''}${esc(o.et.mot)}</span>` : ''}</div>
+        <div class="pcl-res-q">${esc(o.q)}${o.q2 ? `<span>${o.q2}</span>` : ''}</div>
+        ${(o.ctx || []).map((c, i) => `<div class="pcl-res-c${i ? ' pcl-res-sep' : ''}">${c}</div>`).join('')}</div>${l2}</section>`;
+  }
+  /** Le bloc où mène un point de « À corriger » : à l'écran (défilement doux seulement sans prefers-reduced-motion: reduce),
+   *  encadré de --accent un instant. Les rendus suivants (la fiche qui arrive) gardent l'encadré là où en est son animation. */
+  const doux = () => !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function montrer(sel) { st.vu = { sel, t0: Date.now(), defiler: true }; vuAppliquer(); }
+  function vuAppliquer() {
+    const v = st.vu;
+    if (!v || !st.el) { return; }
+    const ecoule = Date.now() - v.t0;
+    if (ecoule > 1800) { st.vu = null; return; }
+    const el = st.el.querySelector(v.sel);
+    if (!el) { return; }
+    if (v.defiler) { v.defiler = false; el.style.scrollMarginTop = '16px'; el.scrollIntoView({ behavior: doux() ? 'smooth' : 'auto', block: 'nearest' }); }
+    el.classList.add('pcl-vu'); el.style.animationDelay = (-ecoule) + 'ms';
+    clearTimeout(v.tm); v.tm = setTimeout(() => { const e2 = st.el.querySelector(v.sel); if (e2) { e2.classList.remove('pcl-vu'); } if (st.vu === v) { st.vu = null; } }, 1800 - ecoule);
   }
   function fenetre(titre, corps, pied, large) {
     return `<div class="confirm pcl-fen" data-act="fermer-fond"><div class="confirm__box card${large ? ' pcl-fen-l' : ''}" role="dialog" aria-modal="true" aria-label="${esc(titre)}">
@@ -177,7 +219,7 @@
     const P = st.p, d = P.d;
     const barre = `<div class="pcl-filtres"><input id="pcl-pq" type="search" placeholder="Nom, téléphone, e-mail" value="${esc(P.q)}" autocomplete="off">
       <span class="pcl-grp">Avec ${seg('p-filtre', P.filtre, [['', 'Tous'], ['remise', 'Une remise' + (d ? ' · ' + nf(d.avecRemise) : '')]])}</span>
-      <span class="pcl-sp"></span><span class="pcl-compte">${d ? nf(d.total) + ' particuliers' + (d.lu ? ' · lus à ' + esc(d.lu) : '') : ''}</span><button type="button" class="linklike" data-act="relire">relire</button></div>`;
+      <span class="pcl-sp"></span><button type="button" class="linklike" data-act="relire">relire</button></div>`;
     let corps;
     if (P.err && !d) { corps = `<div class="pcl-vide error">${esc(P.err)}</div>`; }
     else if (!d) { corps = attente('Lecture des particuliers du magasin…'); }
@@ -189,7 +231,9 @@
           <td class="num"><button type="button" class="btn btn--sm" data-act="p-offre" data-id="${c.id}">Offre</button></td></tr>`).join('')}</tbody></table></div>
         <div class="pcl-pied">${d.trouves > d.clients.length ? nf(d.trouves) + ' trouvés, les ' + d.clients.length + ' premiers montrés : précisez la recherche.' : nf(d.trouves) + (d.q ? ' trouvé' + (d.trouves > 1 ? 's' : '') : ' — les derniers créés d’abord ; cherchez par le nom, le téléphone ou l’e-mail.')}</div>`;
     }
-    return `<div class="pcl-2"><div><section class="card pcl-carte">${barre}${P.lecture && d ? '<div class="pcl-fil"></div>' : ''}${corps}</section></div>${ficheParticulier()}</div>`;
+    // Le résumé (26/11/2026, §7.13) : le nombre de particuliers, une liste à lire — pas de « À corriger ».
+    const res = d ? resume({ aria: 'Résumé des particuliers', v: nf(d.total), q: 'particuliers dans TF Buddy', q2: `${nf(d.avecRemise)} avec une remise personnelle${d.lu ? ' · lus à ' + esc(d.lu) : ''}` }) : '';
+    return `<div class="pcl-2"><div>${res}<section class="card pcl-carte">${barre}${P.lecture && d ? '<div class="pcl-fil"></div>' : ''}${corps}</section></div>${ficheParticulier()}</div>`;
   }
   function ficheParticulier() {
     const P = st.p;
@@ -226,8 +270,18 @@
     if (E.err && !d) { return `<div class="pcl-vide error card">${esc(E.err)}</div>`; }
     if (!d) { return attente('Lecture des entreprises du magasin…'); }
     const riche = d.source === 'panel', L = entreprisesVisibles();
-    const haut = (d.incompletes ? `<div class="pcl-alerte">${SVG(ICO.alerte)}<div>${nf(d.incompletes)} entreprise${d.incompletes > 1 ? 's ont' : ' a'} des données incomplètes (TVA, adresse, ou ni e-mail ni téléphone) : leurs factures et leurs offres ne peuvent pas partir.</div>
-        <button type="button" class="btn btn--sm" data-act="e-incompl">${E.incompl ? 'Toutes les afficher' : 'Les afficher'}</button></div>` : '')
+    // Le résumé (26/11/2026, §7.13) : le nombre d'entreprises ; « À corriger » : les fiches incomplètes (leurs factures et leurs
+    // offres ne partent pas) et le crédit dépassé ou proche de sa limite (ce que la colonne Crédit dit déjà) — chaque bouton
+    // ouvre la fiche, le geste du clic sur la ligne. Le filtre des incomplètes reste, au bout de la ligne.
+    const T = d.entreprises, MAXE = 8;
+    const AC = T.filter(c => c.manques.length).map(c => ({ c, sig: 'prize', txt: `${esc(c.nom)} : manque ${esc(c.manques.map(m => MANQUE[m]).join(', '))}`, titre: 'Fiche incomplète : ses factures et ses offres ne peuvent pas partir. Ouvrir la fiche.' }))
+      .concat(T.filter(c => c.credit && c.credit.alerte === 'danger').map(c => ({ c, sig: 'stop', txt: `${esc(c.nom)} : crédit dépassé (${nf(c.credit.pct)} %)`, titre: 'Ouvrir la fiche : le crédit, les factures' })))
+      .concat(T.filter(c => c.credit && c.credit.alerte === 'attention').map(c => ({ c, sig: 'prize', txt: `${esc(c.nom)} : crédit proche de la limite (${nf(c.credit.pct)} %)`, titre: 'Ouvrir la fiche : le crédit, les factures' })));
+    const filtreInc = d.incompletes ? `<button type="button" class="linklike" data-act="e-incompl">${E.incompl ? 'afficher toutes les entreprises' : 'n’afficher que les ' + nf(d.incompletes) + ' incomplète' + (d.incompletes > 1 ? 's' : '')}</button>` : '';
+    const haut = resume({ aria: 'Résumé des entreprises', v: nf(d.total), q: 'entreprises B2B du magasin', q2: `${d.incompletes ? nf(d.incompletes) + ' à compléter · ' : ''}${d.lu ? 'lues à ' + esc(d.lu) : (riche ? 'lues avec le compte du magasin' : 'la liste de base et le relevé des tickets pro')}`,
+      L: AC.slice(0, MAXE).map(x => ({ sig: x.sig, txt: x.txt, titre: x.titre, attr: `data-act="ac-e" data-id="${x.c.id}"` })),
+      apres: (AC.length > MAXE ? `<span class="pcl-res-reste">et ${AC.length - MAXE} autres</span>` : '') + filtreInc,
+      ok: 'Rien à corriger : chaque fiche est complète, aucun crédit n’approche sa limite.' })
       + (riche ? '' : note(`${esc(d.panel ? d.panel.texte : '')}<br>${esc(d.releve ? d.releve.texte : '')}${d.panel && (!d.panel.magasin || d.panel.magasinExpire) ? '<div style="margin-top:8px">' + tfbBouton() + '</div>' : ''}`, 'pcl-note-doux'));
     const barre = `<div class="pcl-filtres"><input id="pcl-eq" type="search" placeholder="Société, TVA, ville" value="${esc(E.q)}" autocomplete="off">
       ${riche ? `<span class="pcl-grp">Score ${seg('e-score', E.score, [['', 'Tous'], ['A', 'A'], ['B', 'B'], ['C', 'C'], ['D', 'D']])}</span>` : ''}
@@ -241,7 +295,7 @@
       <td class="num"><button type="button" class="btn btn--sm" data-act="e-offre" data-id="${c.id}">Offre</button></td></tr>`).join('');
     const table = L.length ? `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Société</th>${riche ? '<th>Score</th><th>Type · mode</th>' : ''}<th class="num">${riche ? 'Commandes' : 'Tickets'} 12M</th><th class="num">CA 12M</th>${riche ? '<th>Crédit</th>' : ''}<th></th></tr></thead><tbody>${lignes}</tbody></table></div>`
       : `<div class="pcl-vide">Aucune entreprise ne répond à ces filtres.</div>`;
-    return `<div class="pcl-2"><div>${haut}<section class="card pcl-carte">${barre}${E.lecture ? '<div class="pcl-fil"></div>' : ''}${table}<div class="pcl-pied">${nf(L.length)} sur ${nf(d.total)} entreprises${d.lu ? ' · lues à ' + esc(d.lu) : ''}</div></section></div>${ficheEntreprise()}</div>`;
+    return `<div class="pcl-2"><div>${haut}<section class="card pcl-carte">${barre}${E.lecture ? '<div class="pcl-fil"></div>' : ''}${table}<div class="pcl-pied">${nf(L.length)} sur ${nf(d.total)} entreprises</div></section></div>${ficheEntreprise()}</div>`;
   }
   /** Les bureaux d'une société (la liste des bureaux, si TF Buddy la donne). */
   const bureauxDe = id => st.b.d && st.b.d.ok ? st.b.d.data.bureaux.filter(b => b.idSociete === id) : null;
@@ -288,9 +342,25 @@
   }
   const STATUTS = { active: ['Actif', 'chip chip--ok'], pending: ['En attente', 'tag-warn'], inactive: ['Inactif', 'chip chip--draft'], archived: ['Archivé', 'chip chip--draft'] };
   const statut = s => { const x = STATUTS[s] || [s || '—', 'chip chip--draft']; return `<span class="${x[1]}">${esc(x[0])}</span>`; };
+  /** Le résumé de Bureaux (26/11/2026, §7.13) : les bureaux actifs (ou, sans le compte du magasin, les demandes à valider) ;
+   *  « À corriger » : les demandes à valider ou à reprendre (le bouton ouvre la demande, comme un clic sur sa ligne), les
+   *  bureaux sans site (aucune tournée ne les livre : le bouton ouvre le bureau, « Ajouter un site »). */
+  function resumeBureaux() {
+    const B = st.b, d = B.d, D = B.dev, ok = d && d.ok;
+    const A = D ? D.demandes.filter(x => x.statut === 'a_valider') : [], Bx = ok ? d.data.bureaux : [];
+    const Hko = D ? D.demandes.filter(x => x.source === 'hors_zone' && (x.d || {})._tfbuddy !== 'ok') : [];
+    if (!D && !ok) { return ''; }
+    const L = A.map(x => x.erreurs.length ? { sig: 'stop', txt: `${esc(x.bureau)} : à reprendre dans TF Buddy`, titre: x.erreurs.join(' · '), attr: `data-act="dev-sel" data-id="${x.id}"` }
+      : { sig: 'prize', txt: `${esc(x.bureau)} : à valider`, titre: 'Ouvrir la demande : créer le bureau dans TF Buddy', attr: `data-act="dev-sel" data-id="${x.id}"` })
+      .concat(Hko.map(x => ({ sig: 'stop', txt: `Demande hors zone ${esc([x.cp, x.ville].filter(Boolean).join(' '))} : pas reçue par TF Buddy`, titre: 'La renvoyer à TF Buddy', attr: `data-act="hz-renvoyer" data-id="${x.id}"` })))
+      .concat(Bx.filter(b => !b.sites).map(b => ({ sig: 'prize', txt: `${esc(b.nom)} : pas de site`, titre: 'Aucune tournée ne peut livrer ce bureau tant qu’il n’a pas de point de livraison : ouvrez-le, « Ajouter un site ».', attr: `data-act="b-sel" data-id="${b.id}"` })));
+    const nAct = Bx.filter(b => b.statut === 'active').length, nAtt = Bx.filter(b => b.statut === 'pending').length;
+    return resume(ok ? { aria: 'Résumé des bureaux', v: nf(nAct), q: 'bureaux actifs, livrés par une tournée', q2: `sur ${nf(Bx.length)} bureaux${nAtt ? ' · ' + nf(nAtt) + ' en attente' : ''}${D ? ' · ' + nf(A.length) + ' demande' + (A.length > 1 ? 's' : '') + ' en développement à valider' : ''}`, L, ok: 'Rien à corriger : aucune demande à valider, chaque bureau a son site.' }
+      : { aria: 'Résumé des bureaux en développement', v: nf(A.length), q: 'demande' + (A.length > 1 ? 's' : '') + ' de bureau à valider', q2: 'les bureaux du magasin se lisent avec le compte TF Buddy du magasin', L, ok: 'Rien à corriger : aucune demande à valider.' });
+  }
   function vueBureaux() {
     const B = st.b, d = B.d;
-    const dev = blocDev(), tirDev = B.w ? vueAssistant() : B.devSel ? tiroirDemande() : '';
+    const dev = resumeBureaux() + blocDev(), tirDev = B.w ? vueAssistant() : B.devSel ? tiroirDemande() : '';
     if (B.err && !d) { return dev + `<div class="pcl-vide error card">${esc(B.err)}</div>` + tirDev; }
     if (!d) { return dev + attente('Lecture des bureaux du magasin…') + tirDev; }
     if (!d.ok) { return dev + tirDev + refus(d, 'Les bureaux du magasin') + note('Ce que montre l’onglet une fois le compte TF Buddy du magasin connecté : une ligne par bureau (statut, catalogue, offres, sites), sa fiche en onglets — Livraison (site, tournée, créneau, heure limite), Catalogue, Offres, Personnes (invitations), Documents (affiche, cartes, brochure) — et « Ajouter un bureau » en sept étapes.', 'pcl-note-doux'); }
@@ -303,7 +373,7 @@
       <td>${b.catalogue === 'restricted' || b.catalogue === 'custom' ? 'Réduit' : b.catalogue ? 'Complet' : '—'}</td><td class="num">${nf(b.offres)}</td><td class="num">${nf(b.departements)}</td><td>${b.sites ? nf(b.sites) + ' site' + (b.sites > 1 ? 's' : '') : '<span class="tag-warn">pas de site</span>'}</td></tr>`).join('');
     // La liste garde toute la largeur ; un bureau s'ouvre dans le tiroir (26/11/2026, maquette A « even larger »).
     return dev + `<section class="card pcl-carte">${barre}${B.lecture ? '<div class="pcl-fil"></div>' : ''}${L.length ? `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Bureau</th><th>Statut</th><th>Catalogue</th><th class="num">Offres</th><th class="num">Départements</th><th>Livraison</th></tr></thead><tbody>${lignes}</tbody></table></div>` : '<div class="pcl-vide">Aucun bureau.</div>'}</section>
-      ${d.data.bureaux.some(b => !b.sites) ? note('Un bureau sans site ne peut être livré par aucune tournée tant qu’il n’a pas de point de livraison : ouvrez-le, « Ajouter un site ».', 'pcl-note-doux') : ''}${tirDev || tiroirBureau(L)}`;
+      ${tirDev || tiroirBureau(L)}`;
   }
   const detDe = ch => st.b.det[st.b.sel + ch];
   const detCorps = (ch, f) => { const x = detDe(ch); if (!x || x.lecture) { lireDet(ch); return attente('Lecture…'); } if (!x.ok) { return `<div class="pcl-aide error">${esc(x.texte || x.motif || 'illisible')}</div>`; } return f(x.data || {}); };
@@ -395,7 +465,7 @@
           <label class="pcl-champ pcl-lien-url"><span>Le lien de ${esc(nomM)}</span><input id="pcl-q-url" value="${esc(lien)}" readonly></label></div>
         <div class="pcl-acts"><button type="button" class="btn btn--sm btn--primary" data-act="dev-copier">${B.lienCopie === shop ? 'Lien copié' : 'Copier le lien'}</button><a class="btn btn--sm" href="${esc(lien)}" target="_blank" rel="noopener">Ouvrir</a>
           <button type="button" class="btn btn--sm" data-act="lien-qr" data-shop="${esc(shop)}">Télécharger le QR</button>${ici ? '<button type="button" class="btn btn--sm btn--ghost" data-act="dev-questionnaire">Réglages et bon</button>' : ''}</div>
-        <div class="pcl-aide" style="margin-top:6px">${ici ? `Formulaire ${q.actif ? '<b class="pcl-vert">ouvert</b>' : '<b>fermé</b>'}${promo ? ' · bon de bienvenue : ' + esc(promo.nom) : ' · sans bon de bienvenue'} · au plus 40 inscriptions par jour.` : 'Son ouverture et son bon se règlent dans le dashboard de ce magasin.'}</div></div></div>`;
+        <div class="pcl-aide" style="margin-top:6px">${ici ? `Formulaire ${q.actif ? '<span class="pcl-vert">ouvert</span>' : 'fermé'}${promo ? ' · bon de bienvenue : ' + esc(promo.nom) : ' · sans bon de bienvenue'} · au plus 40 inscriptions par jour.` : 'Son ouverture et son bon se règlent dans le dashboard de ce magasin.'}</div></div></div>`;
   }
   /** Le QR d'un lien en PNG (1024 px), pour une affiche. */
   function telechargerQr(shop) {
@@ -409,17 +479,55 @@
   function blocDev() {
     const B = st.b, D = B.dev;
     if (!D) { return B.devErr ? note('Les bureaux en développement ne se lisent pas : ' + esc(B.devErr), 'pcl-note-doux') : ''; }
-    const A = D.demandes.filter(x => x.statut === 'a_valider'), T = D.demandes.filter(x => x.statut !== 'a_valider'), q = D.questionnaire;
+    const H = D.demandes.filter(x => x.source === 'hors_zone'), R = D.demandes.filter(x => x.source !== 'hors_zone');
+    const A = R.filter(x => x.statut === 'a_valider'), T = R.filter(x => x.statut !== 'a_valider'), q = D.questionnaire;
     const promo = q.promo ? (D.promos.find(p => p.id === q.promo) || null) : null;
-    const tab = L => `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Bureau</th><th>Personne</th><th>Reçu</th><th>Bon</th><th></th></tr></thead><tbody>${L.map(x => `<tr class="pcl-ligne${B.devSel === x.id ? ' is-sel' : ''}" data-act="dev-sel" data-id="${x.id}">
+    const tab = L => `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Bureau</th><th>Personne</th><th>Reçu</th><th>Bon</th><th>Statut</th><th></th></tr></thead><tbody>${L.map(x => `<tr class="pcl-ligne${B.devSel === x.id ? ' is-sel' : ''}" data-act="dev-sel" data-id="${x.id}">
       <td>${esc(x.bureau)}${x.erreurs.length ? ' <span class="tag-warn" title="' + esc(x.erreurs.join(' · ')) + '">à reprendre</span>' : ''}<span class="sub">${esc([x.societe, x.tva, x.ville].filter(Boolean).join(' · '))}</span></td>
       <td>${esc(x.personne)}<span class="sub">${esc(x.fonction || x.email)}</span></td><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(SOURCES[x.source] || x.source)}</span></td>
       <td>${x.bon ? `<span class="pcl-bon">${esc(x.bon.code)}</span>` : '<span class="muted">—</span>'}</td>
-      <td class="num">${x.statut === 'a_valider' ? '<span class="btn btn--sm">Valider</span>' : etiquetteDev(x.statut)}</td></tr>`).join('')}</tbody></table></div>`;
-    return `<section class="card pcl-carte pcl-dev"><div class="pcl-dev-tete"><div><div class="pcl-dev-titre">Bureaux en développement${A.length ? ` <span class="page-tabs__count">${A.length} à valider</span>` : ''}</div>
+      <td>${etiquetteDev(x.statut)}</td><td class="num">${x.statut === 'a_valider' ? '<span class="btn btn--sm">Valider</span>' : ''}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<section class="card pcl-carte pcl-dev" id="pcl-dev"><div class="pcl-dev-tete"><div><div class="pcl-dev-titre">Bureaux en développement</div>
         <div class="pcl-aide">Chaque inscription crée le compte webshop de la personne${promo ? ', son bon' : ''} et la société dans TF Buddy ; si le bureau de sa société existe déjà, elle le rejoint aussitôt. Sinon, le bureau attend ici votre validation.</div></div>
         <span class="pcl-sp"></span><button type="button" class="btn btn--sm btn--primary" data-act="dev-nouveau">${SVG(ICO.plus)}Nouveau bureau en développement</button></div>
-      ${blocLien()}${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}</section>`;
+      ${blocLien()}${blocTournees()}${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}${blocHorsZone(H)}</section>`;
+  }
+  /** Ce que voient vos clients (27/11/2026, Sam : « la base sont les tournées webshop ») : les tournées que le webshop
+   *  publie pour ce magasin. Les deux pages Livraison au bureau (celle d'atelierby.be, celle du webshop) n'affichent
+   *  qu'elles : jours, créneau et heure limite viennent de TF Buddy, sans aucun chiffre écrit ailleurs. */
+  function blocTournees() {
+    const T = st.b.tour, titre = '<div class="pcl-lien-titre">Ce que voient vos clients</div>';
+    if (!T || T.lecture) { return `<div class="pcl-tz">${titre}<div class="pcl-aide">Lecture des tournées publiées…</div></div>`; }
+    const L = T.tournees || [];
+    const jours = t => t.jours.length ? `<span class="pcl-jours7">${JOURS.map(j => `<i class="${t.jours.includes(j[0]) ? 'on' : ''}">${j[1]}</i>`).join('')}</span>` : '<span class="muted">—</span>';
+    const corps = !T.ok ? `<div class="pcl-aide">${esc(T.motif || 'TF Buddy ne donne pas les tournées.')}</div>`
+      : !L.length ? `<div class="pcl-manque">${SVG(ICO.alerte)}<div><b>Aucune tournée publiée.</b> Ce magasin n’apparaît pas dans la liste des zones des pages Livraison au bureau : un bureau de votre région ne peut que laisser une demande « Ma zone n’est pas dans la liste ». Les tournées se créent dans TF Buddy.</div></div>`
+      : `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Tournée</th><th>Jours livrés</th><th>Créneaux de livraison</th><th>Heure limite de commande</th></tr></thead><tbody>${L.map(t => `<tr>
+          <td>${esc(t.nom)}${t.zone ? `<span class="sub">${esc(t.zone)}</span>` : ''}</td><td>${jours(t)}</td>
+          <td>${esc((t.creneaux.length ? t.creneaux.join(' / ') : t.de && t.a ? t.de + '–' + t.a : '') || '—')}</td>
+          <td>${esc(t.limite || '—')}${t.preavis ? `<span class="sub">préavis minimum ${nf(t.preavis)} h</span>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="pcl-tz">${titre}<div class="pcl-aide">Les tournées que le webshop publie pour ce magasin. La page Livraison au bureau d’atelierby.be et celle du webshop n’affichent que celles-ci.</div>${corps}</div>`;
+  }
+  /** Les demandes hors zone (27/11/2026, Sam : « une copie de toutes les demandes sur le cockpit ») : chaque « Ma zone
+   *  n'est pas dans la liste » des deux pages, rangée à la boutique la plus proche choisie par le visiteur. TF Buddy reçoit
+   *  l'original ; une copie qu'il n'a pas prise se renvoie d'ici. */
+  function blocHorsZone(H) {
+    const B = st.b, ORI = { landing: 'page atelierby.be', webshop: 'page du webshop' };
+    const msg = B.hzMsg ? `<p class="${B.hzMsg.err ? 'error' : 'pcl-ok'}" style="margin:6px 0">${esc(B.hzMsg.err || B.hzMsg.texte)}</p>` : '';
+    const tete = `<div class="pcl-lien-titre">Demandes hors zone${H.length ? ` <span class="page-tabs__count">${nf(H.length)}</span>` : ''}</div>
+      <div class="pcl-aide">Les bureaux qui ne trouvent pas leur zone sur une page Livraison au bureau et choisissent ce magasin comme le plus proche. L’original part dans TF Buddy ; la copie reste ici 90 jours.</div>`;
+    if (!H.length) { return `<div class="pcl-tz">${tete}${msg}</div>`; }
+    const km = v => v != null ? String(v).replace('.', ',') + ' km du magasin' : '';
+    const ligne = x => {
+      const d = x.d || {}, ok = d._tfbuddy === 'ok';
+      return `<tr><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(ORI[d.origine] || '')}</span></td>
+        <td>${esc([x.cp, x.ville].filter(Boolean).join(' '))}${d.distance != null ? `<span class="sub">${esc(km(d.distance))}</span>` : ''}</td>
+        <td>${esc(x.societe || '—')}${x.personnes ? `<span class="sub">${nf(x.personnes)} personnes</span>` : ''}</td>
+        <td>${x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ''}</td>
+        <td>${ok ? '<span class="chip chip--ok">reçue</span>' : `<span class="tag-warn" title="${esc(x.erreurs.join(' · '))}">pas reçue</span>`}</td>
+        <td class="num">${ok ? '' : `<button type="button" class="btn btn--sm" data-act="hz-renvoyer" data-id="${x.id}"${B.hzBusy === x.id ? ' disabled' : ''}>Renvoyer</button>`}</td></tr>`;
+    };
+    return `<div class="pcl-tz">${tete}${msg}<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Reçue</th><th>Code postal · commune</th><th>Société</th><th>E-mail</th><th>TF Buddy</th><th></th></tr></thead><tbody>${H.map(ligne).join('')}</tbody></table></div></div>`;
   }
   /** Le tiroir d'une demande : ce qu'elle a créé dans TF Buddy, et la validation (le bureau créé, la personne reliée). */
   function tiroirDemande() {
@@ -653,18 +761,23 @@
     if (!d.kpi) { return barre + refus(d.panel || {}, 'Le tableau de bord B2B'); }
     const mo = MC[(A.mois + 10) % 12] + (d.memesJours ? ' (1–' + d.memesJours + ')' : ''), an = MC[A.mois - 1] + '. ' + (A.annee - 1);
     const fl = (x, pts) => x == null ? '<span class="muted">—</span>' : `<span class="${x >= 0 ? 'pcl-up' : 'pcl-down'}">${x >= 0 ? '▲ +' : '▼ '}${nf(x, 1).replace(',0', '')}${pts ? ' pt' : ' %'}</span>`;
-    const K = d.kpi, carte = (k, l, v, fort) => `<div class="card pcl-k6${fort ? ' fort' : ''}"><div class="l">${l}</div><div class="v">${v}</div><div class="t">${fl(K[k].mom, k === 'part')} vs ${mo}${fl(K[k].yoy, k === 'part')} vs ${an}</div></div>`;
+    const K = d.kpi, ecarts = k => `${fl(K[k].mom, k === 'part')} vs ${mo} · ${fl(K[k].yoy, k === 'part')} vs ${an}`;
     const v = (k, f) => K[k].v == null ? '—' : f(K[k].v);
-    const kpis = `<div class="pcl-kpi6">${carte('ventes', 'Ventes B2B', v('ventes', fE0), true)}${carte('tickets', 'Tickets B2B', v('tickets', x => nf(x)))}${carte('panier', 'Panier moyen B2B', v('panier', fE))}
-      ${carte('clients', 'Clients B2B uniques', v('clients', x => nf(x)))}${carte('part', 'Part B2B du CA', v('part', x => nf(x, 1) + ' %'))}${carte('factures', 'Factures B2B', v('factures', x => nf(x)) + (K.factures.ca ? ' · ' + fE0(K.factures.ca) : ''))}</div>`;
+    // Le résumé (26/11/2026, §7.13) remplace les six cartes : les ventes B2B (la valeur clé) et leur écart au même mois l'an
+    // dernier en mots (vert au-dessus, or en dessous) ; les tickets, le panier, les clients, les factures en contexte. La part
+    // du chiffre vit dans sa carte, à côté du graphique (un chiffre, une place). Un onglet de lecture : pas de « À corriger ».
+    const yv = K.ventes.yoy, mot = yv == null ? null : yv >= 0 ? { sig: 'green', mot: 'au-dessus de ' + an } : { sig: 'prize', mot: 'sous ' + an };
+    const ctx = (k, l, f) => `<p>${l} ${v(k, f)}<span>${ecarts(k)}</span></p>`;
+    const kpis = resume({ aria: 'Résumé de l’analyse B2B', v: v('ventes', fE0), et: mot, q: 'de ventes B2B en ' + MOIS[A.mois - 1] + ' ' + A.annee, q2: ecarts('ventes'),
+      ctx: [ctx('tickets', 'Tickets', x => nf(x)) + ctx('panier', 'Panier moyen', fE), ctx('clients', 'Clients uniques', x => nf(x)) + ctx('factures', 'Factures', x => nf(x) + (K.factures.ca ? ' · ' + fE0(K.factures.ca) : ''))] });
     // Le graphique se relit à chaque mois et chaque métrique (le panel gardait les données du premier affichage).
     const m = A.metrique, G = d.graphique || [], max = Math.max(1, ...G.map(x => Math.max(x[m][0] || 0, x[m][1] || 0)));
     const barres = `<div class="pcl-barres">${G.map(x => `<div class="m${x.mois === A.mois ? ' is-mois' : ''}" title="${MOIS[x.mois - 1]} : ${A.annee} ${x[m][0] == null ? '—' : nf(x[m][0], m === 'part' ? 1 : 0)} · ${A.annee - 1} ${x[m][1] == null ? '—' : nf(x[m][1], m === 'part' ? 1 : 0)}">
       <i class="a" style="height:${100 * (x[m][0] || 0) / max}%"></i><i class="p" style="height:${100 * (x[m][1] || 0) / max}%"></i></div>`).join('')}</div><div class="pcl-mois12">${MC.map(x => `<span>${x}</span>`).join('')}</div>`;
     const part = K.part.v, ca = d.ca;
     const donut = part == null ? '<div class="pcl-aide">La part du chiffre ne se calcule pas pour ce mois.</div>' : `<svg viewBox="0 0 120 120" class="pcl-donut"><circle cx="60" cy="60" r="44" fill="none" stroke="#EDE7DE" stroke-width="18"/><circle cx="60" cy="60" r="44" fill="none" stroke="#8D1D2C" stroke-width="18" stroke-dasharray="${2 * Math.PI * 44 * Math.min(100, part) / 100} 999" transform="rotate(-90 60 60)"/><text x="60" y="65" text-anchor="middle" font-family="Gotham, system-ui" font-size="16" fill="#1c1a17">${nf(part, 1)} %</text></svg>
-      ${K.ventes.v != null ? ligneF('B2B', fE0(K.ventes.v)) : ''}${ca != null && K.ventes.v != null ? ligneF('Le reste du chiffre', fE0(ca - K.ventes.v)) : ''}`;
-    const notes = (d.source === 'releve' ? note(esc(d.texte) + (d.memesJours ? ` Le mois en cours se compare aux ${d.memesJours} premiers jours du mois d’avant et de ${MOIS[A.mois - 1]} ${A.annee - 1}.` : '') + (d.couverture && d.couverture.lus < d.couverture.jours ? ` <b>${d.couverture.lus} jours lus sur ${d.couverture.jours}</b> : les autres seront relus par le relevé de nuit.` : '') + (d.panel ? '<br>' + esc(d.panel.texte) + (!d.panel.magasin || d.panel.magasinExpire ? '<div style="margin-top:8px">' + tfbBouton() + '</div>' : '') : ''), 'pcl-note-doux') : '');
+      <div class="pcl-part-e">${ecarts('part')}</div>${ca != null && K.ventes.v != null ? ligneF('Le reste du chiffre', fE0(ca - K.ventes.v)) : ''}`;
+    const notes = (d.source === 'releve' ? note(esc(d.texte) + (d.memesJours ? ` Le mois en cours se compare aux ${d.memesJours} premiers jours du mois d’avant et de ${MOIS[A.mois - 1]} ${A.annee - 1}.` : '') + (d.couverture && d.couverture.lus < d.couverture.jours ? ` ${d.couverture.lus} jours lus sur ${d.couverture.jours} : les autres seront relus par le relevé de nuit.` : '') + (d.panel ? '<br>' + esc(d.panel.texte) + (!d.panel.magasin || d.panel.magasinExpire ? '<div style="margin-top:8px">' + tfbBouton() + '</div>' : '') : ''), 'pcl-note-doux') : '');
     return barre + notes + kpis + `<div class="pcl-an2"><section class="card"><h2 class="pcl-h2">Ventes B2B, mois par mois<small>${seg('a-metrique', m, [['ventes', 'Ventes'], ['tickets', 'Tickets'], ['clients', 'Clients'], ['part', 'Part du CA']])}</small></h2>${barres}
       <div class="pcl-leg"><span><i style="background:var(--accent)"></i>${A.annee}</span><span><i style="background:#EBD3D8"></i>${A.annee - 1}</span></div></section>
       <section class="card"><h2 class="pcl-h2">Part B2B du chiffre</h2>${donut}<div class="pcl-aide" style="margin-top:8px">Un pro = une fiche avec une TVA valide, comme la jauge B2B de l’Opérationnel.</div></section></div>`;
@@ -747,6 +860,7 @@
     // Le tiroir garde son défilement d'un rendu à l'autre, sauf quand on change de bureau (hautTiroir = 0).
     const tc2 = st.el.querySelector('.pcl-tir-corps'); if (tc2 && haut != null) { if (st.b.hautTiroir === 0) { st.b.hautTiroir = null; } else { tc2.scrollTop = haut; } }
     if (id) { const i = st.el.querySelector('#' + id); if (i) { i.focus(); if (pos != null && i.setSelectionRange) { try { i.setSelectionRange(pos, pos); } catch (e) { /* champ sans curseur */ } } } }
+    vuAppliquer();
   }
   const ouvrir = (type, f, plus) => { st.mo = Object.assign({ type, f: Object.assign({}, f || {}), err: null, busy: false }, plus || {}); rendre(); };
   const vide = o => { const r = {}; Object.keys(o).forEach(k => { r[k] = o[k] == null ? '' : o[k]; }); return r; };
@@ -788,7 +902,7 @@
     const P = st.p, E = st.e, B = st.b, A = st.a, m = st.mo;
     switch (act) {
       case 'fermer': st.mo = null; rendre(); break;
-      case 'onglet': st.onglet = v; memo('pcl-onglet:' + st.shop, v); st.mo = null; if (v === 'b2c' && !P.d) { lireParticuliers(); } else if (v === 'b2b' && !E.d) { charger(); } else if (v === 'bur') { if (!B.d) { lireBureaux(); } lireDev(); }   // les bureaux en développement se lisent même si Entreprises B2B a déjà lu les bureaux (26/11/2026) else if (v === 'an' && !A.d) { lireAnalyse(); } else { rendre(); } break;
+      case 'onglet': st.onglet = v; memo('pcl-onglet:' + st.shop, v); st.mo = null; if (v === 'b2c' && !P.d) { lireParticuliers(); } else if (v === 'b2b' && !E.d) { charger(); } else if (v === 'bur') { if (!B.d) { lireBureaux(); } lireDev(); } /* les bureaux en développement se lisent même si Entreprises B2B a déjà lu les bureaux (26/11/2026) */ else if (v === 'an' && !A.d) { lireAnalyse(); } else { rendre(); } break;
       case 'aller-offres': if (st.aller) { st.aller('offres'); } break;
       case 'tfb-connecter': if (window.DashTfb) { window.DashTfb.ouvrir(st.shop, st.api, toutRelire); } break;
       case 'tfb-deconnecter': if (window.DashTfb) { window.DashTfb.deconnecter(st.shop, st.api).then(toutRelire); } break;
@@ -811,6 +925,7 @@
       case 'e-ca': E.ca = v; rendre(); break;
       case 'e-freq': E.freq = v; rendre(); break;
       case 'e-sel': lireFiche(E, id); break;
+      case 'ac-e': lireFiche(E, id); montrer('.pcl-fiche'); break;   // « À corriger » : la fiche, encadrée un instant
       case 'e-offre': { const c = E.d.entreprises.find(x => x.id === id) || {}; offre({ id, nom: c.nom || (E.fiche && E.fiche.client.nom), b2b: true, ville: c.ville }); break; }
       case 'e-ajouter': ouvrir('e-ajouter', { tax_number: '', company_name: '', street: '', street_number: '', zip: '', city: '', phone: '', email: '' }); break;
       case 'e-ajouter-ok': ecrire({ action: 'creer', entreprise: true, champs: m.f }, d => lireEntreprises(true).then(() => d.id ? lireFiche(E, d.id) : null)); break;
@@ -851,6 +966,9 @@
       case 'w-logo-retirer': B.w.logo = null; B.w.logoErr = null; rendre(); break;
       case 'geo-place': geoChoisir(a.dataset.cle, a.dataset.id); break;
       case 'dev-traitees': B.devTraitees = !B.devTraitees; rendre(); break;
+      case 'hz-renvoyer': B.hzBusy = id; B.hzMsg = null; rendre();
+        envoyer('/dashboard/bureaux-dev/renvoyer', { id }).then(() => { B.hzMsg = { texte: 'Demande remise à TF Buddy.' }; return lireDev(); })
+          .catch(e => { B.hzMsg = { err: e.message }; }).finally(() => { B.hzBusy = null; rendre(); }); break;
       case 'dev-sel': B.devSel = id; B.entre = true; B.devMsg = null; B.sel = null; rendre(); if (B.d && B.d.ok) { lireOptions().then(rendre); } break;
       case 'dev-fermer': B.devSel = null; B.devMsg = null; rendre(); break;
       case 'dev-bureau': B.devSel = null; B.sel = id; B.entre = true; rendre(); break;

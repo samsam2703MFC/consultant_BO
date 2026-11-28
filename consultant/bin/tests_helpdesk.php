@@ -402,5 +402,14 @@ wr_helpdesk_repondre(909);
 $c = ep_helpdesk_demandes(); $x = array_values(array_filter($c['demandes'], static fn ($d) => $d['id'] === 909))[0] ?? [];
 verifie('une réponse avec « Résolue » est gardée de même', ($x['statut'] ?? '') === 'RESOLVED' && !empty($x['statutAttente']));
 
+// Les demandes que le panel écrit en polonais, remises en français (27/11/2026).
+$pl = hdkDemande(['id' => 77, 'area_key' => 'webshop_billing_vat_conflict', 'status' => 'NEW', 'title' => 'Konflikt NIP Webshop: BE0838388420',
+    'description' => 'Kilka rekordów firmowych ma ten sam numer VAT BE0838388420. Sprawdź rekordy klientów B2B: 62, 9135. Próba dodania firmy do faktur na koncie klienta #13178.']);
+verifie('le titre polonais du panel passe en français', $pl['titre'] === 'Conflit de n° de TVA sur le webshop : BE0838388420');
+verifie('la description polonaise passe en français, avec ses valeurs', $pl['description'] === 'Plusieurs fiches société ont le même n° de TVA BE0838388420. Vérifiez les fiches des clients B2B 62 et 9135. Le problème est apparu en ajoutant la société aux factures du compte client n° 13178.');
+verifie('le domaine du panel a un nom français', $pl['domaineNom'] === 'Webshop : n° de TVA en double');
+$fr = hdkDemande(['id' => 78, 'area_key' => 'strategy', 'title' => 'Vitrine', 'description' => 'Texte libre du magasin.']);
+verifie('un texte hors modèle reste tel quel', $fr['titre'] === 'Vitrine' && $fr['description'] === 'Texte libre du magasin.');
+
 echo "\n" . $ok . ' ok, ' . $ko . " KO\n";
 exit($ko > 0 ? 1 : 0);

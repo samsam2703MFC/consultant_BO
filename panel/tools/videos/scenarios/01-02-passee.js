@@ -33,7 +33,8 @@ module.exports = async function () {
   await rien(f);
 
   await enHautDe(f, '.vt', 30);
-  await dire(f, '.vt .vt-top', 'Ont manqué', 'La vitrine dit ce qui <b>a manqué</b>, et les ventes perdues.', 4000);
+  await f.montrerTout('.vt .vt-h .rs', 'Ont manqué');
+  await f.dire('La vitrine dit ce qui <b>a manqué</b>, et les ventes perdues.', 4000);
   await f.montrerTout('.vt .vt-h', 'Par durée de vie');
   await f.dire('Par durée de vie : les produits vides alors que des clients les demandaient encore.', 4400);
   await rien(f);

@@ -54,6 +54,9 @@
     if (s === '') { return null; }
     const v = parseFloat(s); return isNaN(v) ? undefined : v;
   };
+  /** L'état d'un cash (§7.13, une échelle et ses mots) : découvert --stop, sous le coussin --prize, au-dessus --green. */
+  const etatCash = (v, coussin) => v < 0 ? { sig: 'stop', mot: 'découvert' } : (v < coussin ? { sig: 'prize', mot: 'sous le coussin' } : { sig: 'ok', mot: 'au-dessus du coussin' });
+  const pl = (k, s, p) => k + ' ' + (k > 1 ? p : s);
   const clone = o => JSON.parse(JSON.stringify(o));
   const objet = v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
   const liste = v => Array.isArray(v) ? v : [];
@@ -317,9 +320,12 @@
     E.fmt = {};
     // Le défilement de côté des grilles survit au redessin (25/11/2026 : chaque saisie ramenait le tableau à gauche, loin
     // de la case tapée — une remarque, le × d'un paiement).
-    const ongAvant = E.onglet, defil = [...racine.querySelectorAll('.tr-defil')].map(x => x.scrollLeft);
+    // Les grilles défilent aussi de haut en bas dans leur fenêtre (tête collée, 26/11/2026) : la hauteur survit de même.
+    // Un geste d'« À corriger » qui déplace la fenêtre de semaines repart de la gauche (E.defil0).
+    const ongAvant = E.onglet, defil = [...racine.querySelectorAll('.tr-defil')].map(x => [x.scrollLeft, x.scrollTop]);
     racine.innerHTML = corps();
-    if (E.onglet === ongAvant) { racine.querySelectorAll('.tr-defil').forEach((x, i) => { if (defil[i]) { x.scrollLeft = defil[i]; } }); }
+    if (E.onglet === ongAvant) { racine.querySelectorAll('.tr-defil').forEach((x, i) => { if (defil[i]) { if (!E.defil0) { x.scrollLeft = defil[i][0]; } x.scrollTop = defil[i][1]; } }); }
+    E.defil0 = false;
     const X = extraActif(), ext = X && racine.querySelector('[data-trext]');
     if (ext && typeof X.rendre === 'function') {
       try { X.rendre(ext); } catch (e) { ext.innerHTML = `<div class="db-err">${esc(X.nom || X.cle)} : ${esc(e.message)}</div>`; }
@@ -415,14 +421,62 @@
       <button type="button" class="tr-nav" data-tra="nav:1" aria-label="Semaines suivantes">›</button>
       <span class="tr-plage">${esc(dCourt(a.ms) + ' ' + a.annee + ' → ' + dCourt(b.dimanche) + ' ' + new Date(b.dimanche).getUTCFullYear())}</span></div></div>`;
   }
-  /** Les deux lignes d'entête des colonnes (le mois, puis le lundi). */
-  function entete(C, F, larg, libelle, total) {
+  /**
+   * Les deux lignes d'entête des colonnes (le mois, puis le lundi), collées en haut de la fenêtre de la grille
+   * (26/11/2026, §7.13 « le statut dans la colonne, la tête collée ») ; `statut(i)` : l'état de la semaine, dit dans sa
+   * colonne — un point et un mot ({sig, mot}), ou rien quand tout va bien.
+   */
+  function entete(C, F, larg, libelle, total, statut) {
     const W = C.W;
-    let h = `<div class="tr-r"><div class="tr-lab tr-lab-vide" style="width:${larg}px"></div>`;
+    let h = `<div class="tr-tete"><div class="tr-r"><div class="tr-lab tr-lab-vide" style="width:${larg}px"></div>`;
     F.vis.forEach((i, k) => { const w = W[i], prem = k === 0 || W[i - 1].mois !== w.mois; h += `<div class="tr-c tr-mois${i === C.cur ? ' cur' : ''}">${prem ? esc(MO[w.mois] + ' ' + w.annee) : ''}</div>`; });
     h += `<div class="tr-tot"></div></div><div class="tr-r tr-r-hd"><div class="tr-lab tr-lab-hd" style="width:${larg}px">${libelle}</div>`;
-    F.vis.forEach(i => { const w = W[i]; h += `<div class="tr-c tr-chd${i === C.cur ? ' cur' : ''}">${i === C.cur ? '<span class="tr-cette">Cette semaine</span>' : ''}<b>${dm(w.ms)}</b><small>S${w.iso} · sem. ${w.sdm}</small></div>`; });
-    return h + `<div class="tr-tot tr-tot-hd">${total}</div></div>`;
+    F.vis.forEach(i => {
+      const w = W[i], st = statut ? statut(i) : null;
+      h += `<div class="tr-c tr-chd${i === C.cur ? ' cur' : ''}" id="tr-col-${i}">${i === C.cur ? '<span class="tr-cette">Cette semaine</span>' : ''}<b>${dm(w.ms)}</b><small>S${w.iso} · sem. ${w.sdm}</small>${st ? `<span class="tr-st"><i class="trs-ic trs-${st.sig}" aria-hidden="true"></i>${esc(st.mot)}</span>` : ''}</div>`;
+    });
+    return h + `<div class="tr-tot tr-tot-hd">${total}</div></div></div>`;
+  }
+
+  /* --- le résumé et « À corriger » (26/11/2026, docs/DESIGN_SYSTEM.md §7.13) -------------------------------------------
+   * En haut de chaque onglet qui se corrige : le chiffre clé (24 px, le seul gras), son état en mots, ce qu'il mesure ;
+   * puis « À corriger » : ce qui demande un geste aujourd'hui ou plus tard, un bouton par point, qui mène au geste qui
+   * existe déjà (l'onglet, la fenêtre de semaines, la case — mise en évidence un instant, et la main donnée au champ s'il
+   * y a quelque chose à taper). Rien n'y est calculé : chaque point vient de ce que l'onglet compte déjà.
+   * Un point : { sig: 'stop' | 'prize', txt, voir: « onglet,id de la cible,semaine,clé du champ » }. */
+  function aCorriger(L, ok) {
+    if (!L.length) { return `<div class="trs-l2"><p class="trs-rien">${esc(ok)}</p></div>`; }
+    return `<div class="trs-l2" role="region" aria-label="À corriger"><span class="trs-ct">À corriger</span>${L.map(x => `<button type="button" class="btn btn--sm trs-b" data-tra="voir:${esc(x.voir)}"${x.title ? ` title="${esc(x.title)}"` : ''}><i class="trs-ic trs-${x.sig}" aria-hidden="true"></i>${esc(x.txt)}</button>`).join('')}</div>`;
+  }
+  /** Le résumé court d'un onglet : une ligne (la valeur, son état, ce qu'elle mesure), puis « À corriger ». */
+  function resumeCourt(o) {
+    return `<section class="tr-carte trs trs-court" aria-label="${esc(o.aria)}"><div class="trs-cle"><span class="trs-v">${esc(o.v)}</span>${o.etat ? `<span class="trs-niv"><i class="trs-ic trs-${o.etat.sig}" aria-hidden="true"></i>${esc(o.etat.mot)}</span>` : ''}<span class="trs-q">${esc(o.q)}<small>${esc(o.s || '')}</small></span></div>${aCorriger(o.L, o.ok)}</section>`;
+  }
+  /** Le geste d'un point : l'onglet, la fenêtre de semaines qui montre la semaine, la cible à l'écran, encadrée un instant. */
+  function voir(a, C, F) {
+    const S = E, [ong, id, sem, foc] = a.split(',');
+    if (ong) { S.onglet = ong; }
+    if (sem !== '' && sem != null) { S.decal = F.borne(+sem - (F.nW >= C.N ? 0 : 1)); S.defil0 = true; }
+    S.edition = null;
+    rendre();
+    const el = id && racine.querySelector('#' + CSS.escape(id)); if (!el) { return; }
+    const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    // Une case d'une grille : sa fenêtre défile d'abord jusqu'à elle (sous la tête collée), puis la page jusqu'à la carte.
+    const def = el.closest('.tr-defil');
+    if (def) {
+      const tete = def.querySelector('.tr-tete, .tr-pay-hd, thead'), ht = tete ? tete.offsetHeight : 0;
+      const y = el.getBoundingClientRect().top - def.getBoundingClientRect().top + def.scrollTop;
+      if (y - ht < def.scrollTop || y + el.offsetHeight > def.scrollTop + def.clientHeight) { def.scrollTop = Math.max(0, y - ht - 8); }
+    }
+    const bloc = el.closest('.tr-carte') || el;
+    bloc.style.scrollMarginTop = '16px';
+    bloc.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+    [el, sem !== '' && sem != null ? racine.querySelector('#tr-col-' + sem) : null].forEach(x => {
+      if (!x) { return; }
+      x.classList.remove('trs-vu'); void x.offsetWidth; x.classList.add('trs-vu');
+      clearTimeout(x._trsT); x._trsT = setTimeout(() => x.classList.remove('trs-vu'), 1800);
+    });
+    if (foc) { const f = racine.querySelector(`[data-trn="${CSS.escape(foc)}"]`); if (f) { f.focus({ preventScroll: true }); } }
   }
 
   function rendPlan(C, d, R, auj) {
@@ -430,13 +484,71 @@
     const statut = v => v < 0 ? 'neg' : (v < C.coussin ? 'bas' : '');
     let h = '';
 
-    // La routine du dimanche et la décision.
+    /* Le résumé (26/11/2026, §7.13) : le cash prévu à la fin de cette semaine, son état, le point bas de la période, la
+     * décision des 4 semaines à venir, les repères de l'année ; puis « À corriger ». Il remplace la carte « La décision »
+     * (ses quatre cases sont la ligne « Cash fin de semaine » de la grille et le graphique) et la rangée des cinq chiffres
+     * clés (le point bas et les semaines sous le coussin y sont fondus ; les ventes prévues de l'année sont le total de la
+     * ligne Encaissements ; leurs écarts, la marchandise et le personnel passent dans la ligne des repères). */
+    const ic = Math.max(0, Math.min(N - 1, C.cur)), vC = C.fin[ic], eC = etatCash(vC, C.coussin);
+    const s4 = Math.max(0, Math.min(N - 4, C.cur));
+    const p4 = [0, 1, 2, 3].map(k => s4 + k).filter(i => i < N);
+    const j4n = p4.find(i => C.fin[i] < 0), j4b = p4.find(i => C.fin[i] < C.coussin);
+    const lev = j4n != null ? ['Décide tout de suite quoi décaler', `Découvert prévu la semaine du ${dm(W[j4n].ms)} : tu ne peux pas tout payer. Préviens avant l’échéance, pas après.`]
+      : (j4b != null ? ['Décide tout de suite quoi décaler', `Sous ton coussin la semaine du ${dm(W[j4b].ms)}. Préviens avant l’échéance, pas après.`]
+        : ['Rien à décaler', 'Le cash prévu reste au-dessus de ton coussin sur les 4 semaines à venir.']);
+    const depReel = ic > 0 && C.reel[ic - 1] != null;
+    const eB = etatCash(C.bas, C.coussin);
+    const plaf = +d.plafond || 0, tauxP = R.taux && R.taux.personnel ? R.taux.personnel / 100 : null;
+    const ventesRep = (C.budA ? 'budget ' + pctS(C.vBud / C.budA - 1) + (C.budK < C.nbA ? ` (${C.budK} sem.)` : '') : 'pas de budget') + ', ' + (C.n1A ? 'N-1 ' + pctS(C.vN1 / C.n1A - 1) + (C.n1K < C.nbA ? ` (${C.n1K} sem.)` : '') : 'pas de N-1');
+    const repMat = audela(C.matPct, plaf) ? { sig: 'prize', mot: 'au-dessus du plafond' } : null;
+    const repPers = tauxP && audela(C.persPct, tauxP) ? { sig: 'prize', mot: 'au-dessus de la cible' } : null;
+    const rep = (txt, et, titre) => `<span class="trs-rep"${titre ? ` title="${esc(titre)}"` : ''}>${esc(txt)}${et ? `<span class="trs-niv"><i class="trs-ic trs-${et.sig}" aria-hidden="true"></i>${esc(et.mot)}</span>` : ''}</span>`;
+
+    // « À corriger » : le solde du dimanche, les semaines qui passent sous le coussin ou à découvert (à partir de cette
+    // semaine), les semaines sans ventes prévues, les dettes hors plan.
+    const L = [];
+    if (C.dernierDim < 0) {
+      if (d.startCash == null || d.startCashNote) { L.push({ sig: 'stop', txt: 'Cash réel de départ à saisir', voir: 'plan,tr-dim,,start#dim', title: 'Tant qu’il est vide, le plan part de 0 €' }); }
+    } else {
+      const i = C.dernierDim, du = W[i].du, e = C.ecart[i];
+      if (d.reel[du] == null) { L.push({ sig: 'prize', txt: `Solde réel du dimanche ${dm(W[i].dimanche)} à saisir`, voir: `plan,tr-dim,,r:${du}#dim` }); }
+      else if (e != null && Math.abs(e) > SEUIL_ECART) { L.push({ sig: 'prize', txt: `Écart de ${(e > 0 ? '+' : '') + eur(e)} au dimanche ${dm(W[i].dimanche)} à expliquer`, voir: 'plan,tr-dim,,' }); }
+      const autres = W.map((w, k) => k).filter(k => k !== i && W[k].dimanche < auj && C.reel[k] == null);
+      if (autres.length) { L.push({ sig: 'prize', txt: `${pl(autres.length, 'autre dimanche', 'autres dimanches')} sans solde réel`, voir: `plan,tr-reel-${autres[0]},${autres[0]},r:${W[autres[0]].du}` }); }
+    }
+    const aVenir = W.map((w, k) => k).filter(k => k >= ic);
+    const neg = aVenir.filter(k => C.fin[k] < 0), bas = aVenir.filter(k => C.fin[k] >= 0 && C.fin[k] < C.coussin);
+    if (neg.length) { L.push({ sig: 'stop', txt: `Découvert prévu la semaine du ${dm(W[neg[0]].ms)} · ${eur(C.fin[neg[0]])}${neg.length > 1 ? ' · ' + neg.length + ' semaines' : ''}`, voir: `plan,tr-fin-${neg[0]},${neg[0]},` }); }
+    if (bas.length) { L.push({ sig: 'prize', txt: `Sous le coussin la semaine du ${dm(W[bas[0]].ms)} · ${eur(C.fin[bas[0]])}${bas.length > 1 ? ' · ' + bas.length + ' semaines' : ''}`, voir: `plan,tr-fin-${bas[0]},${bas[0]},` }); }
+    if (C.sansBase) {
+      const k0 = W.findIndex((w, k) => C.genre[k] === 'vide' && !w.ref.complet);
+      L.push({ sig: 'prize', txt: `${pl(C.sansBase, 'semaine', 'semaines')} sans ventes prévues`, voir: `plan,tr-ventes-${k0},${k0},s:${W[k0].du}`, title: 'Ni budget ni année passée : leurs ventes sont à 0 tant que tu ne les tapes pas' });
+    }
+    const horsT = d.hors.reduce((t, x) => t + (+x.montant || 0), 0), horsV = d.hors.filter(x => x.montant == null);
+    if (horsT > 0 || horsV.length) {
+      L.push({ sig: 'prize', txt: [horsT > 0 ? 'Hors plan : dettes à mettre en échéancier' : 'Hors plan', horsV.length ? pl(horsV.length, 'montant à demander', 'montants à demander') : ''].filter(Boolean).join(' · '),
+        voir: 'plan,tr-hors,,' + (horsV.length ? 'h:' + horsV[0].id : ''), title: 'Tant qu’une dette n’est pas dans l’onglet Paiements, ton cash prévu est trop beau' });
+    }
+
+    h += `<section class="tr-carte trs" aria-label="Le cash prévu"><div class="trs-l1">
+        <div class="trs-vv"><span class="trs-v">${esc(eur(vC))}</span><span class="trs-niv"><i class="trs-ic trs-${eC.sig}" aria-hidden="true"></i>${esc(eC.mot)}</span></div>
+        <div class="trs-q">de cash prévu dimanche ${esc(dLong(W[ic].dimanche))}<small>fin de cette semaine, partie de ${esc(eur(C.debut[ic]))} lundi ${depReel ? '(le solde réel du dimanche)' : (ic === 0 ? '(le cash de départ)' : '(le cash prévu)')}</small></div>
+        <div class="trs-g"><span class="trs-pb" title="Le moment où ton compte sera le plus bas. Négatif : un problème à régler avant la semaine indiquée.">Point bas de la période : ${esc(eur(C.bas))}, semaine du ${esc(dm(W[C.basIdx].ms) + '/' + W[C.basIdx].annee)}<span class="trs-niv"><i class="trs-ic trs-${eB.sig}" aria-hidden="true"></i>${esc(eB.mot)}</span></span>
+          <small>Coussin ${esc(eur(C.coussin))} · ${esc(pl(C.sous, 'semaine', 'semaines'))} sur ${N} en dessous</small></div>
+        <div class="trs-lev"><span class="trs-lh">${esc(lev[0])}</span><span>${esc(lev[1])}</span></div>
+        <p class="trs-meta">Repères ${C.anT} ·
+          ${rep('ventes prévues : ' + ventesRep, null, 'Les ventes du plan sur l’année, face au budget validé et à l’année passée, sur les semaines qui ont l’un ou l’autre. Le total est celui de la ligne Encaissements.')}
+          ${rep('marchandises ' + pct(C.matPct) + ' des ventes, plafond ' + pct(plaf), repMat)}
+          ${rep('personnel et gérant ' + pct(C.persPct) + (tauxP ? ', cible ' + pct(tauxP) : ''), repPers)}</p></div>
+      ${aCorriger(L, 'Rien à corriger : le plan est à jour.')}</section>`;
+
+    // La routine du dimanche (la case du solde réel), à côté du pilotage (le cash de départ, le coussin).
     let dim;
     if (C.dernierDim < 0) {
       const veille = W[0].ms - DAY;
       dim = { titre: 'Cash réel de départ · dimanche ' + dLong(veille), champ: champ('start#dim', d.startCash, { cls: 'tr-in-gros', ph: 'à saisir' }),
         cmpL: 'Premier lundi du plan', cmpV: dCourt(W[0].ms) + ' ' + W[0].annee, cmpC: '',
-        note: d.startCashNote || (d.startCash == null ? 'Le solde RÉEL de ton compte ce dimanche-là, lu dans ta banque. Tant qu’il est vide, le plan part de 0 € : tout est faux.' : 'Le vrai chiffre, pas une estimation : tout le plan part de lui.'), noteC: d.startCash == null || d.startCashNote ? 'bas' : '' };
+        note: d.startCashNote || (d.startCash == null ? 'Le solde réel de ton compte ce dimanche-là, lu dans ta banque. Tant qu’il est vide, le plan part de 0 € : tout est faux.' : 'Le vrai chiffre, pas une estimation : tout le plan part de lui.'), noteC: d.startCash == null || d.startCashNote ? 'bas' : '' };
     } else {
       const i = C.dernierDim, e = C.ecart[i], al = e != null && Math.abs(e) > SEUIL_ECART;
       dim = { titre: 'Solde réel · dimanche ' + dLong(W[i].dimanche), champ: champ('r:' + W[i].du + '#dim', d.reel[W[i].du], { cls: 'tr-in-gros', ph: 'à saisir' }),
@@ -444,42 +556,24 @@
         note: e == null ? 'Le vrai chiffre, pas une estimation. Dès qu’il est saisi, la semaine suivante repart de ce chiffre.' : (al ? `Plus de ${n(SEUIL_ECART)} € : tu trouves la cause avant lundi. Un écart qu’on n’explique pas revient toujours, en plus gros.` : 'Écart sous contrôle. Passe aux 4 semaines à venir.'),
         noteC: al ? 'bas' : '' };
     }
-    const s4 = Math.max(0, Math.min(N - 4, C.cur));
-    const p4 = [0, 1, 2, 3].map(k => s4 + k).filter(i => i < N);
-    const f4 = p4.map(i => C.fin[i]);
-    const decision = f4.some(v => v < 0) ? 'Rouge : tu ne peux pas tout payer. Tu décides tout de suite quoi décaler et tu préviens avant l’échéance, pas après.'
-      : (f4.some(v => v < C.coussin) ? 'Orange : tu passes sous ton coussin. Tu décides tout de suite quoi décaler et tu préviens avant l’échéance, pas après.' : 'Le cash prévu reste au-dessus de ton coussin sur les 4 semaines.');
     h += `<div class="tr-g2">
-      <div class="tr-carte"><div class="tr-carte-hd"><span class="tr-k">Routine du dimanche</span>${C.oublies ? `<span class="tr-pastille">${C.oublies} dimanche${C.oublies > 1 ? 's oubliés' : ' oublié'}</span>` : ''}</div>
+      <div class="tr-carte" id="tr-dim"><div class="tr-carte-hd"><span class="tr-k">Routine du dimanche</span></div>
         <div class="tr-titre">${esc(dim.titre)}</div>
         <div class="tr-dim"><label><span>Solde du compte, lu dans ta banque</span>${dim.champ}</label>
         <div class="tr-cmp"><span>${esc(dim.cmpL)}</span><b class="${dim.cmpC}">${esc(dim.cmpV)}</b></div></div>
         <div class="tr-note ${dim.noteC}">${esc(dim.note)}</div></div>
-      <div class="tr-carte"><div class="tr-carte-hd"><span class="tr-k">La décision · 4 semaines à venir</span></div>
-        <div class="tr-q4">${p4.map(i => `<div class="tr-q ${statut(C.fin[i])}"><span>Lun. ${dm(W[i].ms)}</span><b>${eur(C.fin[i])}</b></div>`).join('')}</div>
-        <div class="tr-note">${decision}</div></div></div>`;
-
-    // Les repères chiffrés.
-    const plaf = +d.plafond || 0, tauxP = R.taux && R.taux.personnel ? R.taux.personnel / 100 : null;
-    const vA = C.tA(C.ventes);
-    const kpis = [
-      { l: 'Point bas du cash sur la période', v: eur(C.bas), s: 'Semaine du lundi ' + dm(W[C.basIdx].ms) + '/' + W[C.basIdx].annee, c: statut(C.bas), t: 'Le moment où ton compte sera le plus bas. Négatif : un problème à régler avant la semaine indiquée.' },
-      { l: 'Semaines sous le coussin', v: C.sous + ' / ' + N, s: 'Coussin : ' + eur(C.coussin), c: C.sous ? 'bas' : '' },
-      { l: `Ventes prévues ${C.anT}`, v: eur(vA), s: (C.budA ? 'budget ' + pctS(C.vBud / C.budA - 1) + (C.budK < C.nbA ? ` (${C.budK} sem.)` : '') : 'pas de budget') + ' · ' + (C.n1A ? 'N-1 ' + pctS(C.vN1 / C.n1A - 1) + (C.n1K < C.nbA ? ` (${C.n1K} sem.)` : '') : 'pas de N-1'), c: '', t: 'Les ventes du plan sur l’année, face au budget validé et à l’année passée, sur les semaines qui ont l’un ou l’autre.' },
-      { l: `Marchandises en % des ventes (${C.anT})`, v: pct(C.matPct), s: 'Plafond : ' + pct(plaf), c: audela(C.matPct, plaf) ? 'neg-t' : '' },
-      { l: `Personnel + gérant en % des ventes (${C.anT})`, v: pct(C.persPct), s: tauxP ? 'Cible : ' + pct(tauxP) : 'Paie + rémunération du gérant', c: tauxP && audela(C.persPct, tauxP) ? 'bas-t' : '' }
-    ];
-    h += `<div class="tr-kpis">${kpis.map(k => `<div class="tr-kpi"${k.t ? ` title="${esc(k.t)}"` : ''}><span>${esc(k.l)}</span><b class="${k.c}">${esc(k.v)}</b><small>${esc(k.s)}</small></div>`).join('')}</div>`;
+      <div class="tr-carte"><div class="tr-h3">Pilotage</div>
+        <div class="tr-param"><div><span>Cash réel de départ (dimanche ${esc(dLong(W[0].ms - DAY))})</span>${champ('start', d.startCash, { cls: 'tr-in-p', ph: 'à saisir' })}</div><small${d.startCashNote ? ' class="bas-t"' : ''}>${esc(d.startCashNote || 'Le solde réel de ton compte, lu dans ta banque. Sans lui, tout le plan part d’un chiffre faux.')}</small></div>
+        <div class="tr-param"><div><span>Coussin de sécurité minimum (€)</span>${champ('coussin', d.coussin, { cls: 'tr-in-p' })}</div><small>Le minimum que tu veux garder en permanence sur le compte. En dessous, la ligne « Cash fin de semaine » passe sur fond or, « sous le coussin ».</small></div></div></div>`;
     if (!liste(R.sources).length) { h += `<div class="db-alerte">Aucune vente lue pour ce magasin, ni au panel ni dans la copie de caisse : ni réalisé, ni année passée.${R.budgets && R.budgets.some(b => b.moisBudget + b.moisTheorique) ? ' Les ventes prévues partent du budget.' : ' Pas de budget non plus : tape tes ventes prévues dans le plan.'}</div>`; }
-    if (C.sansBase) { h += `<div class="db-alerte">${C.sansBase} semaine${C.sansBase > 1 ? 's' : ''} à venir sans budget ni année passée : leurs ventes sont à 0 tant que tu ne les tapes pas.</div>`; }
 
     // Le graphique du cash de fin de semaine.
     const fin = C.fin, maxV = Math.max(...fin, C.coussin, 0) * 1.08, minV = Math.min(...fin, 0) * 1.08, plage = (maxV - minV) || 1;
     const P = v => ((maxV - v) / plage * 100).toFixed(2) + '%';
     h += `<div class="tr-carte"><div class="tr-cbar"><div class="tr-h3">Cash fin de semaine (prévu)</div><div class="tr-leg">
-      <span><i style="background:var(--color-text-muted)"></i>Au-dessus du coussin</span><span><i style="background:var(--tr-orange)"></i>Sous le coussin</span><span><i style="background:var(--color-primary)"></i>Découvert</span></div></div>
+      <span><i class="tr-b-ok"></i>Au-dessus du coussin</span><span><i class="tr-b-bas"></i>Sous le coussin</span><span><i class="tr-b-neg"></i>Découvert</span></div></div>
       <div class="tr-graph"><div class="tr-ligne-c" style="top:${P(C.coussin)}"></div><div class="tr-ligne-cl" style="top:${P(C.coussin)}">Coussin ${esc(eur(C.coussin))}</div><div class="tr-ligne-z" style="top:${P(0)}"></div>
-      ${W.map((w, i) => { const v = fin[i], s = statut(v); return `<button type="button" class="tr-barre" data-tra="barre:${i}" title="${esc('Lundi ' + dm(w.ms) + '/' + w.annee + ' · ' + eur(v))}" style="opacity:${F.vis.includes(i) ? 1 : 0.35}"><i style="top:${v >= 0 ? P(v) : P(0)};height:${(Math.abs(v) / plage * 100).toFixed(2)}%;background:${s === 'neg' ? 'var(--color-primary)' : (s === 'bas' ? 'var(--tr-orange)' : 'var(--color-text-muted)')}"></i></button>`; }).join('')}</div>
+      ${W.map((w, i) => { const v = fin[i], s = statut(v); return `<button type="button" class="tr-barre" data-tra="barre:${i}" title="${esc('Lundi ' + dm(w.ms) + '/' + w.annee + ' · ' + eur(v) + ' · ' + etatCash(v, C.coussin).mot)}" style="opacity:${F.vis.includes(i) ? 1 : 0.35}"><i class="tr-b-${s || 'ok'}" style="top:${v >= 0 ? P(v) : P(0)};height:${(Math.abs(v) / plage * 100).toFixed(2)}%"></i></button>`; }).join('')}</div>
       <div class="tr-graph-m">${W.map((w, i) => `<span>${(i === 0 || W[i - 1].mois !== w.mois) && (i === 0 || w.mois % 2 === 0) ? MO[w.mois] : ''}</span>`).join('')}</div></div>`;
 
     // Le plan, semaine par semaine.
@@ -507,7 +601,7 @@
       if (g === 'reel') { return T(C.ventes[i], { cls: 'reel', titre: 'Réalisé : ventes de la semaine en caisse. Il remplace la prévision.' }); }
       const b = C.base[i], saisi = d.ventes[w.du];
       return champ('s:' + w.du, saisi, { cls: 'tr-in' + (saisi == null ? ' est' : ''), aff: v => v == null ? (b ? '≈ ' + n(b.v) : '') : n(v), ph: b ? '' : 'à saisir', titre: b ? 'Base : ' + srcLib[b.src] + ' ' + eur(b.v) : 'Ni budget ni année passée pour cette semaine' });
-    }, { total: C.tA(C.ventes), gras: 600, sous: 'Base : ' + (d.base === 'budget' ? 'budget validé' : srcLib.n1) + (nTape ? ` · ${nTape} sem. tapée${nTape > 1 ? 's' : ''}` : ''), versOnglet: 'budget' });
+    }, { id: 'ventes', total: C.tA(C.ventes), gras: 600, sous: 'Base : ' + (d.base === 'budget' ? 'budget validé' : srcLib.n1) + (nTape ? ` · ${nTape} sem. tapée${nTape > 1 ? 's' : ''}` : ''), versOnglet: 'budget' });
     ligne('Repère · réalisé en caisse', 'Les ventes réellement encaissées (panel). La semaine en cours : à ce jour.', i => { const r = W[i].ref, passe = W[i].ms <= auj; return T(r.realise, { cls: 'ref', vide: passe ? '–' : '', titre: r.complet ? (r.realise != null ? 'Semaine close' : 'Aucune vente lue cette semaine') : (r.realise != null ? 'À ce jour, semaine en cours' : (passe ? 'Aucune vente lue à ce jour' : 'Semaine à venir')) }); }, { total: C.tA(W.map(w => w.ref.realise)), ref: true, note: W.some(w => w.ms <= auj) ? '' : 'semaines à venir' });
     ligne('Repère · budget validé', 'Le budget du mois réparti sur ses jours au profil de l’an passé. Vide : pas de budget pour ce mois.', i => { const r = W[i].ref; return T(r.budget, { cls: 'ref', vide: '–', titre: r.budget == null ? 'Pas de budget pour ce mois (cockpit › Budget), ni de CA théorique de l’étude' : [r.budgetSource === 'theorique' ? 'CA théorique de l’étude (pas de budget encodé)' : '', r.budget != null && r.budgetJours < 7 ? `Extrapolé de ${r.budgetJours} jours budgétés sur 7` : ''].filter(Boolean).join(' · ') }); }, { total: C.budA, ref: true });
     ligne('Repère · même semaine N-1', 'Les ventes de la même semaine un an plus tôt (décalée de 364 jours : un lundi face à un lundi).', i => T(W[i].ref.n1, { cls: 'ref', vide: '–', titre: W[i].ref.n1 == null ? motifN1(W[i]) : '' }), { total: C.n1A, ref: true, note: noteN1 });
@@ -529,58 +623,69 @@
     ligne('Ponctuels / imprévus', 'Tout ce qui n’est pas récurrent : réparation, prime de fin d’année, pécule de vacances, régularisation d’énergie, matériel. Dans la semaine où l’argent sort.', i => champ('p:' + W[i].du, d.ponct[W[i].du], { aff: v => v ? n(v) : '' }), { total: C.tA(C.ponct) });
     ligne('Total décaissements', '', i => T(C.totdec[i], { cls: 'g6' }), { total: C.tA(C.totdec), gras: 600, bord: 'fort' });
     ligne('Solde de la semaine', '', i => T(C.solde[i], { cls: C.solde[i] < 0 ? 'neg-t' : '' }), { total: C.tA(C.solde) });
-    ligne('Cash fin de semaine (prévu)', 'La ligne qui compte. Orange : sous ton coussin de sécurité. Rouge : découvert, tu ne peux pas tout payer.', i => T(C.fin[i], { cls: 'g6 ' + statut(C.fin[i]) }), { gras: 600, bord: 'fort' });
-    ligne('Cash réel en banque (dimanche)', 'Chaque dimanche soir : le solde RÉEL de ton compte, lu dans ta banque. La semaine suivante repart de ce chiffre. Une case orange foncé = un dimanche oublié.', i => {
+    ligne('Cash fin de semaine (prévu)', 'La ligne qui compte. Fond or : sous ton coussin de sécurité. Fond rouge : découvert, tu ne peux pas tout payer. L’état de chaque semaine est dit en mots en tête de sa colonne.', i => T(C.fin[i], { cls: 'g6 ' + statut(C.fin[i]), titre: etatCash(C.fin[i], C.coussin).mot }), { id: 'fin', gras: 600, bord: 'fort' });
+    ligne('Cash réel en banque (dimanche)', 'Chaque dimanche soir : le solde réel de ton compte, lu dans ta banque. La semaine suivante repart de ce chiffre. Une case or bordée = un dimanche oublié.', i => {
       const w = W[i], oubli = d.reel[w.du] == null && w.dimanche < auj;
-      return champ('r:' + w.du, d.reel[w.du], { cls: 'tr-in reel-in' + (oubli ? ' oubli' : '') });
-    });
-    ligne('Écart réel − prévu', `Réel moins prévu. Au-delà de ${n(SEUIL_ECART)} € la case passe en orange : cherche la cause (ventes surestimées, facture oubliée, paiement décalé) avant lundi.`, i => { const e = C.ecart[i]; return T(e, { cls: e != null && Math.abs(e) > SEUIL_ECART ? 'bas' : '' }); });
+      return champ('r:' + w.du, d.reel[w.du], { cls: 'tr-in reel-in' + (oubli ? ' oubli' : ''), titre: oubli ? 'Dimanche oublié : solde réel à saisir' : '' });
+    }, { id: 'reel' });
+    ligne('Écart réel − prévu', `Réel moins prévu. Au-delà de ${n(SEUIL_ECART)} € la case passe sur fond or : cherche la cause (ventes surestimées, facture oubliée, paiement décalé) avant lundi.`, i => { const e = C.ecart[i], al = e != null && Math.abs(e) > SEUIL_ECART; return T(e, { cls: al ? 'bas' : '', titre: al ? 'Plus de ' + n(SEUIL_ECART) + ' € : à expliquer avant lundi' : '' }); });
 
-    h += `<div class="tr-carte tr-carte-t">${barreFenetre(C, F, 'Plan semaine par semaine')}<div class="tr-defil"><div class="tr-grille">`;
-    h += entete(C, F, LARG, 'Lundi du', 'Total ' + C.anT);
+    h += `<div class="tr-carte tr-carte-t" id="tr-grille-plan">${barreFenetre(C, F, 'Plan semaine par semaine')}<div class="tr-defil"><div class="tr-grille">`;
+    h += entete(C, F, LARG, 'Lundi du', 'Total ' + C.anT, i => { const e = etatCash(C.fin[i], C.coussin); return e.sig === 'ok' ? null : e; });
     lignes.forEach(L => {
       const o = L.o;
-      h += `<div class="tr-r${o.ref ? ' tr-r-ref' : ''} ${o.bord === 'fort' ? 'b-fort' : (o.bord === 'aucun' ? 'b-aucun' : '')}"><div class="tr-lab" style="width:${LARG}px"><div class="tr-lab-t"><span style="font-weight:${o.gras || 400}">${esc(L.lab)}</span>${o.note ? `<small class="tr-lab-note">${esc(o.note)}</small>` : ''}${o.sous ? `<button type="button" class="tr-sous-l" data-tra="onglet:${o.versOnglet}">${esc(o.sous)}</button>` : ''}</div>${L.aide ? `<span class="tr-aide" title="${esc(L.aide)}">?</span>` : ''}</div>`;
-      F.vis.forEach(i => { h += `<div class="tr-c${i === C.cur ? ' cur' : ''}">${L.cellule(i)}</div>`; });
-      h += `<div class="tr-tot" style="font-weight:${o.gras || 400}">${o.total == null ? '' : n(o.total)}</div></div>`;
+      // Une ligne de total (le total des décaissements, le cash de fin de semaine) : le fond --total-line, pas le gras (§4.3).
+      h += `<div class="tr-r${o.ref ? ' tr-r-ref' : ''}${o.gras && o.bord === 'fort' ? ' tr-r-tot' : ''} ${o.bord === 'fort' ? 'b-fort' : (o.bord === 'aucun' ? 'b-aucun' : '')}"><div class="tr-lab" style="width:${LARG}px"><div class="tr-lab-t"><span>${esc(L.lab)}</span>${o.note ? `<small class="tr-lab-note">${esc(o.note)}</small>` : ''}${o.sous ? `<button type="button" class="tr-sous-l" data-tra="onglet:${o.versOnglet}">${esc(o.sous)}</button>` : ''}</div>${L.aide ? `<span class="tr-aide" title="${esc(L.aide)}">?</span>` : ''}</div>`;
+      F.vis.forEach(i => { h += `<div class="tr-c${i === C.cur ? ' cur' : ''}"${o.id ? ` id="tr-${o.id}-${i}"` : ''}>${L.cellule(i)}</div>`; });
+      h += `<div class="tr-tot">${o.total == null ? '' : n(o.total)}</div></div>`;
     });
     h += '</div></div></div>';
 
-    // Le pilotage et les dettes hors plan.
+    // Les dettes hors plan (le pilotage est monté à côté de la routine du dimanche, 26/11/2026). Le total de la carte
+    // reste en noir : une somme, pas une alerte — ce qui est à faire est dans « À corriger ».
     const hors = d.hors.reduce((t, x) => t + (+x.montant || 0), 0);
-    h += `<div class="tr-g2">
-      <div class="tr-carte"><div class="tr-h3">Pilotage</div>
-        <div class="tr-param"><div><span>Cash réel de départ (dimanche ${esc(dLong(W[0].ms - DAY))})</span>${champ('start', d.startCash, { cls: 'tr-in-p', ph: 'à saisir' })}</div><small${d.startCashNote ? ' class="bas-t"' : ''}>${esc(d.startCashNote || 'Le solde RÉEL de ton compte, lu dans ta banque. Sans lui, tout le plan part d’un chiffre faux.')}</small></div>
-        <div class="tr-param"><div><span>Coussin de sécurité minimum (€)</span>${champ('coussin', d.coussin, { cls: 'tr-in-p' })}</div><small>Le minimum que tu veux garder en permanence sur le compte. En dessous, la ligne « Cash fin de semaine » passe en orange.</small></div></div>
-      <div class="tr-carte"><div class="tr-hors-hd"><div class="tr-h3">Hors plan, à arbitrer</div><b class="neg-t">${esc(eur(hors))}</b></div>
-        <small class="tr-mu">Ce que tu dois mais qui n’est PAS dans le plan ci-dessus. Tant que ces montants ne sont pas transformés en échéancier dans l’onglet Paiements, ton cash prévu est trop beau.</small>
-        <div class="tr-hors">${d.hors.map(x => `<div class="tr-hors-l"><div><input class="tr-txt" data-trtxt="h:${esc(x.id)}:libelle" value="${esc(x.libelle)}" aria-label="Dette"><input class="tr-txt tr-txt-mu" data-trtxt="h:${esc(x.id)}:note" value="${esc(x.note)}" placeholder="Remarque"></div>${champ('h:' + x.id, x.montant, { ph: '—' })}<button type="button" class="tr-x" data-tra="delH:${esc(x.id)}" title="Supprimer">×</button></div>`).join('')}</div>
+    h += `<div class="tr-carte tr-hors-c" id="tr-hors"><div class="tr-hors-g"><div class="tr-hors-hd"><div class="tr-h3">Hors plan, à arbitrer</div><span class="tr-hors-t">${esc(eur(hors))}</span></div>
+        <small class="tr-mu">Ce que tu dois mais qui n’est pas dans le plan ci-dessus. Tant que ces montants ne sont pas transformés en échéancier dans l’onglet Paiements, ton cash prévu est trop beau.</small></div>
+        <div><div class="tr-hors">${d.hors.map(x => `<div class="tr-hors-l"><div><input class="tr-txt" data-trtxt="h:${esc(x.id)}:libelle" value="${esc(x.libelle)}" aria-label="Dette"><input class="tr-txt tr-txt-mu" data-trtxt="h:${esc(x.id)}:note" value="${esc(x.note)}" placeholder="Remarque"></div>${champ('h:' + x.id, x.montant, { ph: '—' })}<button type="button" class="tr-x" data-tra="delH:${esc(x.id)}" title="Supprimer">×</button></div>`).join('')}</div>
         <button type="button" class="tr-btn" data-tra="addH">+ Ajouter une dette</button></div></div>`;
     return h;
   }
 
   function rendFournisseurs(C, d) {
-    const W = C.W, F = fenetre(C), LARG = 380, plaf = +d.plafond || 0;
-    let h = `<p class="tr-intro">Montant à PAYER à chaque fournisseur, semaine par semaine (€ TTC). Case vide = l’estimation du fournisseur : un % des ventes prévues, ou un montant fixe par semaine. Dès que tu connais le montant réel, tape-le dans la case (0 si tu ne paies rien). Le total alimente la ligne Marchandises du plan.</p>`;
-    h += `<div class="tr-carte tr-carte-t">${barreFenetre(C, F, 'Achats fournisseurs par semaine')}<div class="tr-defil"><div class="tr-grille">`;
-    h += entete(C, F, LARG, '<span class="tr-fl"><span title="Un fournisseur par ligne, 15 au plus.">Fournisseur</span><span title="Ce que tu paies à ce fournisseur les semaines sans montant tapé : un % de tes ventes TTC, ou un montant fixe par semaine. Choisis % ou € sur la ligne.">Estimation</span></span>', 'Total période');
+    const W = C.W, N = C.N, F = fenetre(C), LARG = 380, plaf = +d.plafond || 0;
+    const sV = C.ventes.reduce((a, b) => a + b, 0), sM = C.march.reduce((a, b) => a + b, 0);
+    const pS = i => C.ventes[i] ? C.march[i] / C.ventes[i] : 0;
+    // Le résumé (26/11/2026, §7.13) : les achats en % des ventes de la période face au plafond ; « À corriger » : les
+    // semaines à venir au-dessus du plafond, et la dernière semaine close sans aucun montant réel tapé.
+    const ic = Math.max(0, Math.min(N - 1, C.cur)), pT = sV ? sM / sV : 0, Lf = [];
+    const hauts = W.map((w, k) => k).filter(k => k >= ic && audela(pS(k), plaf));
+    if (hauts.length) { Lf.push({ sig: 'prize', txt: `Achats au-dessus du plafond la semaine du ${dm(W[hauts[0]].ms)} · ${pct(pS(hauts[0]))}${hauts.length > 1 ? ' · ' + hauts.length + ' semaines' : ''}`, voir: `fournisseurs,tr-pct-${hauts[0]},${hauts[0]},` }); }
+    const jD = C.dernierDim;
+    if (jD >= 0 && d.fournisseurs.length && !C.supReel[jD]) {
+      const s0 = d.fournisseurs[0];
+      Lf.push({ sig: 'prize', txt: `Montants payés la semaine du ${dm(W[jD].ms)} à taper`, voir: `fournisseurs,tr-fa-0-${jD},${jD},fa:${s0.id}:${W[jD].du}`, title: 'Semaine close : remplace les estimations par ce que tu as réellement payé' });
+    }
+    let h = resumeCourt({ aria: 'Les achats', v: pct(pT), etat: audela(pT, plaf) ? { sig: 'prize', mot: 'au-dessus du plafond' } : { sig: 'ok', mot: 'sous le plafond' },
+      q: 'd’achats sur les ventes prévues de la période', s: 'plafond ' + pct(plaf) + ', du ' + dCourt(W[0].ms) + ' ' + W[0].annee + ' au ' + dCourt(W[N - 1].dimanche) + ' ' + new Date(W[N - 1].dimanche).getUTCFullYear(), L: Lf, ok: 'Rien à corriger : les achats prévus restent sous le plafond.' });
+    h += `<p class="tr-intro">Montant à payer à chaque fournisseur, semaine par semaine (€ TTC). Case vide = l’estimation du fournisseur : un % des ventes prévues, ou un montant fixe par semaine. Dès que tu connais le montant réel, tape-le dans la case (0 si tu ne paies rien). Le total alimente la ligne Marchandises du plan.</p>`;
+    h += `<div class="tr-carte tr-carte-t" id="tr-grille-fou">${barreFenetre(C, F, 'Achats fournisseurs par semaine')}<div class="tr-defil"><div class="tr-grille">`;
+    h += entete(C, F, LARG, '<span class="tr-fl"><span title="Un fournisseur par ligne, 15 au plus.">Fournisseur</span><span title="Ce que tu paies à ce fournisseur les semaines sans montant tapé : un % de tes ventes TTC, ou un montant fixe par semaine. Choisis % ou € sur la ligne.">Estimation</span></span>', 'Total période', i => audela(pS(i), plaf) ? { sig: 'prize', mot: 'au-dessus du plafond' } : null);
     d.fournisseurs.forEach(s => {
       const si = d.fournisseurs.indexOf(s);
       h += `<div class="tr-r"><div class="tr-lab tr-lab-f" style="width:${LARG}px"><button type="button" class="tr-x" data-tra="delF:${esc(s.id)}" title="Supprimer ce fournisseur">×</button><input class="tr-txt" data-trtxt="f:${esc(s.id)}:nom" value="${esc(s.nom)}" placeholder="Nom du fournisseur"><span class="tr-mode" role="group" aria-label="Estimation en % des ventes ou en montant fixe">${[['pct', '%', 'Un % des ventes prévues de la semaine'], ['fixe', '€', 'Un montant fixe chaque semaine']].map(([m, l, t]) => `<button type="button" class="${(m === 'fixe') === (s.mode === 'fixe') ? 'on' : ''}" data-tra="fmode:${esc(s.id)}:${m}" title="${t}">${l}</button>`).join('')}</span>${s.mode === 'fixe'
         ? champ('ff:' + s.id, s.fixe, { cls: 'tr-in tr-in-pct', aff: v => n(+v || 0) + ' €', titre: 'Montant fixe payé chaque semaine (€ TTC)' })
         : champ('fp:' + s.id, s.pct, { cls: 'tr-in tr-in-pct', edit: v => v == null ? '' : String(+(v * 100).toFixed(2)).replace('.', ','), aff: v => pct(+v || 0), titre: 'Part des ventes TTC de la semaine' })}</div>`;
-      F.vis.forEach(i => { const du = W[i].du, a = s.montants[du], est = C.supEst[si][i]; h += `<div class="tr-c${i === C.cur ? ' cur' : ''}">${champ('fa:' + s.id + ':' + du, a, { cls: 'tr-in' + (a == null ? ' est' : ''), aff: v => v == null ? '≈ ' + n(est) : n(v) })}</div>`; });
+      F.vis.forEach(i => { const du = W[i].du, a = s.montants[du], est = C.supEst[si][i]; h += `<div class="tr-c${i === C.cur ? ' cur' : ''}" id="tr-fa-${si}-${i}">${champ('fa:' + s.id + ':' + du, a, { cls: 'tr-in' + (a == null ? ' est' : ''), aff: v => v == null ? '≈ ' + n(est) : n(v) })}</div>`; });
       h += `<div class="tr-tot">${n(C.supTot[si])}</div></div>`;
     });
-    const sV = C.ventes.reduce((a, b) => a + b, 0), sM = C.march.reduce((a, b) => a + b, 0);
     const som = [
       { l: 'Total achats', s: [d.fournisseurs.some(x => x.mode !== 'fixe') ? pct(d.fournisseurs.filter(x => x.mode !== 'fixe').reduce((t, x) => t + (+x.pct || 0), 0)) : '', d.fournisseurs.some(x => x.mode === 'fixe') ? n(d.fournisseurs.filter(x => x.mode === 'fixe').reduce((t, x) => t + (+x.fixe || 0), 0)) + ' €/sem.' : ''].filter(Boolean).join(' + '), cls: 'g6', bord: 'b-fort', t: n(sM), c: i => `<div class="tr-v g6">${n(C.march[i])}</div>` },
-      { l: 'En % des ventes', s: '', cls: '', bord: '', t: pct(sV ? sM / sV : 0), c: i => { const p = C.ventes[i] ? C.march[i] / C.ventes[i] : 0; return `<div class="tr-v${audela(p, plaf) ? ' bas' : ''}">${pct(p)}</div>`; } },
+      { l: 'En % des ventes', s: '', cls: '', bord: '', t: pct(pT), id: 'pct', c: i => { const p = pS(i); return `<div class="tr-v${audela(p, plaf) ? ' bas' : ''}"${audela(p, plaf) ? ' title="Au-dessus du plafond"' : ''}>${pct(p)}</div>`; } },
       { l: 'dont montants réels saisis', s: '', cls: '', bord: '', t: n(C.supReel.reduce((a, b) => a + b, 0)), c: i => `<div class="tr-v mu">${C.supReel[i] ? n(C.supReel[i]) : '–'}</div>` }
     ];
     som.forEach(r => {
-      h += `<div class="tr-r ${r.bord}"><div class="tr-lab tr-lab-s" style="width:${LARG}px"><span class="${r.cls}">${r.l}</span><span class="${r.cls}">${r.s}</span></div>`;
-      F.vis.forEach(i => { h += `<div class="tr-c${i === C.cur ? ' cur' : ''}">${r.c(i)}</div>`; });
+      h += `<div class="tr-r ${r.bord}${r.cls === 'g6' ? ' tr-r-tot' : ''}"><div class="tr-lab tr-lab-s" style="width:${LARG}px"><span class="${r.cls}">${r.l}</span><span class="${r.cls}">${r.s}</span></div>`;
+      F.vis.forEach(i => { h += `<div class="tr-c${i === C.cur ? ' cur' : ''}"${r.id ? ` id="tr-${r.id}-${i}"` : ''}>${r.c(i)}</div>`; });
       h += `<div class="tr-tot ${r.cls}">${r.t}</div></div>`;
     });
     h += `</div></div><div class="tr-pied"><button type="button" class="tr-btn" data-tra="addF"${d.fournisseurs.length >= 15 ? ' disabled' : ''}>+ Ajouter un fournisseur</button>
@@ -591,12 +696,19 @@
   }
 
   function rendPaiements(C, d) {
-    let h = `<p class="tr-intro">Une ligne par paiement. « Chaque semaine » = toutes les semaines. « Chaque mois » = une fois par mois, la semaine indiquée (1 à 4 ; la semaine 1 est celle du premier lundi du mois). « Chaque trimestre » = janvier, avril, juillet et octobre, la semaine indiquée. Dates de début et de fin facultatives. Le plan se met à jour tout seul.</p>`;
+    // Le résumé (26/11/2026, §7.13) : le nombre de paiements récurrents (il était au pied de la liste) ; « À corriger » :
+    // les paiements à 0 € (la rémunération du gérant d'un plan neuf), et TVA et ONSS quand aucun n'est encodé.
+    const Lp = [];
+    d.paiements.filter(p => !(+p.montant)).forEach(p => Lp.push({ sig: 'prize', txt: `${p.libelle || 'Paiement sans libellé'} : montant à fixer`, voir: `paiements,tr-pay-${p.id},,pa:${p.id}` }));
+    if (!d.paiements.some(p => p.cat === 'TVA & ONSS' && +p.montant)) { Lp.push({ sig: 'prize', txt: 'TVA et ONSS pas encore encodées', voir: 'paiements,tr-pay-pied,,', title: 'Demande montants et échéances à ton comptable ; tant que c’est vide, ton plan est trop optimiste' }); }
+    let h = resumeCourt({ aria: 'Les paiements récurrents', v: String(d.paiements.length), q: d.paiements.length > 1 ? 'paiements récurrents' : 'paiement récurrent',
+      s: 'chacun tombe dans la ligne de sa catégorie, les semaines où il sort du compte', L: Lp, ok: 'Rien à corriger : chaque paiement a son montant.' });
+    h += `<p class="tr-intro">Une ligne par paiement. « Chaque semaine » = toutes les semaines. « Chaque mois » = une fois par mois, la semaine indiquée (1 à 4 ; la semaine 1 est celle du premier lundi du mois). « Chaque trimestre » = janvier, avril, juillet et octobre, la semaine indiquée. Dates de début et de fin facultatives. Le plan se met à jour tout seul.</p>`;
     h += `<div class="tr-carte tr-carte-t"><div class="tr-defil"><div class="tr-pay">
       <div class="tr-pay-l tr-pay-hd"><span>Libellé</span><span title="La catégorie décide dans quelle ligne du plan le montant atterrit.">Catégorie</span><span class="d" title="Montant TTC réellement débité du compte à chaque échéance.">Montant (€)</span><span>Fréquence</span><span title="Pour un paiement mensuel ou trimestriel : la semaine du mois où il sort du compte, de 1 à 4.">Sem.</span><span title="Facultatif : avant cette date, rien n’est compté.">Premier paiement</span><span title="Facultatif : après cette date, rien n’est compté.">Dernier paiement</span><span class="d">Sur la période</span><span>Source / remarque</span><span></span></div>`;
     d.paiements.forEach((p, pi) => {
       const hebdo = p.freq === 'Chaque semaine';
-      h += `<div class="tr-pay-l"><input class="tr-txt" data-trtxt="p:${esc(p.id)}:libelle" value="${esc(p.libelle)}" placeholder="Libellé">
+      h += `<div class="tr-pay-l" id="tr-pay-${esc(p.id)}"><input class="tr-txt" data-trtxt="p:${esc(p.id)}:libelle" value="${esc(p.libelle)}" placeholder="Libellé">
         <select class="tr-sel" data-trsel="p:${esc(p.id)}:cat">${CATS.map(c => `<option${c === p.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>
         ${champ('pa:' + p.id, p.montant, { cls: 'tr-in tr-in-b' })}
         <select class="tr-sel" data-trsel="p:${esc(p.id)}:freq">${FREQS.map(c => `<option${c === p.freq ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>
@@ -607,7 +719,7 @@
         <input class="tr-txt tr-txt-mu" data-trtxt="p:${esc(p.id)}:note" value="${esc(p.note)}" title="${esc(p.note)}" placeholder="—">
         <button type="button" class="tr-x" data-tra="delP:${esc(p.id)}" title="Supprimer ce paiement">×</button></div>`;
     });
-    h += `<div class="tr-pied"><button type="button" class="tr-btn" data-tra="addP"${d.paiements.length >= 50 ? ' disabled' : ''}>+ Ajouter un paiement</button><span class="tr-mu">${d.paiements.length} paiement${d.paiements.length > 1 ? 's récurrents' : ' récurrent'}</span></div></div></div></div>`;
+    h += `<div class="tr-pied" id="tr-pay-pied"><button type="button" class="tr-btn" data-tra="addP"${d.paiements.length >= 50 ? ' disabled' : ''}>+ Ajouter un paiement</button></div></div></div></div>`;
     h += '<p class="tr-mu tr-p">Les paiements proposés d’un plan neuf viennent des postes du budget (Budget › Paramètres) : un taux du CA, traduit en euros par mois. Remplace-les par tes montants réels. TVA et ONSS ne sont pas préremplies : tant que tu ne les as pas encodées avec ton comptable, ton plan est trop optimiste.</p>';
     return h;
   }
@@ -692,7 +804,9 @@
     const T = R.taux || {};
     sec('Le réel du P&amp;L (panel), mois clos · face aux taux du budget');
     const pnl = (k, i) => clos(i) && reel[ymI(i)] && reel[ymI(i)][k] != null ? +reel[ymI(i)][k] : null;
-    const ligneP = (lab, k, seuil, haut) => { const v = M.map((m, i) => pnl(k, i)); L(lab, v.map(x => x == null ? '–' : p1(x)), '', i => v[i] == null || seuil == null ? '' : (haut ? (v[i] > seuil + 0.05 ? 'k' : 'g') : (v[i] < seuil ? 'k' : ''))); };
+    // Les échelles du design system (§7.13, 26/11/2026) : un taux de charge dans sa cible --green, au-dessus --prize ; la
+    // marge nette en perte --stop, de 0 à 20 % --prize, 20 % et plus --green. Les mots sont dans la légende sous le tableau.
+    const ligneP = (lab, k, seuil, haut) => { const v = M.map((m, i) => pnl(k, i)); L(lab, v.map(x => x == null ? '–' : p1(x)), '', i => v[i] == null || seuil == null ? '' : (haut ? (v[i] > seuil + 0.05 ? 'o' : 'g') : (v[i] < seuil ? 'k' : (v[i] < 20 ? 'o' : 'g')))); };
     ligneP(`Matière <small class="tr-mu">cible ${p1(T.matiere)}</small>`, 'matiere', T.matiere, true);
     ligneP(`Personnel <small class="tr-mu">cible ${p1(T.personnel)}</small>`, 'personnel', T.personnel, true);
     ligneP(`Frais généraux <small class="tr-mu">repère ${p1(T.fraisGeneraux)}</small>`, 'fraisGeneraux', T.fraisGeneraux, true);
@@ -706,7 +820,7 @@
     }
     h += `<div class="tr-carte tr-carte-t"><div class="tr-cbar"><div class="tr-h3">Le budget, mois par mois</div><div class="tr-ctl">${ans.map(y => { const x = (B.exercices || []).find(e => e.annee === y) || {}; return `<button type="button" class="tr-pil${y === an ? ' on' : ''}" data-tra="anb:${y}">${y} · ${court(x)}</button>`; }).join('')}</div></div>
       <div class="tr-defil"><table class="tr-tab tr-tab-b"><thead><tr><th></th>${MO.map((m, i) => `<th class="${ymI(i) === cur ? 'cur' : ''}">${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>${lignes.join('')}</tbody></table></div>
-      <div class="tr-note tr-p">€ TTC · * mois en cours, à ce jour.</div></div>`;
+      <div class="tr-note tr-p tr-leg-b">€ TTC · * mois en cours, à ce jour. <span><i class="trs-ic trs-ok" aria-hidden="true"></i>vert : atteint, dans la cible, marge nette de 20 % et plus</span> <span><i class="trs-ic trs-prize" aria-hidden="true"></i>or : au-dessus de la cible, marge nette sous 20 %</span> <span><i class="trs-ic trs-stop" aria-hidden="true"></i>rouge : sous le budget, sous l’année passée, perte</span></div></div>`;
     // La carte « Le budget, exercice par exercice » est retirée (14/11/2026) : la validation est dans l'entête de la
     // section budget et sur le bouton de l'année, les charges dans la grille.
     h += carteEtude(ex, an);
@@ -750,7 +864,7 @@
       ${etape(1, 'Le solde réel', 'Tu ouvres ta banque et tu tapes le solde du compte dans « Routine du dimanche » (ou la ligne « Cash réel en banque (dimanche) » du plan). Le vrai chiffre, pas une estimation.')}
       ${etape(2, 'L’écart', `Juste en dessous, l’écart entre le réel et le prévu. Plus de ${n(SEUIL_ECART)} € : tu trouves la cause avant lundi. Un écart qu’on n’explique pas revient toujours, en plus gros.`)}
       ${etape(3, 'Les 4 semaines à venir', 'Tu corriges tes ventes prévues (onglet Plan), les montants à payer à chaque fournisseur (onglet Fournisseurs) et les paiements exceptionnels. Un montant calculé (marchandises, gérant, personnel, frais…) qui n’est pas le bon cette semaine-là : double-clic sur la case et tu tapes le vrai montant, pour cette semaine seulement. Vider la case revient au calcul.')}
-      ${etape(4, 'La décision', 'Tu lis la ligne « Cash fin de semaine (prévu) ». Orange : tu passes sous ton coussin. Rouge : tu ne peux pas tout payer. Tu décides tout de suite quoi décaler et tu préviens avant l’échéance, pas après.')}
+      ${etape(4, 'La décision', 'Tu lis le haut de l’onglet Plan et la ligne « Cash fin de semaine (prévu) » ; l’état de chaque semaine est écrit en tête de sa colonne. Sous le coussin : tu passes sous ton coussin. Découvert : tu ne peux pas tout payer. Tu décides tout de suite quoi décaler et tu préviens avant l’échéance, pas après.')}
       <div class="tr-k">Ce qui est repris tout seul</div>
       <div class="tr-def"><b>Ce qui a été fait</b><span>Une semaine close prend les ventes réelles de la caisse : tu n’as plus à les taper. Le mois en cours et les mois passés sont dans l’onglet « Budget & étude ».</span>
       <b>Le budget validé</b><span>Le CA budget de chaque mois, réparti sur ses semaines au profil de l’an passé : la base des ventes prévues. Ses taux donnent le plafond matière, le repère du personnel et, pour un plan neuf, les paiements proposés.</span>
@@ -762,8 +876,8 @@
       <span class="tr-ex reel">12 840</span><span>Le réel de la caisse : une semaine close.</span>
       <span class="tr-ex nu">8 500</span><span>Un calcul automatique. Double-clic dessus pour le remplacer, cette semaine seulement ; les totaux, eux, se corrigent par les cases saisies.</span>
       <span class="tr-ex force">8 200</span><span>Un montant saisi au double-clic pour cette semaine seulement, à la place du calcul.</span>
-      <span class="tr-ex bas">4 210</span><span>Orange : tu passes sous ton coussin de sécurité.</span>
-      <span class="tr-ex neg">−1 250</span><span>Rouge : le compte est à découvert, tu ne peux pas tout payer.</span></div>
+      <span class="tr-ex bas">4 210</span><span>Fond or, « sous le coussin » : tu passes sous ton coussin de sécurité.</span>
+      <span class="tr-ex neg">−1 250</span><span>Fond rouge, « découvert » : le compte est à découvert, tu ne peux pas tout payer.</span></div>
       <div class="tr-savoir"><div class="tr-k">À savoir</div>
       <span>Tous les montants sont en € TTC : ce qui entre et sort réellement du compte.</span>
       <span>TVA et ONSS ne sont pas préremplies. Tant que tu ne les as pas encodées dans Paiements avec ton comptable, ton plan est trop optimiste.</span>
@@ -808,6 +922,7 @@
     if (k === 'reessayer') { S.sale = true; return enregistrer(); }
     if (!S.R || !S.data) { return; }
     const C = calcul(S.data, S.R, jourUTC()), F = fenetre(C);
+    if (k === 'voir') { return voir(a, C, F); }
     if (k === 'fen') { S.fen = a; S.decal = null; return rendre(); }
     if (k === 'nav') { S.decal = +a === 0 ? null : F.borne(F.decal + (+a) * F.nW); return rendre(); }
     if (k === 'barre') { S.decal = F.borne(+a - (F.nW >= C.N ? 0 : 1)); return rendre(); }

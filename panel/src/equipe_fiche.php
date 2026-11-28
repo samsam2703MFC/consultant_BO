@@ -91,7 +91,8 @@ function eqfFiche(array $r, ?array $detail = null): array
         foreach (['level', 'position_level', 'current_level'] as $k) { if (isset($p[$k])) { $n = eqfNomDe($p[$k]); if ($n !== '') { return $n; } if (is_scalar($p[$k])) { return (string) $p[$k]; } } }
         return null;
     };
-    return eqpPersonne($r) + [
+    // Le détail fait foi (array_merge) : son contrat passe devant celui de la liste (eqpPersonne, 27/11/2026).
+    return array_merge(eqpPersonne($r), [
         'prenom' => trim((string) ($d['name'] ?? '')), 'nomFamille' => trim((string) ($d['surname'] ?? '')),
         'affiche' => trim((string) ($d['display_name'] ?? '')),
         'langue' => strtolower(trim((string) ($d['lang_code'] ?? ''))),
@@ -103,7 +104,7 @@ function eqfFiche(array $r, ?array $detail = null): array
         'roles' => array_values(array_filter(array_map('eqfNomDe', (array) ($d['roles'] ?? [])))),
         'competences' => array_values(array_filter(array_map('eqfNomDe', (array) ($d['competencies'] ?? [])))),
         'positions' => array_values(array_filter(array_map(static fn ($p) => ($n = eqfNomDe($p)) !== '' ? ['nom' => $n, 'niveau' => $niveau($p)] : null, (array) ($d['positions'] ?? [])))),
-    ];
+    ]);
 }
 
 /** GET /dashboard/equipe/personne?shop=&id= */
@@ -116,8 +117,10 @@ function ep_equipe_personne(?int $shop = null, ?int $id = null): array
     $detail = eqpGet('/employees/' . $id . '?include=competencies,positions');
     if (is_array($detail) && isset($detail['data']) && is_array($detail['data']) && !array_is_list($detail['data'])) { $detail = $detail['data']; }
     if (!is_array($detail) || (int) ($detail['id'] ?? $id) !== $id) { $detail = null; }
-    return ['personne' => eqfFiche($r, $detail), 'detailLu' => $detail !== null,
-        'choix' => ['contrats' => EQF_CONTRATS, 'roles' => EQF_ROLES, 'langues' => EQF_LANGUES]];
+    // Le statut (employé, ouvrier : le salaire garanti d'une maladie, 27/11/2026) vit au cockpit, pas au panel.
+    $statut = function_exists('eqaStatuts') ? (eqaStatuts($shop)[$id] ?? null) : null;
+    return ['personne' => eqfFiche($r, $detail) + ['statut' => $statut], 'detailLu' => $detail !== null,
+        'choix' => ['contrats' => EQF_CONTRATS, 'roles' => EQF_ROLES, 'langues' => EQF_LANGUES, 'statuts' => defined('EQA_STATUTS') ? EQA_STATUTS : []]];
 }
 
 /**

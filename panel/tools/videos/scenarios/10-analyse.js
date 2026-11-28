@@ -17,7 +17,7 @@ module.exports = async function () {
   await f.dire('Semaine, mois, trimestre, année, 13 semaines, ou <b>du … au</b> : un clic change la période.', 4400);
   await f.cacher(150);
   await f.cliquer('[data-per="mois"]', { apres: 1800 });
-  await f.montrer('.an-kpi:first-child', 'Novembre');
+  await f.montrer('.an-res-v', 'Novembre');
   await f.dire('<b>Mois</b> : novembre jusqu’à aujourd’hui, face aux mêmes jours d’octobre. ‹ et › changent de période.', 5200);
   await f.cacher(150);
   await f.cliquer('[data-per="sem13"]', { apres: 1800 });
@@ -25,15 +25,15 @@ module.exports = async function () {
 
   await f.chapitre({ n: 2, total: 4, titre: 'L’essentiel en un coup d’œil', texte: 'Le chiffre, la marge réalisée, les familles, et quatre classements de produits.' });
   await f.etape('2 · L’essentiel');
-  await f.montrer('.an-kpis', 'L’essentiel');
+  await f.montrer('.an-res-l1', 'L’essentiel');
   await f.dire('En tête : le chiffre, les pièces, la <b>marge réalisée</b>, le panier moyen, les références vendues.', 4800);
-  await f.montrer('.an-kpi.fort', 'Marge réalisée');
+  await f.montrer('.an-res-sep > p:first-child', 'Marge réalisée');
   await f.dire('La marge réalisée : le chiffre hors TVA, moins les pièces vendues × le coût de leur recette.', 4800);
-  await f.montrer('.an-kpi.alerte', 'Recettes sans coût');
-  await f.dire('Une recette sans coût au panel : sa marge est inconnue. Elle est <b>à compléter au panel</b>.', 4400);
+  await f.montrer('.an-res-l2', 'Recettes sans coût');
+  await f.dire('Une recette sans coût au panel : sa marge est inconnue. « À corriger » la signale : elle est <b>à compléter au panel</b>.', 5200);
   await f.cacher(150);
   await f.montrer('.an-corps > .an-g2:not(.an-g2--top) > .an-carte:first-child', 'Les familles');
-  await f.dire('Les <b>familles</b>, leur marge et leur flèche : ▲ vert à +5 % et plus, ▶ gris : stable, ▼ orange de −5 à −15 %, ▼ rouge au-delà.', 6400);
+  await f.dire('Les <b>familles</b>, leur marge et leur flèche : ▲ vert à +5 % et plus, ▶ gris : stable, ▼ or à −5 % et moins.', 5600);
   await f.cacher(150);
   await f.montrerTout('.an-g2--top > .an-carte:nth-child(-n+2)', 'Les classements');
   await f.dire('Quatre classements : les plus gros chiffres, <b>ce qui rapporte le plus</b>…', 3800);
@@ -48,9 +48,9 @@ module.exports = async function () {
   await f.taper('Croissant au beurre', 55);
   await f.p.keyboard.press('Enter');
   await f.pause(1800);
-  if (!(await f.p.locator('.an-ret').count())) { await f.cliquer('.an-g2--top tr[data-pid="100"]', { apres: 1800 }); }
+  if (!(await f.p.locator('.an-res-ret').count())) { await f.cliquer('.an-g2--top tr[data-pid="100"]', { apres: 1800 }); }
   await f.dire('Un produit se cherche par son nom, ou s’ouvre d’un clic dans un classement.', 3800);
-  await f.montrer('.an-ret', 'Ce qu’il faut retenir');
+  await f.montrer('.an-res-ret', 'Ce qu’il faut retenir');
   await f.dire('En tête, <b>ce qu’il faut retenir</b> : son rang, ce qu’on en jette, son jour fort, son prix.', 4800);
   await f.montrer('.an-qs > .an-qq:nth-child(2)', 'Combien il me rapporte ?');
   await f.dire('Puis une question par carte. <b>Combien il me rapporte</b> : du prix TTC à la marge par pièce.', 4800);
@@ -67,12 +67,12 @@ module.exports = async function () {
   await f.defiler(-4000);
   await f.cliquer('[data-retour]', { apres: 1600 });
   await f.cliquer('.an-fam[data-groupe="Pâtisserie"]', { apres: 1800 });
-  await f.montrer('.an-ret', 'Ce qu’il faut retenir');
+  await f.montrer('.an-res-ret', 'Ce qu’il faut retenir');
   await f.dire('Un clic sur une famille ouvre sa page : son poids dans le chiffre et dans la marge, sa tendance, le réseau.', 5200);
   await f.montrer('.an-qs > .an-qq:nth-child(3)', 'Qui la porte ?');
   await f.dire('<b>Quels produits la portent</b> : ceux qu’il ne faut jamais manquer. Un clic ouvre la fiche du produit.', 5000);
   await f.montrer('.an-qs > .an-qq:nth-child(5)', 'Ce qu’elle perd');
-  await f.dire('<b>Où est-ce que je perds de l’argent</b> : les invendus, produit par produit. Vert sous 8 %, orange de 8 à 15 %, rouge au-delà.', 6000);
+  await f.dire('<b>Où est-ce que je perds de l’argent</b> : les invendus, produit par produit. Vert sous 8 %, or de 8 à 15 %, rouge au-delà.', 6000);
   await f.cacher(150);
   await f.cliquer('.an-qs > .an-qq:nth-child(6) [data-jour="0"]', { apres: 1500 });
   await f.montrer('.an-qs > .an-qq:nth-child(6)', 'À quelle heure ?');

@@ -30,7 +30,7 @@ module.exports = async function () {
   await f.dire('Le plan répond à une seule question : peut-on <b>payer tout le monde</b> dans les semaines qui viennent ?', 5400);
   await f.montrerTout(G + '.tr-etape', 'La routine du dimanche soir');
   await f.dire('La routine du dimanche soir, en quatre étapes : le <b>solde réel</b>, l’<b>écart</b>, les quatre semaines à venir, la <b>décision</b>.', 6400);
-  await f.dire('Plus de 500 € d’écart : on en trouve la cause avant lundi. Orange ou rouge : on décide quoi décaler, et on prévient avant l’échéance.', 7000);
+  await f.dire('Plus de 500 € d’écart : on en trouve la cause avant lundi. Or ou rouge : on décide quoi décaler, et on prévient avant l’échéance.', 7000);
   await f.montrer(G + '.tr-def:not(.tr-def-c)', 'Repris tout seul');
   await f.dire('Repris tout seul : les <b>ventes réelles</b> des semaines closes, le <b>budget validé</b>, l’<b>année passée</b>.', 5600);
   await f.montrer(G + '.tr-def-c', 'Les couleurs');

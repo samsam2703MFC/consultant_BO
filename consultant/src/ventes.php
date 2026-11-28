@@ -745,6 +745,8 @@ function venteMois(string $m, array $nomDe): array
     $matin = 'GREATEST(0, LEAST(TIME_TO_SEC(end_hour), ' . $bascule . ') - LEAST(TIME_TO_SEC(start_hour), ' . $bascule . '))';
     $duree = 'GREATEST(TIME_TO_SEC(end_hour) - TIME_TO_SEC(start_hour), 0)';
     $heures = []; $creneauxEmp = [];
+    // Les heures travaillées : sans les services d'une absence payée de Mon équipe (27/11/2026, panel/src/equipe_absences.php).
+    $sansAbs = function_exists('eqaSansAbsencesSql') ? eqaSansAbsencesSql('franchisee_employee_schedule') : '';
     try {
         foreach (Db::rows('SELECT id_employee,
                                   SUM((TIME_TO_SEC(end_hour) - TIME_TO_SEC(start_hour) + 86400) % 86400) / 3600 h,
@@ -753,7 +755,7 @@ function venteMois(string $m, array $nomDe): array
                                   SUM(CASE WHEN WEEKDAY(work_date) >= 5 THEN ' . $matin . ' ELSE 0 END) / 3600 matWe,
                                   SUM(CASE WHEN WEEKDAY(work_date) >= 5 THEN ' . $duree . ' - ' . $matin . ' ELSE 0 END) / 3600 amWe
                              FROM franchisee_employee_schedule
-                            WHERE work_date >= ? AND work_date < ?
+                            WHERE work_date >= ? AND work_date < ?' . $sansAbs . '
                             GROUP BY id_employee', [substr($du, 0, 10), substr($au, 0, 10)]) as $r) {
             $id = (int) $r['id_employee'];
             $heures[$id] = (float) $r['h'];
