@@ -18,7 +18,11 @@
 
   function api(method, path, body) {
     return fetch(API + path, { method, credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
-      .then(r => r.json().catch(() => ({})).then(j => { if (r.ok) return j; const e = j && j.error; return Promise.reject(new Error(typeof e === 'string' ? e : (e && e.message) || j.erreur || ('HTTP ' + r.status))); }));
+      .then(r => r.text().then(t => {
+        // Une page HTML au lieu des données (session expirée, mauvaise adresse : 28/11/2026) se dit, au lieu de passer pour une réponse vide.
+        let j = {};
+        if (t.trim()) { try { j = JSON.parse(t); } catch (x) { return Promise.reject(new Error(/^\s*</.test(t) ? 'Le serveur a renvoyé une page au lieu des données (session expirée ou mauvaise adresse) : rechargez la page.' : 'Réponse illisible du serveur (HTTP ' + r.status + ').')); } }
+        if (r.ok) return j; const e = j && j.error; return Promise.reject(new Error(typeof e === 'string' ? e : (e && e.message) || j.erreur || ('HTTP ' + r.status))); }));
   }
   function toast(t, ko) { const d = document.createElement('div'); d.className = 'toast' + (ko ? ' ko' : ''); d.textContent = t; d.style.bottom = '84px'; document.body.appendChild(d); setTimeout(() => d.remove(), ko ? 6000 : 3000); }
 
