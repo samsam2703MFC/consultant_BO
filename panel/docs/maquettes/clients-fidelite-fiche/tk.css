@@ -1,0 +1,43 @@
+/* Le ticket d'un passage (maquettes ticket.html) : écrit comme il irait dans panel/public/dashboard/clients.css. */
+/* Le passage choisi dans la frise : souligné à l'encre, les autres plus pâles. */
+.pcl-frise i.on { cursor: pointer; }
+.pcl-frise i.sel { outline: 2px solid var(--ink); outline-offset: 1px; border-radius: 1px; }
+.pcl-frise i.pale { opacity: 0.4; }
+.pcl-fid-quand { position: relative; }
+
+/* Le ticket : l'en-tête (le jour, l'heure, le canal), les lignes, la remise et le total, le passage d'avant et d'après. */
+.pcl-tk { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 10px 12px 8px; font-size: 12px; }
+.pcl-tk-h { display: flex; align-items: center; gap: 8px; }
+.pcl-tk-h b { font-weight: 400; font-size: 13px; color: var(--ink); }
+.pcl-tk-h small { color: var(--muted); font-size: 11.5px; }
+.pcl-tk-h .x { margin-left: auto; width: 22px; height: 22px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; }
+.pcl-tk-h2 { display: flex; align-items: center; gap: 7px; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+.pcl-tk-c { display: inline-block; padding: 1px 7px; border-radius: 5px; background: var(--chip); font-size: 11px; color: var(--ink); }
+.pcl-tk-l { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 3px 6px; margin-top: 8px; padding-top: 7px; border-top: 1px dashed var(--line); }
+.pcl-tk-l .q { color: var(--muted); text-align: right; }
+.pcl-tk-l .n small { display: block; color: var(--muted); font-size: 10.5px; }
+.pcl-tk-l .t { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pcl-tk-s { display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); color: var(--muted); }
+.pcl-tk-s + .pcl-tk-s { margin-top: 2px; padding-top: 0; border-top: 0; }
+.pcl-tk-s.tot { color: var(--ink); font-size: 13px; }
+.pcl-tk-nav { display: flex; justify-content: space-between; margin-top: 7px; }
+.pcl-tk-nav .linklike { padding: 2px 0; font-size: 11.5px; }
+
+/* 1 · La bulle : posée sous le trait, par-dessus la fiche (rien ne bouge). */
+.pcl-tk--bulle { position: absolute; z-index: 5; width: 290px; border-color: var(--muted-2, #8c857b); }
+.pcl-tk--bulle::before { content: ''; position: absolute; top: -6px; left: var(--fleche, 50%); width: 10px; height: 10px; margin-left: -5px; background: #fff;
+  border-left: 1px solid var(--muted-2, #8c857b); border-top: 1px solid var(--muted-2, #8c857b); transform: rotate(45deg); }
+
+/* 2 · Sous la frise : le ticket s'ouvre dans la fiche, le radar descend. */
+.pcl-tk--dans { margin-top: 8px; background: var(--paper, #faf7f2); }
+
+/* 3 · Le ticket de caisse à côté : un second panneau à gauche de la fiche, par-dessus la liste. */
+.mq-duo { display: flex; gap: 12px; align-items: flex-start; }
+.pcl-tk--recu { width: 268px; flex: none; padding: 16px 18px 12px; border-radius: 12px; margin-top: 455px; }
+.pcl-tk--recu .rt { text-align: center; padding-bottom: 9px; border-bottom: 1px dashed var(--line); }
+.pcl-tk--recu .rt b { display: block; font-weight: 400; font-size: 14px; color: var(--ink); }
+.pcl-tk--recu .rt span { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+.pcl-tk--recu .pcl-tk-l { border-top: 0; margin-top: 4px; }
+.pcl-tk--recu .pcl-tk-l .n small { margin-top: 1px; }
+.pcl-tk--recu .pied { margin-top: 8px; font-size: 11px; color: var(--muted); text-align: center; }
+.pcl-tk--recu .x { position: absolute; }

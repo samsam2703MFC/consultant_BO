@@ -86,12 +86,13 @@
 
   /* ── Les quatre façons de dire quand il vient ── */
   const JOURS90 = Array.from({ length: MEMOIRE }, (_, i) => jour(DEBUT, i));
-  function quandA() {
-    const traits = JOURS90.map(j => `<i class="${VU.has(j) ? 'on' : ''}${!VU.has(j) && dow(j) >= 5 ? ' we' : ''}"${VU.has(j) ? ` style="background:${P.couleur}" title="${fD(j)}"` : ''}></i>`).join('');
+  function quandA(o) {
+    o = o || {};
+    const traits = JOURS90.map(j => `<i class="${VU.has(j) ? 'on' : ''}${!VU.has(j) && dow(j) >= 5 ? ' we' : ''}${o.sel === j ? ' sel' : ''}${o.sel && o.sel !== j && VU.has(j) ? ' pale' : ''}"${VU.has(j) ? ` style="background:${P.couleur}" title="${fD(j)}"` : ''}></i>`).join('');
     const mois = JOURS90.filter(j => j.slice(8) === '01').map(j => `<span style="left:${(100 * JOURS90.indexOf(j) / MEMOIRE).toFixed(1)}%">${MOIS[+j.slice(5, 7) - 1]}</span>`).join('');
-    return `<div class="pcl-fid-quand"><div class="lab">Ses passages<span>90 jours, un trait par jour</span></div>
-      <div class="pcl-frise">${traits}</div><div class="pcl-frise-m">${mois}<span class="auj">auj.</span></div>
-      <p class="dit"><b>${PASSAGES.length} passages</b> · le plus long creux : <b>${creux.n} jours</b>, du ${fJ(creux.du)} au ${fJ(creux.au)}</p></div>`;
+    return `<div class="pcl-fid-quand"><div class="lab">Ses passages<span>${o.lab || '90 jours, un trait par jour'}</span></div>
+      <div class="pcl-frise">${traits}</div><div class="pcl-frise-m">${mois}<span class="auj">auj.</span></div>${o.dans || ''}
+      <p class="dit"><b>${PASSAGES.length} passages</b> · le plus long creux : <b>${creux.n} jours</b>, du ${creux.du.slice(0, 7) === creux.au.slice(0, 7) ? +creux.du.slice(8, 10) : fJ(creux.du)} au ${fJ(creux.au)}</p>${o.apres || ''}</div>`;
   }
   function quandB() {
     const lundis = Array.from({ length: 13 }, (_, s) => jour(DEBUT, 7 * s));
@@ -156,6 +157,8 @@
     c: ['C · Semaine par semaine', 'Une barre par semaine face au rythme de son profil : tient-il son rendez-vous ?', () => ficheSerree(quandC)],
     d: ['D · Mois par mois', 'Les jours de chaque mois et le profil du mois : il glisse, il revient.', () => ficheSerree(quandD)],
   };
+  window.FF = { ficheSerree, quandA, PASSAGES, P, JOURS90, DEBUT, esc, nf, fD, dow, MOIS, MOISL };
+  if (window.FF_SANS_RENDU) { return; }
   const PLI = 840;   // le bas de l'écran d'un portable 1080p, depuis le haut de la fiche
   const q = new URLSearchParams(location.search).get('v');
   const cles = q && V[q] ? [q] : ['avant', 'a', 'b', 'c', 'd'];

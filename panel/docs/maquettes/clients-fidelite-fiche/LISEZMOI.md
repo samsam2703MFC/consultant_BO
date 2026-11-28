@@ -32,3 +32,26 @@ radar à 270 px au lieu de toute la largeur, sans la phrase d'aide.
 
 Régénérer : `node panel/docs/maquettes/clients-fidelite-fiche/capturer.js` (aucun serveur ; `DSF=1` pour des captures
 légères). `index.html?v=a` (ou `b`, `c`, `d`, `avant`) n'en montre qu'une.
+
+## Un passage de la frise ouvre son ticket (maquettes, 28/11/2026)
+
+**Statut : maquette, rien n'est codé.** Demande : « avant de mettre en ligne, ajouter la possibilité de cliquer sur une
+visite et d'avoir son ticket ; fais une maquette ». `ticket.html` (`tk.js`, `tk.css`) reprend la fiche A et ouvre le
+ticket (fictif) du samedi 21/11 de trois façons :
+
+| Capture | Ce qu'elle montre |
+|---|---|
+| `ticket-1.png` | **1 · la bulle** : sous le trait, par-dessus la fiche, la flèche sur le trait ; rien ne bouge |
+| `ticket-2.png` | **2 · sous la frise** : le ticket s'ouvre dans la fiche, le radar descend le temps de le lire |
+| `ticket-3.png` | **3 · le ticket de caisse à côté** : un panneau à gauche de la fiche, par-dessus la liste, mis en page comme le ticket de la caisse (n°, prix unitaires) |
+| `ticket-ensemble.png` | les trois côte à côte |
+
+Partout : le jour, le canal (comptoir, commande, webshop), l'heure et le n° du ticket ; par ligne la quantité, le produit,
+la portion et le total après remise ; la remise et le total ; ‹ › le passage d'avant ou d'après ; × ferme.
+
+**Les données** : rien de nouveau à garder. Les tickets d'un client et d'un jour sont déjà dans `mar_fid_ticket` (id,
+heure, montant, canal) ; leurs lignes se liraient à la demande (`/transactions/{id}?include=products`, compte du
+cockpit : `product_display_name`, `product_portion_label`, `quantity`, `unit_gross_price`,
+`total_gross_value_after_discount`), par une route comme `GET /fidelite/ticket?shop=&client=&jour=`.
+
+Régénérer : `node panel/docs/maquettes/clients-fidelite-fiche/capturer-ticket.js`.
