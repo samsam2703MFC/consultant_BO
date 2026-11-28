@@ -37,7 +37,7 @@
 .fs-nouv-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}.fs-nouv-h b{font-size:15px;font-weight:400}.fs-nouv-h span{color:var(--muted);font-size:12px}
 .fs-cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
 .fs-nc{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;padding:0;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
-.fs-nc:hover{border-color:#E8C9CD}
+.fs-nc:hover{border-color:var(--muted-2)}
 .fs-nc-b{height:72px;display:flex;align-items:flex-end;padding:8px 10px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#fff;position:relative;background:linear-gradient(135deg,#B9A99A,#7a736a)}
 .fs-nc-b.prod{background:linear-gradient(135deg,#9A7A6E,#5E4238)}.fs-nc-b.ntech{background:linear-gradient(135deg,#6E9A7C,#2F5E40)}
 .fs-nc-b.conn{background:linear-gradient(135deg,#7FA2C0,#2D5D80)}.fs-nc-b.tech{background:linear-gradient(135deg,#C97A86,#8D1D2C)}
@@ -56,7 +56,7 @@
 .fs-res-rep{display:flex;flex-wrap:wrap;gap:6px 18px;padding-left:18px;border-left:1px solid var(--line)}
 .fs-res-p{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
 .fs-pt{flex:none;width:8px;height:8px;border-radius:50%;background:var(--chip)}
-.fs-pt.stop{background:var(--stop)}.fs-pt.prize{background:var(--prize)}.fs-pt.green{background:var(--green)}.fs-pt.neutre{background:#c9c1b4}
+.fs-pt.stop{background:var(--stop)}.fs-pt.prize{background:var(--prize)}.fs-pt.green{background:var(--green)}.fs-pt.neutre{background:var(--faint)}
 .fs-res-l2{display:flex;align-items:flex-start;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .fs-res-t{flex:none;font-size:12.5px;line-height:30px;color:var(--muted-2)}
 .fs-res-l{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
@@ -69,7 +69,7 @@
 .fs-th{height:32px;background:var(--table-head);color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--line)}
 .fs-l{width:100%;min-height:54px;border:0;border-bottom:1px solid var(--row-line);background:#fff;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
 .fs-l:hover{background:var(--paper)}.fs-l:last-child{border-bottom:0}
-.fs-th .c,.fs-l .c{flex:1;min-width:0;padding:7px 0}.fs-l .c b{display:block;font-weight:400;font-size:13.5px}.fs-l .c small{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
+.fs-th .c,.fs-l .c{flex:1;min-width:0;padding:7px 0}.fs-l .c b{display:block;font-weight:400;font-size:13px}.fs-l .c small{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
 .fs-th .s,.fs-l .s{width:96px;flex:0 0 auto}.fs-th .e,.fs-l .e{width:64px;flex:0 0 auto;font-size:12px;color:var(--muted-2)}.fs-l .e.ret{color:var(--stop)}
 .fs-th .o,.fs-l .o{width:54px;flex:0 0 auto;color:var(--accent);font-size:12px;text-align:right}
 /* La tête « Échéance » prenait les 12 px de la cellule : la tête reste en 10,5 px comme les autres. */
@@ -92,7 +92,7 @@
 .fs-prof-t img{width:56px;height:56px;border-radius:12px;background:var(--chip);flex:0 0 auto}
 .fs-prof-t b{font-weight:400;font-size:15px;display:block}.fs-prof-t span{font-size:12px;color:var(--muted);line-height:1.45}.fs-prof-t span b{display:inline;font-size:inherit;color:var(--ink)}
 .fs-qp{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font:inherit;font-size:12.5px;color:var(--ink);background:#fff;margin-top:6px;cursor:pointer}
-.fs-qp:hover{border-color:#E8C9CD}.fs-qp small{display:block;color:var(--muted);font-size:10.5px}
+.fs-qp:hover{border-color:var(--muted-2)}.fs-qp small{display:block;color:var(--muted);font-size:10.5px}
 .fs-q{display:flex;gap:6px;margin-top:10px}.fs-q .db-sel{flex:1;min-width:0}
 /* Une formation */
 .fs-fh{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -118,8 +118,8 @@
 .fs-grille{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .fs-j{position:relative;height:40px;border-radius:6px;background:var(--chip);overflow:hidden;border:1px solid transparent}
 .fs-j img{width:100%;height:100%;object-fit:cover;display:block}
-.fs-j small{position:absolute;left:3px;bottom:1px;font-size:8.5px;color:var(--muted-2)}.fs-j img+small{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
-.fs-j.ok{border-color:var(--green)}.fs-j.ok::after{content:'✓';position:absolute;top:1px;right:2px;font-size:9px;color:#fff;background:var(--green);border-radius:50%;width:12px;height:12px;line-height:12px;text-align:center}
+.fs-j small{position:absolute;left:3px;bottom:1px;font-size:10px;color:var(--muted-2)}.fs-j img+small{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.fs-j.ok{border-color:var(--green)}.fs-j.ok::after{content:'✓';position:absolute;top:1px;right:2px;font-size:10px;color:#fff;background:var(--green);border-radius:50%;width:12px;height:12px;line-height:12px;text-align:center}
 .fs-j.ko{border-color:var(--stop)}.fs-j.att{border-color:var(--prize)}
 .fs-j.manq{background:var(--stop-soft)}.fs-j.faire{background:var(--prize-soft);border:1px dashed var(--prize)}.fs-j.venir{background:#fff;border:1px dashed var(--line)}
 /* La photo du jour : l'action de l'écran (bordeaux plein, la seule). */
