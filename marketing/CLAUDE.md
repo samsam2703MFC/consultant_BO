@@ -29,4 +29,4 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   (`src/mkt_agences.php`, lues et écrites par `…/agencies`). Plus aucune requête sur les tables propres au module : ne
   pas en remettre ; ce qui manque se demande au module (une route), comme pour les agences.
 - **Tests** : `php marketing/bin/tests_fonds_relais.php`, `tests_campagnes_lecture.php`, `tests_agences_relais.php`, `tests_metadonnee.php`, `tests_newsletter.php`, `tests_promos*.php`, `tests_bons.php`,
-  `tests_canaux.php`, `tests_catalogue.php` ; `php marketing/tests/visibilite/run.php`.
+  `tests_canaux.php`, `tests_fidelite_cartes.php` (les cartes par public et le bingo, 28/11/2026), `tests_catalogue.php` ; `php marketing/tests/visibilite/run.php`.

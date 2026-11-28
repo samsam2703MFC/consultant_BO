@@ -39,7 +39,8 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   dashboard (`src/tfb_magasin.php`, `tfb-magasin.js` : téléphone, PIN, SMS ; la session reste dans le navigateur, en-tête
   `X-TFB-Jeton`), le consultant, l'admin. Les routes `/panel/shops/{s}/…` n'ouvrent qu'au compte du magasin ; sans lui, le
   module se rabat sur `/shops/{s}/clients…` et le relevé des tickets pro. Commandes lit aussi ses livraisons avec lui.
-  Les offres restent la page Offres.
+  Les offres restent la page Offres. **Le compte en ligne** (28/11/2026) : la colonne et le filtre des particuliers
+  (`compte=en_ligne|sans_compte`) et la fiche lisent `last_login_at` de TF Buddy (rempli seulement si le client a un mot de passe).
   **Bureaux en développement** (`src/bureaux_dev.php`, 26/11/2026) : une nouvelle personne et son futur bureau, saisis au
   dashboard ou par le questionnaire public du magasin (`public/bureau/`, un par magasin, lien et QR dans Clients ›
   Bureaux) ; la personne, la société (si TVA) et le bon de bienvenue se créent tout de suite, le bureau à la validation

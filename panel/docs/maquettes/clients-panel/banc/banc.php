@@ -113,7 +113,9 @@ function bancDonnees(): array
         $id = 1000 + $i;
         $D['b2c'][$id] = ['id' => $id, 'id_main_shop' => $i % 7 === 0 ? 2 : 3, 'is_b2b' => 0, 'name' => $pre[$i % 20], 'surname' => $nom[($i * 7) % 20], 'phone' => '+32 4' . (70 + $i % 29) . ' ' . str_pad((string) (10 + $i), 2, '0') . ' ' . (20 + $i % 70) . ' ' . str_pad((string) ($i % 97), 2, '0', STR_PAD_LEFT),
             'email' => $i % 3 ? strtolower($pre[$i % 20]) . '.' . strtolower($nom[($i * 7) % 20]) . '@exemple.be' : '', 'street' => 'rue de Namur', 'street_number' => (string) (1 + $i), 'zip' => '6041', 'city' => 'Gosselies',
-            'personal_discount_percent' => $i % 9 === 0 ? 5 : ($i % 13 === 0 ? 10 : 0), 'can_deferral' => 0, 'create_timestamp' => date('Y-m-d H:i:s', strtotime('2026-11-24 -' . ($i * 5) . ' day')), 'password_hash' => 'x', 'api_key' => 'k'];
+            'personal_discount_percent' => $i % 9 === 0 ? 5 : ($i % 13 === 0 ? 10 : 0), 'can_deferral' => 0, 'create_timestamp' => date('Y-m-d H:i:s', strtotime('2026-11-24 -' . ($i * 5) . ' day')), 'password_hash' => 'x', 'api_key' => 'k',
+            // Le compte en ligne (28/11/2026) : un client sur quatre s'est déjà connecté au webshop.
+            'last_login_at' => $i % 4 === 1 ? date('Y-m-d H:i:s', strtotime('2026-11-27 18:00 -' . ($i * 2) . ' day')) : null];
     }
     $bur = [['Lunchroom Hainaut Assurances', 800, 'Charleroi', 3, 'active'], ['Horizon · Jumet', 801, 'Jumet', 2, 'active'], ['Fiduciaire Delvaux', 802, 'Gosselies', 1, 'active'], ['Techni-Sol · atelier', 803, 'Jumet', 0, 'active'],
         ['Atelier numérique', 804, 'Charleroi', 1, 'active'], ['Bureau Lambot', 805, 'Courcelles', 0, 'pending'], ['Biolab · labo 2', 807, 'Gosselies', 2, 'active']];

@@ -1,0 +1,75 @@
+/* Les documents du programme commercial B2B (20/11/2026) : contrat d'agent commercial, feuille de mission, feuille
+ * d'explication et convention des franchisés. Gabarit des documents de gestion, version A (docs/DESIGN_SYSTEM.md
+ * §13.4) : logo et filet Ruby en tête, libellés en petites capitales, encadré à filet Ruby ; Gotham en trait normal,
+ * le 700 réservé aux accents du §4.3 (titre de la pièce, noms des parties, valeurs des références). */
+@font-face { font-family: 'Gotham'; src: url('../../../shared/public/assets/ds/fonts/Gotham_Medium.otf'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Gotham'; src: url('../../../shared/public/assets/ds/fonts/Gotham_Regular.otf'); font-weight: 700; font-display: block; }
+@page { size: A4; margin: 14mm 14mm 18mm; }
+* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+html, body { margin: 0; background: #fff; }
+body { font: 400 11px/1.5 'Gotham', Helvetica, Arial, sans-serif; color: #1c1a17; }
+p { margin: 0 0 7px; }
+b { font-weight: 700; }
+
+/* En-tête : logo à gauche, type de pièce à droite, filet Ruby 2 px */
+.doc__head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #8D1D2C; padding-bottom: 12px; margin-bottom: 20px; }
+.doc__logo { height: 34px; display: block; background: #fff; }
+.doc__type { text-align: right; font-size: 10px; color: #7a736a; line-height: 1.5; }
+.doc__type b { display: block; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: #1c1a17; }
+
+/* Chapeau : une phrase qui dit à quoi sert la pièce */
+.doc__chapeau { font-size: 13px; line-height: 1.5; margin: 0 0 18px; }
+
+/* Petits libellés en capitales */
+.doc__label { font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; margin-bottom: 5px; }
+
+/* Parties */
+.doc__parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 16px; }
+.doc__parties p { margin: 0; }
+.blanc { display: inline-block; min-width: 150px; border-bottom: 1px solid #b8b2a8; height: 13px; vertical-align: bottom; }
+.blanc.court { min-width: 60px; }
+.blanc.long { min-width: 260px; }
+.case { display: inline-block; width: 9px; height: 9px; border: 1px solid #7a736a; border-radius: 2px; margin: 0 5px 0 0; vertical-align: -1px; }
+
+/* Références : 4 colonnes entre deux filets */
+.doc__refs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid #e6e0d8; border-bottom: 1px solid #e6e0d8; margin-bottom: 16px; }
+.doc__refs .v { font-size: 11px; font-weight: 700; }
+
+/* Titres de partie : petites capitales, filet dessous */
+h2 { font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; font-weight: 400; margin: 20px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #e6e0d8; break-after: avoid; }
+
+/* Articles d'un contrat : le numéro en libellé, le titre en taille, le texte dessous */
+.art { margin: 0 0 12px; break-inside: avoid; }
+.art__n { font-size: 8.5px; letter-spacing: .07em; text-transform: uppercase; color: #7a736a; }
+.art h3 { font-size: 12.5px; font-weight: 400; margin: 1px 0 5px; }
+.art ol, .art ul, .liste { margin: 4px 0 0; padding: 0 0 0 16px; }
+.art li, .liste li { margin: 0 0 4px; }
+
+/* Tableaux */
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th { padding: 6px 8px; border-bottom: 1px solid #e6e0d8; font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; color: #7a736a; font-weight: 400; text-align: left; }
+td { padding: 7px 8px; border-bottom: 1px solid rgba(34, 34, 34, .06); vertical-align: top; }
+tr { break-inside: avoid; }
+.num { text-align: right; white-space: nowrap; }
+.sub { display: block; font-size: 9.5px; color: #7a736a; margin-top: 1px; }
+.g { color: #7a736a; }
+.petit { font-size: 9.5px; color: #7a736a; }
+
+/* Encadré : filet gauche Ruby 3 px (exemple chiffré, bon pour accord) */
+.doc__box { border-left: 3px solid #8D1D2C; padding: 2px 0 2px 12px; margin: 16px 0 0; break-inside: avoid; }
+.doc__box p:last-child { margin-bottom: 0; }
+
+/* Signatures */
+.signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 10px; }
+.signatures .zone { border-top: 1px solid #e6e0d8; padding-top: 8px; min-height: 92px; }
+.signatures .zone p { margin: 0 0 6px; }
+
+/* Étapes numérotées (feuille d'explication) */
+.etapes { counter-reset: e; margin: 0; padding: 0; list-style: none; }
+.etapes li { counter-increment: e; position: relative; padding: 6px 0 6px 28px; border-bottom: 1px solid rgba(34, 34, 34, .06); break-inside: avoid; }
+.etapes li::before { content: counter(e); position: absolute; left: 0; top: 6px; width: 18px; height: 18px; border: 1px solid #e6e0d8; border-radius: 5px; text-align: center; font-size: 10px; line-height: 17px; color: #7a736a; }
+
+/* Deux colonnes de texte */
+.deux { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.saut { break-before: page; }
+.avertissement { margin-top: 18px; font-size: 9px; color: #7a736a; border-top: 1px solid #e6e0d8; padding-top: 8px; }
