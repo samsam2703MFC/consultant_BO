@@ -557,6 +557,14 @@ Décidé par Sam le 26/11/2026 (« adapte ce style à tout le dashboard ») à p
 - **« Prête »** (Commandes) : bleu-gris `#4A6478` (5,5:1 sur son fond), distinct du bleu d'identification du Webshop.
 - **Petits textes sur fond teinté** : sur `--table-head` ou `--paper`, `--muted` ne fait que 4,45:1 (sous 4,5:1) ; un
   texte de 12 px ou moins y prend `--muted-2` (6,7:1).
+- **Le dashboard magasin au système, page par page** (28/11/2026, suivi : `panel/docs/maquettes/refonte-design-system/`).
+  Les **couleurs d'identification restent** : les checklists et leurs zones (Sam, 28/11 : « les checklists gardent leur
+  couleur » — bandeau et repère d'heure des contrôles en photo), les quatre familles de Formations (codes couleur des
+  catalogues, 22/11), les canaux (comptoir or, commande bordeaux, webshop bleu : Commandes, Fidélité et la jauge des
+  commandes par canal de l'Opérationnel, gardée), les leviers, les cartes de fidélité, les types de fichier. Les vues d'une
+  même carte prennent le sélecteur segmenté `.db-ong--seg` (fond `--chip`, la vue choisie en blanc) ; un `.db-ong` plein
+  reste aux filtres d'une barre. Les courbes du magasin : le réalisé `--chart-real`, le réseau ou J−7 en `--muted`,
+  l'objectif `--chart-goal`. Un écart ou une heure : une case au fond teinté de son état, jamais un aplat plein en blanc.
 
 ---
 
