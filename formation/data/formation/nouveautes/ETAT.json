@@ -1,9 +1,9 @@
 {
   "brancheEnLigne": "claude/deploiement-application-serveur-lmz1bm",
-  "dernierCommitLu": "b4979cb638017eaa37587b58522a34df550e7310",
-  "dernierCommitLuLe": "2026-11-27T05:01:15+01:00",
-  "passeLe": "2026-11-27",
-  "prochainNumero": 11,
+  "dernierCommitLu": "5a4a30b83192cbbb4573546ee642cdc5699a03f6",
+  "dernierCommitLuLe": "2026-11-28T04:59:58+01:00",
+  "passeLe": "2026-11-28",
+  "prochainNumero": 12,
   "themes": [
     {
       "n": 1,
@@ -208,6 +208,21 @@
       "version": "1.0",
       "statut": "publiee",
       "note": "5 photos, clients floutés ; Bureaux non capturé (connexion du compte du magasin requise)"
+    },
+    {
+      "n": 11,
+      "theme": "Le dashboard : Mon équipe › absences, congés et remplacements",
+      "id": "art-dash-absences",
+      "fichier": "data/formation/nouveautes/art-dash-absences.json",
+      "sources": [
+        "fc176998 Mon équipe : absences, congés et remplacements (2026-11-27T13:58:03Z)",
+        "d296f96f Absences : l'app employés, et le salaire garanti d'une maladie (2026-11-27T16:46:38Z)",
+        "1356b06e Absences : l'Opérationnel et les primes (2026-11-27T17:05:56Z)",
+        "40be275a Absences : le consultant (2026-11-27T17:42:04Z)",
+        "7b4d2ed1 Vidéos de Mon équipe retournées, nouvelle 02-19 (2026-11-27T15:00:18Z)"
+      ],
+      "etat": "redige",
+      "redigeLe": "2026-11-28"
     }
   ],
   "ecartes": [
@@ -622,6 +637,39 @@
       ],
       "raison": "documentation des routines",
       "le": "2026-11-27"
+    },
+    {
+      "sujet": "Références et pertes : un prix tenu par le tarif d'un fournisseur intégré (SUPPLIER_MANAGED_PRICE)",
+      "sources": [
+        "c2b5d34b"
+      ],
+      "raison": "écran du siège (Vérification › Références et pertes, déjà écarté le 27/11) ; correctif",
+      "le": "2026-11-28"
+    },
+    {
+      "sujet": "Dashboard magasin : le nouveau style dans toutes les sections (résumé, « À corriger », échelles de couleur), correctif des onglets de Clients",
+      "sources": [
+        "d4ecd6f5"
+      ],
+      "raison": "changement d'apparence sans nouveau geste ; suivi par la routine SOP du dashboard magasin (ART-PIL-01, SOP-PIL-01)",
+      "le": "2026-11-28"
+    },
+    {
+      "sujet": "Demandes des franchisés : les demandes écrites en polonais (conflit de n° de TVA du webshop) passent en français",
+      "sources": [
+        "65e132f5"
+      ],
+      "raison": "correctif sans changement de geste",
+      "le": "2026-11-28"
+    },
+    {
+      "sujet": "Manuels du 28/11 (documentation seulement)",
+      "sources": [
+        "07a9c3c8",
+        "7fc7da44"
+      ],
+      "raison": "documentation des routines",
+      "le": "2026-11-28"
     }
   ],
   "misesAJourSignalees": [
@@ -751,6 +799,64 @@
         "98a1ffca"
       ],
       "le": "2026-11-27"
+    },
+    {
+      "code": "0.0.40",
+      "titre": "Le dashboard : l'onglet Mois",
+      "change": "Résultat › Mois : le CA du réseau sur douze mois glissants (courbe des 12 derniers mois clos face au N-1, évolution réseau entier et à magasins comparables, détail par magasin au survol) et les douze mois glissants par catégorie principale (Traiteur, Boulangerie, Viennoiseries, Quiches, Tartes : CA des 12 mois, part, évolution, courbe au clic) ; l'axe garde la décimale (27/11)",
+      "sources": [
+        "805636c1",
+        "83523932",
+        "eb4c35e6"
+      ],
+      "le": "2026-11-28"
+    },
+    {
+      "code": "0.0.68",
+      "titre": "Le dashboard : Vendre › Clients (particuliers, entreprises B2B, bureaux)",
+      "change": "Clients › Bureaux : « Ce que voient vos clients » et « Demandes hors zone » (copie des demandes hors zone des deux landings, transmises à TF Buddy) (27/11)",
+      "sources": [
+        "d6ace1a2"
+      ],
+      "le": "2026-11-28"
+    },
+    {
+      "code": "0.0.52",
+      "titre": "Le dashboard : l'onglet Mon catalogue",
+      "change": "le catalogue « gamme par gamme » du Marketing (v1.23) : présentation avec design (photos cadrées, disposition, textes stylés, fond), pages libres dans les aperçus et miniatures, police Gotham Book, ordre des gammes depuis l'assistant (27/11)",
+      "sources": [
+        "dd334f9a",
+        "4c588047"
+      ],
+      "le": "2026-11-28"
+    },
+    {
+      "code": "0.0.66",
+      "titre": "Le dashboard : Mon équipe (responsabilités, planning, fiches, primes)",
+      "change": "la partie « Retirer de l’horaire de la semaine » (absent, en congé) ne vaut plus pour une absence payée : le bouton « Absente ou en congé » et la barre « Absence ou congé » (thème 11) ; la fiche gagne « Statut (maladie) » (27/11)",
+      "sources": [
+        "fc176998",
+        "d296f96f"
+      ],
+      "le": "2026-11-28"
+    },
+    {
+      "code": "0.0.37",
+      "titre": "Le dashboard : l'onglet Opérationnel",
+      "change": "« L’équipe du jour » : ligne « Absences (Mon équipe) » ; une absence payée n'est ni en poste ni dans le partage des ventes ; « (+1 absente) » (27/11) — décrit dans le thème 11",
+      "sources": [
+        "1356b06e"
+      ],
+      "le": "2026-11-28"
+    },
+    {
+      "code": "0.0.32",
+      "titre": "La visite du consultant en magasin",
+      "change": "l'équipe de la visite : une absence payée sous « Aussi au planning aujourd’hui », pas à noter (27/11) — décrit dans le thème 11",
+      "sources": [
+        "40be275a"
+      ],
+      "le": "2026-11-28"
     }
   ],
   "regles": [

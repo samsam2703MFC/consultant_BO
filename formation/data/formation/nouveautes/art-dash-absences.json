@@ -1,0 +1,415 @@
+{
+  "aConfirmer": [
+    "Le salaire garanti ne prend pas en compte (code et LISEZMOI de la mise en ligne du 27/11) : un employé sous contrat de moins de trois mois (régime des ouvriers), la rechute dans les 14 jours (même période), la part au-dessus du plafond pour un ouvrier ; le jour se compte depuis le début de la période posée. Les congés des ouvriers (caisse de vacances) restent comptés au coût du planning. L’article ne donne pas de règle sociale au-delà de ce que l’écran calcule : à relire par le siège.",
+    "Un jour de congé sans service prévu (semaine pas encore faite) : l’écran ne pose rien (« faites d’abord son horaire ») ; combien d’heures payer reste à décider (point 2 « À vérifier » du LISEZMOI).",
+    "Le taux de l’intérim se saisit à chaque absence (pas de réglage du magasin) : point 4 « À vérifier » du LISEZMOI.",
+    "Les droits du compte du cockpit au panel (DELETE et POST /schedule) sont « à vérifier » au LISEZMOI : si le panel refuse, l’écran affiche « Rien n’est enregistré : … ».",
+    "Captures du 28/11/2026 à Halle (?shop=4), sans absence posée au magasin : la semaine hachurée, la ligne « Extérieurs », l’Opérationnel et l’app employés ne sont pas photographiés (rien à montrer ; jamais de capture fictive). Le champ de date s’affiche au format du navigateur de capture (11/28/2026).",
+    "NL : traduction de travail, à relire."
+  ],
+  "id": "art-dash-absences",
+  "code": "",
+  "type": "Article",
+  "dossier": "05",
+  "version": "1.0",
+  "statut": "a_valider",
+  "langue_origine": "FR",
+  "poste": "vente",
+  "moment": null,
+  "acces": "responsable",
+  "duree": "20 min de lecture, avec Mon équipe › Planning ouvert sur son magasin",
+  "titre": {
+    "fr": "Le dashboard : Mon équipe › absences, congés et remplacements",
+    "nl": "Het dashboard: Mon équipe › afwezigheden, verlof en vervangingen"
+  },
+  "objectif": {
+    "fr": "Poser une maladie, un congé payé, un congé de circonstance ou une absence non payée sur les services d’une personne, sans fausser le budget d’heures : une absence payée garde son coût, la personne sort de la présence. La remplacer aux mêmes heures par quelqu’un de l’équipe ou de l’extérieur, en voyant le coût ajouté, le budget du jour et le comptoir avant d’enregistrer. Savoir où l’absence se lit ensuite : le planning, l’Opérationnel, les primes, l’app des employés et la visite du consultant.",
+    "nl": "Een ziekte, betaald verlof, omstandigheidsverlof of onbetaalde afwezigheid op de diensten van iemand zetten, zonder het urenbudget te vervalsen: een betaalde afwezigheid houdt haar kost, de persoon telt niet meer als aanwezig. Haar op dezelfde uren vervangen door iemand van het team of van buiten, met de extra kost, het dagbudget en de toonbank zichtbaar vóór het bewaren. Weten waar de afwezigheid daarna te lezen staat: de planning, « Opérationnel », de premies, de app van de medewerkers en het bezoek van de consultant."
+  },
+  "pour": {
+    "fr": "Franchisé, locataire gérant, manager et adjoint manager (P7 à P12), et chefs de section (P4 à P6) qui font les horaires. À lire après « Le dashboard : Mon équipe (responsabilités, planning, fiches, primes) » (0.0.66).",
+    "nl": "Franchisenemer, locataire-gérant, manager en adjunct-manager (P7 tot P12), en sectiechefs (P4 tot P6) die de uurroosters maken. Te lezen na « Le dashboard : Mon équipe (responsabilités, planning, fiches, primes) » (0.0.66)."
+  },
+  "classement": {
+    "souscat": "D5.1",
+    "phases": [
+      "operationnel",
+      "formation"
+    ],
+    "postes": [
+      "P4",
+      "P5",
+      "P6",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12"
+    ],
+    "competences": [
+      "C-PLAN.Planning",
+      "C-PILOTAGE.KPI"
+    ],
+    "formations": [
+      "FO-24",
+      "FO-06"
+    ],
+    "checklists": []
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Avant de commencer",
+        "nl": "Voor je begint"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Où se pose une absence",
+            "nl": "Waar een afwezigheid gezet wordt"
+          },
+          "texte": {
+            "fr": "Au dashboard : « Mon équipe » › « Planning ».\nTrois entrées : le bouton « Absence ou congé » de la barre du planning (à côté de « Ajouter un service ») ; « Absente ou en congé » dans la fenêtre d’un service ; un clic sur la case d’une absence déjà posée.\nLes trois ouvrent la même fenêtre « Absence ou congé », pour un jour ou pour une période.\nPour le franchisé et le responsable qui font les horaires.",
+            "nl": "In het dashboard: « Mon équipe » › « Planning ».\nDrie ingangen: de knop « Absence ou congé » in de balk van de planning (naast « Ajouter un service »); « Absente ou en congé » in het venster van een dienst; een klik op het vakje van een reeds gezette afwezigheid.\nAlle drie openen hetzelfde venster « Absence ou congé », voor één dag of voor een periode.\nVoor de franchisenemer en de verantwoordelijke die de uurroosters maken."
+          },
+          "critique": false,
+          "photo": "art-dash-absences-barre.jpg",
+          "video": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Pourquoi cet écran",
+            "nl": "Waarom dit scherm"
+          },
+          "texte": {
+            "fr": "Une personne sous contrat de travail, malade ou en congé, reste payée.\nSupprimer ses services ferait baisser le budget d’heures alors que le magasin paie : le franchisé croirait avoir de la marge.\nIci, le service devient absent : son coût reste au budget, la personne ne compte plus comme présence (le comptoir, les linéaires, « À corriger »).\nLe trou qu’elle laisse se voit, et on la remplace aux mêmes heures.",
+            "nl": "Iemand met een arbeidscontract die ziek of met verlof is, blijft betaald.\nZijn diensten schrappen zou het urenbudget doen dalen terwijl de winkel betaalt: de franchisenemer zou denken dat hij marge heeft.\nHier wordt de dienst afwezig: de kost blijft in het budget, de persoon telt niet meer als aanwezig (de toonbank, de lijnen, « À corriger »).\nHet gat dat ze laat, is zichtbaar, en ze wordt op dezelfde uren vervangen."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Le motif décide du coût",
+        "nl": "Het motief bepaalt de kost"
+      },
+      "etapes": [
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Les quatre motifs",
+            "nl": "De vier motieven"
+          },
+          "texte": {
+            "fr": "Sous « Pourquoi », quatre cartes, chacune avec ce qu’elle fait du coût :\n« Maladie » : « Salaire garanti : ses heures restent payées ».\n« Congé payé » : « Ses heures restent payées ».\n« Congé de circonstance » : « Mariage, décès, déménagement… : ses heures restent payées ».\n« Absence non payée » : « Sans solde, injustifiée : le coût sort, le service quitte le panel ».\nChaque carte montre le montant : « reste au budget » ou « sort du budget ».",
+            "nl": "Onder « Pourquoi » vier kaarten, elk met wat ze met de kost doet:\n« Maladie »: « Salaire garanti : ses heures restent payées ».\n« Congé payé »: « Ses heures restent payées ».\n« Congé de circonstance »: « Mariage, décès, déménagement… : ses heures restent payées ».\n« Absence non payée »: « Sans solde, injustifiée : le coût sort, le service quitte le panel ».\nElke kaart toont het bedrag: « reste au budget » of « sort du budget »."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Payée ou non : ce qui se passe au panel",
+            "nl": "Betaald of niet: wat er in het panel gebeurt"
+          },
+          "texte": {
+            "fr": "Absence payée : le service reste au planning du panel TF Buddy ; son coût reste partout (le Résultat, Mon équipe). L’absence n’est notée qu’au cockpit.\nAbsence non payée : le service est retiré du panel ; si l’absence est annulée, il revient.\nLe contrat de la personne compte : « Contrat civil », « B2B », « Intérim », « Stage », « Bénévole » sont payés aux heures prestées. Une absence ne leur coûte rien : leur service quitte le panel.\nLe type de contrat s’affiche en tête de la fenêtre, à côté du nom.",
+            "nl": "Betaalde afwezigheid: de dienst blijft in de planning van het panel TF Buddy; de kost blijft overal (het Resultaat, Mon équipe). De afwezigheid wordt alleen in de cockpit genoteerd.\nOnbetaalde afwezigheid: de dienst wordt uit het panel gehaald; wordt de afwezigheid geannuleerd, dan komt hij terug.\nHet contract van de persoon telt: « Contrat civil », « B2B », « Intérim », « Stage », « Bénévole » worden per gepresteerd uur betaald. Een afwezigheid kost dan niets: hun dienst verlaat het panel.\nHet contracttype staat bovenaan het venster, naast de naam."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Poser une absence et la remplacer",
+        "nl": "Een afwezigheid zetten en vervangen"
+      },
+      "etapes": [
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Qui, quand, pourquoi",
+            "nl": "Wie, wanneer, waarom"
+          },
+          "texte": {
+            "fr": "« Qui » : la personne (déjà choisie quand on part de son service).\n« Du » … « au » : la période ; 31 jours au plus d’un coup.\n« Pourquoi » : le motif.\nPour une maladie : la case « Certificat médical reçu ».\nUne absence se pose sur les services de la personne : sans service sur la période, l’écran le dit (faire d’abord son horaire).\nSes jours de repos sur la période sont listés : « rien à payer en plus ».",
+            "nl": "« Qui »: de persoon (al gekozen als je vanuit haar dienst vertrekt).\n« Du » … « au »: de periode; maximaal 31 dagen in één keer.\n« Pourquoi »: het motief.\nBij ziekte: het vakje « Certificat médical reçu ».\nEen afwezigheid wordt op de diensten van de persoon gezet: zonder dienst in de periode zegt het scherm dat (eerst haar uurrooster maken).\nHaar rustdagen in de periode worden opgesomd: « rien à payer en plus »."
+          },
+          "critique": false,
+          "photo": "art-dash-absences-fenetre.jpg",
+          "video": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "Jour par jour : remplacer aux mêmes heures",
+            "nl": "Dag per dag: vervangen op dezelfde uren"
+          },
+          "texte": {
+            "fr": "Le tableau « Jour par jour » : « Jour », « Son service », « Devient », « Heures », « Coût qui reste » (ou « Coût qui sort »), « Remplacer par », « Effet », « Budget du jour », « Comptoir ».\n« Remplacer par » propose l’équipe libre à ces heures : ceux du même rôle d’abord, puis le moins cher ; chaque nom avec son coût ; le premier porte « (proposé) ».\n« — personne » : pas de remplaçant ce jour.\n« Quelqu’un d’extérieur (intérim, extra)… » : son « Nom » et son « Taux » en €/h. Il est « connu du cockpit seul : son coût s’ajoute ici, sa facture passe par les frais ».\nUn remplaçant de l’équipe devient un vrai service au panel : son coût s’ajoute.",
+            "nl": "De tabel « Jour par jour »: « Jour », « Son service », « Devient », « Heures », « Coût qui reste » (of « Coût qui sort »), « Remplacer par », « Effet », « Budget du jour », « Comptoir ».\n« Remplacer par » stelt het vrije team op die uren voor: eerst wie dezelfde rol heeft, dan de goedkoopste; elke naam met zijn kost; de eerste draagt « (proposé) ».\n« — personne »: geen vervanger die dag.\n« Quelqu’un d’extérieur (intérim, extra)… »: zijn « Nom » en « Taux » in €/u. Hij is « connu du cockpit seul : son coût s’ajoute ici, sa facture passe par les frais ».\nEen vervanger uit het team wordt een echte dienst in het panel: zijn kost komt erbij."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "Lire l’effet, puis enregistrer",
+            "nl": "Het effect lezen, dan bewaren"
+          },
+          "texte": {
+            "fr": "Sous le tableau, quatre chiffres : « L’absence de … » (les heures payées sans présence), « Les remplacements » (le coût ajouté), « Budget de ces jours » (avant → après), « Comptoir » (« tenu » ou « vide » avec les heures).\nEn bas, le résumé : la personne, le motif, la période, les services, les remplacements.\n« Poser l’absence » (ou « Poser l’absence et 1 remplacement ») enregistre. Rien n’est écrit avant.\n« Fermer » ne garde rien.",
+            "nl": "Onder de tabel vier cijfers: « L’absence de … » (de betaalde uren zonder aanwezigheid), « Les remplacements » (de extra kost), « Budget de ces jours » (voor → na), « Comptoir » (« tenu » of « vide » met de uren).\nOnderaan de samenvatting: de persoon, het motief, de periode, de diensten, de vervangingen.\n« Poser l’absence » (of « Poser l’absence et 1 remplacement ») bewaart. Vooraf wordt niets geschreven.\n« Fermer » bewaart niets."
+          },
+          "critique": true,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Le salaire garanti d’une maladie",
+        "nl": "Het gewaarborgd loon bij ziekte"
+      },
+      "etapes": [
+        {
+          "numero": "8",
+          "titre": {
+            "fr": "Le statut dans la fiche",
+            "nl": "Het statuut in de fiche"
+          },
+          "texte": {
+            "fr": "Une maladie est payée par le magasin les 30 premiers jours de sa période, puis la mutuelle paie : le service quitte le panel, la case dit « Malade · mutuelle ».\nLa part du magasin dépend du statut de la personne :\nemployé·e : 100 % les 30 premiers jours ;\nouvrier·ère : 100 % la première semaine, 85,88 % la deuxième, 25,88 % jusqu’au 30e jour.\nLe statut se choisit dans la fiche de la personne, onglet « Identité et contrat », champ « Statut (maladie) ». Sans statut : « à préciser (compté employé·e) ».\nLe solde des congés payés n’est pas montré.",
+            "nl": "Een ziekte wordt de eerste 30 dagen van de periode door de winkel betaald, daarna betaalt het ziekenfonds: de dienst verlaat het panel, het vakje toont « Malade · mutuelle ».\nHet deel van de winkel hangt af van het statuut van de persoon:\nbediende: 100 % de eerste 30 dagen;\narbeider: 100 % de eerste week, 85,88 % de tweede, 25,88 % tot de 30e dag.\nHet statuut wordt gekozen in de fiche van de persoon, tabblad « Identité et contrat », veld « Statut (maladie) ». Zonder statuut: « à préciser (compté employé·e) ».\nHet saldo van het betaald verlof wordt niet getoond."
+          },
+          "critique": true,
+          "photo": "art-dash-absences-statut.jpg",
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Lire les absences au planning",
+        "nl": "De afwezigheden in de planning lezen"
+      },
+      "etapes": [
+        {
+          "numero": "9",
+          "titre": {
+            "fr": "La semaine, le jour, le mois",
+            "nl": "De week, de dag, de maand"
+          },
+          "texte": {
+            "fr": "La case d’un service absent est hachurée, avec son motif (« Malade · payée », « Congé payé », « Absente · non payée »…) et qui remplace, ou « à remplacer ».\nLe service du remplaçant porte « remplace » et le prénom de l’absent.\nUne ligne « Extérieurs » : « intérim, extra : connus du cockpit, pas du panel ».\nSous le nom de la personne : le motif, la période, les heures payées et leur coût.\nLa légende : « absence payée : le coût reste » ; « remplaçant·e : son coût s’ajoute ».\nAu mois : une lettre par absence (M, CP, C, A). Le planning imprimé porte le motif.",
+            "nl": "Het vakje van een afwezige dienst is gearceerd, met het motief (« Malade · payée », « Congé payé », « Absente · non payée »…) en wie vervangt, of « à remplacer ».\nDe dienst van de vervanger draagt « remplace » en de voornaam van de afwezige.\nEen lijn « Extérieurs »: « intérim, extra : connus du cockpit, pas du panel ».\nOnder de naam van de persoon: het motief, de periode, de betaalde uren en hun kost.\nDe legende: « absence payée : le coût reste »; « remplaçant·e : son coût s’ajoute ».\nIn de maand: één letter per afwezigheid (M, CP, C, A). De afgedrukte planning toont het motief."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "10",
+          "titre": {
+            "fr": "Le budget reste honnête",
+            "nl": "Het budget blijft eerlijk"
+          },
+          "texte": {
+            "fr": "Le pourcentage du budget compte l’absente et son remplaçant : c’est ce que le magasin paie.\nLe résumé ajoute le bloc « Absences et congés » : le montant « payés sans présence » et sa part du budget, « Sans les absences » (le budget sans elles) et « Remplacements ».\nLa tête de chaque jour dit « dont … d’absence » et le nombre d’absents (« +1 abs. »).\n« À corriger » montre aussi le pourcentage « sans les absences » : un jour au-dessus de la cible à cause d’un congé ne se corrige pas en retirant des heures.",
+            "nl": "Het percentage van het budget telt de afwezige en haar vervanger: dat betaalt de winkel.\nDe samenvatting voegt het blok « Absences et congés » toe: het bedrag « payés sans présence » en zijn deel van het budget, « Sans les absences » (het budget zonder hen) en « Remplacements ».\nDe kop van elke dag toont « dont … d’absence » en het aantal afwezigen (« +1 abs. »).\n« À corriger » toont ook het percentage « sans les absences »: een dag boven het doel door een verlof wordt niet gecorrigeerd door uren te schrappen."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Modifier ou annuler",
+        "nl": "Wijzigen of annuleren"
+      },
+      "etapes": [
+        {
+          "numero": "11",
+          "titre": {
+            "fr": "Rouvrir une absence posée",
+            "nl": "Een gezette afwezigheid heropenen"
+          },
+          "texte": {
+            "fr": "Un clic sur la case de l’absence (ou sur la ligne sous le nom) rouvre la fenêtre : « Absence posée ».\nUn jour déjà remplacé montre son remplaçant « · au planning » ; les autres jours se remplacent encore, puis « Enregistrer ».\n« … travaille : annuler l’absence » l’annule, après confirmation ; la case « retirer aussi son remplaçant » retire aussi le service du remplaçant.\nAnnulée : une absence payée compte de nouveau comme présence ; une absence non payée remet ses services au planning du panel.\nUne absence non payée déjà posée sur ces jours bloque une nouvelle absence : l’annuler d’abord.",
+            "nl": "Een klik op het vakje van de afwezigheid (of op de lijn onder de naam) heropent het venster: « Absence posée ».\nEen dag die al vervangen is, toont zijn vervanger « · au planning »; de andere dagen kunnen nog vervangen worden, dan « Enregistrer ».\n« … travaille : annuler l’absence » annuleert ze, na bevestiging; het vakje « retirer aussi son remplaçant » haalt ook de dienst van de vervanger weg.\nGeannuleerd: een betaalde afwezigheid telt weer als aanwezigheid; een onbetaalde afwezigheid zet haar diensten terug in de planning van het panel.\nEen onbetaalde afwezigheid die al op die dagen staat, blokkeert een nieuwe: eerst annuleren."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Où l’absence se lit ensuite",
+        "nl": "Waar de afwezigheid daarna te lezen staat"
+      },
+      "etapes": [
+        {
+          "numero": "12",
+          "titre": {
+            "fr": "Opérationnel et primes",
+            "nl": "Opérationnel en premies"
+          },
+          "texte": {
+            "fr": "Opérationnel, « L’équipe du jour » : une ligne « Absences (Mon équipe) » donne le nom, le motif et les heures. « Leurs heures restent payées ; elles ne comptent ni en poste ni dans le partage des ventes. »\nLe nombre de personnes au planning du jour ajoute « (+1 absente) ».\nLes primes : la condition d’heures et le CA par heure se comptent sur les heures travaillées, sans les absences payées.",
+            "nl": "Opérationnel, « L’équipe du jour »: een lijn « Absences (Mon équipe) » geeft de naam, het motief en de uren. « Leurs heures restent payées ; elles ne comptent ni en poste ni dans le partage des ventes. »\nHet aantal personen in de planning van de dag krijgt « (+1 absente) ».\nDe premies: de urenvoorwaarde en de omzet per uur worden op de gewerkte uren berekend, zonder de betaalde afwezigheden."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        },
+        {
+          "numero": "13",
+          "titre": {
+            "fr": "L’app des employés et la visite du consultant",
+            "nl": "De app van de medewerkers en het bezoek van de consultant"
+          },
+          "texte": {
+            "fr": "L’app des employés, « Planning » : l’absence s’affiche à la place du service, avec son motif (« Maladie », « Congé payé », « Congé de circonstance », « Absence ») ; elle ne compte ni dans les heures travaillées ni comme prochain service.\nLe service d’un remplaçant porte « remplacement », sans dire qui il remplace ni pourquoi.\nLa visite du consultant : la personne absente est rangée sous « Aussi au planning aujourd’hui », avec « absente ce jour (Mon équipe) », et n’est pas à noter. Les ventes par heure du consultant écartent ses heures.",
+            "nl": "De app van de medewerkers, « Planning »: de afwezigheid staat in de plaats van de dienst, met het motief (« Maladie », « Congé payé », « Congé de circonstance », « Absence »); ze telt niet bij de gewerkte uren en niet als volgende dienst.\nDe dienst van een vervanger draagt « remplacement », zonder te zeggen wie hij vervangt of waarom.\nHet bezoek van de consultant: de afwezige staat onder « Aussi au planning aujourd’hui », met « absente ce jour (Mon équipe) », en hoeft niet beoordeeld te worden. De verkoop per uur van de consultant laat haar uren weg."
+          },
+          "critique": false,
+          "photo": null,
+          "video": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Pour une maladie ou un congé : « Absente ou en congé » (ou « Absence ou congé »), pas « Retirer de l’horaire de la semaine », qui supprime les services et leur coût.",
+      "nl": "Voor ziekte of verlof: « Absente ou en congé » (of « Absence ou congé »), niet « Retirer de l’horaire de la semaine », dat de diensten en hun kost schrapt."
+    },
+    {
+      "fr": "Une absence payée garde son coût au budget : le pourcentage monte. On lit « Sans les absences » avant de retirer des heures.",
+      "nl": "Een betaalde afwezigheid houdt haar kost in het budget: het percentage stijgt. Lees « Sans les absences » vóór je uren schrapt."
+    },
+    {
+      "fr": "Le statut employé·e ou ouvrier·ère se règle dans la fiche : sans lui, une maladie est comptée comme celle d’un·e employé·e.",
+      "nl": "Het statuut bediende of arbeider wordt in de fiche ingesteld: zonder statuut wordt een ziekte geteld als die van een bediende."
+    },
+    {
+      "fr": "Un remplaçant de l’équipe est un vrai service au panel : l’équipe le voit dans son app. Rien n’est écrit avant « Poser l’absence » ou « Enregistrer ».",
+      "nl": "Een vervanger uit het team is een echte dienst in het panel: het team ziet hem in de app. Niets wordt geschreven vóór « Poser l’absence » of « Enregistrer »."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Une vendeuse sous contrat de travail est en congé payé jeudi. Que devient le coût de son service ?",
+        "nl": "Een verkoopster met een arbeidscontract heeft donderdag betaald verlof. Wat gebeurt er met de kost van haar dienst?"
+      },
+      "choix": {
+        "fr": [
+          "Il reste au budget ; elle ne compte plus comme présence",
+          "Il sort du budget",
+          "Il passe à la mutuelle"
+        ],
+        "nl": [
+          "Hij blijft in het budget; ze telt niet meer als aanwezig",
+          "Hij verdwijnt uit het budget",
+          "Hij gaat naar het ziekenfonds"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Quel motif retire le service du panel ?",
+        "nl": "Welk motief haalt de dienst uit het panel?"
+      },
+      "choix": {
+        "fr": [
+          "Congé de circonstance",
+          "Absence non payée",
+          "Maladie avec certificat"
+        ],
+        "nl": [
+          "Omstandigheidsverlof",
+          "Onbetaalde afwezigheid",
+          "Ziekte met attest"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Un ouvrier est malade depuis dix jours. Quelle part le magasin paie-t-il ce jour-là ?",
+        "nl": "Een arbeider is sinds tien dagen ziek. Welk deel betaalt de winkel die dag?"
+      },
+      "choix": {
+        "fr": [
+          "100 %",
+          "25,88 %",
+          "85,88 %"
+        ],
+        "nl": [
+          "100 %",
+          "25,88 %",
+          "85,88 %"
+        ]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {
+        "fr": "Où se choisit le statut employé·e ou ouvrier·ère ?",
+        "nl": "Waar wordt het statuut bediende of arbeider gekozen?"
+      },
+      "choix": {
+        "fr": [
+          "Dans l’onglet Primes",
+          "Dans la fiche, « Identité et contrat », « Statut (maladie) »",
+          "Au panel TF Buddy"
+        ],
+        "nl": [
+          "In het tabblad Primes",
+          "In de fiche, « Identité et contrat », « Statut (maladie) »",
+          "In het panel TF Buddy"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Un intérimaire remplace une absente. Où son coût est-il compté ?",
+        "nl": "Een uitzendkracht vervangt een afwezige. Waar wordt zijn kost geteld?"
+      },
+      "choix": {
+        "fr": [
+          "Nulle part",
+          "Au panel, comme un service de l’équipe",
+          "Au cockpit (ligne « Extérieurs ») ; sa facture passe par les frais"
+        ],
+        "nl": [
+          "Nergens",
+          "In het panel, als een dienst van het team",
+          "In de cockpit (lijn « Extérieurs »); zijn factuur gaat via de kosten"
+        ]
+      },
+      "bonne": 2
+    }
+  ]
+}
