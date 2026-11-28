@@ -39,7 +39,7 @@
 .cf2-rs-pl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}
 .cf2-rs-pl .cf2-u{margin:0}
 .cf2-pv{font-size:12px;line-height:1.45;color:var(--muted)}
-.cf2-pe{flex:none;width:8px;height:8px;border-radius:50%;background:#c9c1b4}
+.cf2-pe{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint)}
 .cf2-pe.stop{background:var(--stop)}.cf2-pe.prize{background:var(--prize)}.cf2-pe.green{background:var(--green)}
 .cf2-rs-l2{display:flex;align-items:flex-start;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .cf2-rs-t{flex:none;font-size:12.5px;line-height:30px;color:var(--muted-2)}
@@ -78,7 +78,7 @@
 .cf2-d .ico{width:30px;height:30px;flex:0 0 auto;border-radius:8px;background:var(--chip);color:var(--muted-2);display:flex;align-items:center;justify-content:center;font-size:14px}
 .cf2-d .nm{flex:1;min-width:0}.cf2-d .nm small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
 .cf2-d .n{font-size:11px;color:var(--muted);min-width:22px;text-align:center;border-radius:6px;background:var(--chip);padding:1px 6px}
-.cf2-d.on{background:#F6EDEE;color:var(--accent)}.cf2-d.on .ico{background:#fff;color:var(--accent)}.cf2-d.on .n{background:#fff;color:var(--accent)}
+.cf2-d.on{background:rgba(141,29,44,.08);color:var(--accent)}.cf2-d.on .ico{background:#fff;color:var(--accent)}.cf2-d.on .n{background:#fff;color:var(--accent)}
 .cf2-d .bar{display:block;height:3px;border-radius:2px;background:var(--chip);margin-top:4px;overflow:hidden}.cf2-d .bar b{display:block;height:100%;background:var(--green)}
 .cf2-d.gd{margin-top:6px;border-top:1px solid var(--row-line);border-radius:0 0 10px 10px;padding-top:12px}
 
@@ -99,12 +99,12 @@
 .cf2-l{display:flex;align-items:center;gap:14px;width:100%;padding:10px 16px;border:0;border-top:1px solid var(--row-line);background:#fff;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
 .cf2-l:hover{background:var(--paper)}
 /* La ligne choisie : fond teinté et liseré bordeaux de 3 px (un fond, pas une ombre). */
-.cf2-l.sel{background:linear-gradient(var(--accent),var(--accent)) left / 3px 100% no-repeat,#F6EDEE}
+.cf2-l.sel{background:linear-gradient(var(--accent),var(--accent)) left / 3px 100% no-repeat,rgba(141,29,44,.08)}
 .cf2-ty{width:34px;height:40px;flex:0 0 auto;border-radius:6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:8.5px;font-weight:400;letter-spacing:.04em;position:relative;color:#fff;background:#8F877C}
 .cf2-ty::after{content:'';position:absolute;top:0;right:0;width:10px;height:10px;background:linear-gradient(225deg,#fff 50%,rgba(0,0,0,.14) 50%);border-radius:0 6px 0 0}
 .cf2-ty.pdf{background:#B5452F}.cf2-ty.xls{background:#2E7D4F}.cf2-ty.doc{background:#2D5D80}.cf2-ty.img{background:#8C6BB1}.cf2-ty.web{background:var(--accent)}
 .cf2-l .tt{flex:1;min-width:0}
-.cf2-l .tt b{display:block;font-weight:400;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf2-l .tt b{display:block;font-weight:400;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cf2-l .tt small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cf2-l .dos{width:140px;flex:0 0 auto;font-size:12px;color:var(--muted-2)}
 .cf2-l .qd{width:84px;flex:0 0 auto;font-size:12px;color:var(--muted-2)}
@@ -151,7 +151,7 @@
 .cf2-gd{display:flex;align-items:center;gap:12px;padding:8px 16px;border-top:1px solid var(--row-line)}
 /* La date d'une grande date : neutre à venir, or dans les 4 mois, effacée passée (sans gras, sans bordeaux : il n'est pas un état). */
 .cf2-gd .d{width:46px;flex:0 0 auto;text-align:center;border-radius:8px;background:var(--chip);color:var(--ink);padding:4px 0}
-.cf2-gd .d b{display:block;font-size:17px;font-weight:400;line-height:1.1}.cf2-gd .d small{display:block;font-size:10px}
+.cf2-gd .d b{display:block;font-size:18px;font-weight:400;line-height:1.1}.cf2-gd .d small{display:block;font-size:10px}
 .cf2-gd.bientot .d,.cf2-gd.encours .d{background:var(--prize-soft);color:var(--prize-ink)}
 .cf2-gd.passee{opacity:.55}.cf2-gd.passee .d{background:var(--chip);color:var(--muted-2)}
 .cf2-gd .c{flex:1;min-width:0}.cf2-gd .c b{display:block;font-weight:400;font-size:13px}
@@ -188,7 +188,7 @@
 /* La fenêtre du dépôt, l'assistant dedans */
 .cf2-mod{position:fixed;top:5vh;left:50%;transform:translateX(-50%);width:900px;max-width:96vw;max-height:90vh;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;z-index:62}
 .cf2-mod .h{display:flex;align-items:center;gap:12px;padding:15px 22px;border-bottom:1px solid var(--line)}
-.cf2-mod .h b{font-size:17px;font-weight:400}.cf2-mod .h .cf2-qui{padding:0}
+.cf2-mod .h b{font-size:16px;font-weight:400}.cf2-mod .h .cf2-qui{padding:0}
 .cf2-mod .c{display:grid;grid-template-columns:340px minmax(0,1fr);overflow-y:auto;flex:1;min-height:0}
 .cf2-mod .g{padding:18px 22px;border-right:1px solid var(--line)}
 .cf2-mod .d{padding:18px 22px;background:var(--table-head);min-width:0}
@@ -253,9 +253,9 @@
 .db-rail>*{flex:0 0 auto}
 .db-rail-coffre{margin:auto 0 0;padding:12px 12px 4px;border-top:1px solid var(--line);position:sticky;bottom:-24px;background:#fff}
 .db-rail-coffre .sidebar__item{width:100%;border:1px solid var(--line);background:var(--table-head)}
-.db-rail-coffre .sidebar__item.is-active{background:#F6EDEE;border-color:#E8C9CD}
+.db-rail-coffre .sidebar__item.is-active{background:rgba(141,29,44,.08);border-color:rgba(141,29,44,.25)}
 .db-coffre-bas{display:flex;align-items:center;gap:10px;margin:18px 12px 18px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font:inherit;width:calc(100% - 24px);text-align:left;cursor:pointer}
-.db-coffre-bas b{display:block;font-weight:400;font-size:13.5px}
+.db-coffre-bas b{display:block;font-weight:400;font-size:13px}
 .db-coffre-bas small{display:block;font-size:11px;color:var(--muted)}
 .db-coffre-bas.mob{margin-bottom:calc(84px + env(safe-area-inset-bottom, 0px))}   /* au-dessus des onglets fixes du téléphone (.mb-tabs) */
 .db-coffre-bas .n{margin-left:auto;font-size:10.5px;background:rgba(141,29,44,.08);color:var(--accent);border-radius:4px;padding:1px 7px}
