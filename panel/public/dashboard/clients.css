@@ -353,14 +353,44 @@
 .pcl-fid i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 button.pcl-fid { cursor: pointer; }
 button.pcl-fid:hover { text-decoration: underline; text-decoration-color: var(--line); }
-.pcl-fid-bloc .sub { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
-.pcl-fid-radar { margin-top: 10px; }
-/* Le radar garde 72 px de marge autour du cercle pour ses libellés : la fiche en reprend une partie, en haut et en bas. */
-.pcl-fid-radar .fd-radar { margin: -30px auto -26px; }
-.pcl-fid-seg { display: flex; justify-content: center; margin-bottom: 2px; }
-.pcl-fid-radar .pcl-aide { margin: 6px 0 0; text-align: center; }
-.pcl-fid-bloc > .linklike { display: block; margin: 8px auto 0; }
+.pcl-fid-bloc > .linklike { display: block; margin: 6px auto 0; }
 .pcl-fid-bloc.pcl-vu { outline-offset: -3px; }
 /* La fiche d'un particulier, plus haute avec le radar : elle défile dans sa colonne au lieu de sortir de l'écran. */
 .pcl-fiche-defile { max-height: calc(100vh - 24px); overflow-y: auto; }
 @media (max-width: 1100px) { .pcl-fiche-defile { max-height: none; overflow: visible; } }
+
+/* La fiche serrée (28/11/2026, maquette A de panel/docs/maquettes/clients-fidelite-fiche) : la remise et le paiement
+   différé dans la ligne sous le nom, les coordonnées resserrées ; le radar tient sur un écran 1080p. */
+.pcl-serre .pcl-ft { padding: 13px 16px 10px; }
+.pcl-serre .pcl-fmeta b { font-weight: 400; color: var(--ink); }
+.pcl-serre .pcl-bloc { padding: 10px 16px; }
+.pcl-serre .pcl-bloc h4 { margin-bottom: 5px; }
+.pcl-serre .pcl-lf { padding: 2px 0; }
+/* Le profil sur une ligne, puis quatre chiffres. */
+.pcl-fid-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12.5px; }
+.pcl-fid-tete .pcl-fid { font-size: 13.5px; }
+.pcl-fid-tete small { font-size: 11.5px; color: var(--muted); }
+.pcl-fid-k { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 8px -16px 0; border-top: 1px solid var(--row-line); border-bottom: 1px solid var(--row-line); }
+.pcl-fid-k > div { padding: 5px 10px 5px 16px; border-left: 1px solid var(--row-line); min-width: 0; }
+.pcl-fid-k > div + div { padding-left: 11px; }
+.pcl-fid-k > div:first-child { border-left: 0; }
+.pcl-fid-k .v { font-size: 14px; white-space: nowrap; }
+.pcl-fid-k .k { margin-top: 2px; font-size: 9.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+/* « Ses passages » : la frise des 90 jours, un trait par jour, plein le jour d'un passage (le week-end un peu plus foncé). */
+.pcl-fid-quand { margin-top: 8px; }
+.pcl-fid-quand .lab { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.pcl-fid-quand .lab span { letter-spacing: normal; text-transform: none; }
+.pcl-fid-quand .dit { margin: 6px 0 0; font-size: 11.5px; color: var(--muted-2, var(--muted)); line-height: 1.4; }
+.pcl-fid-quand .dit b { font-weight: 400; color: var(--ink); }
+.pcl-frise { display: flex; align-items: flex-end; gap: 1px; height: 30px; }
+.pcl-frise i { flex: 1; height: 7px; border-radius: 1px; background: var(--chip); }
+.pcl-frise i.we { background: #e6dfd3; }
+.pcl-frise i.on { height: 30px; }
+.pcl-frise-m { position: relative; height: 15px; margin-top: 3px; font-size: 10.5px; color: var(--muted); }
+.pcl-frise-m span { position: absolute; top: 0; padding-left: 4px; border-left: 1px solid var(--line); line-height: 13px; }
+.pcl-frise-m span.auj { right: 0; border-left: 0; padding: 0; }
+/* Le radar, 270 px au lieu de toute la largeur : il garde 72 px de marge pour ses libellés, la fiche en reprend une partie. */
+.pcl-fid-radar { margin-top: 6px; }
+.pcl-fid-seg { display: flex; justify-content: center; margin-bottom: 2px; }
+.pcl-fid-seg .seg button { padding: 4px 10px; font-size: 12px; }
+.pcl-fid-radar .fd-radar { max-width: 270px; margin: -26px auto -22px; }

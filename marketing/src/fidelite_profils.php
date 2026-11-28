@@ -378,9 +378,12 @@ function fpMagasin(int $sid, bool $lire = true, bool $detail = true, bool $tous 
     if ($tous) {
         $out['parClient'] = [];
         foreach ($liste as $x) {
+            // Les jours de passage (28/11/2026, la frise des 90 jours de la fiche : « quand le client était là »).
+            $jours = array_keys($C[$x['client']]['jours']);
+            sort($jours);
             $out['parClient'][$x['client']] = ['profil' => $x['profil'], 'rythme' => $x['rythme'], 'passagesFenetre' => $x['passagesFenetre'], 'passages' => $x['passages'],
                 'premier' => $x['premier'], 'dernier' => $x['dernier'], 'depuis' => $x['depuis'], 'tk' => $x['tk'], 'eur' => $x['eur'], 'cmd' => $x['cmd'],
-                'radar' => $x['radar'], 'familles' => $x['famLues'] ? $x['familles'] : null];
+                'radar' => $x['radar'], 'familles' => $x['famLues'] ? $x['familles'] : null, 'jours' => $jours];
         }
     }
     return $out;
@@ -439,8 +442,8 @@ function ep_fidelite_profils_magasin(): array
 }
 
 /**
- * GET /fidelite/profils/clients?shop= : le profil et les deux radars de chaque client scanné du magasin, pour Clients ›
- * Particuliers du dashboard (clients.js). 28/11/2026, Sam : « dans clients rajouter un indicateur de fidélité du client,
+ * GET /fidelite/profils/clients?shop= : le profil, les deux radars et les jours de passage de chaque client scanné du
+ * magasin, pour Clients › Particuliers du dashboard (clients.js). 28/11/2026, Sam : « dans clients rajouter un indicateur de fidélité du client,
  * rien si pas de fidélité ; au clic, dans le tiroir avec le détail, mettre le spider ». Le calcul de
  * /fidelite/profils/magasin, sans relire les articles des tickets ni les noms : seules les journées de tickets manquantes
  * se lisent. Un client absent de `clients` n'a pas été reconnu en caisse sur la mémoire (90 jours) : rien à montrer.

@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-28T10:13:36Z",
+ "genere": "2026-11-28T10:33:08Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1060,7 +1060,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1155"
+    "clients.js:1182"
    ],
    "magasin": true,
    "routes": [
@@ -1081,7 +1081,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1174"
+    "clients.js:1201"
    ],
    "magasin": true,
    "routes": [
@@ -1102,7 +1102,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1169"
+    "clients.js:1196"
    ],
    "magasin": true,
    "routes": [
@@ -1123,7 +1123,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1158"
+    "clients.js:1185"
    ],
    "magasin": true,
    "routes": [
@@ -1144,7 +1144,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:915"
+    "clients.js:942"
    ],
    "magasin": true,
    "routes": [
@@ -1186,7 +1186,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1165"
+    "clients.js:1192"
    ],
    "magasin": true,
    "routes": [
@@ -1272,13 +1272,13 @@
    ],
    "fichiers": [
     "clients.js:104",
-    "clients.js:1052",
+    "clients.js:1079",
     "clients.js:120",
     "clients.js:139",
-    "clients.js:538",
-    "clients.js:549",
-    "clients.js:560",
-    "clients.js:911"
+    "clients.js:565",
+    "clients.js:576",
+    "clients.js:587",
+    "clients.js:938"
    ],
    "magasin": true,
    "routes": [
@@ -1299,7 +1299,7 @@
     "POST"
    ],
    "fichiers": [
-    "clients.js:1046"
+    "clients.js:1073"
    ],
    "magasin": true,
    "routes": [
@@ -1320,7 +1320,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1030"
+    "clients.js:1057"
    ],
    "magasin": true,
    "routes": [
@@ -1383,9 +1383,9 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:290",
-    "clients.js:323",
-    "clients.js:336"
+    "clients.js:314",
+    "clients.js:347",
+    "clients.js:360"
    ],
    "magasin": true,
    "routes": [
@@ -1427,7 +1427,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1036"
+    "clients.js:1063"
    ],
    "magasin": true,
    "routes": [
@@ -2970,7 +2970,7 @@
      ],
      "chemin": "/fidelite/client",
      "handler": "ep_fidelite_client",
-     "source": "marketing/src/fidelite_profils.php:537",
+     "source": "marketing/src/fidelite_profils.php:540",
      "resume": ": l'historique d'un client sur 180 jours, ticket par ticket."
     }
    ]
@@ -2991,8 +2991,8 @@
      ],
      "chemin": "/fidelite/profils/clients",
      "handler": "ep_fidelite_profils_clients",
-     "source": "marketing/src/fidelite_profils.php:448",
-     "resume": ": le profil et les deux radars de chaque client scanné du magasin, pour Clients › Particuliers du dashboard (clients.js)."
+     "source": "marketing/src/fidelite_profils.php:451",
+     "resume": ": le profil, les deux radars et les jours de passage de chaque client scanné du magasin, pour Clients › Particuliers du dashboard (clients.js)."
     }
    ]
   },
@@ -3012,7 +3012,7 @@
      ],
      "chemin": "/fidelite/profils/magasin",
      "handler": "ep_fidelite_profils_magasin",
-     "source": "marketing/src/fidelite_profils.php:434",
+     "source": "marketing/src/fidelite_profils.php:437",
      "resume": ": le dashboard du magasin."
     }
    ]
@@ -3033,7 +3033,7 @@
      ],
      "chemin": "/fidelite/profils/tendance",
      "handler": "ep_fidelite_profils_tendance",
-     "source": "marketing/src/fidelite_profils.php:509",
+     "source": "marketing/src/fidelite_profils.php:512",
      "resume": ": le nombre de clients de chaque profil, date après date."
     }
    ]
@@ -3054,7 +3054,7 @@
      ],
      "chemin": "/fidelite/scan",
      "handler": "ep_fidelite_scan",
-     "source": "marketing/src/fidelite_profils.php:522",
+     "source": "marketing/src/fidelite_profils.php:525",
      "resume": "La part des tickets scannés (12/11/2026, Sam : « par défaut c'est aujourd'hui ; en dessous le mois et l'année en moyenne »)."
     }
    ]

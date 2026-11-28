@@ -1,6 +1,8 @@
 # Clients › Particuliers : la fiche plus serrée et « quand il vient » (maquettes)
 
-**Statut : maquette, rien n'est codé (28/11/2026).** La demande, depuis la fiche en ligne
+**Statut : A choisie par Sam (« le a », 28/11/2026) et codée** (`panel/public/dashboard/clients.js` : `ficheParticulier`,
+`blocFidelite`, `friseFid` ; `clients.css` ; les jours de passage dans `GET /fidelite/profils/clients`). B, C et D
+restent ici pour mémoire. La demande, depuis la fiche en ligne
 (`dashboard/?shop=4&vue=clients`, la fidélité et son radar mis en ligne le même jour, PR #339) : « compresser
 légèrement le drawer (datas) et rajouter une indication sur la fréquence (quand le client était là), visuellement ;
 fais-moi 3-4 maquettes en screenshot et on décide ».

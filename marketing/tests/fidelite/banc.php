@@ -49,6 +49,7 @@ verifie('client 1 Fanbase, client 6 Découverte', ($K[1]['profil'] ?? 0) === $P[
 verifie('mêmes profils que la page Fidélité', array_count_values(array_map(static fn ($x) => $x['profil'], $K)) == array_filter(array_column($m['profils'], 'clients', 'id')));
 verifie('un radar à six branches par client', count(array_filter($K, static fn ($x) => array_keys($x['radar']) === array_keys(FP_AXES))) === 8, json_encode($K[1]['radar']));
 verifie('aucun nom (les noms restent dans TF Buddy)', !array_filter($K, static fn ($x) => isset($x['nom'])));
+verifie('ses jours de passage, un par passage, dans l’ordre, le dernier = « dernier »', count(array_filter($K, static fn ($x) => count($x['jours']) === $x['passages'] && end($x['jours']) === $x['dernier'] && $x['jours'] === array_values(array_unique($x['jours'])))) === 8, json_encode(array_slice($K[4]['jours'], -3)));
 verifie('les profils avec leur condition, la moyenne', count($pc['profils']) === 6 && ($pc['profils'][2]['condition'] ?? '') === '1 fois par semaine' && is_array($pc['moyenne']['radar'] ?? null));
 $avant = PanelApi::$appels;
 ep_fidelite_profils_clients();

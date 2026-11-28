@@ -70,8 +70,11 @@ function profilsClients() {
     Object.keys(s.familles).forEach(k => { familles[k] = Math.round(s.familles[k] * (0.6 + a() * 0.8)); });
     const passages = Math.max(1, Math.round(Math.max(rythme, 0.4) * 3 * (0.8 + a() * 0.3))), tk = passages + Math.round(a() * passages * 0.1);
     const depuis = rythme >= 4 ? Math.floor(a() * 4) : rythme >= 1 ? Math.floor(a() * 20) : 31 + Math.floor(a() * 55);
-    L[id] = { profil, rythme, passagesFenetre: Math.round(rythme), passages, premier: D.plus(AUJ, -Math.min(89, depuis + passages * 6)), dernier: D.plus(AUJ, -depuis), depuis,
-      tk, eur: D.r2(tk * s.panier * (0.7 + a() * 0.6)), cmd: Math.round(tk * s.commande / 100), radar, familles };
+    // Ses jours de passage (la frise de la fiche) : le dernier il y a `depuis` jours, les autres à son rythme, en arrière.
+    const pas = 30 / Math.max(rythme, 0.4), jours = [];
+    for (let k = 0, j = depuis; k < passages && j < 90; k++, j += Math.max(1, Math.round(pas * (0.6 + a() * 0.8)))) { jours.unshift(D.plus(AUJ, -j)); }
+    L[id] = { profil, rythme, passagesFenetre: Math.round(rythme), passages: jours.length, premier: jours[0], dernier: D.plus(AUJ, -depuis), depuis,
+      tk, eur: D.r2(tk * s.panier * (0.7 + a() * 0.6)), cmd: Math.round(tk * s.commande / 100), radar, familles, jours };
   });
   const P = PROFILS.map(p => ({ id: p.id, nom: p.nom, couleur: p.couleur, unite: p.unite, seuil: p.seuil, condition: p.condition, equivalent: p.equivalent,
     clients: STATS[p.id].clients, part: D.r1(100 * STATS[p.id].clients / N) }));

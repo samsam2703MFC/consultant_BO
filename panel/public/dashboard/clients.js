@@ -261,7 +261,8 @@
     if (!x) { return ''; }
     return `<button type="button" class="pcl-fid" data-act="p-fid" data-id="${esc(id)}" title="${esc(x.p.nom + ' : ' + x.p.condition + ' — voir son radar')}"><i style="background:${esc(x.p.couleur)}" aria-hidden="true"></i>${esc(x.p.nom)}</button><span class="sub">${esc(fidDepuis(x.c.depuis))}</span>`;
   }
-  /** Sa fidélité dans la fiche : le profil, ses chiffres et le radar (récurrence ou type d'achat) face à la moyenne du magasin. */
+  /** Sa fidélité dans la fiche : le profil sur une ligne, quatre chiffres, la frise de ses passages et le radar
+   *  (récurrence ou type d'achat) face à la moyenne du magasin. */
   function blocFidelite(id) {
     const F = st.f;
     if (!F.d || F.shop !== st.shop) { return F.lecture ? `<div class="pcl-bloc" id="pcl-fid"><h4>Fidélité</h4>${attente('Lecture des passages en caisse…')}</div>` : ''; }
@@ -274,14 +275,37 @@
       ? R.radar([{ v: M.familles, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: c.familles, c: p.couleur, fond: 0.16, w: 2.2 }], d.familles, 310, 80) + R.legende(serie, moy)
       : R.radar([{ v: M.radar, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: c.radar, c: p.couleur, fond: 0.16, w: 2.2 }], d.axes, 310) + R.legende(serie, moy);
     const choix = c.familles ? seg('p-fid-vue', achat ? 'achat' : 'recurrence', [['recurrence', 'Récurrence'], ['achat', 'Type d’achat']]) : '';
-    const tk = Math.max(1, c.tk);
+    const tk = Math.max(1, c.tk), k = (v, l, t) => `<div title="${esc(t)}"><div class="v">${v}</div><div class="k">${l}</div></div>`;
     return `<div class="pcl-bloc pcl-fid-bloc" id="pcl-fid"><h4>Fidélité<span>reconnu en caisse sur ${nf(d.memoire)} jours</span></h4>
-      ${ligneF('Profil', `<span class="pcl-fid pcl-fid--fiche"><i style="background:${esc(p.couleur)}" aria-hidden="true"></i>${esc(p.nom)}</span><span class="sub">${esc(p.condition)}</span>`)}
-      ${ligneF('Rythme', `${nf(c.rythme, 1)} passage${c.rythme >= 2 ? 's' : ''} par mois<span class="sub">${nf(c.passagesFenetre)} sur les ${nf(d.fenetre)} derniers jours</span>`)}
-      ${ligneF('Passages', `${nf(c.passages)} en ${nf(d.memoire)} jours<span class="sub">${esc(fidDepuis(c.depuis))}</span>`)}
-      ${ligneF('Panier moyen', fE(c.eur / tk))}${ligneF('En commande', nf(Math.round(100 * c.cmd / tk)) + ' %')}
-      <div class="pcl-fid-radar">${choix ? `<div class="pcl-fid-seg">${choix}</div>` : ''}${radar}<p class="pcl-aide">${achat ? 'La part de ses articles par famille, en % (80 au bord).' : '0 au centre, 100 au bord : fréquence, récence, ancienneté, panier, diversité et achats au comptoir.'}</p></div>
+      <div class="pcl-fid-tete"><span><span class="pcl-fid"><i style="background:${esc(p.couleur)}" aria-hidden="true"></i>${esc(p.nom)}</span> <small>${esc(p.condition)}</small></span><small>${esc(fidDepuis(c.depuis))}</small></div>
+      <div class="pcl-fid-k">${k(nf(c.rythme, 1), 'par mois', nf(c.passagesFenetre) + ' passages sur les ' + nf(d.fenetre) + ' derniers jours, ramenés à un mois')}${k(nf(c.passages), 'en ' + nf(d.memoire) + ' j', 'passages (jours avec un ticket) sur ' + nf(d.memoire) + ' jours')}
+        ${k(fE(c.eur / tk), 'panier', 'panier moyen sur ' + nf(c.tk) + ' ticket' + (c.tk > 1 ? 's' : ''))}${k(nf(Math.round(100 * c.cmd / tk)) + ' %', 'commande', 'part de ses tickets passés en commande')}</div>
+      ${friseFid(c, d, p)}
+      <div class="pcl-fid-radar" title="${achat ? 'La part de ses articles par famille, en % (80 au bord).' : '0 au centre, 100 au bord : fréquence, récence, ancienneté, panier, diversité et achats au comptoir.'}">${choix ? `<div class="pcl-fid-seg">${choix}</div>` : ''}${radar}</div>
       ${st.aller ? '<button type="button" class="linklike" data-act="p-fid-historique" data-id="' + esc(id) + '">Son historique : Fidélité ›</button>' : ''}</div>`;
+  }
+  /** « Quand il vient » (28/11/2026, maquette A choisie par Sam : « la frise des 90 jours ») : un trait par jour de la
+   *  mémoire, plein le jour d'un passage, à la couleur de son profil ; les mois dessous ; le plus long creux en mots. */
+  const isoPlus = (iso, n) => { const t = new Date(iso + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  const ecartJ = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+  const fJM = iso => +iso.slice(8, 10) + ' ' + MOIS[+iso.slice(5, 7) - 1];
+  function friseFid(c, d, p) {
+    if (!Array.isArray(c.jours) || !d.au) { return ''; }
+    const n = Math.max(7, +d.memoire || 90), debut = isoPlus(d.au, -(n - 1)), vu = new Set(c.jours);
+    const jours = Array.from({ length: n }, (_, i) => isoPlus(debut, i));
+    const traits = jours.map(j => { const we = (new Date(j + 'T12:00:00Z').getUTCDay() + 6) % 7 >= 5;
+      return vu.has(j) ? `<i class="on" style="background:${esc(p.couleur)}" title="${esc(fD(j).slice(0, 5))}"></i>` : `<i${we ? ' class="we"' : ''}></i>`; }).join('');
+    const mois = jours.map((j, i) => j.slice(8) === '01' && i < n - 8 ? `<span style="left:${(100 * i / n).toFixed(1)}%">${MC[+j.slice(5, 7) - 1]}</span>` : '').join('');
+    // Le plus long creux : entre deux passages, ou depuis le dernier (en cours).
+    const L = c.jours.filter(j => j >= debut && j <= d.au).sort();
+    let creux = { n: 0 };
+    L.forEach((j, i) => { if (i) { const e = ecartJ(L[i - 1], j); if (e > creux.n) { creux = { n: e, du: L[i - 1], au: j }; } } });
+    const enCours = L.length ? ecartJ(L[L.length - 1], d.au) : 0;
+    const dit = L.length <= 1 ? `<b>1 passage</b>${L.length ? ', le ' + esc(fJM(L[0])) : ''}`
+      : `<b>${nf(L.length)} passages</b> · ` + (enCours > creux.n ? `<b>aucun depuis ${nf(enCours)} jours</b>` : `le plus long creux : <b>${nf(creux.n)} jours</b>, du ${esc(creux.du.slice(0, 7) === creux.au.slice(0, 7) ? String(+creux.du.slice(8, 10)) : fJM(creux.du))} au ${esc(fJM(creux.au))}`);
+    return `<div class="pcl-fid-quand"><div class="lab">Ses passages<span>${nf(n)} jours, un trait par jour</span></div>
+      <div class="pcl-frise" role="img" aria-label="${esc(nf(L.length) + ' passages sur ' + n + ' jours')}">${traits}</div><div class="pcl-frise-m">${mois}<span class="auj">auj.</span></div>
+      <p class="dit">${dit}</p></div>`;
   }
   /* ── Nettoyer la base (28/11/2026, panel/src/clients_nettoyage.php) ─────────────────────────────────────────── */
   function ouvrirNettoyage() {
@@ -376,14 +400,17 @@
     if (!F) { return `<aside class="card pcl-fiche">${attente('Lecture de la fiche…')}</aside>`; }
     const c = F.client, adr = [[c.street, c.street_number].filter(Boolean).join(' '), [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
     const mien = +c.id_main_shop === +st.shop;
-    return `<aside class="card pcl-fiche pcl-fiche-defile"><div class="pcl-ft"><div class="pcl-fnom">${esc(c.nom)}</div><div class="pcl-fmeta">${c.create_timestamp ? 'client depuis ' + fD(String(c.create_timestamp).slice(0, 10)) : ''}${mien ? '' : ' · créé par un autre magasin'}</div></div>
-      <div class="pcl-kpis"><div><div class="v">${c.personal_discount_percent ? nf(c.personal_discount_percent, 1).replace(',0', '') + ' %' : '—'}</div><div class="k">Remise</div></div>
-        <div><div class="v">${c.can_deferral ? 'Oui' : 'Non'}</div><div class="k">Paiement différé</div></div><div><div class="v">${esc(c.city || '—')}</div><div class="k">Ville</div></div></div>
+    // La fiche serrée (28/11/2026, Sam : « compresser légèrement le drawer », maquette A de
+    // panel/docs/maquettes/clients-fidelite-fiche) : la remise et le paiement différé dans la ligne sous le nom (la ville
+    // est dans l'adresse), l'aide « Passer en entreprise » dans le titre du bouton ; le radar tient sur un écran 1080p.
+    const meta = [c.create_timestamp ? 'client depuis ' + fD(String(c.create_timestamp).slice(0, 10)) : '',
+      c.personal_discount_percent ? '<b>remise ' + nf(c.personal_discount_percent, 1).replace(',0', '') + ' %</b>' : 'sans remise',
+      c.can_deferral ? '<b>paiement différé</b>' : 'pas de paiement différé', mien ? '' : 'créé par un autre magasin'].filter(Boolean).join(' · ');
+    return `<aside class="card pcl-fiche pcl-fiche-defile pcl-serre"><div class="pcl-ft"><div class="pcl-fnom">${esc(c.nom)}</div><div class="pcl-fmeta">${meta}</div></div>
       <div class="pcl-bloc"><h4>Coordonnées</h4>${ligneF('Téléphone', c.phone ? `<a href="tel:${esc(String(c.phone).replace(/\s/g, ''))}">${esc(c.phone)}</a>` : '')}${ligneF('E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '')}${ligneF('Adresse', esc(adr))}${c.comment ? ligneF('Note', esc(c.comment)) : ''}
-        ${ligneF('Compte en ligne', c.connexion ? `<span class="chip chip--ok">En ligne</span> connecté le ${fD(c.connexion)}` : '<span class="chip chip--draft">Pas de compte</span>')}</div>
+        ${ligneF('Compte en ligne', c.connexion ? `<span class="chip chip--ok" title="Dernière connexion au webshop">En ligne</span> ${fD(c.connexion)}` : '<span class="chip chip--draft">Pas de compte</span>')}</div>
       <div class="pcl-bloc pcl-acts"><button type="button" class="btn btn--primary btn--sm" data-act="p-offre" data-id="${c.id}">Préparer une offre</button><button type="button" class="btn btn--sm" data-act="p-modifier">Modifier</button>
-        <button type="button" class="btn btn--sm" data-act="p-entreprise">Passer en entreprise</button>${mien ? '<button type="button" class="btn btn--sm btn--danger" data-act="p-supprimer">Supprimer</button>' : ''}</div>
-      <div class="pcl-bloc pcl-doux"><h4>Passer en entreprise</h4><div class="pcl-aide">Le numéro de TVA se vérifie dans TF Buddy puis dans VIES et remplit la société et l’adresse ; la fiche passe dans Entreprises B2B avec ses conditions de paiement et sa remise.</div></div>
+        <button type="button" class="btn btn--sm" data-act="p-entreprise" title="Le numéro de TVA se vérifie dans TF Buddy puis dans VIES et remplit la société et l’adresse ; la fiche passe dans Entreprises B2B avec ses conditions de paiement et sa remise.">Passer en entreprise</button>${mien ? '<button type="button" class="btn btn--sm btn--danger" data-act="p-supprimer">Supprimer</button>' : ''}</div>
       ${blocFidelite(c.id)}</aside>`;
   }
 
