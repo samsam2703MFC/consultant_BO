@@ -3830,3 +3830,86 @@ body.db-vue-social{overflow:hidden}
   .fd-dd.ouvert{overflow:visible}
   .fd-t thead th{position:sticky;top:0;z-index:2;box-shadow:0 1px 0 var(--line)}
 }
+/* Fidélité › Cartes, par public (28/11/2026 ; maquette C retenue, panel/docs/maquettes/fidelite-particuliers-entreprises) :
+ * l'interrupteur abricot Particuliers · Entreprises, les cartes dessinées (une par carte de l'ERP, et le bingo), la grille
+ * de 13 cases d'un client, les sociétés en tuiles. Le bleu du bingo est une couleur d'identification, comme la couleur
+ * d'une carte dans l'ERP (§3) ; un état se dit toujours aussi par un mot. */
+.fdp{--fd-bingo:#2E6385}
+.fdp-choix{display:flex;align-items:center;gap:16px;margin:8px 0 2px;flex-wrap:wrap}
+.fdp-choix .fd-tg{margin-left:auto}
+.fdp-pub button{font-size:14px;padding:8px 16px}
+.fdp-cartes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:10px}
+.fdp-carte{min-width:0;border-radius:16px;padding:16px 18px;color:#fff}
+.fdp-carte[data-fdcarte]{cursor:pointer}
+.fdp-carte[data-fdcarte]:hover{filter:brightness(1.06)}
+.fdp-carte.on{outline:2px solid var(--ink);outline-offset:3px}
+.fdp-carte.fdp-bingo{background:var(--fd-bingo)}
+.fdp-carte .nm{display:flex;align-items:center;gap:10px;font-size:16px;line-height:1.25}
+.fdp-carte .nm span{flex:none;font-size:11px;background:rgba(255,255,255,.18);border-radius:5px;padding:2px 7px}
+.fdp-carte .rc{font-size:12px;opacity:.88;margin-top:3px;line-height:1.4}
+.fdp-k{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:14px;font-size:11.5px;line-height:1.3}
+.fdp-k b{display:block;font-size:22px;font-weight:400;line-height:1.1;font-variant-numeric:tabular-nums}
+.fdp-k b small{font-size:13px;opacity:.75}
+.fdp-hi{display:flex;align-items:flex-end;gap:4px;margin-top:14px}
+.fdp-hi>div{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px}
+.fdp-hi i{display:block;width:100%;background:#fff;border-radius:3px 3px 0 0}
+.fdp-hi span{font-size:11px;min-height:13px;font-variant-numeric:tabular-nums}
+.fdp-hi small{font-size:10px;opacity:.8;white-space:nowrap;min-height:12px}
+.fdp-sem{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:5px;margin-top:16px}
+.fdp-sem>i{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;font-style:normal}
+.fdp-sem b{display:flex;align-items:center;justify-content:center;width:100%;max-width:34px;aspect-ratio:1;border-radius:50%;border:2px dashed rgba(255,255,255,.5);font-weight:400;font-size:12px;font-variant-numeric:tabular-nums}
+.fdp-sem .passee b{border:2px solid rgba(255,255,255,.75);background:rgba(255,255,255,.16)}
+.fdp-sem .cours b{border:2px solid #fff;background:#fff;color:var(--fd-bingo)}
+.fdp-sem small{font-size:9.5px;opacity:.78;white-space:nowrap}
+.fdp-det{padding:0;overflow:hidden}.fdp-det .fdc-det{border-top:0}
+/* La grille d'un client : 13 cases */
+.fdp-t td{vertical-align:middle}
+.fdp-t td:nth-child(3){min-width:230px}
+.fdp-fl input{width:300px}
+.fdp-t th .fdp-pt{display:inline-block;width:16px;height:11px;border-radius:3px;background:var(--fd-bingo);margin-right:7px;vertical-align:-1px}
+.fdp-bgc{display:flex;flex-direction:column;gap:4px}
+.fdp-bg{display:inline-flex;gap:3px}
+.fdp-bg i{position:relative;display:block;width:11px;height:11px;border-radius:3px;border:1px solid var(--line);background:#fff;overflow:hidden}
+.fdp-bg i.ok{background:var(--fd-bingo);border-color:var(--fd-bingo)}
+.fdp-bg i.cours{border-color:var(--fd-bingo)}
+.fdp-bg i.cours::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--p);background:var(--fd-bingo);opacity:.4}
+.fdp-bg i.vide{background:var(--chip)}
+.fdp-bg i.av{background:var(--paper)}
+.fdp-s{font-size:11px;color:var(--muted)}
+.fdp-s .ok,.fdp .ok{color:var(--green)}
+.fdp-s .att{color:var(--prize-ink)}
+.fdp-s .ac-ic{display:inline-block;margin-right:5px}
+/* La case de la semaine d'un groupe : cochée · à moins de 3 € · pas encore */
+.fdp-sg{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--chip);margin:2px 0 6px}
+.fdp-sg i{display:block;height:100%}
+.fdp-sg .co,.fdp-lg .co{background:var(--fd-bingo)}
+.fdp-sg .pr,.fdp-lg .pr{background:var(--prize)}
+.fdp-lg .pa{background:var(--chip);border:1px solid var(--faint)}
+.fdp-lg{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:11.5px;color:var(--muted-2)}
+.fdp-lg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+/* Les sociétés en tuiles */
+.fdp-fl{padding:0 0 10px;border:0}
+.fdp-tl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:12px}
+.fdp-tl>.db-card{margin:0}
+.fdp-ti{display:flex;flex-direction:column}
+.fdp-ti[hidden]{display:none}
+.fdp-ti-h{display:flex;justify-content:space-between;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);font-size:14.5px}
+.fdp-ti-h small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.fdp-ti-h .r{text-align:right;font-size:12.5px;white-space:nowrap}
+.fdp-ti-b{padding:0 18px 14px}
+.fdp-ti-b+.fdp-ti-b{border-top:1px solid var(--row-line)}
+.fdp-lab{margin:12px 0 7px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fdp-ti-2{display:grid;grid-template-columns:1fr 1.1fr;gap:18px;align-items:start}
+.fdp-ti-2>div:first-child{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fdp-ti-b p.fdp-s{margin:0;font-size:12px}
+.fdp-ti-v{display:flex;flex-direction:column;gap:8px}
+.fdp-ti-l{margin:8px 0 0;font-size:12.5px}
+.fdp-bar{position:relative;display:block;height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
+.fdp-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--muted-2);border-radius:3px}
+.fdp-nm{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.fdp-nm span{position:relative;font-size:12px;background:var(--table-head);border:1px solid var(--line);border-radius:6px;padding:2px 8px 2px 20px;cursor:pointer}
+.fdp-nm span:hover{border-color:var(--accent)}
+.fdp-nm span::before{content:"";position:absolute;left:8px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--chip);border:1px solid var(--faint)}
+.fdp-nm span.co::before{background:var(--fd-bingo);border-color:var(--fd-bingo)}
+.fdp-nm span.pr::before{background:var(--prize);border-color:var(--prize)}
+@media (max-width:900px){.fdp-tl,.fdp-ti-2{grid-template-columns:1fr}.fdp-cartes{grid-template-columns:1fr}}

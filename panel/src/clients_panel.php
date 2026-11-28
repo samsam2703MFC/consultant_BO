@@ -43,7 +43,8 @@ const PCL_LIMITE = 50;           // une recherche de particuliers rend 50 fiches
 const PCL_PAGE = 500;            // le repli par pages (limit + offset), comme les bons (marketing/src/promos_bons.php)
 const PCL_PAGES_MAX = 80;
 /** La forme d'une ligne gardée (`pclClients:{shop}:{type}`) : 2 depuis le 28/11/2026, la date de la dernière connexion au
- *  webshop (`connexion`). Une liste gardée sous une autre forme se relit dans TF Buddy. */
+ *  webshop (`connexion`), la société et le bureau (`societeId`, `bureauId`). Une liste gardée sous une autre forme se relit
+ *  dans TF Buddy. */
 const PCL_VERSION_LISTE = 2;
 /** Le filtre du compte en ligne des particuliers (28/11/2026) : ceux qui ont un compte webshop, ceux qui n'en ont pas. */
 const PCL_FILTRES_COMPTE = ['en_ligne', 'sans_compte'];
@@ -147,6 +148,8 @@ function pclCourt(array $c): array
         'remise' => pclNombre($c['personal_discount_percent'] ?? null), 'delai' => pclNombre($c['payment_terms'] ?? null),
         'differe' => !empty($c['can_deferral']), 'cree' => substr(pclTexte($c['create_timestamp'] ?? ''), 0, 10),
         'main' => (int) ($c['id_main_shop'] ?? 0), 'manques' => !empty($c['is_b2b']) ? pclManques($c) : [],
+        // Sa société et son bureau (28/11/2026) : la Fidélité range les personnes d'une société sous elle (marketing/src/fidelite_cartes.php).
+        'societeId' => (int) ($c['company_client_id'] ?? 0), 'bureauId' => (int) ($c['office_id'] ?? 0),
         // Le compte en ligne (28/11/2026) : TF Buddy note la dernière connexion au webshop (last_login_at) ; elle n'existe
         // que pour un client qui a un mot de passe. Le jour seulement ; vide = pas de compte (un client créé en caisse).
         'connexion' => substr(pclTexte($c['last_login_at'] ?? ''), 0, 10)];
