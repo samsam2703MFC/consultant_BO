@@ -2059,7 +2059,7 @@
       + (avecListe && (p.products || []).length ? '<div class="cat-pres__list">' + liste(p.products, lang, repliDe(p)) + '</div>' : '') + (avecListe ? piedDispo(p.availabilityFooter) : '') + '</div>';
   }
   /* --- gamme par gamme (Marketing v1.23, 27/11/2026 : rendu de `PresentationDesign` et de la page libre, CataloguePages.tsx) */
-  const DISPOS_PRES = { une: '1 grande photo', deux: '2 photos', mosaique: 'Mosaïque de 3', pleine: 'Photo pleine page' };
+  const DISPOS_PRES = { une: '1 grande image', deux: '2 images', mosaique: 'Mosaïque de 3', pleine: 'Photo pleine page' };
   const PHOTOS_PRES = { une: 1, deux: 2, mosaique: 3, pleine: 1 };
   const GRAISSES_PRES = { light: 300, regular: 400, medium: 500, bold: 700 };
   const nombre = (v, d, min, max) => { const n = Number(v); return isFinite(n) ? Math.min(max, Math.max(min, n)) : d; };
@@ -2079,22 +2079,44 @@
     return '<div class="cat-pd__ph' + (url ? '' : ' is-empty') + (classe ? ' ' + classe : '') + '">'
       + (url ? '<img src="' + esc(url) + '" alt="" style="object-position:' + x + '% ' + y + '%;' + (z !== 100 ? 'transform:scale(' + (z / 100) + ');' : '') + 'transform-origin:' + x + '% ' + y + '%">' : '') + '</div>';
   }
-  /** La page de présentation d'une gamme, gamme par gamme : ses photos dans la disposition choisie (1 grande · 2 · 3 en
-   * mosaïque · pleine page), l'accroche, le titre et le texte dans leurs styles, sur un fond de couleur ou une photo sous
-   * un voile ; au choix, la liste de ses produits. */
+  /** L'illustration de la gamme dans une case (Marketing v1.24, `DrawnCase`) : le dessin de saison cadré comme une photo
+   * (x, y, zoom ; à 100 % le dessin entier), son trait teint par le filtre SVG `idTeinte(encre)` posé avec la page. */
+  function dessinCadre(src, encre, ph, classe) {
+    ph = ph || {};
+    const x = nombre(ph.x, 50, 0, 100), y = nombre(ph.y, 50, 0, 100), z = nombre(ph.zoom, 100, 50, 400);
+    return '<div class="cat-pd__ph cat-pd__ph--draw' + (src ? '' : ' is-empty') + (classe ? ' ' + classe : '') + '">'
+      + (src ? '<img class="cat-pd__draw" src="' + esc(src) + '" alt="" style="object-position:' + x + '% ' + y + '%;' + (z !== 100 ? 'transform:scale(' + (z / 100) + ');' : '') + 'transform-origin:' + x + '% ' + y + '%;filter:url(#' + idTeinte(encre) + ')">' : '') + '</div>';
+  }
+  const PLACES_PRES = ['haut', 'bas', 'gauche', 'droite', 'pleine'];
+  const PLACES_TEXTE = ['haut', 'centre', 'bas'];
+  /** La page de présentation d'une gamme, gamme par gamme : ses images dans la disposition choisie (1 grande · 2 · 3 en
+   * mosaïque), à leur place par rapport au texte (Marketing v1.24 : haut, bas, gauche, droite, ou la page entière, le
+   * texte par-dessus sous un voile) — chaque case une photo ou l'illustration de la gamme ; l'accroche, le titre et le
+   * texte dans leurs styles, sur un fond de couleur, une photo ou l'illustration sous un voile ; au choix, la liste de ses
+   * produits. `layout` « pleine » (d'avant) : une photo pleine page, le texte sur un bandeau. */
   function presentationDesign(doc, p, d) {
     const lang = doc.version.lang, avecListe = p.layout === 'presentation_liste';
     const disp = PHOTOS_PRES[d.layout] ? d.layout : 'une', pleine = disp === 'pleine';
+    const place = pleine ? 'haut' : (PLACES_PRES.includes(d.position) ? d.position : 'haut'), dessus = place === 'pleine';
+    const texteLa = PLACES_TEXTE.includes(d.textPlace) ? d.textPlace : 'bas';
     const photos = Array.from({ length: PHOTOS_PRES[disp] }, (x, i) => (Array.isArray(d.photos) && d.photos[i]) || {});
     const titre = d.title || {}, acc = d.kicker || {}, txt = d.text || {}, fond = d.background || {};
     const clair = ['#FFFFFF', '#F5EFE4'].includes(String(titre.color || '').toUpperCase());
     const texteTitre = String(titre.text != null ? titre.text : p.title || '');
-    let h = '<div class="cat-pd cat-pd--' + disp + (avecListe ? ' cat-pd--liste' : '') + '">';
-    if (fond.imageUrl) {
-      h += '<div class="cat-pd__bg"><img src="' + esc(fond.imageUrl) + '" alt=""><i style="background:' + (clair ? '#000' : css(fond.color, '#F6EFE5')) + ';opacity:' + (nombre(fond.veil, 0, 0, 100) / 100) + '"></i></div>';
+    const encre = couleurLook(d.ink) || couleurLook(d.gammeColor) || '#8D1D2C', src = dessin(d.drawingUrl);
+    const voile = '<i style="background:' + (clair ? '#000' : css(fond.color, '#F6EFE5')) + ';opacity:' + (nombre(fond.veil, 0, 0, 100) / 100) + '"';
+    const fondGenre = fond.kind || (fond.imageUrl ? 'photo' : 'color');
+    const caseDe = (ph, classe) => ph.kind === 'illustration' ? dessinCadre(src, encre, ph, classe) : photoCadree(ph, classe);
+    let h = '<div class="cat-pd cat-pd--' + disp + (pleine ? '' : ' cat-pd--pos-' + place) + (dessus ? ' cat-pd--place-' + texteLa : '') + (avecListe ? ' cat-pd--liste' : '') + '">';
+    h += '<svg class="cat-tint" width="0" height="0" aria-hidden="true" focusable="false"><filter id="' + idTeinte(encre) + '" color-interpolation-filters="sRGB"><feFlood flood-color="' + encre + '"/><feComposite in2="SourceAlpha" operator="in"/></filter></svg>';
+    if (fondGenre === 'photo' && fond.imageUrl) {
+      h += '<div class="cat-pd__bg"><img src="' + esc(fond.imageUrl) + '" alt="">' + voile + '></i></div>';
+    } else if (fondGenre === 'illustration') {
+      h += '<div class="cat-pd__bg">' + dessinCadre(src, encre, {}, 'cat-pd__bgdraw') + voile + '></i></div>';
     }
-    h += pleine ? '<div class="cat-pd__bg">' + photoCadree(photos[0]) + '</div>'
-      : '<div class="cat-pd__photos">' + photos.map((ph, i) => photoCadree(ph, 'cat-pd__ph--' + i)).join('') + '</div>';
+    h += pleine ? '<div class="cat-pd__bg">' + caseDe(photos[0], '') + '</div>'
+      : '<div class="cat-pd__photos' + (dessus ? ' cat-pd__photos--over' : '') + '">' + photos.map((ph, i) => caseDe(ph, 'cat-pd__ph--' + i)).join('') + '</div>';
+    if (dessus) { h += voile.replace('<i ', '<i class="cat-pd__veil" ') + '></i>'; }
     h += '<div class="cat-pd__head"' + (pleine ? ' style="background:' + css(fond.color, '#F6EFE5') + '"' : '') + '>'
       + (acc.text ? '<div class="cat-pd__kicker" style="' + stylePres(acc) + '">' + esc(acc.text) + '</div>' : '')
       // La Vank en capitales, écrites (pas par CSS : les accents tombaient).
