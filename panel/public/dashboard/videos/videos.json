@@ -7975,9 +7975,9 @@
       ],
       "fichier": "26-03-bureaux.mp4",
       "debut": 0,
-      "fin": 68.67,
+      "fin": 70.15,
       "affiche": "clients-bureaux.jpg",
-      "duree": "1 min 09",
+      "duree": "1 min 10",
       "sources": [
         "panel/public/dashboard/clients.js",
         "panel/public/dashboard/tfb-magasin.js",
@@ -7985,8 +7985,8 @@
         "panel/src/bureaux_dev.php",
         "panel/src/tfb_magasin.php"
       ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "4498033bbc82a7636742de559876721e633b16d9",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "clients-questionnaire",
@@ -8000,8 +8000,8 @@
         "clients"
       ],
       "fichier": "26-03-bureaux.mp4",
-      "debut": 68.67,
-      "fin": 103.27,
+      "debut": 70.15,
+      "fin": 104.85,
       "affiche": "clients-questionnaire.jpg",
       "duree": "35 s",
       "sources": [
@@ -8011,8 +8011,8 @@
         "panel/src/bureaux_dev.php",
         "panel/src/tfb_magasin.php"
       ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "4498033bbc82a7636742de559876721e633b16d9",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "clients-valider-demande",
@@ -8026,10 +8026,10 @@
         "clients"
       ],
       "fichier": "26-03-bureaux.mp4",
-      "debut": 148.82,
-      "fin": 178.98,
+      "debut": 104.85,
+      "fin": 138.45,
       "affiche": "clients-valider-demande.jpg",
-      "duree": "30 s",
+      "duree": "34 s",
       "sources": [
         "panel/public/dashboard/clients.js",
         "panel/public/dashboard/tfb-magasin.js",
@@ -8037,8 +8037,8 @@
         "panel/src/bureaux_dev.php",
         "panel/src/tfb_magasin.php"
       ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "4498033bbc82a7636742de559876721e633b16d9",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "clients-refuser-demande",
@@ -8052,10 +8052,10 @@
         "clients"
       ],
       "fichier": "26-03-bureaux.mp4",
-      "debut": 178.98,
-      "fin": 198.32,
+      "debut": 138.45,
+      "fin": 159.79,
       "affiche": "clients-refuser-demande.jpg",
-      "duree": "19 s",
+      "duree": "21 s",
       "sources": [
         "panel/public/dashboard/clients.js",
         "panel/public/dashboard/tfb-magasin.js",
@@ -8063,8 +8063,8 @@
         "panel/src/bureaux_dev.php",
         "panel/src/tfb_magasin.php"
       ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "4498033bbc82a7636742de559876721e633b16d9",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "clients-ajouter-bureau",
@@ -8078,8 +8078,8 @@
         "clients"
       ],
       "fichier": "26-03-bureaux.mp4",
-      "debut": 198.32,
-      "fin": 258.77,
+      "debut": 159.79,
+      "fin": 220.07,
       "affiche": "clients-ajouter-bureau.jpg",
       "duree": "1 min",
       "sources": [
@@ -8089,8 +8089,8 @@
         "panel/src/bureaux_dev.php",
         "panel/src/tfb_magasin.php"
       ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "4498033bbc82a7636742de559876721e633b16d9",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "clients-modifier-livraison",
@@ -8104,8 +8104,8 @@
         "clients"
       ],
       "fichier": "26-03-bureaux.mp4",
-      "debut": 258.77,
-      "fin": 288.42,
+      "debut": 220.07,
+      "fin": 249.85,
       "affiche": "clients-modifier-livraison.jpg",
       "duree": "30 s",
       "sources": [
@@ -8115,8 +8115,8 @@
         "panel/src/bureaux_dev.php",
         "panel/src/tfb_magasin.php"
       ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "4498033bbc82a7636742de559876721e633b16d9",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "clients-ajouter-site",
@@ -8130,10 +8130,10 @@
         "clients"
       ],
       "fichier": "26-03-bureaux.mp4",
-      "debut": 288.42,
-      "fin": 325.89,
+      "debut": 249.85,
+      "fin": 287.68,
       "affiche": "clients-ajouter-site.jpg",
-      "duree": "37 s",
+      "duree": "38 s",
       "sources": [
         "panel/public/dashboard/clients.js",
         "panel/public/dashboard/tfb-magasin.js",
@@ -8141,8 +8141,8 @@
         "panel/src/bureaux_dev.php",
         "panel/src/tfb_magasin.php"
       ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "4498033bbc82a7636742de559876721e633b16d9",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "clients-inviter",
@@ -8156,10 +8156,10 @@
         "clients"
       ],
       "fichier": "26-03-bureaux.mp4",
-      "debut": 325.89,
-      "fin": 355.16,
+      "debut": 287.68,
+      "fin": 318.61,
       "affiche": "clients-inviter.jpg",
-      "duree": "29 s",
+      "duree": "31 s",
       "sources": [
         "panel/public/dashboard/clients.js",
         "panel/public/dashboard/tfb-magasin.js",
@@ -8167,8 +8167,8 @@
         "panel/src/bureaux_dev.php",
         "panel/src/tfb_magasin.php"
       ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "4498033bbc82a7636742de559876721e633b16d9",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "clients-analyse",
