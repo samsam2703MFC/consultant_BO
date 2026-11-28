@@ -49,7 +49,26 @@ verifie('client 1 Fanbase, client 6 Découverte', ($K[1]['profil'] ?? 0) === $P[
 verifie('mêmes profils que la page Fidélité', array_count_values(array_map(static fn ($x) => $x['profil'], $K)) == array_filter(array_column($m['profils'], 'clients', 'id')));
 verifie('un radar à six branches par client', count(array_filter($K, static fn ($x) => array_keys($x['radar']) === array_keys(FP_AXES))) === 8, json_encode($K[1]['radar']));
 verifie('aucun nom (les noms restent dans TF Buddy)', !array_filter($K, static fn ($x) => isset($x['nom'])));
+verifie('ses jours de passage, un par passage, dans l’ordre, le dernier = « dernier »', count(array_filter($K, static fn ($x) => count($x['jours']) === $x['passages'] && end($x['jours']) === $x['dernier'] && $x['jours'] === array_values(array_unique($x['jours'])))) === 8, json_encode(array_slice($K[4]['jours'], -3)));
 verifie('les profils avec leur condition, la moyenne', count($pc['profils']) === 6 && ($pc['profils'][2]['condition'] ?? '') === '1 fois par semaine' && is_array($pc['moyenne']['radar'] ?? null));
+verifie('le montant de chaque jour, un par jour', count(array_filter($K, static fn ($x) => count($x['montants']) === count($x['jours']) && min($x['montants']) > 0)) === 8, json_encode(array_slice($K[4]['montants'], -3)));
+
+echo "== Le ticket d'un passage (GET /fidelite/ticket, la frise de la fiche)\n";
+$jour = end($K[4]['jours']);
+$_GET = ['shop' => '4', 'client' => '4', 'jour' => $jour];
+$tk = ep_fidelite_ticket();
+$t1 = $tk['tickets'][0] ?? [];
+verifie('un ticket ce jour-là, lu avec ses lignes', count($tk['tickets'] ?? []) === 1 && $t1['lu'] === true && count($t1['lignes']) === 2, json_encode($t1, JSON_UNESCAPED_UNICODE));
+verifie('heure, montant et canal du cache', ($t1['heure'] ?? '') === '12:15' && abs(($t1['montant'] ?? 0) - 9.8) < 0.01 && in_array($t1['canal'] ?? '', ['comptoir', 'commande', 'webshop'], true));
+verifie('prix connus sur une ligne, inconnus sur l’autre : pas de remise inventée', $t1['lignes'][0]['pu'] === 3.2 && $t1['lignes'][0]['total'] === 3.04 && $t1['lignes'][1]['pu'] === null && $t1['remise'] === null);
+$_GET = ['shop' => '4', 'client' => '4', 'jour' => '2001-01-01'];
+$r404 = @ep_fidelite_ticket();
+verifie('un jour sans ticket : un message', ($r404['error'] ?? '') !== '');
+$_GET = ['shop' => '4', 'client' => '4', 'jour' => 'hier'];
+$r422 = @ep_fidelite_ticket();
+verifie('un jour mal écrit : refusé', str_contains($r422['error'] ?? '', 'AAAA-MM-JJ'));
+$_GET = ['shop' => '4'];
+
 $avant = PanelApi::$appels;
 ep_fidelite_profils_clients();
 verifie('relue : seuls aujourd’hui et la veille, ni articles ni noms', PanelApi::$appels - $avant <= 2, (string) (PanelApi::$appels - $avant) . ' appels');

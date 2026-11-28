@@ -14,7 +14,8 @@ php tests/fidelite/banc.php
 ```
 
 `banc.php` vérifie les profils de départ, le rangement des clients, la relecture (seuls le jour en cours et la veille
-se relisent), le profil de chaque client scanné (`/fidelite/profils/clients`, pour Clients › Particuliers), la fiche
+se relisent), le profil de chaque client scanné (`/fidelite/profils/clients`, pour Clients › Particuliers) et le ticket d'un passage
+(`/fidelite/ticket`), la fiche
 d'un client et la publication (seuils en double, profil de base, mémoire trop courte).
 
 L'écran Fidélité du cockpit est retiré (19/11/2026) ; le banc navigateur ne garde que l'Assistant · coachs :

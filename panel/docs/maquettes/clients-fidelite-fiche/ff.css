@@ -1,0 +1,81 @@
+/* Maquettes : la page, les colonnes, le trait du bas d'écran. Les éléments neufs de la fiche (pcl-fid-*) sont écrits
+   comme ils iraient dans panel/public/dashboard/clients.css. */
+body { margin: 0; background: var(--paper, #faf7f2); font-family: 'Gotham', system-ui, sans-serif; color: var(--ink); }
+.mq { padding: 22px 26px 40px; }
+.mq h1 { margin: 0 0 4px; font-size: 19px; font-weight: 400; }
+.mq > p { margin: 0 0 18px; font-size: 12.5px; color: var(--muted); max-width: 1100px; line-height: 1.5; }
+.mq-cols { display: grid; grid-template-columns: repeat(var(--n, 4), 370px); gap: 26px; align-items: start; }
+.mq-col h2 { margin: 0 0 3px; font-size: 14px; font-weight: 700; color: var(--accent); }
+.mq-col .mq-q { margin: 0 0 10px; min-height: 34px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.mq-cadre { position: relative; }
+.mq-cadre .pcl-fiche { position: static; max-height: none; overflow: visible; }
+/* Le bas de l'écran d'un portable 1080p (la fiche commence à 110 px, la barre des tâches et le navigateur en prennent 240). */
+.mq-pli { position: absolute; left: -8px; right: -8px; height: 0; border-top: 2px dashed #c0392b; z-index: 3; pointer-events: none; }
+.mq-pli span { position: absolute; right: 0; top: -19px; font-size: 10.5px; color: #c0392b; background: var(--paper, #faf7f2); padding: 0 4px; }
+.mq-h { margin-top: 6px; font-size: 11px; color: var(--muted); }
+
+/* ── Ce qui irait dans clients.css ─────────────────────────────────────────────────────────────────────────────── */
+/* La fiche serrée : les chiffres, les coordonnées, les gestes sur une ligne ; l'aide « Passer en entreprise » part dans
+   le titre du bouton (et reste dans sa fenêtre). */
+.pcl-serre .pcl-ft { padding: 13px 16px 10px; }
+.pcl-serre .pcl-kpis > div { padding: 8px 14px; }
+.pcl-serre .pcl-kpis .v { font-size: 15px; }
+.pcl-serre .pcl-bloc { padding: 10px 16px; }
+.pcl-serre .pcl-bloc h4 { margin-bottom: 5px; }
+.pcl-serre .pcl-lf { padding: 2px 0; }
+.pcl-serre .pcl-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* Le profil sur une ligne, puis quatre chiffres. */
+.pcl-fid-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12.5px; }
+.pcl-fid-tete .pcl-fid { font-size: 13.5px; }
+.pcl-fid-tete small { font-size: 11.5px; color: var(--muted); }
+.pcl-fid-k { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 8px -16px 0; border-top: 1px solid var(--row-line); border-bottom: 1px solid var(--row-line); }
+.pcl-fid-k > div { padding: 5px 10px 5px 16px; border-left: 1px solid var(--row-line); min-width: 0; }
+.pcl-fid-k > div:first-child { border-left: 0; }
+.pcl-fid-k .v { font-size: 14px; white-space: nowrap; }
+.pcl-fid-k .k { margin-top: 2px; font-size: 9.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.pcl-fid-quand { margin-top: 8px; }
+.pcl-fid-quand .lab { display: flex; justify-content: space-between; gap: 8px; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.pcl-fid-quand .lab span { letter-spacing: normal; text-transform: none; }
+.pcl-fid-quand .dit { margin-top: 6px; font-size: 11.5px; color: var(--muted-2, var(--muted)); line-height: 1.4; }
+.pcl-fid-quand .dit b { font-weight: 400; color: var(--ink); }
+.pcl-serre .pcl-fmeta b { font-weight: 400; color: var(--ink); }
+/* Le radar, plus petit dans la fiche serrée (270 px au lieu de toute la largeur). */
+.pcl-serre .pcl-fid-radar { margin-top: 6px; }
+.pcl-serre .pcl-fid-radar .fd-radar { max-width: 270px; margin: -26px auto -22px; }
+.pcl-serre .pcl-fid-seg .seg button { padding: 4px 10px; font-size: 12px; }
+
+/* A — la frise des 90 jours : un trait par jour, plein le jour d'un passage. */
+.pcl-frise { display: flex; align-items: flex-end; gap: 1px; height: 30px; }
+.pcl-frise i { flex: 1; height: 7px; border-radius: 1px; background: var(--chip); }
+.pcl-frise i.on { height: 30px; }
+.pcl-frise i.we { background: #e6dfd3; }
+.pcl-frise-m { position: relative; height: 15px; margin-top: 3px; font-size: 10.5px; color: var(--muted); }
+.pcl-frise-m span { position: absolute; top: 0; padding-left: 4px; border-left: 1px solid var(--line); line-height: 13px; }
+.pcl-frise-m span.auj { right: 0; border-left: 0; padding: 0; }
+
+/* B — le calendrier des 13 semaines : une colonne par semaine, une ligne par jour. */
+.pcl-cal13 { display: grid; grid-template-columns: 16px repeat(13, 14px); gap: 2px 3px; align-items: center; justify-content: start; }
+.pcl-cal13 .j { font-size: 9.5px; color: var(--muted); }
+.pcl-cal13 .c { width: 14px; height: 13px; border-radius: 3px; background: var(--chip); }
+.pcl-cal13 .c.vide { background: transparent; }
+.pcl-cal13 .c.auj { outline: 1.5px solid var(--ink); outline-offset: -1.5px; }
+.pcl-cal13 .m { font-size: 9.5px; color: var(--muted); white-space: nowrap; overflow: visible; height: 12px; }
+
+/* C — semaine par semaine : une barre par semaine, le trait du profil. */
+.pcl-sem { position: relative; display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; align-items: end; height: 46px; border-bottom: 1px solid var(--line); }
+.pcl-sem i { display: block; border-radius: 3px 3px 0 0; }
+.pcl-sem i.zero { height: 3px !important; background: var(--chip) !important; border-radius: 2px; }
+.pcl-sem em { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--ink); opacity: 0.55; }
+.pcl-sem em span { position: absolute; right: 0; top: -15px; font-style: normal; font-size: 10px; color: var(--muted); background: #fff; padding-left: 4px; }
+.pcl-sem-l { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin-top: 3px; font-size: 9.5px; color: var(--muted); }
+.pcl-sem-l span { white-space: nowrap; }
+
+/* D — mois par mois : les jours du mois, et le profil du mois. */
+.pcl-mpm { display: grid; grid-template-columns: 44px minmax(0, 1fr) 92px; gap: 4px 8px; align-items: center; font-size: 11.5px; }
+.pcl-mpm .mo { color: var(--muted); }
+.pcl-mpm .jr { display: flex; gap: 1.5px; height: 16px; }
+.pcl-mpm .jr i { flex: 1; border-radius: 1.5px; background: var(--chip); }
+.pcl-mpm .jr i.fut { background: transparent; border: 1px dashed var(--line); }
+.pcl-mpm .pf { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.pcl-mpm .pf i { width: 8px; height: 8px; border-radius: 50%; }
+.pcl-mpm .pf small { color: var(--muted); font-size: 10.5px; }
