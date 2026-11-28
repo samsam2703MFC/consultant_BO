@@ -78,4 +78,11 @@ n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode «
   qu'elle ne l'a pas rattrapé, quinze minutes au plus. Au-delà, le journal dit que le panel rend toujours l'ancien
   statut. Vaut pour la liste du cockpit et pour « Mes demandes » du franchisé.
 
+- **Le 27/11/2026** : plus de polonais (Sam : « soit du français soit du néerlandais »). Le panel crée lui-même, sans
+  magasin, des demandes rédigées en polonais ; le cockpit reconnaît leur modèle et les montre en français, avec les
+  mêmes valeurs (`hdkFrancais`, dans `hdkDemande`). Un seul modèle connu à ce jour, le domaine « Webshop : n° de TVA
+  en double » (`webshop_billing_vat_conflict`) : le titre « Conflit de n° de TVA sur le webshop : … » et le texte
+  « Plusieurs fiches société ont le même n° de TVA … Vérifiez les fiches des clients B2B … » (et le compte client où
+  l'ajout aux factures a échoué). Le panel garde son texte ; un texte hors modèle reste tel quel.
+
 Banc : `php consultant/bin/tests_helpdesk.php` (SMS, date limite, relances ; SQLite en mémoire, doublures du panel et de SMSAPI).
