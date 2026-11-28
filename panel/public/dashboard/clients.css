@@ -394,3 +394,28 @@ button.pcl-fid:hover { text-decoration: underline; text-decoration-color: var(--
 .pcl-fid-seg { display: flex; justify-content: center; margin-bottom: 2px; }
 .pcl-fid-seg .seg button { padding: 4px 10px; font-size: 12px; }
 .pcl-fid-radar .fd-radar { max-width: 270px; margin: -26px auto -22px; }
+/* Le ticket d'un passage (28/11/2026, maquette 2 de panel/docs/maquettes/clients-fidelite-fiche/ticket.html) : un clic
+   sur la frise ouvre, sous elle, le ticket du passage le plus proche ; le trait choisi est souligné à l'encre. */
+.pcl-frise { cursor: pointer; border-radius: 2px; }
+.pcl-frise:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.pcl-frise i.sel { outline: 2px solid var(--ink); outline-offset: 1px; border-radius: 1px; }
+.pcl-frise i.pale { opacity: 0.4; }
+.pcl-tk { margin-top: 8px; padding: 10px 12px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper, #faf7f2); font-size: 12px; }
+.pcl-tk-h { display: flex; align-items: center; gap: 8px; }
+.pcl-tk-h b { font-weight: 400; font-size: 13px; color: var(--ink); }
+.pcl-tk-h .x { margin-left: auto; width: 22px; height: 22px; padding: 0; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; }
+.pcl-tk-h .x:hover { color: var(--ink); }
+.pcl-tk-h2 { display: flex; align-items: center; gap: 7px; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+.pcl-tk-un + .pcl-tk-un { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.pcl-tk-c { display: inline-block; padding: 1px 7px; border-radius: 5px; background: var(--chip); font-size: 11px; color: var(--ink); }
+.pcl-tk-l { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 3px 6px; margin-top: 8px; padding-top: 7px; border-top: 1px dashed var(--line); }
+.pcl-tk-l .q { color: var(--muted); text-align: right; }
+.pcl-tk-l .n small { display: block; color: var(--muted); font-size: 10.5px; }
+.pcl-tk-l .t { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pcl-tk-s { display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); color: var(--muted); }
+.pcl-tk-s + .pcl-tk-s { margin-top: 2px; padding-top: 0; border-top: 0; }
+.pcl-tk-s.tot { color: var(--ink); font-size: 13px; }
+.pcl-tk-m { margin: 8px 0 2px; color: var(--muted); }
+.pcl-tk-m.error { color: var(--stop); }
+.pcl-tk-nav { display: flex; justify-content: space-between; margin-top: 7px; }
+.pcl-tk-nav .linklike { padding: 2px 0; font-size: 11.5px; }

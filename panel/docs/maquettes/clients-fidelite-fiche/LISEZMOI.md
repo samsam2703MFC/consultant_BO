@@ -35,7 +35,9 @@ légères). `index.html?v=a` (ou `b`, `c`, `d`, `avant`) n'en montre qu'une.
 
 ## Un passage de la frise ouvre son ticket (maquettes, 28/11/2026)
 
-**Statut : maquette, rien n'est codé.** Demande : « avant de mettre en ligne, ajouter la possibilité de cliquer sur une
+**Statut : 2 choisie par Sam (« le 2 », 28/11/2026) et codée** (`clients.js` : `friseFid`, `ticketFid`, `lireTicket` ;
+`GET /fidelite/ticket` dans `marketing/src/fidelite_profils.php`). Un clic sur la frise ouvre le passage le plus proche
+(à 4 jours près : un trait ne fait que 3 px) ; Entrée sur la frise, le dernier ; Échap ou × ferme. Demande : « avant de mettre en ligne, ajouter la possibilité de cliquer sur une
 visite et d'avoir son ticket ; fais une maquette ». `ticket.html` (`tk.js`, `tk.css`) reprend la fiche A et ouvre le
 ticket (fictif) du samedi 21/11 de trois façons :
 

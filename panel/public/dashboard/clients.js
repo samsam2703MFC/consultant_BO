@@ -39,7 +39,7 @@
 
   const st = { shop: null, api: '../api/cockpit', el: null, aller: null, nomShop: '', onglet: 'b2b', mo: null,
     p: { q: '', filtre: '', compte: '', d: null, err: null, lecture: false, sel: null, fiche: null, ficheErr: null },
-    f: { shop: null, d: null, err: null, lecture: false, vue: 'recurrence' },
+    f: { shop: null, d: null, err: null, lecture: false, vue: 'recurrence', sel: null, tk: {} },
     e: { d: null, err: null, lecture: false, q: '', score: '', ca: '', freq: '', incompl: false, sel: null, fiche: null, ficheErr: null },
     b: { d: null, err: null, lecture: false, q: '', statut: '', sel: null, ong: 'livraison', det: {}, options: null, w: null },
     a: { annee: null, mois: null, d: null, err: null, lecture: false, metrique: 'ventes' } };
@@ -87,6 +87,16 @@
     lire('/fidelite/profils/clients').then(d => { if (F.shop === shop) { F.d = d; } })
       .catch(e => { if (F.shop === shop) { F.err = e.message; } }).finally(() => { if (F.shop === shop) { F.lecture = false; rendre(); } });
   }
+  /** Le ticket d'un passage (28/11/2026, maquette 2 : sous la frise) : GET /fidelite/ticket, lu une fois par client et jour. */
+  function lireTicket(client, jour) {
+    const F = st.f, k = client + '|' + jour;
+    F.sel = { client, jour };
+    if (!F.tk[k] || F.tk[k].err) {
+      F.tk[k] = { lecture: true };
+      lire('/fidelite/ticket', { client, jour }).then(d => { F.tk[k] = { d }; }).catch(e => { F.tk[k] = { err: e.message }; }).finally(rendre);
+    }
+    rendre();
+  }
   function lireParticuliers(frais) {
     lireFidelite(false);
     const P = st.p, q = P.q, f = P.filtre, cpt = P.compte; P.lecture = true; rendre();
@@ -125,6 +135,7 @@
       .catch(e => { A.err = e.message; }).finally(() => { A.lecture = false; rendre(); });
   }
   function lireFiche(X, id) {
+    if (X === st.p && st.f.sel && st.f.sel.client !== id) { st.f.sel = null; }   // le ticket ouvert reste à son client
     X.sel = id; X.fiche = null; X.ficheErr = null; rendre();
     // Sur un écran étroit, la fiche est sous la liste : on y descend.
     if (window.innerWidth <= 1100) { const f = st.el.querySelector('.pcl-fiche'); if (f && f.scrollIntoView) { f.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }
@@ -280,7 +291,7 @@
       <div class="pcl-fid-tete"><span><span class="pcl-fid"><i style="background:${esc(p.couleur)}" aria-hidden="true"></i>${esc(p.nom)}</span> <small>${esc(p.condition)}</small></span><small>${esc(fidDepuis(c.depuis))}</small></div>
       <div class="pcl-fid-k">${k(nf(c.rythme, 1), 'par mois', nf(c.passagesFenetre) + ' passages sur les ' + nf(d.fenetre) + ' derniers jours, ramenés à un mois')}${k(nf(c.passages), 'en ' + nf(d.memoire) + ' j', 'passages (jours avec un ticket) sur ' + nf(d.memoire) + ' jours')}
         ${k(fE(c.eur / tk), 'panier', 'panier moyen sur ' + nf(c.tk) + ' ticket' + (c.tk > 1 ? 's' : ''))}${k(nf(Math.round(100 * c.cmd / tk)) + ' %', 'commande', 'part de ses tickets passés en commande')}</div>
-      ${friseFid(c, d, p)}
+      ${friseFid(c, d, p, id)}
       <div class="pcl-fid-radar" title="${achat ? 'La part de ses articles par famille, en % (80 au bord).' : '0 au centre, 100 au bord : fréquence, récence, ancienneté, panier, diversité et achats au comptoir.'}">${choix ? `<div class="pcl-fid-seg">${choix}</div>` : ''}${radar}</div>
       ${st.aller ? '<button type="button" class="linklike" data-act="p-fid-historique" data-id="' + esc(id) + '">Son historique : Fidélité ›</button>' : ''}</div>`;
   }
@@ -289,12 +300,16 @@
   const isoPlus = (iso, n) => { const t = new Date(iso + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
   const ecartJ = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
   const fJM = iso => +iso.slice(8, 10) + ' ' + MOIS[+iso.slice(5, 7) - 1];
-  function friseFid(c, d, p) {
+  const JSEM = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'], JSEML = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  const jourC = iso => JSEM[new Date(iso + 'T12:00:00Z').getUTCDay()] + ' ' + iso.slice(8, 10) + '/' + iso.slice(5, 7);
+  function friseFid(c, d, p, id) {
     if (!Array.isArray(c.jours) || !d.au) { return ''; }
-    const n = Math.max(7, +d.memoire || 90), debut = isoPlus(d.au, -(n - 1)), vu = new Set(c.jours);
+    const n = Math.max(7, +d.memoire || 90), debut = isoPlus(d.au, -(n - 1)), vu = {};
+    c.jours.forEach((j, i) => { vu[j] = Array.isArray(c.montants) ? c.montants[i] : null; });
+    const sel = st.f.sel && st.f.sel.client === id ? st.f.sel.jour : null;
     const jours = Array.from({ length: n }, (_, i) => isoPlus(debut, i));
     const traits = jours.map(j => { const we = (new Date(j + 'T12:00:00Z').getUTCDay() + 6) % 7 >= 5;
-      return vu.has(j) ? `<i class="on" style="background:${esc(p.couleur)}" title="${esc(fD(j).slice(0, 5))}"></i>` : `<i${we ? ' class="we"' : ''}></i>`; }).join('');
+      return j in vu ? `<i class="on${sel === j ? ' sel' : sel ? ' pale' : ''}" style="background:${esc(p.couleur)}" title="${esc(jourC(j) + (vu[j] != null ? ' · ' + fE(vu[j]) : ''))}"></i>` : `<i${we ? ' class="we"' : ''}></i>`; }).join('');
     const mois = jours.map((j, i) => j.slice(8) === '01' && i < n - 8 ? `<span style="left:${(100 * i / n).toFixed(1)}%">${MC[+j.slice(5, 7) - 1]}</span>` : '').join('');
     // Le plus long creux : entre deux passages, ou depuis le dernier (en cours).
     const L = c.jours.filter(j => j >= debut && j <= d.au).sort();
@@ -303,9 +318,30 @@
     const enCours = L.length ? ecartJ(L[L.length - 1], d.au) : 0;
     const dit = L.length <= 1 ? `<b>1 passage</b>${L.length ? ', le ' + esc(fJM(L[0])) : ''}`
       : `<b>${nf(L.length)} passages</b> · ` + (enCours > creux.n ? `<b>aucun depuis ${nf(enCours)} jours</b>` : `le plus long creux : <b>${nf(creux.n)} jours</b>, du ${esc(creux.du.slice(0, 7) === creux.au.slice(0, 7) ? String(+creux.du.slice(8, 10)) : fJM(creux.du))} au ${esc(fJM(creux.au))}`);
-    return `<div class="pcl-fid-quand"><div class="lab">Ses passages<span>${nf(n)} jours, un trait par jour</span></div>
-      <div class="pcl-frise" role="img" aria-label="${esc(nf(L.length) + ' passages sur ' + n + ' jours')}">${traits}</div><div class="pcl-frise-m">${mois}<span class="auj">auj.</span></div>
-      <p class="dit">${dit}</p></div>`;
+    // Un clic sur la frise ouvre le ticket du passage le plus proche (un trait ne fait que 3 px) ; Entrée, le dernier.
+    return `<div class="pcl-fid-quand"><div class="lab">Ses passages<span>${nf(n)} jours · un clic sur un trait : son ticket</span></div>
+      <div class="pcl-frise" id="pcl-frise" role="button" tabindex="0" data-act="p-fid-frise" data-id="${esc(id)}" data-n="${n}" data-debut="${esc(debut)}" aria-label="${esc(nf(L.length) + ' passages sur ' + n + ' jours : ouvrir le ticket du dernier passage')}">${traits}</div><div class="pcl-frise-m">${mois}<span class="auj">auj.</span></div>
+      ${sel ? ticketFid(id, sel, L) : ''}<p class="dit">${dit}</p></div>`;
+  }
+  const CANAUX_TK = { comptoir: 'Comptoir', commande: 'Commande', webshop: 'Webshop' };
+  /** Le ticket du passage choisi, sous la frise : le jour, le canal, l'heure et le n°, les lignes, la remise, le total ;
+   *  ‹ › le passage d'avant ou d'après, × ferme. Plusieurs tickets le même jour : l'un sous l'autre. */
+  function ticketFid(id, jour, L) {
+    const x = st.f.tk[id + '|' + jour] || { lecture: true }, i = L.indexOf(jour), av = L[i - 1], ap = L[i + 1];
+    const nav = `<div class="pcl-tk-nav">${av ? `<button type="button" class="linklike" data-act="p-fid-jour" data-id="${esc(id)}" data-v="${esc(av)}">‹ ${esc(jourC(av))}</button>` : '<span></span>'}${ap ? `<button type="button" class="linklike" data-act="p-fid-jour" data-id="${esc(id)}" data-v="${esc(ap)}">${esc(jourC(ap))} ›</button>` : '<span></span>'}</div>`;
+    const tete = `<div class="pcl-tk-h"><b>${esc(JSEML[new Date(jour + 'T12:00:00Z').getUTCDay()] + ' ' + fJM(jour))}</b><button type="button" class="x" data-act="p-fid-fermer" aria-label="Fermer le ticket">×</button></div>`;
+    let corps;
+    if (x.lecture) { corps = `<p class="pcl-tk-m">Lecture du ticket dans TF Buddy…</p>`; }
+    else if (x.err) { corps = `<p class="pcl-tk-m error">${esc(x.err)}</p>`; }
+    else {
+      corps = x.d.tickets.map(t => {
+        const lignes = t.lignes.length ? `<div class="pcl-tk-l">${t.lignes.map(l => `<span class="q">${nf(l.q, l.q % 1 ? 2 : 0)}×</span><span class="n">${esc(l.nom)}${l.portion ? ` <small>portion ${esc(l.portion)}</small>` : ''}</span><span class="t">${l.total != null ? fE(l.total) : l.pu != null ? fE(l.pu * l.q) : ''}</span>`).join('')}</div>`
+          : `<p class="pcl-tk-m">${t.lu ? 'Ticket sans article.' : 'Les articles de ce ticket ne se lisent pas dans TF Buddy pour l’instant.'}</p>`;
+        return `<div class="pcl-tk-un"><div class="pcl-tk-h2"><span class="pcl-tk-c">${esc(CANAUX_TK[t.canal] || 'Commande')}</span>${esc(t.heure)} · ticket n° ${esc(t.id)}</div>${lignes}
+          ${t.remise ? `<div class="pcl-tk-s"><span>dont remise</span><span>− ${fE(t.remise)}</span></div>` : ''}<div class="pcl-tk-s tot"><span>Total</span><span>${fE(t.montant)}</span></div></div>`;
+      }).join('');
+    }
+    return `<div class="pcl-tk" id="pcl-tk">${tete}${corps}${nav}</div>`;
   }
   /* ── Nettoyer la base (28/11/2026, panel/src/clients_nettoyage.php) ─────────────────────────────────────────── */
   function ouvrirNettoyage() {
@@ -1106,6 +1142,16 @@
       // La fidélité (28/11/2026) : l'indicateur ouvre la fiche et y montre le radar ; le radar bascule ; l'historique complet.
       case 'p-fid': if (P.sel !== id) { lireFiche(P, id).then(() => montrer('#pcl-fid')); } else { montrer('#pcl-fid'); } break;
       case 'p-fid-vue': st.f.vue = v; rendre(); break;
+      // Le ticket d'un passage (28/11/2026) : la frise (le passage le plus proche du clic, à 4 jours près ; le même : ferme),
+      // ‹ › d'un passage à l'autre, ×.
+      case 'p-fid-frise': { const x = fidDe(id); if (!x) { break; }
+        const r = a.getBoundingClientRect(), n = +a.dataset.n, k = Math.max(0, Math.min(n - 1, Math.floor((ev.clientX - r.left) / r.width * n)));
+        const vise = isoPlus(a.dataset.debut, k), proche = x.c.jours.filter(j => Math.abs(ecartJ(j, vise)) <= 4).sort((u, w) => Math.abs(ecartJ(u, vise)) - Math.abs(ecartJ(w, vise)))[0];
+        if (!proche) { break; }
+        if (st.f.sel && st.f.sel.client === id && st.f.sel.jour === proche) { st.f.sel = null; rendre(); } else { lireTicket(id, proche); }
+        break; }
+      case 'p-fid-jour': lireTicket(id, v); break;
+      case 'p-fid-fermer': st.f.sel = null; rendre(); break;
       case 'p-fid-historique': if (st.aller) { st.aller('fidelite', { fdClient: id }); } break;
       case 'p-offre': { const c = (P.fiche && P.fiche.id === id ? { id, nom: P.fiche.client.nom, ville: P.fiche.client.city } : (P.d.clients.find(x => x.id === id) || {})); offre(Object.assign({ b2b: false }, c, { id })); break; }
       case 'p-ajouter': ouvrir('p-form', { name: '', surname: '', phone: '', email: '', street: '', street_number: '', zip: '', city: '', comment: '' }); break;
@@ -1243,10 +1289,18 @@
     }
     if (st.mo) { st.mo.f[t.dataset.f] = val; }
   }
+  /** La frise au clavier (28/11/2026) : Entrée ou Espace ouvre le ticket du dernier passage, puis ‹ › s'y promènent. */
+  function clavierFrise(ev) {
+    const a = ev.target.closest && ev.target.closest('[data-act="p-fid-frise"]');
+    if (!a || (ev.key !== 'Enter' && ev.key !== ' ')) { return; }
+    const id = +a.dataset.id, x = fidDe(id);
+    if (!x || !x.c.jours.length) { return; }
+    ev.preventDefault(); lireTicket(id, x.c.jours[x.c.jours.length - 1]);
+  }
   document.addEventListener('keydown', ev => {
     if (ev.key !== 'Escape' || !st.el || !document.body.contains(st.el)) { return; }
     if (st.mo && st.mo.prog && !st.mo.fin) { return; }   // un nettoyage en cours ne se ferme pas d'un geste
-    if (st.mo) { st.mo = null; rendre(); } else if (st.onglet === 'bur' && st.b.devSel && !st.b.w) { st.b.devSel = null; st.b.devMsg = null; rendre(); } else if (st.onglet === 'bur' && st.b.sel && !st.b.w) { st.b.sel = null; st.b.pdf = null; rendre(); }
+    if (st.mo) { st.mo = null; rendre(); } else if (st.onglet === 'b2c' && st.f.sel) { st.f.sel = null; rendre(); } else if (st.onglet === 'bur' && st.b.devSel && !st.b.w) { st.b.devSel = null; st.b.devMsg = null; rendre(); } else if (st.onglet === 'bur' && st.b.sel && !st.b.w) { st.b.sel = null; st.b.pdf = null; rendre(); }
   });
 
   window.DashClients = {
@@ -1257,14 +1311,14 @@
         const auj = new Date();
         Object.assign(st, { shop: String(shop), mo: null });
         st.p = { q: '', filtre: '', compte: '', d: null, err: null, lecture: false, sel: null, fiche: null, ficheErr: null };
-        st.f = { shop: null, d: null, err: null, lecture: false, vue: st.f.vue };
+        st.f = { shop: null, d: null, err: null, lecture: false, vue: st.f.vue, sel: null, tk: {} };
         st.e = { d: null, err: null, lecture: false, q: '', score: '', ca: '', freq: '', incompl: false, sel: null, fiche: null, ficheErr: null };
         st.b = { d: null, err: null, lecture: false, q: '', statut: '', sel: null, ong: 'livraison', det: {}, options: null, w: null, pdf: null, dev: null, devErr: null, devSel: null, devMsg: null, devBusy: false, devTraitees: false };
         st.a = { annee: auj.getFullYear(), mois: auj.getMonth() + 1, d: null, err: null, lecture: false, metrique: 'ventes' };
         const on = o.onglet || memo('pcl-onglet:' + st.shop);
         st.onglet = ['b2c', 'b2b', 'bur', 'an'].includes(on) ? on : 'b2b';
         st.el = document.createElement('div'); st.el.className = 'pcl';
-        st.el.addEventListener('click', geste); st.el.addEventListener('input', saisie); st.el.addEventListener('change', saisie);
+        st.el.addEventListener('click', geste); st.el.addEventListener('input', saisie); st.el.addEventListener('change', saisie); st.el.addEventListener('keydown', clavierFrise);
         rendre(); charger();
       } else { rendre(); }
       return st.el;

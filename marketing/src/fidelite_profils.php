@@ -14,7 +14,8 @@ declare(strict_types=1);
  *  - Le dashboard du magasin les lit :
  *      GET  /fidelite/profils/magasin?shop=   les profils du magasin, leurs radars, les clients qui reviennent ;
  *      GET  /fidelite/client?shop=&client=    l'historique d'un client ;
- *      GET  /fidelite/profils/clients?shop=   le profil et les radars de chaque client scanné (Clients › Particuliers).
+ *      GET  /fidelite/profils/clients?shop=   le profil, les radars et les jours de chaque client scanné (Clients › Particuliers) ;
+ *      GET  /fidelite/ticket?shop=&client=&jour=   les tickets d'un client un jour donné, avec leurs lignes (la frise de la fiche).
  *
  * Comment on compte (réglable) : le rythme se lit sur les FENETRE derniers jours (30), ramené à un mois de 30 jours ;
  * les clients comptés sont ceux passés au moins une fois sur les MEMOIRE derniers jours (90) — un client de la mémoire
@@ -279,7 +280,7 @@ function fpClients(int $sid, string $du, string $au): array
     foreach (Db::rows('SELECT client_id, jour, quand, montant, commande, familles FROM mar_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $du, $au]) as $t) {
         $c = &$C[(int) $t['client_id']];
         $c ??= ['jours' => [], 'tk' => 0, 'eur' => 0.0, 'cmd' => 0, 'fam' => [], 'famLu' => 0];
-        $c['jours'][(string) $t['jour']] = true;
+        $c['jours'][(string) $t['jour']] = ($c['jours'][(string) $t['jour']] ?? 0.0) + (float) $t['montant'];   // le montant du jour (la frise)
         $c['tk']++; $c['eur'] += (float) $t['montant']; $c['cmd'] += (int) $t['commande'];
         if ($t['familles'] !== null) {
             $c['famLu']++;
@@ -378,12 +379,14 @@ function fpMagasin(int $sid, bool $lire = true, bool $detail = true, bool $tous 
     if ($tous) {
         $out['parClient'] = [];
         foreach ($liste as $x) {
-            // Les jours de passage (28/11/2026, la frise des 90 jours de la fiche : « quand le client était là »).
-            $jours = array_keys($C[$x['client']]['jours']);
-            sort($jours);
+            // Les jours de passage et leur montant (28/11/2026, la frise des 90 jours de la fiche : « quand le client était là »).
+            $parJ = $C[$x['client']]['jours'];
+            ksort($parJ);
+            $jours = array_map('strval', array_keys($parJ));
             $out['parClient'][$x['client']] = ['profil' => $x['profil'], 'rythme' => $x['rythme'], 'passagesFenetre' => $x['passagesFenetre'], 'passages' => $x['passages'],
                 'premier' => $x['premier'], 'dernier' => $x['dernier'], 'depuis' => $x['depuis'], 'tk' => $x['tk'], 'eur' => $x['eur'], 'cmd' => $x['cmd'],
-                'radar' => $x['radar'], 'familles' => $x['famLues'] ? $x['familles'] : null, 'jours' => $jours];
+                'radar' => $x['radar'], 'familles' => $x['famLues'] ? $x['familles'] : null, 'jours' => $jours,
+                'montants' => array_map(static fn ($v) => round((float) $v, 2), array_values($parJ))];
         }
     }
     return $out;
@@ -458,6 +461,55 @@ function ep_fidelite_profils_clients(): array
     return ['shop' => $m['shop'], 'au' => $m['au'], 'fenetre' => $m['fenetre'], 'memoire' => $m['memoire'], 'axes' => $m['axes'], 'familles' => $m['familles'],
         'scannes' => $m['scannes'], 'aLire' => $m['aLire'], 'profils' => $profils, 'moyenne' => $m['moyenne'],
         'clients' => $m['parClient'] === [] ? new stdClass() : $m['parClient']];
+}
+
+/** Les lignes d'un ticket lu au panel : produit, portion, quantité, prix unitaire et total après remise (null : inconnu). */
+function fpTicketLignes(mixed $corps): array
+{
+    $d = is_array($corps) && isset($corps['data']) && is_array($corps['data']) && !array_is_list($corps['data']) ? $corps['data'] : $corps;
+    $n = static fn ($v) => is_numeric($v) ? round((float) $v, 2) : null;
+    $out = [];
+    foreach ((array) (is_array($d) ? ($d['products'] ?? []) : []) as $l) {
+        if (!is_array($l)) { continue; }
+        $out[] = ['nom' => trim((string) ($l['product_display_name'] ?? $l['product_name'] ?? '')) ?: 'article sans nom',
+            'portion' => trim((string) ($l['product_portion_label'] ?? '')) ?: null, 'q' => $n($l['quantity'] ?? null) ?? 1.0,
+            'pu' => $n($l['unit_gross_price'] ?? null), 'total' => $n($l['total_gross_value_after_discount'] ?? null)];
+    }
+    return $out;
+}
+
+/**
+ * GET /fidelite/ticket?shop=&client=&jour= (28/11/2026, Sam : « cliquer sur une visite et avoir son ticket », maquette 2 :
+ * le ticket s'ouvre sous la frise de la fiche) : les tickets d'un client un jour donné, tels que le cache de la fidélité
+ * les connaît (heure, montant, canal), avec leurs lignes lues au panel à la demande (`/transactions/{id}?include=products`)
+ * et jamais gardées. Une ligne illisible laisse le ticket et son montant ; un jour sans ticket de ce client : 404.
+ */
+function ep_fidelite_ticket(): array
+{
+    $sid = fpShop();
+    $cid = ctype_digit((string) ($_GET['client'] ?? '')) ? (int) $_GET['client'] : 0;
+    $jour = (string) ($_GET['jour'] ?? '');
+    if ($sid <= 0 || $cid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour)) { http_response_code(422); return ['error' => 'magasin, client ou jour manquant (?shop=&client=&jour=AAAA-MM-JJ)']; }
+    fpSchema();
+    $T = Db::rows('SELECT id, quand, montant, commande, canal FROM mar_fid_ticket WHERE shop_id = ? AND client_id = ? AND jour = ? ORDER BY quand', [$sid, $cid, $jour]);
+    if ($T === []) { http_response_code(404); return ['error' => 'aucun ticket de ce client ce jour-là']; }
+    $ch = [];
+    foreach ($T as $t) { $ch[(int) $t['id']] = '/transactions/' . (int) $t['id'] . '?include=products'; }
+    $res = PanelApi::configured() ? PanelApi::getParalleleDetail($ch, 4, 20) : [];
+    $tickets = [];
+    foreach ($T as $t) {
+        $tid = (int) $t['id'];
+        $r = $res[$tid] ?? null;
+        $lu = is_array($r) && (int) ($r['code'] ?? 0) === 200;
+        $L = $lu ? fpTicketLignes($r['data'] ?? null) : [];
+        // La remise : ce que les lignes valaient avant (prix × quantité) moins leur total après remise, si tout est connu.
+        $avant = 0.0; $apres = 0.0; $complet = $L !== [];
+        foreach ($L as $l) { if ($l['pu'] === null || $l['total'] === null) { $complet = false; break; } $avant += $l['pu'] * $l['q']; $apres += $l['total']; }
+        $tickets[] = ['id' => $tid, 'heure' => substr((string) $t['quand'], 11, 5), 'montant' => round((float) $t['montant'], 2),
+            'canal' => (string) ($t['canal'] ?? '') ?: ((int) $t['commande'] === 1 ? 'commande' : 'comptoir'), 'lu' => $lu, 'lignes' => $L,
+            'remise' => $complet && $avant - $apres > 0.004 ? round($avant - $apres, 2) : null];
+    }
+    return ['shop' => (string) $sid, 'client' => $cid, 'jour' => $jour, 'tickets' => $tickets];
 }
 
 /**

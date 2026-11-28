@@ -4,7 +4,8 @@
  * reconnus en caisse sur 90 jours, six profils (les réglages par défaut du réseau), des prénoms inventés, deux cartes à
  * timbres, un réseau de magasins aux noms génériques. Depuis le 28/11/2026 (les cartes par public) : une carte à points,
  * trois sociétés et leurs personnes, et le bingo d'une saison fictive (GET /fidelite/cartes/bingo), semaine 4 en cours.
- * Depuis le 28/11/2026 (Clients › Particuliers) : le profil de chaque particulier de 26_clients.js (GET /fidelite/profils/clients). */
+ * Depuis le 28/11/2026 (Clients › Particuliers) : le profil de chaque particulier de 26_clients.js (GET /fidelite/profils/clients)
+ * et le ticket d'un de ses passages (GET /fidelite/ticket). */
 'use strict';
 const D = require('./lib/demo');
 
@@ -73,12 +74,30 @@ function profilsClients() {
     // Ses jours de passage (la frise de la fiche) : le dernier il y a `depuis` jours, les autres à son rythme, en arrière.
     const pas = 30 / Math.max(rythme, 0.4), jours = [];
     for (let k = 0, j = depuis; k < passages && j < 90; k++, j += Math.max(1, Math.round(pas * (0.6 + a() * 0.8)))) { jours.unshift(D.plus(AUJ, -j)); }
+    const montants = jours.map(j => ticketsDuJour(id, j).reduce((x, t) => x + t.montant, 0));
     L[id] = { profil, rythme, passagesFenetre: Math.round(rythme), passages: jours.length, premier: jours[0], dernier: D.plus(AUJ, -depuis), depuis,
-      tk, eur: D.r2(tk * s.panier * (0.7 + a() * 0.6)), cmd: Math.round(tk * s.commande / 100), radar, familles, jours };
+      tk, eur: D.r2(montants.reduce((x, m) => x + m, 0)), cmd: Math.round(tk * s.commande / 100), radar, familles, jours, montants };
   });
   const P = PROFILS.map(p => ({ id: p.id, nom: p.nom, couleur: p.couleur, unite: p.unite, seuil: p.seuil, condition: p.condition, equivalent: p.equivalent,
     clients: STATS[p.id].clients, part: D.r1(100 * STATS[p.id].clients / N) }));
   return { shop: D.SHOP, au: AUJ, fenetre: 30, memoire: 90, axes: AXES, familles: FAMILLES, scannes: N, aLire: 0, profils: P, moyenne: MOYENNE, clients: L };
+}
+/* GET /fidelite/ticket?client=&jour= (28/11/2026, le ticket d'un passage, sous la frise de la fiche) : un ticket fictif par
+ * jour de passage, tiré du client et du jour (mêmes lignes à chaque lecture) ; 5 % de remise pour Sophie Renard (8391). */
+const ARTICLES_TK = [['Pain demi-gris tranché', null, 3.2], ['Baguette tradition', null, 1.9], ['Croissant au beurre', null, 1.3], ['Pain au chocolat', null, 1.4],
+  ['Tarte aux fraises', '1/6', 4.5], ['Éclair au café', null, 3.1], ['Sandwich jambon-fromage', null, 4.9], ['Cookie chocolat', null, 2.2], ['Quiche lorraine', '1/4', 4.2], ['Pain aux céréales', null, 3.6]];
+function ticketsDuJour(cid, jour) {
+  const a = D.alea('tk' + cid + jour), remise = +cid === 8391 ? 5 : 0, n = 1 + Math.floor(a() * 4), vus = new Set(), lignes = [];
+  for (let k = 0; k < n; k++) {
+    const x = ARTICLES_TK[Math.floor(a() * ARTICLES_TK.length)];
+    if (vus.has(x[0])) { continue; }
+    vus.add(x[0]);
+    const q = x[0].startsWith('Croissant') || x[0].startsWith('Pain au') ? 1 + Math.floor(a() * 3) : 1;
+    lignes.push({ nom: x[0], portion: x[1], q, pu: x[2], total: D.r2(x[2] * q * (100 - remise) / 100) });
+  }
+  const avant = lignes.reduce((s, l) => s + l.pu * l.q, 0), montant = D.r2(lignes.reduce((s, l) => s + l.total, 0));
+  const canal = a() < 0.12 ? 'commande' : a() < 0.06 ? 'webshop' : 'comptoir', h = 7 + Math.floor(a() * 11), m = Math.floor(a() * 60);
+  return [{ id: 28000 + Math.floor(a() * 900), heure: String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'), montant, canal, lu: true, lignes, remise: remise ? D.r2(avant - montant) : null }];
 }
 function scan() {
   const j = D.journee(AUJ, D.MAINTENANT), t = j.tickets, i = Math.round(t * 0.186);
@@ -231,6 +250,7 @@ module.exports = function (m, p, q) {
   if (m !== 'GET' || !p.startsWith('/fidelite/')) { return undefined; }
   if (p === '/fidelite/profils/magasin') { return profilsMagasin(); }
   if (p === '/fidelite/profils/clients') { return profilsClients(); }
+  if (p === '/fidelite/ticket') { return { shop: D.SHOP, client: +q.get('client'), jour: q.get('jour'), tickets: ticketsDuJour(q.get('client'), q.get('jour')) }; }
   if (p === '/fidelite/scan') { return scan(); }
   if (p === '/fidelite/profils/tendance') { return tendance([30, 90, 180].includes(+q.get('jours')) ? +q.get('jours') : 90); }
   if (p === '/fidelite/client') { return fiche(q.get('client')); }

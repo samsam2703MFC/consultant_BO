@@ -12,6 +12,7 @@ if (str_starts_with($u, '/api/cockpit/')) {
         $p === '/fidelite/profils' => ep_fidelite_profils(),
         $p === '/fidelite/profils/magasin' => ep_fidelite_profils_magasin(),
         $p === '/fidelite/profils/clients' => ep_fidelite_profils_clients(),
+        $p === '/fidelite/ticket' => ep_fidelite_ticket(),
         $p === '/fidelite/profils/tendance' => ep_fidelite_profils_tendance(),
         $p === '/fidelite/scan' => ep_fidelite_scan(),
         $p === '/fidelite/client' => ep_fidelite_client(),

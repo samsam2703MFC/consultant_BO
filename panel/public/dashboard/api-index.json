@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-28T10:33:08Z",
+ "genere": "2026-11-28T10:41:47Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -1039,7 +1039,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:116"
+    "clients.js:126"
    ],
    "magasin": true,
    "routes": [
@@ -1060,7 +1060,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1182"
+    "clients.js:1228"
    ],
    "magasin": true,
    "routes": [
@@ -1081,7 +1081,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1201"
+    "clients.js:1247"
    ],
    "magasin": true,
    "routes": [
@@ -1102,7 +1102,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1196"
+    "clients.js:1242"
    ],
    "magasin": true,
    "routes": [
@@ -1123,7 +1123,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1185"
+    "clients.js:1231"
    ],
    "magasin": true,
    "routes": [
@@ -1144,7 +1144,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:942"
+    "clients.js:978"
    ],
    "magasin": true,
    "routes": [
@@ -1165,7 +1165,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:113"
+    "clients.js:123"
    ],
    "magasin": true,
    "routes": [
@@ -1186,7 +1186,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1192"
+    "clients.js:1238"
    ],
    "magasin": true,
    "routes": [
@@ -1250,7 +1250,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:124"
+    "clients.js:134"
    ],
    "magasin": true,
    "routes": [
@@ -1271,14 +1271,14 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:104",
-    "clients.js:1079",
-    "clients.js:120",
-    "clients.js:139",
-    "clients.js:565",
-    "clients.js:576",
-    "clients.js:587",
-    "clients.js:938"
+    "clients.js:1115",
+    "clients.js:114",
+    "clients.js:130",
+    "clients.js:150",
+    "clients.js:601",
+    "clients.js:612",
+    "clients.js:623",
+    "clients.js:974"
    ],
    "magasin": true,
    "routes": [
@@ -1299,7 +1299,7 @@
     "POST"
    ],
    "fichiers": [
-    "clients.js:1073"
+    "clients.js:1109"
    ],
    "magasin": true,
    "routes": [
@@ -1320,7 +1320,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1057"
+    "clients.js:1093"
    ],
    "magasin": true,
    "routes": [
@@ -1341,7 +1341,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:99"
+    "clients.js:109"
    ],
    "magasin": true,
    "routes": [
@@ -1362,7 +1362,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:131"
+    "clients.js:142"
    ],
    "magasin": true,
    "routes": [
@@ -1383,9 +1383,9 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:314",
-    "clients.js:347",
-    "clients.js:360"
+    "clients.js:350",
+    "clients.js:383",
+    "clients.js:396"
    ],
    "magasin": true,
    "routes": [
@@ -1406,7 +1406,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:93"
+    "clients.js:103"
    ],
    "magasin": true,
    "routes": [
@@ -1427,7 +1427,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1063"
+    "clients.js:1099"
    ],
    "magasin": true,
    "routes": [
@@ -2970,7 +2970,7 @@
      ],
      "chemin": "/fidelite/client",
      "handler": "ep_fidelite_client",
-     "source": "marketing/src/fidelite_profils.php:540",
+     "source": "marketing/src/fidelite_profils.php:592",
      "resume": ": l'historique d'un client sur 180 jours, ticket par ticket."
     }
    ]
@@ -2991,7 +2991,7 @@
      ],
      "chemin": "/fidelite/profils/clients",
      "handler": "ep_fidelite_profils_clients",
-     "source": "marketing/src/fidelite_profils.php:451",
+     "source": "marketing/src/fidelite_profils.php:454",
      "resume": ": le profil, les deux radars et les jours de passage de chaque client scanné du magasin, pour Clients › Particuliers du dashboard (clients.js)."
     }
    ]
@@ -3012,7 +3012,7 @@
      ],
      "chemin": "/fidelite/profils/magasin",
      "handler": "ep_fidelite_profils_magasin",
-     "source": "marketing/src/fidelite_profils.php:437",
+     "source": "marketing/src/fidelite_profils.php:440",
      "resume": ": le dashboard du magasin."
     }
    ]
@@ -3033,7 +3033,7 @@
      ],
      "chemin": "/fidelite/profils/tendance",
      "handler": "ep_fidelite_profils_tendance",
-     "source": "marketing/src/fidelite_profils.php:512",
+     "source": "marketing/src/fidelite_profils.php:564",
      "resume": ": le nombre de clients de chaque profil, date après date."
     }
    ]
@@ -3054,8 +3054,29 @@
      ],
      "chemin": "/fidelite/scan",
      "handler": "ep_fidelite_scan",
-     "source": "marketing/src/fidelite_profils.php:525",
+     "source": "marketing/src/fidelite_profils.php:577",
      "resume": "La part des tickets scannés (12/11/2026, Sam : « par défaut c'est aujourd'hui ; en dessous le mois et l'année en moyenne »)."
+    }
+   ]
+  },
+  {
+   "chemin": "/fidelite/ticket",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "clients.js:96"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/fidelite/ticket",
+     "handler": "ep_fidelite_ticket",
+     "source": "marketing/src/fidelite_profils.php:487",
+     "resume": "28/11/2026, Sam : « cliquer sur une visite et avoir son ticket », maquette 2 : le ticket s'ouvre sous la frise de la fiche) : les tickets d'un client un jour donné, tels que le cache de la fidélité les connaît (heure, montant, canal), avec leurs lignes lues au"
     }
    ]
   },

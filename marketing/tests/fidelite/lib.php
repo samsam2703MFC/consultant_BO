@@ -48,7 +48,7 @@ final class PanelApi
             if (preg_match('#^/shops/(\d+)/transactions\?date=(\S+)$#', $p, $m)) { $o[$k] = ['code' => 200, 'data' => ['data' => self::jour((int) $m[1], $m[2])]]; }
             elseif (preg_match('#^/transactions/(\d+)#', $p, $m)) {
                 $c = intdiv((int) $m[1], 100000);
-                $o[$k] = ['code' => 200, 'data' => ['data' => ['id' => (int) $m[1], 'products' => [['id_product' => 100, 'product_name' => 'Pain Doré', 'quantity' => 1], ['id_product' => $c % 2 ? 200 : 300, 'product_name' => $c % 2 ? 'Croissant' : 'Tarte Fraises', 'quantity' => 2]]]]];
+                $o[$k] = ['code' => 200, 'data' => ['data' => ['id' => (int) $m[1], 'products' => [['id_product' => 100, 'product_name' => 'Pain Doré', 'quantity' => 1, 'unit_gross_price' => 3.2, 'total_gross_value_after_discount' => 3.04], ['id_product' => $c % 2 ? 200 : 300, 'product_name' => $c % 2 ? 'Croissant' : 'Tarte Fraises', 'quantity' => 2]]]]];
             } elseif (preg_match('#^/shops/\d+/clients/(\d+)$#', $p, $m)) { $o[$k] = ['code' => 200, 'data' => ['client' => ['name' => 'Prénom' . $m[1], 'surname' => 'Nom' . $m[1]]]]; }
             else { $o[$k] = ['code' => 404, 'data' => null]; }
         }
