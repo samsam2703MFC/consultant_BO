@@ -1858,6 +1858,8 @@
     // Gamme par gamme (Marketing v1.23) : le fond choisi de la présentation, jusqu'au fond perdu ; sa gamme pour les filets.
     const pd = p.kind === 'presentation' && p.design && typeof p.design === 'object' ? p.design : null;
     const st = 'width:' + (f.w + BLEED * 2) + 'mm;height:' + (f.h + BLEED * 2) + 'mm;--u:' + (f.w / 148) + ';--b:' + BLEED + 'mm;--p:' + css(c.primary, '#8D1D2C') + ';--s:' + css(c.secondary, '#F6EFE5') + ';--a:' + css(c.accent, '#B0792A') + ';--i:' + css(c.ink, '#241C1A')
+      // Les filets et les tirets des listes (couleur « Filets » de la charte, abricot par défaut, Marketing 21/11/2026).
+      + ';--ab:' + css(c.rule, '#F2C9A0')
       + (pd ? ';background:' + css((pd.background || {}).color, '#F6EFE5') + ';--g:' + css(pd.gammeColor, '#8D1D2C') : '');
     let corps = '';
     if (p.kind === 'cover') { corps = couverture(doc, p); }
@@ -1867,7 +1869,10 @@
     else if (p.free) { corps = pageLibre(p); }
     else { corps = interieur(doc, p); }
     const tpl = p.kind === 'products' || p.kind === 'presentation' ? ' cat-face--t' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : p.kind === 'cover' ? ' cat-face--cover' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : '';
-    return '<div class="cat-face cat-face--' + esc(p.kind) + tpl + '" style="' + st + '" lang="' + esc(doc.version.lang) + '"><div class="cat-trim">' + corps + '</div></div>';
+    // La couleur du logo (Marketing v1.16, `TintDefs`) : un filtre SVG posé une fois par page, appelé par son nom.
+    const teinte = p.look && p.look.logo && couleurLook(p.look.logo.color);
+    const filtre = teinte ? '<svg class="cat-tint" width="0" height="0" aria-hidden="true" focusable="false"><filter id="' + idTeinte(teinte) + '" color-interpolation-filters="sRGB"><feFlood flood-color="' + teinte + '"/><feComposite in2="SourceAlpha" operator="in"/></filter></svg>' : '';
+    return '<div class="cat-face cat-face--' + esc(p.kind) + tpl + '" style="' + st + '" lang="' + esc(doc.version.lang) + '">' + filtre + '<div class="cat-trim">' + corps + '</div></div>';
   }
   const css = (v, d) => /^#[0-9a-f]{3,8}$/i.test(String(v || '')) ? v : d;
   const logo = doc => doc.charter && doc.charter.logoUrl ? doc.charter.logoUrl : '../assets/img/logo.png';
@@ -1881,40 +1886,64 @@
     if (!f && !c) { return ''; }
     return ' style="' + (f ? 'font-family:' + f.replace(/"/g, '') + ';' : '') + (font === 'playwrite' ? 'text-transform:none;letter-spacing:0;line-height:1.5;--fs:.55;' : font === 'gotham' ? 'font-weight:500;letter-spacing:.02em;line-height:1.08;--fs:.6;' : '') + (c ? 'color:' + c + ';' : '') + '"';
   }
-  /** La couverture dans son gabarit (charte publiée, maquette A1) : A Pleine couleur · B Illustration · C Photo. */
+  /* Chaque élément d'une page de la marque (Marketing v1.12 à v1.16 ; `shown`, `textStyle`, `logoStyle`, `fieldStyle` de
+   * CataloguePages.tsx) : affiché sauf `show` faux ; sa police et sa couleur, sinon celles du gabarit. */
+  const couleurLook = v => /^#[0-9A-Fa-f]{6}$/.test(String(v || '')) ? v : null;
+  const idTeinte = hex => 'cat-tint-' + hex.replace('#', '').toLowerCase();
+  const montre = (look, el) => !(look && look[el] && look[el].show === false);
+  function declTexte(look, el) {
+    const o = look && look[el] ? look[el] : {}, f = POLICES_COUV[o.font], c = couleurLook(o.color);
+    if (!f && !c) { return ''; }
+    return (f ? 'font-family:' + f.replace(/"/g, '') + ';' : '') + (o.font === 'playwrite' ? 'text-transform:none;letter-spacing:0;' : o.font === 'vank' ? 'letter-spacing:.01em;' : '') + (c ? 'color:' + c + ';' : '');
+  }
+  const attr = d => d ? ' style="' + d + '"' : '';
+  const styleTexte = (look, el) => attr(declTexte(look, el));
+  /** Un champ des coordonnées : le sien par-dessus celui du bloc de la boutique. */
+  const styleChamp = (look, el) => attr(declTexte(look, 'shop') + declTexte(look, el));
+  const styleLogo = look => { const c = look && look.logo && couleurLook(look.logo.color); return c ? ' style="filter:url(#' + idTeinte(c) + ')"' : ''; };
+  /** La couverture dans son gabarit (charte publiée, maquette A1) : A Pleine couleur · B Illustration (finition Papier,
+   * refonte du 21/11/2026) · C Photo — rendu de `Cover`, CataloguePages.tsx. */
   function couverture(doc, p) {
+    const look = p.look;
     const st = styleCouv(p.titleFont, p.titleColor), ss = styleCouv(p.subtitleFont, p.subtitleColor);
     const dessin = p.imageUrl || p.noVisual ? null : (p.drawingUrl || null);
-    const boutique = p.eyebrow ? '<div class="cat-cover__' + (p.template === 'B' ? 'shopB' : 'shop') + '">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '';
-    const kicker = p.kicker ? '<div class="cat-cover__kicker">' + esc(p.kicker) + '</div>' : '';
+    const sousTitre = montre(look, 'subtitle') ? p.subtitle : '';
+    const titre = montre(look, 'title') ? '<div class="cat-cover__title" data-fit="Titre de couverture"' + st + '>' + esc(p.title) + '</div>' : '';
+    const boutique = p.eyebrow ? '<div class="cat-cover__' + (p.template === 'B' ? 'shopB' : 'shop') + '"' + styleTexte(look, 'shop') + '>L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '';
+    const kicker = p.kicker ? '<div class="cat-cover__kicker"' + styleTexte(look, 'kicker') + '>' + esc(p.kicker) + '</div>' : '';
+    const logoTag = cls => montre(look, 'logo') ? '<img class="' + cls + '" src="' + esc(cls.indexOf('cat-logo--dark') >= 0 ? logoSombre(doc) : logo(doc)) + '" alt=""' + styleLogo(look) + '>' : '';
     if (p.template === 'B') {
-      return '<div class="cat-cover cat-cover--B"><img class="cat-logo cat-logo--dark cat-cover__logoB" src="' + esc(logoSombre(doc)) + '" alt=""><div class="cat-cover__art">'
-        + (p.imageUrl ? '<img class="cat-cover__photoB" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawB" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
-        + kicker + '<div class="cat-cover__title">' + esc(p.title) + '</div><div class="cat-cover__rule"></div>'
-        + (p.subtitle ? '<div class="cat-cover__subB"' + ss + '>' + esc(p.subtitle) + '</div>' : '') + boutique + '</div>';
+      // Finition Papier : un filet encadre la page, « La gamme » en manuscrite, le titre et le sous-titre resserrés.
+      return '<div class="cat-cover cat-cover--B cat-cover--papier">' + logoTag('cat-logo cat-logo--dark cat-cover__logoB')
+        + '<div class="cat-cover__art">' + (p.imageUrl ? '<img class="cat-cover__photoB" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawB" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
+        + '<div class="cat-cover__panel">' + kicker + titre + '<div class="cat-cover__rule"></div>'
+        + (sousTitre ? '<div class="cat-cover__subB"' + ss + '>' + esc(sousTitre) + '</div>' : '') + '</div>' + boutique + '</div>';
     }
     if (p.template === 'C') {
       return '<div class="cat-cover cat-cover--C"><div class="cat-cover__top">'
         + (p.imageUrl ? '<img class="cat-cover__photoC" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawC" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
-        + '<div class="cat-cover__band"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">' + kicker + '<div class="cat-cover__title"' + st + '>' + esc(p.title) + '</div>'
-        + (p.subtitle ? '<div class="cat-cover__sub"' + ss + '>' + esc(p.subtitle) + '</div>' : '') + boutique + '</div></div>';
+        + '<div class="cat-cover__band">' + logoTag('cat-logo cat-logo--white') + kicker + titre
+        + (sousTitre ? '<div class="cat-cover__sub"' + ss + '>' + esc(sousTitre) + '</div>' : '') + boutique + '</div></div>';
     }
-    return '<div class="cat-cover"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">'
-      + '<div class="cat-cover__title"' + st + '>' + esc(p.title) + '</div>'
-      + (p.subtitle ? '<div class="cat-cover__sub"' + ss + '>' + esc(p.subtitle) + '</div>' : '')
-      + (p.eyebrow ? '<div class="cat-cover__shop">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '')
+    return '<div class="cat-cover">' + logoTag('cat-logo cat-logo--white') + titre
+      + (sousTitre ? '<div class="cat-cover__sub"' + ss + '>' + esc(sousTitre) + '</div>' : '') + boutique
       + (p.imageUrl ? '<div class="cat-cover__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : dessin ? '<img class="cat-cover__drawing" src="' + esc(dessin) + '" alt="">' : '') + '</div>';
   }
-  /** Page 2 et avant-dernière (charte) : image ou logo, titre, texte ; un paragraphe de plusieurs lignes = une liste. */
+  /** Page 2 et avant-dernière (charte) : image ou logo, titre, texte ; un paragraphe de plusieurs lignes = une liste —
+   * rendu de `Brand`. Gabarit A en finition Papier : le logo, un blanc élastique, le titre, le chapeau ouvert par une lettrine. */
   function marquePage(doc, p) {
     const blocs = String(p.text || '').split(/\n\s*\n/).map(b => b.split('\n').map(l => l.trim()).filter(Boolean)).filter(l => l.length);
     // Gabarits (maquette A2) : A texte seul · B image en haut · C image en bas ; sans gabarit : B avec une image.
-    const t = p.template || (p.imageUrl ? 'B' : 'A'), haut = t === 'B' && p.imageUrl, bas = t === 'C' && p.imageUrl;
-    return '<div class="cat-brand cat-brand--t' + t + (haut ? ' cat-brand--image' : '') + '">'
-      + (haut ? '<div class="cat-brand__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '<img class="cat-logo cat-brand__logo" src="' + esc(logo(doc)) + '" alt="">')
-      + '<div class="cat-brand__title">' + esc(p.title) + '</div><div class="cat-brand__rule"></div><div class="cat-brand__text">'
+    const t = p.template || (p.imageUrl ? 'B' : 'A'), haut = t === 'B' && p.imageUrl, bas = t === 'C' && p.imageUrl, papier = t === 'A';
+    const look = p.look;
+    const logoTag = montre(look, 'logo') ? '<img class="cat-logo cat-logo--dark cat-brand__logo" src="' + esc(logoSombre(doc)) + '" alt=""' + styleLogo(look) + '>' : '';
+    const titreTag = montre(look, 'title') ? '<div class="cat-brand__title"' + styleTexte(look, 'title') + '>' + esc(p.title) + '</div>' : '';
+    const tete = papier ? '<div class="cat-brand__head">' + logoTag + '<div class="cat-brand__space"></div>' + titreTag + '<div class="cat-brand__rule"></div></div>'
+      : (bas ? logoTag : haut ? '<div class="cat-brand__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : logoTag) + titreTag + '<div class="cat-brand__rule"></div>';
+    return '<div class="cat-brand cat-brand--' + esc(p.slot || '') + ' cat-brand--t' + esc(t) + (haut ? ' cat-brand--image' : '') + (papier ? ' cat-brand--papier' : '') + '">' + tete
+      + '<div class="cat-brand__text" data-fit="' + esc(p.title) + '"' + (montre(look, 'text') ? styleTexte(look, 'text') : ' style="display:none"') + '>'
       + blocs.map(l => l.length > 1 ? '<ul>' + l.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p>' + esc(l[0]) + '</p>').join('') + '</div>'
-      + (p.slot === 'penultimate' && (p.allergens || []).length ? legendeAllergenes(p.allergens, doc.version.lang) : '')
+      + (p.slot === 'penultimate' && montre(look, 'legend') && (p.allergens || []).length ? legendeAllergenes(p.allergens, doc.version.lang, declTexte(look, 'legend')) : '')
       + (bas ? '<div class="cat-brand__visual cat-brand__visual--bottom"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '') + '</div>';
   }
   /** La photo du webshop ; sans elle, le dessin de la famille de la page (sinon l'illustration de l'en-tête) — rendu de
@@ -1957,11 +1986,11 @@
     const w = poidsTexte(pr.weightGrams, lang), al = pr.allergens || [];
     return '<span class="cat-facts">' + (w ? '<span class="cat-weight">' + esc(w) + '</span>' : '') + (al.length ? '<span class="cat-als">' + al.map(c => pictoAllergene(c, lang)).join('') + '</span>' : '') + '</span>';
   }
-  function legendeAllergenes(codes, lang) {
-    const nl = lang === 'nl';
-    return '<div class="cat-allegend"><div class="cat-allegend__title">' + (nl ? 'Allergenen' : 'Allergènes') + '</div><div class="cat-allegend__grid">'
-      + codes.map(c => '<span class="cat-allegend__item">' + pictoAllergene(c, lang) + esc((ALLERGENES_NOMS[c] || [c])[nl ? 1 : 0]) + '</span>').join('') + '</div>'
-      + '<p class="cat-allegend__note">' + (nl ? 'De pictogrammen naast elk product tonen de allergenen van het recept (verordening EU 1169/2011). Sporen worden niet vermeld: vraag de volledige lijst in de winkel.'
+  function legendeAllergenes(codes, lang, decl) {
+    const nl = lang === 'nl', sl = attr(decl || '');
+    return '<div class="cat-allegend"><div class="cat-allegend__title"' + sl + '>' + (nl ? 'Allergenen' : 'Allergènes') + '</div><div class="cat-allegend__grid">'
+      + codes.map(c => '<span class="cat-allegend__item"' + sl + '>' + pictoAllergene(c, lang) + esc((ALLERGENES_NOMS[c] || [c])[nl ? 1 : 0]) + '</span>').join('') + '</div>'
+      + '<p class="cat-allegend__note"' + sl + '>' + (nl ? 'De pictogrammen naast elk product tonen de allergenen van het recept (verordening EU 1169/2011). Sporen worden niet vermeld: vraag de volledige lijst in de winkel.'
         : 'Les pictogrammes à côté de chaque produit indiquent les allergènes de sa recette (règlement UE 1169/2011). Les traces ne sont pas indiquées : demandez la liste complète en boutique.') + '</p></div>';
   }
   function carte(pr, lang, grand, repli) {
@@ -2089,33 +2118,73 @@
       return '<svg class="cat-qr" viewBox="0 0 ' + (n + 4) + ' ' + (n + 4) + '" width="' + mm + 'mm" height="' + mm + 'mm" shape-rendering="crispEdges" aria-label="' + esc(url) + '"><rect width="' + (n + 4) + '" height="' + (n + 4) + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
     } catch (e) { return ''; }
   }
-  /** Les coordonnées de la boutique à la dernière page : adresse, horaires, téléphone(s), e-mail (Marketing v1.9 ; rendu de `Back`). */
-  const coordonnees = (s, lang) => [s.address, s.hours ? (lang === 'nl' ? 'Open ' + s.hours : 'Ouvert ' + s.hours) : '', [s.phone, s.phone2 || ''].filter(Boolean).join(' · '), s.email || ''].filter(Boolean);
+  /** La dernière page dans son gabarit (charte) : A QR en avant · B boutique en avant · C « Le magasin », finition Rubis
+   * (refonte du 21/11/2026) — rendu de `Back`, CataloguePages.tsx, chaque élément affiché ou masqué, sa police, sa couleur. */
   function dos(doc, p) {
-    const lang = doc.version.lang, s = p.shop;
+    const lang = doc.version.lang, nl = lang === 'nl', s = p.shop, look = p.look;
+    const ligne = (el, v) => montre(look, el) ? (v || '') : '';
+    const tels = s ? [ligne('phone', s.phone), ligne('phone', s.phone2)].filter(Boolean).join(' · ') : '';
+    const heures = s ? ligne('hours', s.hours) : '';
+    const fetes = s ? ligne('holidays', s.holidayHours) : '';
+    const livraison = s ? ligne('delivery', s.deliveryHours) : '';
+    const pro = p.qrTarget === 'business';
+    const qrLabel = p.qrLabel || (nl ? (pro ? 'Bestellen voor bedrijven' : 'Bestel online') : pro ? 'Commande entreprise' : 'Commander en ligne');
+    const qrHint = p.qrLabel || pro ? qrLabel : s ? (nl ? 'De webshop van ' + s.name : 'Le webshop de ' + s.name) : nl ? 'Al onze winkels' : 'Toutes nos boutiques';
+    const ouvert = heures ? (nl ? 'Open ' : 'Ouvert ') + heures : '';
+    const lignes = s ? [['address', ligne('address', s.address)], ['hours', ouvert], ['holidays', fetes], ['delivery', livraison], ['phone', tels], ['email', ligne('email', s.email)]].filter(x => x[1]) : [];
+    const lg = logoSombre(doc);
+    const logoTag = montre(look, 'logo') ? '<img class="cat-logo cat-logo--dark" src="' + esc(lg) + '" alt=""' + styleLogo(look) + '>' : '';
+    const titreTag = montre(look, 'title') ? '<div class="cat-back__title"' + styleTexte(look, 'title') + '>' + esc(p.title) + '</div>' : '';
+    const texteTag = p.text && montre(look, 'text') ? '<div class="cat-back__text"' + styleTexte(look, 'text') + '>' + esc(p.text) + '</div>' : '';
+    const q = p.qrUrl && montre(look, 'qr') ? p.qrUrl : null;
+    const qrSt = styleTexte(look, 'qr');
+    const voirBoutique = montre(look, 'shop');
+    const quiTag = montre(look, 'name') ? '<div class="cat-back__who"' + styleChamp(look, 'name') + '>' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>' : '';
+    const classeLigne = el => el === 'holidays' ? ' class="cat-back__holidays"' : el === 'delivery' ? ' class="cat-back__delivery"' : '';
+    if (p.template === 'C') {
+      // Le magasin : la photo en haut, le logo, les horaires en grand, deux QR (commander, venir) sur leurs cartes
+      // blanches et les coordonnées sur un pied rubis.
+      const photoUrl = s && s.photoUrl && montre(look, 'photo') ? s.photoUrl : null;
+      const maps = s && s.mapsUrl && montre(look, 'maps') ? s.mapsUrl : null;
+      const contact = s ? [['address', ligne('address', s.address)], ['phone', ligne('phone', s.phone)], ['phone', ligne('phone', s.phone2)], ['email', ligne('email', s.email)]].filter(x => x[1]) : [];
+      const pied = voirBoutique && s && (quiTag || contact.length);
+      const carteQr = (url, label, sl) => '<div class="cat-back__qrC">' + qr(url, 22) + '<div class="cat-back__qrtext"><div class="cat-back__qrlabel"' + sl + '>' + esc(label) + '</div></div></div>';
+      let h = '<div class="cat-back cat-back--C cat-back--rubis' + (photoUrl ? ' cat-back--photo' : '') + '">'
+        + (photoUrl ? '<div class="cat-back__photo"><img src="' + esc(photoUrl) + '" alt=""></div>' : '')
+        + '<div class="cat-back__body">' + (montre(look, 'logo') ? '<img class="cat-logo cat-logo--dark cat-back__logo" src="' + esc(lg) + '" alt=""' + styleLogo(look) + '>' : '') + titreTag + texteTag;
+      if (voirBoutique && s && (heures || fetes || livraison)) {
+        h += '<div class="cat-back__hoursC"><div class="cat-back__label">' + (nl ? 'Openingsuren' : 'Horaires') + '</div>'
+          + (heures ? '<p class="cat-back__hoursBig"' + styleChamp(look, 'hours') + '>' + esc(heures) + '</p>' : '')
+          + (fetes ? '<p class="cat-back__holidays"' + styleChamp(look, 'holidays') + '>' + esc(fetes) + '</p>' : '')
+          + (livraison ? '<p class="cat-back__delivery"' + styleChamp(look, 'delivery') + '>' + esc(livraison) + '</p>' : '') + '</div>';
+      }
+      if (q || maps || pied) {
+        h += '<div class="cat-back__foot">'
+          + (q || maps ? '<div class="cat-back__qrs">' + (q ? carteQr(q, qrLabel, qrSt) : '') + (maps ? carteQr(maps, nl ? 'Kom langs in de winkel' : 'Venir au magasin', styleTexte(look, 'maps')) : '') + '</div>' : '')
+          + (pied ? '<div class="cat-back__shop">' + quiTag + (contact.length ? '<div class="cat-back__contact"' + styleTexte(look, 'shop') + '>' + contact.map(x => '<span' + styleTexte(look, x[0]) + '>' + esc(x[1]) + '</span>').join('') + '</div>' : '') + '</div>' : '')
+          + '</div>';
+      }
+      return h + '</div></div>';
+    }
     if (p.template === 'B') {
       // Boutique en avant (maquette A3, gabarit B) : l'adresse et les horaires en grand, le QR plus petit en bas.
-      const lignes = s ? coordonnees(s, lang) : [];
-      return '<div class="cat-back cat-back--B"><img class="cat-logo" src="' + esc(logo(doc)) + '" alt=""><div class="cat-back__title">' + esc(p.title) + '</div>'
-        + (p.text ? '<div class="cat-back__text">' + esc(p.text) + '</div>' : '')
-        + '<div class="cat-back__shopB"><div class="cat-back__who">' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>' + lignes.map(x => '<p>' + esc(x) + '</p>').join('') + '</div>'
-        + (p.qrUrl ? '<div class="cat-back__qr cat-back__qr--small">' + qr(p.qrUrl, 20) + '<div><div class="cat-back__host">' + esc(p.host || '') + '</div><div class="cat-back__hint">'
-          + esc(s ? (lang === 'nl' ? 'De webshop van ' + s.name : 'Le webshop de ' + s.name) : (lang === 'nl' ? 'Al onze winkels' : 'Toutes nos boutiques')) + '</div></div></div>' : '') + '</div>';
+      return '<div class="cat-back cat-back--B">' + logoTag + titreTag + texteTag
+        + (voirBoutique ? '<div class="cat-back__shopB">' + quiTag + lignes.map(x => '<p' + styleChamp(look, x[0]) + classeLigne(x[0]) + '>' + esc(x[1]) + '</p>').join('') + '</div>' : '')
+        + (q ? '<div class="cat-back__qr cat-back__qr--small">' + qr(q, 20) + '<div><div class="cat-back__host"' + qrSt + '>' + esc(p.host || '') + '</div><div class="cat-back__hint"' + qrSt + '>' + esc(qrHint) + '</div></div></div>' : '') + '</div>';
     }
-    let h = '<div class="cat-back"><img class="cat-logo" src="' + esc(logo(doc)) + '" alt=""><div class="cat-back__title">' + esc(p.title) + '</div>'
-      + (p.text ? '<div class="cat-back__text">' + esc(p.text) + '</div>' : '');
-    if (p.qrUrl) {
-      h += '<div class="cat-back__qr">' + qr(p.qrUrl, 30) + '<div><div class="cat-back__host">' + esc(p.host || '') + '</div><div class="cat-back__hint">'
-        + esc(s ? (lang === 'nl' ? 'De webshop van ' + s.name : 'Le webshop de ' + s.name) : (lang === 'nl' ? 'Al onze winkels' : 'Toutes nos boutiques')) + '</div></div></div>';
+    let h = '<div class="cat-back">' + logoTag + titreTag + texteTag;
+    if (q) {
+      h += '<div class="cat-back__qr">' + qr(q, 30) + '<div><div class="cat-back__host"' + qrSt + '>' + esc(p.host || '') + '</div><div class="cat-back__hint"' + qrSt + '>' + esc(qrHint) + '</div></div></div>';
     }
-    h += '<div class="cat-back__shop"><div class="cat-back__who">' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>';
-    if (s) {
-      const lignes = coordonnees(s, lang);
-      h += '<p>' + lignes.map(esc).join('<br>') + '</p>';
-    } else {
-      h += '<p>' + esc((lang === 'nl' ? 'Al onze winkels op ' : 'Toutes nos boutiques sur ') + (p.host || '')) + '</p>';
+    if (voirBoutique) {
+      h += '<div class="cat-back__shop">' + quiTag;
+      // Gabarit A : adresse, horaires, horaires des fêtes, livraison et téléphone, dans un seul paragraphe.
+      const courtes = s ? [['address', ligne('address', s.address)], ['hours', ouvert], ['holidays', fetes], ['delivery', livraison], ['phone', ligne('phone', s.phone)]].filter(x => x[1]) : [];
+      h += s ? '<p' + styleTexte(look, 'shop') + '>' + courtes.map((x, k) => '<span' + classeLigne(x[0]) + styleTexte(look, x[0]) + '>' + (k ? '<br>' : '') + esc(x[1]) + '</span>').join('') + '</p>'
+        : p.host ? '<p' + styleTexte(look, 'shop') + '>' + esc((nl ? 'Al onze winkels op ' : 'Toutes nos boutiques sur ') + p.host) + '</p>' : '';
+      h += '</div>';
     }
-    return h + '</div></div>';
+    return h + '</div>';
   }
 
   function rendre(S) {
