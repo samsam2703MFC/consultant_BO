@@ -370,3 +370,4 @@
 2026-11-28T09:50:22Z Fidélité › Cartes (correctif) : les cartes dessinées se lisent chez leurs clients quand l'ERP ne donne pas leur définition (en ligne, seul le bingo s'affichait) ; une carte à timbres et à points montre les deux
 2026-11-28T09:53:04Z SMS des formulaires bureaux : une inscription (six étapes) ou une demande hors zone envoie un SMS au GSM du franchisé (Paramètres › Alertes SMS) et aux destinataires de « SMS au bureau » du cockpit ; fournisseur en place (smsPartir) ; tables panel_sms_formulaire*
 2026-11-28T09:57:58Z Vidéo Paramètres (24-01-fenetre) retournée : la fenêtre avec le groupe « Alertes SMS » (SMS des formulaires bureaux), la recherche « sms » à jour (1 min 22)
+2026-11-28T10:00:51Z Clients › Particuliers : la jauge « Compte en ligne » ; « Nettoyer la base » (noms en Nom Propre dans TF Buddy, aperçu avant → après, annulable, table panel_clients_nettoyage) ; filtre « Nom incomplet » (signalés, jamais effacés)

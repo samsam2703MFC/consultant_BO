@@ -323,3 +323,26 @@
 .pcl-hz-reprise td { color: var(--muted); }
 /* L'étape 1 de l'assistant : « Ajouter la société », sous la liste des sociétés (27/11/2026). */
 .pcl-w-societe { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: -4px; }
+
+/* 28/11/2026 : la jauge du compte en ligne (résumé des particuliers) et « Nettoyer la base » (clients_nettoyage.php). */
+.pcl-jauge { display: grid; gap: 6px; min-width: 0; }
+.pcl-jauge-t { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--ink); }
+.pcl-jauge-v { font-variant-numeric: tabular-nums; color: var(--green); }
+.pcl-jauge-b { height: 6px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+.pcl-jauge-b i { display: block; height: 100%; border-radius: 999px; background: var(--green); transition: width .3s ease; }
+.pcl-jauge-s { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pcl-n-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 10px 0 8px; font-size: 13px; }
+.pcl-n-tete b { font-weight: 700; }
+.pcl-n-dernier { margin: 6px 0 8px; font-size: 12.5px; color: var(--muted-2); }
+.pcl-n-prog { display: grid; gap: 6px; margin: 8px 0 10px; }
+.pcl-n-prog-t { font-size: 12.5px; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+.pcl-n-liste { max-height: min(52vh, 520px); overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; }
+.pcl-n-table { width: 100%; }
+.pcl-n-table thead th { position: sticky; top: 0; z-index: 1; }
+.pcl-n-table td { vertical-align: middle; }
+.pcl-n-table td .sub { display: block; }
+.pcl-n-case { width: 34px; }
+.pcl-n-fl { width: 24px; color: var(--muted); text-align: center; }
+.pcl-n-avant { color: var(--muted-2); }
+.pcl-n-off td { opacity: .45; }
+.pcl-n-echecs { margin: 0 0 10px; padding-left: 18px; font-size: 12.5px; color: var(--muted-2); }
