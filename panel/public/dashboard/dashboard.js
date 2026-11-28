@@ -7961,7 +7961,8 @@
    * « M'avertir » des alertes de stock et le choix du ton de l'assistant. Les petits réglages se font sur place (les
    * alertes, le ton), le rappel s'ouvre dans la fenêtre, le reste ouvre sa page. Elle vit hors du rail (body), placée
    * au-dessus de la roue ; Échap ou un clic à côté la ferment. */
-  const PAR = { ouvert: false, niveau: 'liste', q: '', etat: null, auto: null, errAuto: null, lecture: false, lu: 0, occupe: false, flash: null };
+  const PAR = { ouvert: false, niveau: 'liste', q: '', etat: null, auto: null, errAuto: null, lecture: false, lu: 0, occupe: false, flash: null,
+    sms: null, smsErr: null, smsLecture: false, smsF: null };
   const PAR_ICO = {
     mail: '<path d="M3 5h18v14H3zM3 6l9 7 9-7"/>',
     auto: '<path d="M9 14l-5-5 5-5M4 9h10a6 6 0 0 1 6 6v4"/>',
@@ -7971,6 +7972,7 @@
     cloche: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     bulle: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     loupe: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5.2-5.2"/>',
+    sms: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 18h4M9 7h6M9 10.5h4"/>',
     roue: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'
   };
   const parSvg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${PAR_ICO[k] || ''}</svg>`;
@@ -8004,6 +8006,10 @@
         { k: 'rappel', ic: 'horloge', nom: 'Rappel la veille du retrait', desc: 'un e-mail ou un SMS au client, la veille de sa commande',
           et: apres || (R ? (R.actif ? ['ok', 'à ' + String(R.heure).replace(':', ' h ')] : ['off', 'éteint']) : null), detail: 'rappel' },
         { k: 'equipe', ic: 'equipe', nom: 'L’équipe', desc: 'qui reçoit les fiches des promotions', et: eq != null ? ['', eq + ' personne' + (eq > 1 ? 's' : '')] : apres, aller: ['mails', null] }]],
+      // Les SMS des formulaires bureaux (28/11/2026, Sam : « un SMS envoyé lors d'un formulaire envoyé, au GSM du franchisé et au mien »).
+      ['Alertes SMS', [
+        { k: 'smsf', ic: 'sms', nom: 'SMS des formulaires bureaux', desc: 'un SMS à chaque inscription ou demande hors zone',
+          et: PAR.sms ? (PAR.sms.magasin.actif ? ['ok', 'allumés'] : ['off', 'éteints']) : (PAR.smsLecture ? ['off', 'lecture…'] : null), detail: 'smsf' }]],
       ['Cet appareil', [
         { k: 'alertes', ic: 'cloche', nom: 'Alertes de stock', desc: alerteKo ? (S.pushMotif || 'indisponibles sur cet appareil') : 'une notification quand une référence passe sous son minimum',
           sw: S.pushEtat === 'abonne', swKo: alerteKo || S.pushOccupe }]]
@@ -8059,6 +8065,59 @@
       PAR.flash = { ok: true, texte: d.note || (champ === 'actif' ? (g.actif ? 'Rappel allumé : il part chaque jour à ' + g.heure + '.' : 'Rappel éteint.') : 'Enregistré.') };
     }).catch(er => { PAR.flash = { ok: false, texte: er.message }; }).finally(() => { PAR.occupe = false; parRendre(); });
   }
+  /* --- Les SMS des formulaires bureaux (28/11/2026, panel/src/sms_formulaires.php) : le GSM du franchisé, et, pour un compte
+   * du siège, le numéro du siège (un réglage pour tout le réseau) ; le franchisé lit seulement que le siège reçoit aussi. */
+  function parSmsLire() {
+    if (PAR.smsLecture) { return; }
+    PAR.smsLecture = true;
+    lire('/dashboard/sms-formulaires?shop=' + encodeURIComponent(S.shop)).then(d => { PAR.sms = d; PAR.smsErr = null; if (PAR.niveau === 'smsf' && !PAR.smsF) { parSmsForm(); } })
+      .catch(er => { PAR.smsErr = er.message; }).finally(() => { PAR.smsLecture = false; parRendre(); });
+  }
+  /** La saisie part de ce qui est enregistré. */
+  function parSmsForm() {
+    const d = PAR.sms; if (!d) { PAR.smsF = null; return; }
+    PAR.smsF = { actif: !!d.magasin.actif, numero: d.magasin.numero || '', sActif: !!d.siege.actif, sNumero: d.siege.numero || '' };
+  }
+  function parSms() {
+    const d = PAR.sms, F = PAR.smsF, ok = !!(d && F) && !PAR.occupe;
+    const hd = '<div class="par-hd"><button type="button" class="par-ret" data-parret="1">‹ Paramètres</button><button type="button" class="par-x" data-parx="1" aria-label="Fermer">×</button></div>';
+    if (!d) { return hd + `<div class="par-det"><h4>SMS des formulaires bureaux</h4>${PAR.smsErr ? `<div class="db-err">${esc(PAR.smsErr)}</div>` : '<div class="par-attente">Lecture du réglage…</div>'}</div>`; }
+    const sw = (k, on, lib) => `<button type="button" class="par-sw${on ? ' on' : ''}" data-parsms="${k}" role="switch" aria-checked="${on ? 'true' : 'false'}" aria-label="${esc(lib)}"${ok ? '' : ' disabled'}></button>`;
+    const num = (k, v, lib) => `<input type="tel" class="par-num" data-parsmsnum="${k}" value="${esc(v)}" placeholder="0470 12 34 56" aria-label="${esc(lib)}" autocomplete="off"${ok ? '' : ' disabled'}>`;
+    const siege = d.siegeModifiable
+      ? `<div class="par-ch"><span>SMS au siège<small>un numéro pour tout le réseau, réglé par le siège</small></span>${sw('siege', F.sActif, 'SMS au siège')}</div>
+         <div class="par-ch"><span>Numéro du siège</span>${num('siege', F.sNumero, 'Numéro du siège')}</div>`
+      : (d.siege.actif ? '<p class="par-note">Le siège reçoit aussi ces SMS.</p>' : '');
+    return hd + `<div class="par-det"><h4>SMS des formulaires bureaux</h4>
+        <p>Un SMS à chaque inscription par le formulaire des bureaux et à chaque demande hors zone de ce magasin : la société, le lieu, l’effectif. Jamais l’e-mail ni le téléphone du prospect.</p>
+        ${d.fournisseur ? '' : `<div class="par-avis">${parSvg('sms')}<span>Aucun fournisseur SMS n’est réglé sur le serveur : rien ne part pour l’instant.</span></div>`}
+        <div class="par-ch"><span>SMS au franchisé<small>le GSM qui reçoit les SMS de ce magasin</small></span>${sw('actif', F.actif, 'SMS au franchisé')}</div>
+        <div class="par-ch"><span>GSM du franchisé</span>${num('magasin', F.numero, 'GSM du franchisé')}</div>
+        ${siege}
+        <p class="par-note">Aujourd’hui : ${d.aujourdhui} / ${d.max} formulaires notifiés (au plus ${d.max} par jour).</p>
+        ${PAR.flash ? `<div class="par-flash ${PAR.flash.ok ? 'ok' : 'ko'}">${esc(PAR.flash.texte)}</div>` : ''}
+        <div class="par-bts"><button type="button" class="par-bt prim" data-parsmsok="1"${ok ? '' : ' disabled'}>Enregistrer</button><button type="button" class="par-bt" data-parsmsessai="1"${ok && d.fournisseur ? '' : ' disabled'}>Envoyer un SMS d’essai</button></div></div>`;
+  }
+  function parSmsEnregistrer() {
+    const d = PAR.sms, F = PAR.smsF; if (!d || !F || PAR.occupe) { return; }
+    const corps = { shop: S.shop, actif: F.actif, numero: F.numero };
+    if (d.siegeModifiable) { corps.siege = { actif: F.sActif, numero: F.sNumero }; }
+    PAR.occupe = true; PAR.flash = null; parRendre();
+    ecrire('/dashboard/sms-formulaires', corps).then(r => {
+      PAR.sms = r; parSmsForm();
+      PAR.flash = { ok: true, texte: r.magasin.actif ? 'Enregistré : les SMS partent au ' + r.magasin.numero + '.' : 'Enregistré : pas de SMS au franchisé.' };
+    }).catch(er => { PAR.flash = { ok: false, texte: er.message }; }).finally(() => { PAR.occupe = false; parRendre(); });
+  }
+  /** L'essai part aux numéros enregistrés (pas à ceux en cours de saisie). */
+  function parSmsEssai() {
+    if (!PAR.sms || PAR.occupe) { return; }
+    PAR.occupe = true; PAR.flash = null; parRendre();
+    ecrire('/dashboard/sms-formulaires/essai', { shop: S.shop }).then(r => {
+      PAR.flash = { ok: !r.echecs, texte: 'SMS d’essai envoyé à ' + r.envoyes + ' numéro' + (r.envoyes > 1 ? 's' : '') + (r.echecs ? ', ' + r.echecs + ' en échec' : '') + '.' };
+      // Le compteur du jour se relit ; la saisie en cours reste.
+      return lire('/dashboard/sms-formulaires?shop=' + encodeURIComponent(S.shop)).then(d2 => { PAR.sms = d2; });
+    }).catch(er => { PAR.flash = { ok: false, texte: er.message }; }).finally(() => { PAR.occupe = false; parRendre(); });
+  }
   function parPlacer() {
     const el = document.getElementById('db-par'), r = document.querySelector('#db-rail [data-par]');
     if (!el) { return; }
@@ -8073,7 +8132,7 @@
     if (!PAR.ouvert) { if (el) { el.remove(); } return; }
     const f = document.activeElement, garde = f && el && el.contains(f) && f.dataset && f.dataset.parq != null ? f.selectionStart : null;
     if (!el) { el = document.createElement('div'); el.id = 'db-par'; el.className = 'par'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Paramètres'); document.body.appendChild(el); }
-    el.innerHTML = PAR.niveau === 'rappel' ? parRappel() : parListe();
+    el.innerHTML = PAR.niveau === 'rappel' ? parRappel() : PAR.niveau === 'smsf' ? parSms() : parListe();
     parPlacer(); parBrancher(el);
     if (garde != null) { const i = el.querySelector('[data-parq]'); if (i) { i.focus(); try { i.setSelectionRange(garde, garde); } catch (x) { /* champ */ } } }
   }
@@ -8095,6 +8154,11 @@
       railMaj(avecRail()); parRendre();
     }));
     el.querySelectorAll('[data-paraller]').forEach(b => b.addEventListener('click', () => { const v = b.dataset.paraller; parFermer(); allerVers(v); }));
+    // Les SMS des formulaires : les interrupteurs redessinent, les numéros se gardent à la saisie (sans redessiner).
+    el.querySelectorAll('[data-parsms]').forEach(b => b.addEventListener('click', () => { const F = PAR.smsF; if (!F || PAR.occupe) { return; } const k = b.dataset.parsms === 'siege' ? 'sActif' : 'actif'; F[k] = !F[k]; PAR.flash = null; parRendre(); }));
+    el.querySelectorAll('[data-parsmsnum]').forEach(i => i.addEventListener('input', () => { const F = PAR.smsF; if (F) { F[i.dataset.parsmsnum === 'siege' ? 'sNumero' : 'numero'] = i.value; } }));
+    el.querySelectorAll('[data-parsmsok]').forEach(b => b.addEventListener('click', parSmsEnregistrer));
+    el.querySelectorAll('[data-parsmsessai]').forEach(b => b.addEventListener('click', parSmsEssai));
     el.querySelectorAll('[data-parset]').forEach(b => {
       const champ = b.dataset.parset;
       if (champ === 'heure') { b.addEventListener('change', () => parRappelEnvoyer('heure', b.value)); }
@@ -8105,13 +8169,13 @@
   function parChoisir(k) {
     let x = null; parItems().forEach(([, L]) => { L.forEach(y => { if (y.k === k) { x = y; } }); });
     if (!x) { return; }
-    if (x.detail) { PAR.niveau = x.detail; PAR.flash = null; parRendre(); return; }
+    if (x.detail) { PAR.niveau = x.detail; PAR.flash = null; if (x.detail === 'smsf') { parSmsForm(); parSmsLire(); } parRendre(); return; }
     if (x.aller) { parFermer(); allerVers(x.aller[0], x.aller[1]); }
   }
   function parBasculer() { if (PAR.ouvert) { parFermer(); } else { parOuvrir(); } }
   function parOuvrir() {
     PAR.ouvert = true; PAR.niveau = 'liste'; PAR.q = ''; PAR.flash = null;
-    railMaj(avecRail()); parLire(false); parRendre();
+    railMaj(avecRail()); parLire(false); parSmsLire(); parRendre();
     const i = document.querySelector('#db-par [data-parq]'); if (i) { i.focus(); }
   }
   function parFermer() {

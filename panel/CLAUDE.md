@@ -53,6 +53,8 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   Sur chaque demande : « Créer le bureau » (l'assistant « Ajouter un bureau » pré-rempli, « Ajouter la société » à l'étape 1 ;
   le bureau créé, `…/reprendre` passe la demande `reprise`) et la poubelle (`…/effacer` : la copie seule, l'original reste dans
   TF Buddy). Le bouton « Nouveau bureau en développement » est retiré (27/11/2026).
+  **Les SMS des formulaires** (`src/sms_formulaires.php`, 28/11/2026) : une inscription ou une demande hors zone envoie un
+  SMS au GSM du franchisé et au numéro du siège (Paramètres › Alertes SMS ; le numéro du siège, réglé par le siège seul).
 - **Vidéos d'instruction** (23/11/2026) : le carré du rail, à côté d'Assistant IA (`public/dashboard/tutos.js`), le registre
   `public/dashboard/videos/videos.json`, le tournage `panel/tools/videos/` (données fictives). Une nouvelle fonction du
   dashboard peut y annoncer sa vidéo (genre `nouveau`) ; un écran filmé qui change se retourne. Détail : `src/LISEZMOI.md`.

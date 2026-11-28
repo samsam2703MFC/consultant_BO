@@ -3524,6 +3524,21 @@ et quitte la liste (« Ouvrir le bureau »). La poubelle efface la copie.
                                              les tournées que le webshop publie (GET /webshop/shops/{n}/delivery-zones et /{id}) : « Ce que voient
                                              vos clients » dans Clients › Bureaux
 
+**Les SMS des formulaires bureaux** (28/11/2026, Sam : « un SMS envoyé lors d'un formulaire envoyé, au GSM du franchisé et
+au mien » ; « paramètre dans consultant BO, rail dashboard ») : chaque nouvelle inscription par le formulaire en six étapes
+et chaque nouvelle demande hors zone (pas un nouvel essai) envoie un SMS au GSM du franchisé (réglage du magasin) et au
+numéro du siège (un réglage pour tout le réseau, réglé par le siège seul), chacun allumé ou non. Texte ASCII, 160 caractères :
+`{magasin} : nouvelle inscription bureau | demande hors zone - {société}, {cp commune}, {n} pers. Dashboard > Clients > Bureaux`,
+jamais l'e-mail ni le téléphone du prospect. Au plus 10 formulaires notifiés par jour et par magasin ; l'envoi part après la
+réponse (`panel/src/sms_formulaires.php`, Twilio par `shared/src/sms.php` ; sans fournisseur réglé, rien ne part). Le réglage :
+dashboard › Paramètres › Alertes SMS.
+
+    GET  /dashboard/sms-formulaires?shop=    → {fournisseur, magasin: {actif, numero}, siege: {actif, numero (siège seul, sinon null)},
+                                                siegeModifiable, aujourdhui, max: 10}
+    POST /dashboard/sms-formulaires          {shop, actif, numero, siege?: {actif, numero}} → l'état | 422 (numéro invalide) |
+                                             403 (siege sans compte du siège) ; les numéros gardés au format +32…
+    POST /dashboard/sms-formulaires/essai    {shop} → {ok, envoyes, echecs, plafond} | 422 (sans fournisseur, sans numéro allumé) | 429
+
 **Le formulaire en six étapes** (26/11/2026, Sam : « faire le formulaire et le générateur de lien par shop dans l'onglet
 bureau » ; maquette `panel/docs/maquettes/bureau-formulaire/`). Le corps public : `prenom, nom, fonction, tel, langue (fr|nl|en),
 email, tva, pays, societe, secteur (corporate|retail|horeca|event), bureau, emailFact, factRue, factNum, factBoite, factCp,
