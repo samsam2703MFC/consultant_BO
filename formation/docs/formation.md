@@ -1604,6 +1604,12 @@ validation, on archive dans un document de formation du franchisé ». Plan, maq
 - 0.0.69 « L'autocontrôle qualité d'un produit, sur la tablette » — publiée, v1.0 (thème 8).
 - 0.0.70 « Le dashboard : la page Commandes » — publiée, v1.0 (thème 9).
 
+### Passe du 28/11/2026 (publication automatique, décision de Sam du 24/11/2026)
+
+- 0.0.71 « Le dashboard : Mon équipe › absences, congés et remplacements » — publiée, v1.0 (thème 11 ; 13 parties,
+  3 photos, noms floutés ; aucune absence posée à Halle : ni semaine hachurée, ni Opérationnel, ni app employés en
+  photo). Captures : `data/formation/nouveautes/captures_absences.js` (lecture seule ; « Poser l'absence » jamais cliqué).
+
 ## L'autocontrôle qualité par produit, dans l'app Cuisine — maquettes (24/11/2026)
 
 Sam, sur la fiche produit de l'app Cuisine en tablette : « rajouter un bouton autocontrôle qualité (1. cuisson,
