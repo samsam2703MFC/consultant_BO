@@ -172,6 +172,10 @@ function cartes(periode) {
       repartition: R, pointsSoldes: [], timbresIci: Math.round((id === 1 ? 512 : 268) * k), pointsIci: 0, requis: def.timbres, definition: def };
   });
   const L = cartesClients();
+  // La carte à points (28/11/2026) : ses clients et leurs soldes, comme fcProgramme les compte côté serveur.
+  const P3 = L.map(c => c.cartes.find(p => p.id === 3)).filter(Boolean);
+  C.push({ id: 3, nom: 'Carte à points', clients: P3.length, actifsIci: P3.length, pretes: 0, presque: 0, repartition: [], pointsSoldes: P3.map(p => p.points.solde).sort((x, y) => x - y),
+    timbresIci: 0, pointsIci: P3.reduce((s, p) => s + p.gagnesIci.points, 0), definition: DEFS[2] });
   return { shop: D.SHOP, periode: periode || 'mois', du: '2026-11-01', au: AUJ, lu: AUJ + ' 15:40',
     participants: { unique_customers: 248, active_in_period: Math.round(131 * Math.min(1.6, k)) }, reconnaissances: { count: Math.round(402 * k), unique_customers: Math.round(167 * Math.min(1.5, k)) },
     activite: { stamps_earned: Math.round(780 * k) }, reconnusCaisse90: N, cartes: C, definitions: DEFS, clients: L, clientsTotal: 248, erreurClients: null,

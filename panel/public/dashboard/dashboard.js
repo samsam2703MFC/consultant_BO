@@ -6719,27 +6719,44 @@
   }
   /** Des barres blanches sur la carte : le nombre au-dessus, le libellé dessous. */
   const fdBarres = (R, lab) => { const mx = Math.max(1, ...R); return `<div class="fdp-hi">${R.map((n, i) => `<div><span>${n || ''}</span><i style="height:${n ? Math.max(4, 44 * n / mx) : 2}px;opacity:${n ? (0.45 + 0.55 * i / Math.max(1, R.length - 1)).toFixed(2) : 0.25}"></i><small>${lab(i)}</small></div>`).join('')}</div>`; };
-  /** Une carte de l'ERP dessinée pour un public : ses inscrits, ce qu'ils ont gagné ici, les récompenses prêtes, où ils en sont. */
+  /**
+   * Les cartes vues chez les clients (`cartes` de GET /fidelite/cartes), avec leur définition quand l'ERP la donne. En ligne
+   * (28/11/2026), /admin/loyalty/cards ne répond pas et `definitions` reste vide : la carte se lit alors chez ses clients
+   * (son nom, ses timbres requis), comme l'ancien écran.
+   */
+  function fdCartesVues(d) {
+    return (d.cartes || []).map(c => Object.assign({ timbres: c.requis || null, couleur: '#8D1D2C' }, c.definition || {}, { id: c.id, nom: (c.definition && c.definition.nom) || c.nom }));
+  }
+  /** Une carte dessinée pour un public : ses inscrits, ce qu'ils ont gagné ici, les récompenses prêtes, où ils en sont. Une
+   *  même carte peut porter des timbres chez les uns et des points chez les autres (« Carte L'Atelier », 28/11/2026) : les
+   *  deux se dessinent. */
   function fdBloc(def, L) {
     const col = def.couleur || '#8D1D2C', P = L.map(c => (c.cartes || []).find(p => p.id === def.id)).filter(Boolean);
-    const ici = P.reduce((s, p) => s + ((p.gagnesIci || {}).timbres || (p.gagnesIci || {}).points || 0), 0);
+    const T = P.filter(p => p.timbres), Pt = P.filter(p => p.points);
+    const req = def.timbres || (T[0] ? T[0].timbres.requis : 0);
+    const tIci = P.reduce((s, p) => s + ((p.gagnesIci || {}).timbres || 0), 0), pIci = P.reduce((s, p) => s + ((p.gagnesIci || {}).points || 0), 0);
     const pretes = P.reduce((s, p) => s + (p.timbres ? p.timbres.pretes : 0) + (p.points && (p.points.paliers || []).some(t => t.atteint) ? 1 : 0), 0);
-    let viz = '', k3 = '';
-    if (def.timbres) {
-      const R = Array(def.timbres).fill(0); P.forEach(p => { if (p.timbres) { R[Math.max(0, Math.min(def.timbres - 1, p.timbres.progres))]++; } });
-      k3 = `<div><b>${nf(P.filter(p => p.timbres && [1, 2].includes(p.timbres.reste)).length, 0)}</b>à 1 ou 2 timbres</div>`;
-      viz = fdBarres(R, i => i === 0 || i === def.timbres - 1 || i % 3 === 0 ? String(i) : '');
-    } else {
-      const pal = (P.map(p => ((p.points || {}).paliers || [])[0]).find(Boolean) || { points: 100 }).points || 100, R = [0, 0, 0, 0, 0];
-      P.forEach(p => { if (p.points) { R[Math.min(4, Math.floor(4 * p.points.solde / pal))]++; } });
-      k3 = `<div><b>${nf(R[3], 0)}</b>à moins de ${nf(pal / 4, 0)} pts du bon</div>`;
-      viz = fdBarres(R, i => i === 4 ? nf(pal, 0) + ' et +' : nf(i * pal / 4, 0) + '–' + nf((i + 1) * pal / 4 - 1, 0));
+    const K = [`<div><b>${nf(P.length, 0)}</b>inscrit${P.length > 1 ? 's' : ''}</div>`];
+    if (T.length || !Pt.length) { K.push(`<div><b>${nf(tIci, 0)}</b>timbres gagnés ici</div>`); }
+    if (Pt.length) { K.push(`<div><b>${nf(pIci, 0)}</b>points gagnés ici</div>`); }
+    K.push(`<div><b>${nf(pretes, 0)}</b>${Pt.length && !T.length ? 'bons prêts' : 'récompenses prêtes'}</div>`);
+    const viz = [];
+    if (T.length && req > 0) {
+      const R = Array(req).fill(0); T.forEach(p => { R[Math.max(0, Math.min(req - 1, p.timbres.progres))]++; });
+      K.push(`<div><b>${nf(T.filter(p => [1, 2].includes(p.timbres.reste)).length, 0)}</b>à 1 ou 2 timbres</div>`);
+      viz.push((Pt.length ? '<div class="fdp-vt">timbres</div>' : '') + fdBarres(R, i => i === 0 || i === req - 1 || i % 3 === 0 ? String(i) : ''));
     }
-    const sous = [def.timbres ? def.timbres + ' timbres' : 'points', def.recompense, def.au ? 'jusqu’au ' + fdJJMM(def.au) : ''].filter(Boolean).join(' · ');
+    if (Pt.length) {
+      const pal = (Pt.map(p => (p.points.paliers || [])[0]).find(Boolean) || { points: 100 }).points || 100, R = [0, 0, 0, 0, 0];
+      Pt.forEach(p => { R[Math.max(0, Math.min(4, Math.floor(4 * p.points.solde / pal)))]++; });
+      K.push(`<div><b>${nf(R[3], 0)}</b>à moins de ${nf(pal / 4, 0)} pts du bon</div>`);
+      viz.push((T.length ? '<div class="fdp-vt">points</div>' : '') + fdBarres(R, i => i === 4 ? nf(pal, 0) + ' et +' : nf(i * pal / 4, 0) + '–' + nf((i + 1) * pal / 4 - 1, 0)));
+    }
+    const sous = [T.length && req ? req + ' timbres' : '', Pt.length ? 'points' : '', def.recompense, def.au ? 'jusqu’au ' + fdJJMM(def.au) : ''].filter(Boolean).join(' · ');
     const ouverte = String(S.fdCarte) === String(def.id);
     return `<div class="fdp-carte${ouverte ? ' on' : ''}" id="fdc-carte-${esc(def.id)}" data-fdcarte="${esc(def.id)}" style="background:${esc(col)}" title="${ouverte ? 'Fermer le détail' : 'Voir le détail de la carte'}">
-      <div class="nm">${esc(def.nom)}<span>${def.timbres ? 'à timbres' : 'fait consommer'}</span></div><div class="rc">${esc(sous)}</div>
-      <div class="fdp-k"><div><b>${nf(P.length, 0)}</b>inscrit${P.length > 1 ? 's' : ''}</div><div><b>${nf(ici, 0)}</b>${def.timbres ? 'timbres' : 'points'} gagnés ici</div><div><b>${nf(pretes, 0)}</b>${def.timbres ? 'récompenses prêtes' : 'bons prêts'}</div>${k3}</div>${viz}</div>`;
+      <div class="nm">${esc(def.nom)}<span>${T.length && Pt.length ? 'timbres et points' : T.length ? 'à timbres' : 'fait consommer'}</span></div><div class="rc">${esc(sous)}</div>
+      <div class="fdp-k">${K.join('')}</div>${viz.length > 1 ? '<div class="fdp-vz">' + viz.map(v => '<div>' + v + '</div>').join('') + '</div>' : viz.join('')}</div>`;
   }
   /** Le bingo de la saison dessiné pour un public : la case de cette semaine, et semaine après semaine qui a coché. */
   function fdBlocBingo(L, B) {
@@ -6783,7 +6800,7 @@
       const prets = P.reduce((s, c) => s + fdPrets(c), 0), bP = B ? P.filter(c => fdBgEtat(c.id, B).pr).length : 0;
       const AC = [];
       if (prets) { AC.push({ sig: 'prize', txt: `${fdPl(prets, 'récompense prête', 'récompenses prêtes')} à offrir en caisse`, attr: 'data-fdac="pret" title="la liste, filtrée sur « Récompense prête »"' }); }
-      defs.forEach(def => { const n = P.filter(c => (c.cartes || []).some(p => p.id === def.id && p.timbres && [1, 2].includes(p.timbres.reste))).length;
+      fdCartesVues(d).forEach(def => { const n = P.filter(c => (c.cartes || []).some(p => p.id === def.id && p.timbres && [1, 2].includes(p.timbres.reste))).length;
         if (n) { AC.push({ sig: 'prize', txt: `${esc(def.nom)} : ${fdPl(n, 'client', 'clients')} à 1 ou 2 timbres, à relancer`, attr: `data-fdacc="${esc(def.id)}" title="le détail de la carte et ses clients"` }); } });
       if (bP) { AC.push({ sig: 'prize', txt: `Bingo : ${fdPl(bP, 'client', 'clients')} à moins de 3 € de leur case, ${fdBgFin(B)}`, attr: 'data-fdac="case" title="la liste, filtrée sur « À moins de 3 € »"' }); }
       const aIns = d.reconnusCaisse90 != null ? Math.max(0, d.reconnusCaisse90 - L.length) : null, coP = B ? P.filter(c => fdBgEtat(c.id, B).co).length : 0;
@@ -6793,7 +6810,7 @@
         lev: B && B.saison.enCours ? `<span class="chr-lh">${fdPl(coP, 'a coché sa case', 'ont coché leur case')} cette semaine</span><span>${sem}</span>`
           : `<span class="chr-lh">${fdPl(P.filter(c => c.achats).length, 'a acheté', 'ont acheté')} ici</span><span>sur la période choisie</span>`,
         L: AC, ok: 'Rien à corriger : aucune récompense en attente, aucun client à relancer.' }, true);
-      const cartes = defs.filter(def => P.some(c => (c.cartes || []).some(p => p.id === def.id)));
+      const cartes = fdCartesVues(d).filter(def => P.some(c => (c.cartes || []).some(p => p.id === def.id)));
       h += `<div class="db-sec">Leurs cartes<small>soldes actuels, tous magasins · un clic sur une carte ouvre son détail${B && B.saison.enCours ? ' · bingo : la semaine du ' + fdJJMM(B.saison.semaines[B.saison.enCours - 1].du) + ' au ' + fdJJMM(B.saison.semaines[B.saison.enCours - 1].au) : ''}</small></div>`;
       h += `<div class="fdp-cartes">${cartes.map(def => fdBloc(def, P)).join('')}${fdBlocBingo(P, B)}</div>`;
       const ouverte = (d.cartes || []).find(c => String(c.id) === String(S.fdCarte));
