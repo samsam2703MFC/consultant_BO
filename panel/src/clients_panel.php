@@ -140,7 +140,9 @@ function pclCourt(array $c): array
         'cp' => pclTexte($c['zip'] ?? ''), 'ville' => pclTexte($c['city'] ?? ''), 'tel' => pclTexte($c['phone'] ?? ''), 'email' => pclTexte($c['email'] ?? ''),
         'remise' => pclNombre($c['personal_discount_percent'] ?? null), 'delai' => pclNombre($c['payment_terms'] ?? null),
         'differe' => !empty($c['can_deferral']), 'cree' => substr(pclTexte($c['create_timestamp'] ?? ''), 0, 10),
-        'main' => (int) ($c['id_main_shop'] ?? 0), 'manques' => !empty($c['is_b2b']) ? pclManques($c) : []];
+        'main' => (int) ($c['id_main_shop'] ?? 0), 'manques' => !empty($c['is_b2b']) ? pclManques($c) : [],
+        // Sa société et son bureau (28/11/2026) : la Fidélité range les personnes d'une société sous elle (marketing/src/fidelite_cartes.php).
+        'societeId' => (int) ($c['company_client_id'] ?? 0), 'bureauId' => (int) ($c['office_id'] ?? 0)];
 }
 
 /** Le texte où chercher un client : nom, société, TVA, e-mail, et les chiffres du téléphone. */
