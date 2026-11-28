@@ -2234,13 +2234,13 @@ function exJourCalcul(): array
     // dans la boucle, une fois les heures du magasin connues.
     // Chaque créneau, d'où qu'il vienne, devient une ligne du planning.
     $planParShop = []; $planSrc = [];
-    $poseCreneau = function (string $shopJ, string $nom, string $debut, string $fin, int $idEmp = 0) use (&$planParShop): void {
+    $poseCreneau = function (string $shopJ, string $nom, string $debut, string $fin, int $idEmp = 0, int $idSch = 0) use (&$planParShop): void {
         $dj = substr($debut, 0, 5); $fj = substr($fin, 0, 5);
         $hD = (int) substr($dj, 0, 2) + ((int) substr($dj, 3, 2)) / 60;
         $hF = (int) substr($fj, 0, 2) + ((int) substr($fj, 3, 2)) / 60;
         if ($hF <= $hD) { return; }   // un service qui passe minuit sort du cadre du jour
         $planParShop[$shopJ][] = ['nom' => $nom, 'debut' => $dj, 'fin' => $fj,
-            'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2), 'idEmp' => $idEmp];
+            'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2), 'idEmp' => $idEmp, 'idSch' => $idSch];
     };
     // Le taux horaire et le statut de chaque personne, par magasin — rien
     // d'autre de la route employés n'est conservé.
@@ -2276,7 +2276,7 @@ function exJourCalcul(): array
             $nom = trim((string) ($r['display_name'] ?? ''));
             if ($nom === '') { $nom = trim(((string) ($r['name'] ?? '')) . ' ' . ((string) ($r['surname'] ?? ''))); }
             if ($nom === '') { $nom = 'Employé ' . (int) ($r['id_employee'] ?? 0); }
-            $poseCreneau($shopJ, $nom, (string) ($r['start_hour'] ?? ''), (string) ($r['end_hour'] ?? ''), (int) ($r['id_employee'] ?? 0));
+            $poseCreneau($shopJ, $nom, (string) ($r['start_hour'] ?? ''), (string) ($r['end_hour'] ?? ''), (int) ($r['id_employee'] ?? 0), (int) ($r['id_schedule'] ?? $r['id'] ?? 0));
         }
     }
     // 2) LE REPLI, pour les seuls magasins que le panel n'a pas servis : la
@@ -2297,6 +2297,19 @@ function exJourCalcul(): array
                     (string) $pj['start_hour'], (string) $pj['end_hour'], (int) $pj['id_employee']);
             }
         } catch (PDOException $e) { /* planning illisible : les lignes s'en passent */ }
+    }
+
+    // Les absences de Mon équipe (27/11/2026, panel/src/equipe_absences.php) : le service d'une absence payée reste au
+    // panel (son coût reste au P&L, et ici) ; il ne compte plus comme présence — ni « en poste », ni dans le partage des
+    // ventes, ni dans les heures planifiées. L'écran le montre à part, avec son motif.
+    if (function_exists('eqaAbsencesDuJour') && $planParShop !== []) {
+        $absJ = eqaAbsencesDuJour(array_keys($planParShop), $date);
+        foreach ($planParShop as $sidA => $LA) {
+            foreach ($LA as $iA => $qA) {
+                $mA = $absJ['id'][(int) ($qA['idSch'] ?? 0)] ?? ($absJ['cle'][(string) $sidA][(int) $qA['idEmp'] . '|' . $qA['debut']] ?? null);
+                if ($mA !== null) { $planParShop[$sidA][$iA]['absence'] = $mA; }
+            }
+        }
     }
 
     $GLOBALS['_profilHRefaits'] = 0;
@@ -2697,7 +2710,7 @@ function exJourCalcul(): array
         $nbParH = [];
         foreach ($heuresCa as $h9 => $ca9) {
             $nb9 = 0;
-            foreach ($planM as $q9) { if ($q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
+            foreach ($planM as $q9) { if (empty($q9['absence']) && $q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
             $nbParH[$h9] = $nb9;
         }
         // Le COÛT de chaque service au taux du panel, et ce qu'il laisse dans
@@ -2713,7 +2726,7 @@ function exJourCalcul(): array
         foreach ($planM as $i9 => $p9) {
             $att = 0.0;
             foreach ($heuresCa as $h9 => $ca9) {
-                if ($ca9 <= 0 || $p9['hD'] >= $h9 + 1 || $p9['hF'] <= $h9) { continue; }
+                if ($ca9 <= 0 || !empty($p9['absence']) || $p9['hD'] >= $h9 + 1 || $p9['hF'] <= $h9) { continue; }
                 $att += $ca9 / max(1, $nbParH[$h9]);
             }
             $planM[$i9]['ca'] = $att > 0 ? round($att, 2) : null;
@@ -2726,7 +2739,7 @@ function exJourCalcul(): array
             $planM[$i9]['cout'] = $cout;
             $planM[$i9]['horsPnl'] = $fr;
             $planM[$i9]['postes'] = $tx['postes'] ?? [];
-            $hPlan += $p9['h'];
+            if (empty($p9['absence'])) { $hPlan += $p9['h']; }   // une absence payée : son coût reste, pas ses heures de présence
             if ($fr) {
                 $hFr += $p9['h']; $coutFr += $cout ?? 0.0;
                 if (!in_array($p9['nom'], $frNoms, true)) { $frNoms[] = $p9['nom']; }
@@ -2738,7 +2751,7 @@ function exJourCalcul(): array
                 }
             }
         }
-        foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF'], $planM[$i9]['idEmp']); }
+        foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF'], $planM[$i9]['idEmp'], $planM[$i9]['idSch']); }
         usort($planM, static fn ($a9, $b9) => [$a9['debut'], $a9['nom']] <=> [$b9['debut'], $b9['nom']]);
 
         $pph = exPartProHabituelle($id, $date);
@@ -4790,17 +4803,6 @@ function ep_pwa_task_detail(): array
 }
 
 /**
- * GET /fonds — le fonds marketing et les redevances.
- *
- * La donnée n'est PAS recopiée : elle est lue en direct sur le module
- * marketing, déployé sur le même serveur. Dupliquer un grand livre donnerait
- * deux soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait.
- *
- * Le relais se fait côté serveur parce que le module vit sous un autre chemin :
- * un appel depuis le navigateur y serait une requête d'origine différente, que
- * rien n'autorise aujourd'hui.
- */
-/**
  * Un appel au module marketing, quelle que soit la méthode.
  *
  * Le fonds est tenu par le module ; le cockpit ne recopie pas son grand livre,
@@ -4847,6 +4849,10 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
 
     if ($rep === false) { return ['code' => 0, 'corps' => null, 'erreur' => $err !== '' ? $err : 'module injoignable']; }
     $j = json_decode((string) $rep, true);
+    // Un 204 (un retrait, au standard) n'a pas de corps : c'est une réussite, pas une réponse illisible.
+    if (!is_array($j) && $code >= 200 && $code < 300 && trim((string) $rep) === '') {
+        return ['code' => $code, 'corps' => null, 'erreur' => null, 'brut' => null];
+    }
     if (!is_array($j)) {
         return ['code' => $code, 'corps' => null,
             'erreur' => $code >= 400 ? 'HTTP ' . $code : 'réponse illisible'];
@@ -4856,9 +4862,29 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
     $donnees = array_key_exists('data', $j) ? $j['data'] : $j;
     $msg = null;
     if ($code >= 400) {
-        $msg = (string) ($j['description'] ?? $j['message'] ?? ('HTTP ' . $code));
+        // Routes d'avant : `description` (ou `message`) ; routes au standard : `error.message`.
+        $std = is_array($j['error'] ?? null) ? ($j['error']['message'] ?? null) : null;
+        $msg = (string) ($j['description'] ?? $j['message'] ?? $std ?? ('HTTP ' . $code));
     }
     return ['code' => $code, 'corps' => $donnees, 'erreur' => $msg, 'brut' => $j];
+}
+
+/**
+ * GET /diagnostic/marketing-service — le canal du cockpit vers le module Marketing répond-il ? (21/11/2026)
+ *
+ * Une lecture sans effet (les types de campagne) par marketingAppel, avec le jeton de service : c'est le chemin par
+ * lequel le fonds et les types de campagne s'écrivent. Rend le code HTTP du module et si le fichier du jeton est
+ * lisible — jamais le jeton, jamais les données.
+ */
+function ep_diagnostic_marketing_service(): array
+{
+    $fichier = (string) (setting('marketingServiceTokenFile') ?: '/var/www/private/marketing/service-token');
+    $jeton = is_readable($fichier) && strlen(trim((string) @file_get_contents($fichier))) >= 32;
+    $r = marketingAppel('GET', '/campaign-types');
+    return ['jetonLisible' => $jeton, 'code' => $r['code'], 'erreur' => $r['erreur'],
+        'types' => is_array($r['corps']['types'] ?? null) ? count($r['corps']['types'])
+            : (is_array($r['corps']) && array_is_list($r['corps']) ? count($r['corps']) : null),
+        'ok' => $r['code'] === 200 && $r['erreur'] === null];
 }
 
 /**
@@ -4935,175 +4961,7 @@ function fondsRoyaltiesCalcul(string $mois): ?array
     return ['month' => $mois, 'du' => $du, 'au' => $au, 'fin' => $fin, 'shops' => $shops];
 }
 
-function ep_fonds(): array
-{
-    // Lecture DIRECTE des tables mar_* : le module marketing autonome
-    // disparaît, son API avec lui. Les tables restent — c'est la même base
-    // partagée — et le grand livre survit tel quel. Le relais HTTP d'avant
-    // vivait dans marketingAppel(), conservé le temps de la bascule.
-    $out = ['base' => 'tables mar_* (base partagée)', 'ledger' => null, 'leviers' => [],
-        'royalties' => null, 'recurrences' => [], 'magasins' => [], 'campagnes' => [],
-        'fournisseurs' => [], 'erreurs' => [], 'manque' => [], 'source' => null];
-    try {
-        $mvts = Db::rows('SELECT m.*, s.name AS shop_name, c.name AS campaign_name,
-                                 l.label AS lever_label, l.color_hex AS lever_color_hex
-                          FROM mar_fund_movement m
-                          LEFT JOIN mar_shop s ON s.id = m.shop_id
-                          LEFT JOIN mar_campaign c ON c.id = m.campaign_id
-                          LEFT JOIN mar_lever l ON l.id = m.lever_id
-                          ORDER BY m.movement_date, m.id');
-    } catch (PDOException $e) {
-        $out['erreurs'][] = 'tables mar_fund_* absentes : le module marketing n’a jamais été installé sur cette base';
-        return $out;
-    }
-
-    $out['fournisseurs'] = array_map(fn ($f) => ['id' => (string) $f['id'], 'nom' => (string) $f['name']],
-        Db::rows('SELECT id, name FROM con_supplier ORDER BY name'));
-
-    // Le grand livre, période par période (mois civils), avec les soldes.
-    $periodes = [];
-    $solde = 0.0;
-    foreach ($mvts as $m) {
-        $cle = substr((string) $m['movement_date'], 0, 7) . '-01';
-        if (!isset($periodes[$cle])) {
-            $periodes[$cle] = ['period_key' => $cle, 'entries' => [], 'exits' => [],
-                'entries_total' => 0.0, 'exits_total' => 0.0,
-                'opening_balance' => $solde, 'closing_balance' => $solde];
-        }
-        $ligne = [
-            'id' => (int) $m['id'], 'movement_date' => $m['movement_date'],
-            'direction' => $m['direction'], 'label' => $m['label'],
-            'amount' => (float) $m['amount'], 'source' => $m['source'],
-            'shop_id' => $m['shop_id'] !== null ? (int) $m['shop_id'] : null,
-            'shop_name' => $m['shop_name'], 'campaign_id' => $m['campaign_id'] !== null ? (int) $m['campaign_id'] : null,
-            'campaign_name' => $m['campaign_name'],
-            'lever_id' => $m['lever_id'] !== null ? (int) $m['lever_id'] : null,
-            'lever_label' => $m['lever_label'], 'lever_color_hex' => $m['lever_color_hex'],
-            'supplier_name' => $m['supplier_name'], 'document_ref' => $m['document_ref'],
-            'is_investment' => (int) ($m['is_investment'] ?? 0) === 1,
-            'recurrence_id' => ($m['recurrence_id'] ?? null) !== null ? (int) $m['recurrence_id'] : null,
-        ];
-        if ($m['direction'] === 'OUT') {
-            $periodes[$cle]['exits'][] = $ligne;
-            $periodes[$cle]['exits_total'] += (float) $m['amount'];
-            $solde -= (float) $m['amount'];
-        } else {
-            $periodes[$cle]['entries'][] = $ligne;
-            $periodes[$cle]['entries_total'] += (float) $m['amount'];
-            $solde += (float) $m['amount'];
-        }
-        $periodes[$cle]['closing_balance'] = $solde;
-    }
-    $out['ledger'] = ['granularity' => 'month', 'periods' => array_values($periodes),
-        'closing_balance' => $solde];
-
-    // Les leviers, avec la dépense qui leur est imputée. Le ROI du module
-    // reposait sur des objectifs de campagne qui ne sont pas repris : absent,
-    // pas inventé.
-    $out['leviers'] = array_map(fn ($l) => [
-        'lever_id' => (int) $l['id'], 'lever_code' => $l['code'], 'lever_label' => $l['label'],
-        'color_hex' => $l['color_hex'], 'spent_amount' => (float) $l['spent'],
-        'roi_value' => null,
-    ], Db::rows("SELECT l.*, COALESCE(SUM(CASE WHEN m.direction = 'OUT' THEN m.amount END), 0) AS spent
-                 FROM mar_lever l
-                 LEFT JOIN mar_fund_movement m ON m.lever_id = l.id
-                 WHERE l.is_active = 1
-                 GROUP BY l.id ORDER BY l.sort_order, l.id"));
-
-    try {
-        $out['recurrences'] = array_map(fn ($r) => [
-            'id' => (int) $r['id'], 'direction' => $r['direction'], 'frequency' => $r['frequency'],
-            'label' => $r['label'], 'amount' => (float) $r['amount'],
-            'starts_on' => $r['starts_on'], 'ends_on' => $r['ends_on'],
-            'shop_name' => $r['shop_name'],
-        ], Db::rows('SELECT r.*, s.name AS shop_name FROM mar_fund_recurrence r
-                     LEFT JOIN mar_shop s ON s.id = r.shop_id ORDER BY r.starts_on DESC, r.id DESC'));
-    } catch (PDOException $e) { /* table absente sur une vieille base */ }
-
-    $out['magasins'] = array_map(fn ($s2) => ['id' => (int) $s2['id'], 'name' => (string) $s2['name'],
-        'city' => $s2['city'] ?? ''], Db::rows('SELECT id, name, city FROM mar_shop ORDER BY name'));
-    $out['campagnes'] = array_map(fn ($c2) => ['id' => (int) $c2['id'], 'name' => (string) $c2['name']],
-        Db::rows('SELECT id, name FROM mar_campaign ORDER BY starts_on DESC, id DESC'));
-
-    // Les redevances : le calcul partagé fondsRoyaltiesCalcul() — grille des
-    // taux depuis la FICHE BOUTIQUE du panel (royalty_*_percentage), chiffre
-    // d'affaires du mois choisi depuis l'API de ventes (borné au jour même
-    // quand ce mois est en cours). Les écritures ROYALTY déjà passées au
-    // fonds pour ce mois sont rappelées en face du dû théorique. Factures et
-    // règlements émis relèvent du realm ADMIN (compte « admin ERP »).
-    $royFait = false;
-    // ?mois=AAAA-MM : la période s'arrête à l'écran, l'API recalcule CA, taux
-    // et dû pour ce mois-là. Un mois invalide ou futur retombe sur le courant
-    // — un CA qui n'existe pas encore ne se facture pas.
-    $moisCle = (string) ($_GET['mois'] ?? '');
-    if (!preg_match('/^\d{4}-\d{2}$/', $moisCle) || $moisCle > date('Y-m')) { $moisCle = date('Y-m'); }
-    $calc = fondsRoyaltiesCalcul($moisCle);
-    if ($calc !== null) {
-        // Écritures ROYALTY du mois déjà au fonds, par magasin.
-        $ecrit = [];
-        foreach ($mvts as $m) {
-            if (($m['source'] ?? '') === 'ROYALTY' && $m['direction'] === 'IN' && $m['shop_id'] !== null
-                && (str_starts_with((string) $m['movement_date'], $moisCle)
-                    || str_starts_with((string) ($m['period_from'] ?? ''), $moisCle))) {
-                $ecrit[(int) $m['shop_id']][] = ['amount' => (float) $m['amount'], 'label' => $m['label']];
-            }
-        }
-        $shops = [];
-        foreach ($calc['shops'] as $s) {
-            $rates = []; $dues = []; $duTotal = 0.0; $aDu = false; $duMkt = null;
-            foreach ($s['sortes'] as $k) {
-                $rates[] = ['code' => $k['cle'], 'label' => $k['label'], 'rate_pct' => round($k['taux'] * 100, 2)];
-                if ($k['du'] !== null) {
-                    $dues[] = ['code' => $k['code'], 'label' => $k['label'],
-                        'rate_pct' => round($k['taux'] * 100, 2), 'amount' => $k['du'],
-                        // Seule la sorte Marketing part au fonds : l'écran le
-                        // dit ligne à ligne, sinon le « Dû » total laisse
-                        // croire que tout alimente la caisse commune.
-                        'au_fonds' => $k['code'] === 'MARKETING'];
-                    $duTotal += $k['du']; $aDu = true;
-                    if ($k['code'] === 'MARKETING') { $duMkt = $k['du']; }
-                }
-            }
-            $shops[] = [
-                'shop_id' => $s['shop_id'], 'shop_name' => $s['shop_name'], 'city' => $s['city'],
-                'revenue_amount' => $s['ca'], 'rates' => $rates,
-                'royalties_enabled' => $s['enabled'],
-                'billing_frequency' => $s['billing_frequency'],
-                // Le dû du mois TOUTES sortes confondues ; le détail sorte par
-                // sorte suit dans `dues`. Au fonds ne part que la sorte
-                // Marketing — `due_marketing` la donne seule.
-                'due_theorique' => $aDu ? round($duTotal, 2) : null,
-                'due_marketing' => $duMkt !== null ? round($duMkt, 2) : null,
-                'dues' => $dues,
-                'movements' => $ecrit[$s['shop_id']] ?? [],
-            ];
-        }
-        $roy = ['month' => $moisCle, 'shops' => $shops,
-            'source' => 'API panel — fiche boutique (taux) et ventes du mois (CA, jour même)',
-            'erp' => ['available' => true]];
-        if (ErpApi::disponible()) {
-            // Réponses enveloppées ({invoices: […]}, {settlements: […]}).
-            $fac = ErpApi::get('/admin/royalties/invoices');
-            $reg = ErpApi::get('/admin/royalties/settlements');
-            if (is_array($fac)) { $roy['factures'] = array_slice((array) ($fac['invoices'] ?? (analyseListe($fac) ?: [])), 0, 24); }
-            if (is_array($reg)) { $roy['reglements'] = array_slice((array) ($reg['settlements'] ?? (analyseListe($reg) ?: [])), 0, 24); }
-        } else {
-            $roy['facturesNote'] = 'Factures et règlements émis : renseignez le compte admin ERP (Mon compte) pour les lire.';
-        }
-        $out['royalties'] = $roy;
-        $royFait = true;
-    }
-    if (!$royFait) {
-        $out['manque'][] = [
-            'champ' => 'Redevances par magasin',
-            'quoi' => 'la grille des taux, les chiffres d’affaires du mois et l’écriture des redevances au fonds',
-            'source' => 'La grille et le CA se lisent sur l’API du panel : configurez le compte consultant '
-                . '(Mon compte) pour les afficher ici. ' . (PanelApi::$lastError ? 'Dernière erreur : ' . PanelApi::$lastError : ''),
-        ];
-    }
-    $out['source'] = 'tables mar_* (module marketing repris)';
-    return $out;
-}
+// GET /fonds (ep_fonds) : marketing/src/fonds.php, lu au module Marketing par son API (21/11/2026).
 
 /**
  * La grille d'un produit dans un emplacement : combien de colonnes, combien de
@@ -8246,106 +8104,7 @@ function ep_ia_statut(): array
     return Anthropic::statut();
 }
 
-/**
- * GET /marketing — campagnes, calendrier et types, lus dans les tables mar_*.
- *
- * Le module marketing autonome va disparaître : le cockpit reprend Pilotage →
- * Calendrier / Campagnes / Types de campagne en lisant DIRECTEMENT ses tables,
- * comme il le fait pour pla_* — il n'y a plus d'API à appeler quand le module
- * n'existe plus. Les tables restent les mêmes : rien à migrer, l'historique
- * des campagnes survit à la suppression du module.
- */
-function ep_mkt(): array
-{
-    try {
-        $marques = Db::rows('SELECT id, name FROM mar_brand ORDER BY id');
-    } catch (PDOException $e) {
-        return ['indispo' => true,
-            'raison' => 'Les tables mar_* sont absentes de la base partagée : le module marketing n’a jamais été installé ici.'];
-    }
-    $statuts = array_map(fn ($s) => ['code' => $s['code'], 'nom' => $s['label'],
-        'texte' => $s['text_hex'], 'fond' => $s['bg_rgba'], 'ordre' => (int) $s['sort_order']],
-        Db::rows('SELECT * FROM mar_campaign_status ORDER BY sort_order, id'));
-
-    // Les types, avec TOUT ce que le module en connaissait : description, couleur,
-    // icône et levier lié. N'en lire qu'une partie donnait une fiche à moitié
-    // vide dès qu'un type venait de l'assistant — et la réécrivait à moitié
-    // vide au premier enregistrement.
-    //
-    // `lever_label` : le badge du type s'il en porte un, sinon le nom du levier
-    // lié. Même COALESCE que le module, pour que les deux affichent le même mot.
-    // `default_lever_code` reste lu en dernier recours : les types d'avant la
-    // liaison ne portent que ça.
-    $colLevier = mktTypeAColonne('lever_id');
-    $sqlTypes = $colLevier
-        ? 'SELECT t.*, COALESCE(t.lever_badge_label, l.label) AS lever_label, l.color_hex AS lever_color
-             FROM mar_campaign_type t LEFT JOIN mar_lever l ON l.id = t.lever_id
-            ORDER BY t.sort_order, t.id'
-        : 'SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id';
-    $compte = static fn (string $sql): string => str_replace('SELECT t.*',
-        'SELECT t.*, (SELECT COUNT(*) FROM mar_campaign c WHERE c.type_id = t.id) AS campagnes', $sql);
-    // La liste des colonnes n'est qu'une lecture d'`information_schema` : si
-    // elle se trompe, l'écran des campagnes entier tombait en 500 sur une
-    // jointure. Le repli sans levier reste lisible — badge du type d'un côté,
-    // couleur du levier en moins — et se voit tout de suite.
-    try { $lignesTypes = Db::rows($compte($sqlTypes)); }
-    catch (PDOException $e) {
-        $lignesTypes = Db::rows($compte('SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id'));
-    }
-    $types = array_map(fn ($t) => [
-        'id' => (int) $t['id'], 'code' => $t['code'], 'nom' => $t['label'],
-        'description' => $t['description'] ?? null,
-        'levier' => $t['lever_label'] ?? $t['default_lever_code'] ?? null,
-        'levierId' => isset($t['lever_id']) && $t['lever_id'] !== null ? (int) $t['lever_id'] : null,
-        'levierBadge' => $t['lever_badge_label'] ?? null,
-        'levierCouleur' => $t['lever_color'] ?? null,
-        'kpi' => $t['default_kpi_label'],
-        'couleur' => $t['color_hex'] ?? null,
-        'icone' => $t['icon_key'] ?? null, 'iconePath' => $t['icon_path'] ?? null,
-        'ordre' => (int) $t['sort_order'],
-        'actif' => (bool) $t['is_active'],
-        // Compté en base, pas sur les campagnes chargées : c'est lui qui décide
-        // si « Supprimer » a un sens, et une liste tronquée le rendrait faux.
-        'nCampagnes' => (int) ($t['campagnes'] ?? 0)],
-        $lignesTypes);
-    $nShops = [];
-    foreach (Db::rows('SELECT campaign_id, COUNT(*) n FROM mar_campaign_shop GROUP BY campaign_id') as $r) {
-        $nShops[(int) $r['campaign_id']] = (int) $r['n'];
-    }
-    $campagnes = [];
-    foreach (Db::rows('SELECT c.*, t.label AS type_label, t.color_hex AS type_color,
-                              s.label AS status_label, s.text_hex, s.bg_rgba
-                       FROM mar_campaign c
-                       LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                       LEFT JOIN mar_campaign_status s ON s.code = c.status_code
-                       ORDER BY c.starts_on IS NULL, c.starts_on DESC, c.id DESC') as $c) {
-        $tid = $c['type_id'] !== null ? (int) $c['type_id'] : null;
-        $campagnes[] = [
-            'id' => (int) $c['id'], 'nom' => (string) $c['name'],
-            'typeId' => $tid, 'type' => $c['type_label'], 'typeCouleur' => $c['type_color'],
-            'scope' => (string) $c['scope'],
-            'statut' => (string) $c['status_code'], 'statutNom' => $c['status_label'] ?? $c['status_code'],
-            'statutTexte' => $c['text_hex'] ?? '#666666', 'statutFond' => $c['bg_rgba'] ?? 'rgba(120,116,110,.12)',
-            'debut' => $c['starts_on'], 'fin' => $c['ends_on'],
-            'budget' => (float) $c['budget_amount'], 'depense' => (float) $c['spent_amount'],
-            'nBoutiques' => $nShops[(int) $c['id']] ?? 0,
-            'image' => $c['image_url'] ?: null,
-        ];
-    }
-    // Les leviers et la bibliothèque d'icônes accompagnent les types : l'écran
-    // ne redéclare ni les uns ni les autres, il affiche ce que le serveur sert.
-    $leviers = [];
-    try {
-        $leviers = array_map(fn ($l) => ['id' => (int) $l['id'], 'code' => $l['code'],
-            'nom' => $l['label'], 'couleur' => $l['color_hex']],
-            Db::rows('SELECT id, code, label, color_hex FROM mar_lever WHERE is_active = 1 ORDER BY sort_order, id'));
-    } catch (PDOException $e) { /* mar_lever absente : le choix de levier se réduit à « aucun » */ }
-
-    return ['campagnes' => $campagnes, 'types' => $types, 'statuts' => $statuts,
-        'leviers' => $leviers, 'icones' => mktIcones(),
-        'marqueId' => $marques ? (int) $marques[0]['id'] : null,
-        'marque' => $marques ? (string) $marques[0]['name'] : ''];
-}
+// GET /marketing (ep_mkt) : marketing/src/campagnes.php, lu au module Marketing par son API (21/11/2026).
 
 /**
  * GET /reputation — la réputation digitale du réseau, magasin par magasin.
@@ -8657,18 +8416,12 @@ function ep_budget_campagnes(): array
 {
     ensureCampagneObjectifs();
     $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
-    try {
-        // Le TYPE voyage avec la campagne : les bandes se rangent par type,
-        // une ligne chacun — sinon deux campagnes qui se chevauchent se
-        // marchent dessus et aucune ne se lit.
-        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, s.label AS statut,
-                                  t.label AS type_label, t.color_hex AS type_color
-                             FROM mar_campaign c LEFT JOIN mar_campaign_status s ON s.code = c.status_code
-                             LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                            WHERE (c.starts_on IS NOT NULL AND c.starts_on <= ? AND (c.ends_on IS NULL OR c.ends_on >= ?))
-                            ORDER BY c.starts_on', [$exercice . '-12-31', $exercice . '-01-01']);
-    } catch (PDOException $e) {
-        return ['indispo' => true, 'raison' => 'Les tables du module marketing (mar_*) sont absentes de cette base.'];
+    // Les campagnes de l'exercice, lues au module Marketing (marketing/src/campagnes.php, 21/11/2026). Le TYPE voyage
+    // avec la campagne : les bandes se rangent par type, une ligne chacun — sinon deux campagnes qui se chevauchent se
+    // marchent dessus et aucune ne se lit.
+    [$camps, $errC] = campagnesDeLExercice($exercice);
+    if ($camps === null) {
+        return ['indispo' => true, 'raison' => 'Le module Marketing ne rend pas les campagnes : ' . $errC . '.'];
     }
     $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
     $nomDe = [];
@@ -8724,8 +8477,11 @@ function ep_budget_campagnes(): array
     if ($camp !== null) {
         // Le périmètre de la campagne : ses magasins, ou tout le réseau.
         $perim = [];
-        foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
-            $sid = (string) $r['shop_id'];
+        [$ids, $errB] = campagneBoutiques((int) $camp['id']);   // au module Marketing
+        if ($ids === null) {
+            return ['indispo' => true, 'raison' => 'Le module Marketing ne rend pas les boutiques de la campagne : ' . $errB . '.'];
+        }
+        foreach ($ids as $sid) {
             if (isset($nomDe[$sid])) { $perim[] = $sid; }
         }
         if ($perim === []) { $perim = array_keys($nomDe); }

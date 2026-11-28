@@ -704,14 +704,16 @@ function ep_visites_campagnes(): array
 function viCampagnesDe(string $shop, string $auj): array
 {
     $out = ['shop' => $shop, 'aujourdhui' => $auj, 'campagnes' => [], 'motifs' => []];
-    try {
-        $camps = Db::rows("SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, t.label AS type_label
-                             FROM mar_campaign c LEFT JOIN mar_campaign_type t ON t.id = c.type_id
-                            WHERE c.starts_on IS NOT NULL AND c.ends_on IS NOT NULL
-                              AND c.starts_on <= ? AND c.ends_on >= ?
-                              AND c.status_code NOT IN ('draft', 'cancelled', 'canceled', 'archived')
-                            ORDER BY c.starts_on", [mesDecale($auj, 30), mesDecale($auj, -60)]);
-    } catch (PDOException $e) { $out['indispo'] = true; $out['motifs'][] = 'tables marketing absentes'; return $out; }
+    // Les campagnes qui entourent la visite (commencées dans 30 jours au plus, finies il y a 60 jours au plus, ni
+    // brouillon ni annulée ni archivée), lues au module Marketing (marketing/src/campagnes.php, 21/11/2026).
+    [$toutes, $err] = campagnesModule();
+    if ($toutes === null) { $out['indispo'] = true; $out['motifs'][] = 'module Marketing muet : ' . $err; return $out; }
+    $avant = mesDecale($auj, 30); $apres = mesDecale($auj, -60);
+    $camps = array_values(array_filter($toutes, static fn ($c) => is_array($c)
+        && ($c['starts_on'] ?? null) !== null && ($c['ends_on'] ?? null) !== null
+        && $c['starts_on'] <= $avant && $c['ends_on'] >= $apres
+        && !in_array((string) ($c['status_code'] ?? ''), ['draft', 'cancelled', 'canceled', 'archived'], true)));
+    usort($camps, static fn ($a, $b) => [$a['starts_on'], (int) $a['id']] <=> [$b['starts_on'], (int) $b['id']]);
     ensureCampagneObjectifs();
     // Le budget du magasin, pour dire « objectif à fixer » avec un chiffre.
     $budgets = [];
@@ -724,7 +726,8 @@ function viCampagnesDe(string $shop, string $auj): array
     foreach ($camps as $c) {
         $id = (int) $c['id'];
         // Le périmètre : les magasins de la campagne, ou tout le réseau.
-        $perim = array_map(fn ($r) => (string) $r['shop_id'], Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$id]));
+        $perim = campagneShopIds($c);   // ses boutiques, rendues par la liste du module
+        if ($perim === null) { $out['indispo'] = true; $out['motifs'][] = 'module Marketing : les boutiques des campagnes manquent'; return $out; }
         if ($perim !== [] && !in_array($shop, $perim, true)) { continue; }
         $du = (string) $c['starts_on']; $au = (string) $c['ends_on'];
         $motifs = [];
@@ -1089,6 +1092,8 @@ function wr_visites_delete(string $id): array
         }
         $n['reponses'] = Db::exec('DELETE FROM con_visite_point WHERE visite_id = ?', [$vid]);
         if (function_exists('ensureVisitesCadre')) { $n['taches'] = Db::exec('DELETE FROM con_consultant_tache WHERE visite_id = ?', [$vid]); }
+        // Les contrôles qualité de la visite (26/11/2026) restent ceux du magasin, détachés.
+        if (function_exists('aqDetacherVisites')) { aqDetacherVisites('visite_id = ?', [$vid]); }
         Db::exec('DELETE FROM con_visite WHERE id = ?', [$vid]);
         $pdo->commit();
     } catch (Throwable $e) {
@@ -1189,6 +1194,7 @@ function wr_visites_remise(): array
         Db::exec('DELETE FROM con_visite_point WHERE visite_id <= ?', [$max]);
         if (function_exists('ensureVisitesCadre')) { Db::exec('DELETE FROM con_consultant_tache WHERE visite_id IS NOT NULL AND visite_id <= ?', [$max]); }
         if (function_exists('hdkTable')) { Db::exec('DELETE FROM con_hdk_mission WHERE visite_id <= ?', [$max]); }
+        if (function_exists('aqDetacherVisites')) { aqDetacherVisites('visite_id <= ?', [$max]); }
         Db::exec('DELETE FROM con_visite WHERE id <= ?', [$max]);
         $pdo->commit();
     } catch (Throwable $e) {

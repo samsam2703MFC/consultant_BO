@@ -475,6 +475,7 @@ class ComplaintService
             'requested_action' => $r['requested_action'] ? ($labels[$r['requested_action']] ?? $r['requested_action']) : null,
             'compensation' => $r['compensation_method'] ? ($labels[$r['compensation_method']] ?? $r['compensation_method']) : null,
             'production_response' => (string) ($r['production_response'] ?? ''),
+            'seen' => $r['seen_label'] ?? null, // [367] grupa produkcji widziała (tablet) : data · grupa · osoba
             'quantity' => $qty, 'accepted_quantity' => $acc, 'ppc' => $ppc, 'carton_price' => $price,
             'cartons' => $qty > 0 ? (int) ceil($qty / $ppc - 0.000001) : 0,
             'accepted_cartons' => $acc !== null && $acc > 0 ? (int) ceil($acc / $ppc - 0.000001) : null,
@@ -483,6 +484,20 @@ class ComplaintService
             'attachments' => $attachments,
             'shipped' => $shipped,
         ];
+    }
+
+    /**
+     * [391] Fenêtre de détail sans montants (profils autres que Finanse et CEO, règle [312], décision du 23.11.2026) :
+     * on garde pièces et cartons, on retire prix du carton, valeurs et totaux des lignes envoyées.
+     */
+    public static function withoutAmounts(array $d): array
+    {
+        $d['carton_price'] = null;
+        $d['value'] = null;
+        $d['accepted_value'] = null;
+        $d['shipped'] = array_map(fn($l) => ['price_carton' => null, 'total' => null] + $l, $d['shipped'] ?? []);
+        $d['values'] = false;
+        return $d;
     }
 
     public function getComplaints()

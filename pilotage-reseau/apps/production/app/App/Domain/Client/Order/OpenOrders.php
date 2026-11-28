@@ -34,20 +34,34 @@ final class OpenOrders
             . CustomerOrderStatus::IN_TRANSIT . " ELSE {$alias}.status END";
     }
 
-    /** Zamówienia otwarte liczone w ilościach : bez gratisów. */
+    /**
+     * [408] Zamówienia otwarte do zrobienia i wysłania (produkcja, stan, plan, załadunek) : RAZEM z gratisami — gratis
+     * jest produkowany, kompletowany i wysyłany jak każde zamówienie (WDT zamyka go razem z innymi zamówieniami klienta
+     * z tego dnia). Audyt z 23.11.2026 : gratis 1527 (Brownies) nie był widoczny w planie zespołu.
+     */
+    public static function demandSql(string $alias = 'co'): string
+    {
+        return self::sql($alias);
+    }
+
+    /**
+     * Zamówienia otwarte w WARTOŚCIACH i statystykach handlowych (rentowność, płynność, średnie zamówienia) : bez
+     * gratisów. Nigdy dla ilości do zrobienia albo wysłania — tam demandSql() (tests/freebie_demand_test.php).
+     */
     public static function quantitySql(string $alias = 'co'): string
     {
         return self::sql($alias) . " AND COALESCE({$alias}.is_freebie, 0) = 0";
     }
 
     /**
-     * Widok załadunku (logistyka) : zamówienia otwarte oraz już wysłane, bez zarchiwizowanych bez wysyłki,
-     * historycznego statusu 4 i gratisów — dzień po wysyłce zostaje widoczny w załadunku i tygodniu ciężarówek.
+     * Widok załadunku (logistyka) : zamówienia otwarte oraz już wysłane, bez zarchiwizowanych bez wysyłki i
+     * historycznego statusu 4 — dzień po wysyłce zostaje widoczny w załadunku i tygodniu ciężarówek. [408] Gratisy
+     * jadą na tej samej ciężarówce : liczą się (kartony, palety, waga).
      */
     public static function loadingSql(string $alias = 'co'): string
     {
         return "({$alias}.status = " . CustomerOrderStatus::PENDING . " OR {$alias}.status = " . CustomerOrderStatus::IN_TRANSIT
-            . " OR {$alias}.status = " . CustomerOrderStatus::COMPLETED . ") AND COALESCE({$alias}.is_freebie, 0) = 0";
+            . " OR {$alias}.status = " . CustomerOrderStatus::COMPLETED . ")";
     }
 
     /** Stan magazynu do porównania z zamówieniami : kartony wolne (1) i już na paletach (2). */

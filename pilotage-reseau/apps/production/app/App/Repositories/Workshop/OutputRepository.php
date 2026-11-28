@@ -40,7 +40,7 @@ final class OutputRepository extends WorkshopRepository
         $out = [];
         foreach ($this->all('SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons, MIN(co.expected_shipping_date) AS next_ship, COUNT(DISTINCT co.id) AS orders
                 FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
-                WHERE ' . \App\Domain\Client\Order\OpenOrders::quantitySql('co') . " AND co.expected_shipping_date BETWEEN ? AND ? AND cop.id_product IN ({$in})
+                WHERE ' . \App\Domain\Client\Order\OpenOrders::demandSql('co') . " AND co.expected_shipping_date BETWEEN ? AND ? AND cop.id_product IN ({$in})
                 GROUP BY cop.id_product HAVING cartons > 0", [$from, $to]) as $r) {
             $out[(int) $r['id_product']] = ['cartons' => (float) $r['cartons'], 'next_ship' => $r['next_ship'], 'orders' => (int) $r['orders']];
         }

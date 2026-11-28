@@ -100,13 +100,38 @@
   const PK = () => { const b = PER(); return b.du + '|' + b.au; };
   const PQ = () => { const b = PER(); return '&du=' + b.du + '&au=' + b.au + '&prec=' + b.prec; };
 
-  /** Une évolution en flèche : ▲ vert à +5 % et plus · ▶ gris entre −5 et +5 % · ▼ orange de −5 à −15 % · ▼ rouge au-delà. */
+  /** Une évolution en flèche, face à la période d'avant (26/11/2026, DESIGN_SYSTEM.md §7.13 : l'écart au N-1 vert au-dessus,
+   * or en dessous) : ▲ vert à +5 % et plus · ▶ gris entre −5 et +5 % · ▼ or à −5 % et moins. La valeur signée est toujours
+   * écrite à côté (vert et or se distinguent mal pour un daltonien). Les classes warn (−5 à −15 %) et down (au-delà) restent :
+   * même couleur, la valeur dit l'ampleur. */
   function fleche(v) {
     if (v == null || isNaN(v)) { return '<span class="an-f mu">—</span>'; }
     const [cl, f] = v >= 5 ? ['up', '▲'] : v > -5 ? ['flat', '▶'] : v > -15 ? ['warn', '▼'] : ['down', '▼'];
     return `<span class="an-f ${cl}">${f} ${sg(v)}</span>`;
   }
-  const LEGENDE_F = '<span class="an-legf"><span class="an-f up">▲</span> +5 % et plus <span class="an-f flat">▶</span> stable <span class="an-f warn">▼</span> −5 à −15 % <span class="an-f down">▼</span> −15 % et moins</span>';
+  const LEGENDE_F = '<span class="an-legf"><span class="an-f up">▲</span> +5 % et plus <span class="an-f flat">▶</span> stable <span class="an-f down">▼</span> −5 % et moins</span>';
+  /** L'échelle de la marge brute (§7.13) : sous 40 % --stop « faible », 40–60 % --prize « à surveiller », 60 % et plus --green « bonne ». */
+  const zoneMarge = v => v == null || isNaN(v) ? null : v < 40 ? { sig: 'stop', cl: 'ko', mot: 'faible' } : v < 60 ? { sig: 'prize', cl: 'att', mot: 'à surveiller' } : { sig: 'green', cl: 'ok', mot: 'bonne' };
+  const LEGENDE_M = '<span class="an-legf">marge brute : <span class="mz ko">sous 40 % faible</span> · <span class="mz att">40 à 60 % à surveiller</span> · <span class="mz ok">60 % et plus bonne</span></span>';
+  /** L'état d'une évolution en mots, derrière un point (le résumé) : en hausse (vert), stable (sans couleur), en baisse (or). */
+  const etatEvo = v => v == null || isNaN(v) ? null : v >= 5 ? { sig: 'green', mot: 'en hausse' } : v > -5 ? { sig: 'neutre', mot: 'stable' } : { sig: 'prize', mot: 'en baisse' };
+  /**
+   * Le résumé d'une vue (26/11/2026, DESIGN_SYSTEM.md §7.13, la forme de Mon équipe et des chiffres) : ligne 1, la valeur clé
+   * (700, le seul gras) et son état en mots derrière un point, ce qu'elle mesure, puis le contexte ; ligne 2, sous un filet,
+   * « À corriger » (des boutons qui mènent au geste qui existe déjà : ouvrir la fiche) ou, pour une page de pure lecture,
+   * « Ce qu'il faut retenir ». o : { aria, v, et, q, q2, ctx: [html], L: [{sig, txt, attr}], ok, retenir: [html] }.
+   */
+  function resume(o) {
+    const pt = s => `<i class="an-pt an-pt--${s}" aria-hidden="true"></i>`;
+    const L = o.L || [];
+    const l2 = o.retenir ? (o.retenir.length ? `<div class="an-res-l2 an-res-ret"><span class="an-res-t">Ce qu’il faut retenir</span><ul>${o.retenir.map(x => `<li>${x}</li>`).join('')}</ul></div>` : '')
+      : L.length ? `<div class="an-res-l2" role="region" aria-label="À corriger"><span class="an-res-t">À corriger</span><span class="an-res-l">${L.map(x => `<button type="button" class="btn btn--sm an-res-b" ${x.attr}>${pt(x.sig)}${x.txt}</button>`).join('')}${o.reste ? `<span class="an-res-reste">${o.reste}</span>` : ''}</span></div>`
+        : o.ok ? `<div class="an-res-l2"><p class="an-res-ok">${o.ok}</p></div>` : '';
+    return `<section class="an-res" aria-label="${esc(o.aria)}"><div class="an-res-l1${o.ctx && o.ctx.length ? '' : ' an-res-l1--court'}">
+        <div class="an-res-v"><span class="an-res-kv">${o.v}</span>${o.et ? `<span class="an-res-et">${o.et.sig !== 'neutre' ? pt(o.et.sig) : ''}${esc(o.et.mot)}</span>` : ''}</div>
+        <div class="an-res-q">${o.q}${o.q2 ? `<span>${o.q2}</span>` : ''}</div>
+        ${(o.ctx || []).map((c, i) => `<div class="an-res-c${i ? ' an-res-sep' : ''}">${c}</div>`).join('')}</div>${l2}</section>`;
+  }
 
   /* --- l'état et les lectures --------------------------------------------------------------------------------------- */
   const st = { shop: null, api: '../api/cockpit', el: null, vue: 'accueil', pid: null, groupe: null, jourF: 6, d: {}, err: {}, enCours: {}, prep: null, frais: false, cleBarre: null,
@@ -230,12 +255,10 @@
     return `<svg class="an-svg" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(o.titre || 'courbe')}">${g}</svg>`;
   }
   const barre = (v, max, coul = '#8D1D2C') => `<span class="an-bar"><i style="width:${(100 * Math.max(0, v || 0) / (max || 1)).toFixed(1)}%;background:${coul}"></i></span>`;
-  const kpi = (k, v, s, cl) => `<div class="an-kpi${cl ? ' ' + cl : ''}"><span class="k">${k}</span><span class="v">${v}</span>${s ? `<span class="s">${s}</span>` : ''}</div>`;
-  const Q = (n, question, reponse, corps, cl) => `<section class="an-carte an-qq${cl ? ' ' + cl : ''}"><div class="an-qh"><span class="an-qn">${n}</span><h4>${question}</h4></div><p class="an-rep">${reponse}</p>${corps || ''}</section>`;
+  const Q = (n, question, reponse, corps, cl) => `<section class="an-carte an-qq${cl ? ' ' + cl : ''}"><div class="an-qh"><span class="an-qn">${n}</span><h4>${question}</h4></div><div class="an-rep">${reponse}</div>${corps || ''}</section>`;
   const attente = () => '<div class="an-att"><span class="db-sk" style="height:12px;width:70%"></span><span class="db-sk" style="height:12px;width:45%"></span></div>';
   /** L'état d'une lecture pour une carte : null si elle est là, sinon le message (attente ou erreur). */
   const manque = (cle, quoi) => cle in st.d ? null : cle in st.err ? `<p class="an-err">${esc(quoi)} : ${esc(st.err[cle])}</p>` : attente();
-  const retenir = L => L.length ? `<section class="an-ret"><h4>Ce qu’il faut retenir</h4><ul>${L.map(x => `<li>${x}</li>`).join('')}</ul></section>` : '';
 
   /** Les mois depuis l'ouverture : pièces et chiffre, par jour du mois pour comparer des mois inégaux ; la flèche face au mois
    * d'avant dès le troisième mois (le premier est celui de l'ouverture, le deuxième ne se compare pas à un mois entamé). */
@@ -252,6 +275,7 @@
   }
   function periode(P) { return `du ${dfr(P.D.du)} au ${dfr(P.D.au)}`; }
   /** La courbe d'une période : « jour par jour », « semaine par semaine », « mois par mois ». */
+  const moisEnCours = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
   const parTranche = P => ({ jour: 'jour par jour', semaine: 'semaine par semaine', mois: 'mois par mois' }[P.D.pas]);
   /** Le seuil des listes « monte / baisse » : 60 pièces sur 13 semaines, à la longueur de la période (10 au moins). */
   const seuilQ = P => Math.max(10, Math.round(60 * P.jours / 91));
@@ -259,7 +283,8 @@
   /* --- A · l'entrée -------------------------------------------------------------------------------------------------- */
   function vueAccueil(P) {
     const T = P.tot, libs = P.sem.tranches;
-    // Le panier : les tickets de la semaine (Semaine), sinon des mois de la période qui ont leurs tickets (le mois entamé compris).
+    // Le panier : les tickets de la semaine (Semaine), sinon des mois de la période qui ont leurs tickets. /ventes/mensuel
+    // écarte le mois en cours (incomplet) : sur ce seul mois, on le dit au lieu de « pas de tickets relevés » (25/11/2026).
     const M = st.d.mens, SV = st.per.type === 'semaine' ? st.d['sv|' + PER().du] : null;
     const mm = M && Array.isArray(M.mois) ? M.mois.filter(m => m.tickets && m.ca && m.mois >= P.D.du.slice(0, 7) && m.mois <= P.D.au.slice(0, 7)) : [];
     const tickets = SV && SV.totaux ? SV.totaux.tickets : somme(mm.map(m => m.tickets)), caT = SV && SV.totaux ? SV.totaux.ca : somme(mm.map(m => m.ca));
@@ -267,19 +292,29 @@
     const cleSV = 'sv|' + PER().du, svAttente = st.per.type === 'semaine' && !SV && !st.err[cleSV];
     const evoT = P.D.total.evo || {};
     const nb = v => P.produits.filter(p => p.evo && p.evo.verdict === v).length;
-    const sansCout = P.produits.filter(p => p.marge == null).length;
-    const kp = `<div class="an-kpis">${kpi('Chiffre d’affaires TTC', k1(T.v), P.rienAvant ? 'pas de période d’avant à comparer' : fleche(evoT.pct) + ' ' + esc(P.face))}
-      ${kpi('Pièces vendues', n0(T.q), n0(P.rythme(T.q)) + ' ' + P.unite)}
-      ${kpi('Marge réalisée', k1(T.marge), pc(T.margePct) + ' du CA HT · connue sur ' + n0(T.couverture) + ' % du CA', 'fort')}
-      ${kpi('Panier moyen', tickets ? e2(caT / tickets) : '—', tickets ? n0(tickets) + ' tickets, ' + panierDe : svAttente || !M ? (st.err.mens ? 'tickets illisibles' : 'lecture…') : 'pas de tickets relevés')}
-      ${kpi('Références vendues', n0(P.produits.length), nb('monte') + ' en hausse · ' + nb('baisse') + ' en baisse · ' + nb('nouveau') + ' nouvelles')}
-      ${kpi('Recettes sans coût', n0(sansCout), 'marge inconnue : à compléter au panel', sansCout ? 'alerte' : '')}</div>`;
+    // Le résumé (26/11/2026, §7.13) remplace les six tuiles : le chiffre (la valeur clé), son évolution en mots ; les pièces et
+    // le panier ; la marge réalisée sur l'échelle de la marge brute, les références. « À corriger » : les recettes sans coût
+    // (leur marge est inconnue), chacune ouvre la fiche du produit — le geste du clic sur un produit.
+    const sansCout = P.produits.filter(p => p.marge == null).sort((a, b) => b.v13 - a.v13);
+    const zM = zoneMarge(T.margePct), MAXC = 6;
+    const panier = tickets ? `Panier moyen ${e2(caT / tickets)}<span>${n0(tickets)} tickets, ${esc(panierDe)}</span>`
+      : `Panier moyen —<span>${svAttente || !M ? (st.err.mens ? 'tickets illisibles' : 'lecture…') : (P.D.du.slice(0, 7) === moisEnCours() && P.D.au.slice(0, 7) === moisEnCours() ? 'le mois en cours se lit à sa clôture ; la Semaine a ses tickets' : 'pas de tickets relevés')}</span>`;
+    const kp = resume({
+      aria: 'Résumé de la période', v: k1(T.v), et: P.rienAvant ? null : etatEvo(evoT.pct),
+      q: 'de chiffre d’affaires TTC', q2: P.rienAvant ? 'pas de période d’avant à comparer' : fleche(evoT.pct) + ' ' + esc(P.face),
+      ctx: [`<p>${n0(T.q)} pièces vendues<span>${n0(P.rythme(T.q))} ${P.unite}</span></p><p>${panier}</p>`,
+        `<p>Marge réalisée ${k1(T.marge)}<span>${zM ? `<i class="an-pt an-pt--${zM.sig}" aria-hidden="true"></i>${pc(T.margePct)} du CA HT : ${zM.mot} · ` : ''}connue sur ${n0(T.couverture)} % du CA</span></p>`
+          + `<p>${n0(P.produits.length)} références vendues<span>${nb('monte')} en hausse · ${nb('baisse')} en baisse · ${nb('nouveau')} nouvelle${nb('nouveau') > 1 ? 's' : ''}</span></p>`],
+      L: sansCout.slice(0, MAXC).map(p => ({ sig: 'prize', txt: `${esc(p.nom)} : coût de recette manquant`, attr: `data-pid="${esc(p.id)}" title="Marge inconnue, à compléter au panel : ouvrir la fiche du produit"` })),
+      reste: sansCout.length > MAXC ? `et ${sansCout.length - MAXC} autres` : '',
+      ok: 'Rien à corriger : toutes les recettes vendues ont leur coût, la marge se lit partout.',
+    });
     const maxV = Math.max(...P.groupes.map(g => g.v13), 1);
     const fam = `<section class="an-carte"><h3>Les familles <small>chiffre, marge réalisée, évolution ${esc(P.face)} · un clic ouvre la famille</small></h3>
       ${P.groupes.map(g => `<button type="button" class="an-fam" data-groupe="${esc(g.nom)}"><span class="nm"><i style="background:${g.coul}"></i>${esc(g.nom)}<small>${g.n} réf.</small></span>
         <span class="br"><b style="width:${(100 * g.v13 / maxV).toFixed(1)}%;background:${g.coul}"></b></span><span class="n">${k1(g.v13)}</span>
-        <span class="n mz ${g.margePct == null ? 'mu' : g.margePct < 40 ? 'ko' : g.margePct < 60 ? 'att' : 'ok'}">${pc(g.margePct)}</span><span class="n">${fleche(g.evo && g.evo.pct)}</span></button>`).join('')}
-      <p class="an-src">Évolution : la période ${esc(P.face)}, au jour · marge : CA HT − pièces × coût de la recette. ${LEGENDE_F}</p></section>`;
+        <span class="n mz ${(zoneMarge(g.margePct) || { cl: 'mu' }).cl}">${pc(g.margePct)}</span><span class="n">${fleche(g.evo && g.evo.pct)}</span></button>`).join('')}
+      <p class="an-src">Évolution : la période ${esc(P.face)}, au jour · marge : CA HT − pièces × coût de la recette. ${LEGENDE_F} · ${LEGENDE_M}</p></section>`;
     const courbe = `<section class="an-carte"><h3>Le chiffre, ${parTranche(P)} <small>toutes familles, ${esc(P.lib)}</small></h3>
       ${courbes({ w: 640, h: 300, libelles: libs, fmt: k1, titre: 'le chiffre ' + parTranche(P), series: [{ vals: P.D.total.v, coul: '#8D1D2C', ep: 2.4, points: true, aire: true }] })}
       <div class="an-leg"><span><i style="background:#8D1D2C"></i>chiffre TTC</span>${P.D.enCours ? `<span>${esc(libs[P.n - 1])} : en cours</span>` : ''}</div></section>`;
@@ -312,7 +347,7 @@
       + (R ? '' : manque(cleR, 'Le réseau') || ''));
     // 2. Combien il me rapporte ?
     const q2 = mu == null ? Q(2, 'Combien il me rapporte ?', `Le coût de la recette n’est pas renseigné au panel${p.tauxCatalogue == null && ht == null ? ', ni le prix' : ''} : la marge ne se calcule pas. Le chiffre : <b>${k1(p.v13)} ${P.sur}</b>, ${er(rgCA)} du magasin.`)
-      : Q(2, 'Combien il me rapporte ?', `<b>${e2(mu)} par pièce</b>, soit ${pc(100 * mu / ht)} du prix hors TVA. <b>${k1(p.marge)} ${P.sur}</b> : ${er(rgM)} marge du magasin.`,
+      : Q(2, 'Combien il me rapporte ?', `<b>${e2(mu)} par pièce</b>, soit ${pc(100 * mu / ht)} du prix hors TVA. <b>${k1(p.marge)} ${P.sur}</b> : ${ere(rgM)} marge du magasin.`,
         `<div class="an-eq"><span><b>${e2(p.prix)}</b>prix TTC</span><i>−</i><span><b>${e2(p.prix - ht)}</b>TVA</span><i>=</i><span><b>${e2(ht)}</b>hors TVA</span><i>−</i><span><b>${e2(cout)}</b>recette</span><i>=</i><span class="ok"><b>${e2(mu)}</b>marge</span></div>
         <table class="an-t an-t--kv"><tbody><tr><td>Coefficient (prix HT ÷ recette)</td><td class="n">× ${n1(ht / cout)}</td></tr><tr><td>Part du chiffre · de la marge du magasin</td><td class="n">${pc(partCA)} · ${pc(partM)}</td></tr><tr><td>Rang au chiffre · à la marge</td><td class="n">${er(rgCA)} · ${er(rgM)} sur ${P.produits.length}</td></tr></tbody></table>
         ${p.taux ? '<p class="an-src">Vendu aussi à la part : la marge applique le taux de la recette au chiffre hors TVA.</p>' : ''}`);
@@ -393,7 +428,13 @@
       const kMax = parJour.indexOf(Math.max(...parJour.slice(1)));
       q7 = Q(7, 'Comment a-t-il évolué depuis l’ouverture ?', lignes.length > 2 ? `Le meilleur mois : <b>${MOIS[+M.mois[kMax].cle.slice(5, 7) - 1]}</b>, ${n0(parJour[kMax])} pièces par jour. Mois par mois, face au mois d’avant :` : 'Mois par mois :', tableMois(M, lignes), 'an-qq--l');
     }
-    return retenir(L) + `<div class="an-qs">${q1}${q2}${q3}${q4}${q5}${q6}${q7}</div>`;
+    // Le résumé (26/11/2026, §7.13) : le chiffre du produit sur la période (il n'est écrit nulle part ailleurs), son évolution
+    // en mots ; « Ce qu'il faut retenir » dessous (la page se lit, elle ne demande pas de geste).
+    const zP = zoneMarge(p.margePct);
+    const res = resume({ aria: 'Résumé du produit', v: k1(p.v13), et: P.rienAvant ? null : etatEvo(p.evo && p.evo.pct),
+      q: 'de chiffre TTC ' + esc(P.sur), q2: (P.rienAvant ? '' : fleche(p.evo && p.evo.pct) + ' ' + esc(P.face) + ' · ') + (zP ? `marge brute ${pc(p.margePct)} : ${zP.mot}` : 'marge inconnue : coût de recette à compléter au panel'),
+      retenir: L });
+    return res + `<div class="an-qs">${q1}${q2}${q3}${q4}${q5}${q6}${q7}</div>`;
   }
 
   /* --- F · la famille ------------------------------------------------------------------------------------------------- */
@@ -406,7 +447,7 @@
     const L = [];
     // 1. Combien pèse-t-elle ?
     const kH = R && R.produits ? R.produits.reduce((s, x) => s + (x.p10k || 0), 0) : null;
-    const q1 = Q(1, 'Combien pèse-t-elle chez moi ?', `<b>${k1(fam.v13)} ${P.sur}</b>, ${pc(partCA)} du chiffre du magasin${fam.marge ? `, et <b>${k1(fam.marge)} de marge</b> (${pc(fam.margePct)} du hors TVA), ${pc(partM)} de la marge du magasin` : ''}.`,
+    const q1 = Q(1, 'Combien pèse-t-elle chez moi ?', `${fam.marge ? `<b>${k1(fam.marge)} de marge</b> ${P.sur} (${pc(fam.margePct)} du hors TVA), ${pc(partM)} de la marge du magasin` : `La marge ne se calcule pas ${P.sur}`}.`,
       `<div class="an-reg an-reg--4"><div><span class="k">Pièces ${P.unite}</span><span class="v">${n0(P.rythme(fam.q13))}</span><span class="s">${Lp.length} références vendues</span></div>
         <div><span class="k">Pour 10 k€ de chiffre</span><span class="v">${kH != null ? n0(kH) : '—'}</span><span class="s">pièces de la famille, ${R ? 'à comparer aux autres (question 7)' : 'lecture…'}</span></div>
         <div><span class="k">Marge par pièce</span><span class="v">${fam.marge ? e2(fam.marge / fam.q13) : '—'}</span><span class="s">en moyenne sur la famille</span></div>
@@ -451,8 +492,8 @@
       const faibles = Lp.filter(x => x.margePct != null && x.margePct < 50 && x.q13 >= seuilQ(P));
       q5 = Q(5, 'Où est-ce que je perds de l’argent ?', jetT ? `<b>${n0(jetT)} pièces jetées</b> ${P.sur}, ${e0(coutT)} de matière${fam.marge ? ` : ${pc(100 * coutT / fam.marge)} de la marge de la famille` : ''}.${faibles.length ? ` Et ${faibles.length} produit${faibles.length > 1 ? 's' : ''} sous 50 % de marge.` : ''}` : `<b>Aucun invendu saisi</b> ${P.sur}.${faibles.length ? ` ${faibles.length} produit${faibles.length > 1 ? 's' : ''} sous 50 % de marge.` : ''}`,
         inv.length ? `<table class="an-t an-t--g"><thead><tr><th>Produit</th><th class="n">Vendus</th><th class="n">Jetés</th><th>Part des sortis du four</th><th class="n">Matière perdue</th></tr></thead><tbody>
-          ${inv.slice(0, 8).map(x => `<tr data-pid="${x.id}" class="an-lien"><td>${esc(x.nom)}</td><td class="n">${n0(x.vendus)}</td><td class="n">${n0(x.jet)}</td><td><span class="an-bv">${barre(x.taux, 25, x.taux >= 15 ? '#A61E1E' : x.taux >= 8 ? '#B26A00' : '#3F7A52')}<b>${pc(x.taux)}</b></span></td><td class="n">${e0(x.cout)}</td></tr>`).join('')}</tbody></table>
-         <p class="an-src">Jetés : saisis en caisse, ${periode(P)} · la barre : vert sous 8 %, orange de 8 à 15 %, rouge au-delà.</p>` : '');
+          ${inv.slice(0, 8).map(x => `<tr data-pid="${x.id}" class="an-lien"><td>${esc(x.nom)}</td><td class="n">${n0(x.vendus)}</td><td class="n">${n0(x.jet)}</td><td><span class="an-bv">${barre(x.taux, 25, x.taux >= 15 ? 'var(--stop)' : x.taux >= 8 ? 'var(--prize)' : 'var(--green)')}<b>${pc(x.taux)}</b></span></td><td class="n">${e0(x.cout)}</td></tr>`).join('')}</tbody></table>
+         <p class="an-src">Jetés : saisis en caisse, ${periode(P)} · la barre : vert sous 8 %, or de 8 à 15 %, rouge au-delà.</p>` : '');
       if (jetT) { L.push(`<b>${n0(jetT)} pièces jetées</b> ${P.sur}, ${e0(coutT)} de matière${inv.length >= 3 ? ` : ${inv.slice(0, 3).map(x => esc(x.nom)).join(', ')} en font ${n0(100 * top3 / coutT)} %` : ''}.`); }
     }
     // 6. À quelle heure ?
@@ -470,7 +511,8 @@
         totH ? `<table class="an-t an-t--g an-t--j"><thead><tr><th>Heure</th><th>Chiffre, un ${esc(nomJ)} moyen</th><th class="n">Pièces</th><th class="n">Vendu à la fin de l’heure</th></tr></thead><tbody>
           ${HC.map(h => `<tr><td>${h.h} h</td><td><span class="an-bv">${barre(h.moyCa, maxH)}<b>${e0(h.moyCa)}</b></span></td><td class="n">${n0(h.moyQ)}</td><td class="n">${n0(h.cum)} %</td></tr>`).join('')}</tbody></table>
          <p class="an-src">La moyenne des ${(JN.jours || []).length} ${esc(nomJ)}s avant le ${dfr(JN.date)}.</p>` : '');
-      if (totH && a != null) { L.push(`Un ${esc(nomJ)}, la moitié de la famille est vendue avant ${a + 1} h : c’est la première fournée qui fait la journée.`); }
+      // La conclusion suit l'heure (26/11/2026 : « la première fournée » était dite même quand la moitié se vend l'après-midi).
+      if (totH && a != null) { L.push(`Un ${esc(nomJ)}, la moitié de la famille est vendue avant ${a + 1} h : ${a + 1 <= 11 ? 'c’est la première fournée qui fait la journée' : a + 1 <= 14 ? 'la matinée et le midi font la journée' : 'l’après-midi compte autant que le matin'}.`); }
     }
     // 7. Et chez les autres ?
     let q7;
@@ -496,7 +538,11 @@
       const lignes = M.mois.map((m, k) => ({ q: somme(ids.map(id => (M.produits[id][k] || [])[0])), ca: somme(ids.map(id => (M.produits[id][k] || [])[1])), marge: somme(ids.map(id => (M.produits[id][k] || [])[3] || 0)) }));
       q8 = Q(8, 'Comment a-t-elle évolué depuis l’ouverture ?', 'Mois par mois, en pièces par jour, face au mois d’avant :', tableMois(M, lignes), 'an-qq--l');
     }
-    return retenir(L) + `<div class="an-qs">${q1}${q2}${q3}${q4}${q5}${q6}${q7}${q8}</div>`;
+    const zF = zoneMarge(fam.margePct);
+    const res = resume({ aria: 'Résumé de la famille', v: k1(fam.v13), et: P.rienAvant ? null : etatEvo(evH),
+      q: 'de chiffre TTC ' + esc(P.sur), q2: `${pc(partCA)} du chiffre du magasin` + (zF ? ` · marge brute ${pc(fam.margePct)} : ${zF.mot}` : ''),
+      retenir: L });
+    return res + `<div class="an-qs">${q1}${q2}${q3}${q4}${q5}${q6}${q7}${q8}</div>`;
   }
 
   /* --- la page --------------------------------------------------------------------------------------------------------- */

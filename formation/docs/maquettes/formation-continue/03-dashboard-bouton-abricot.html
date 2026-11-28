@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>03 — Dashboard magasin : le bouton abricot du dossier de formation</title>
+<link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="fc.css"><link rel="stylesheet" href="dash.css">
+<style>
+.mur{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tuile{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;height:96px}
+.tuile .l{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tuile .v{font-size:24px;margin-top:6px}
+.grand{background:#fff;border:1px solid var(--line);border-radius:12px;height:260px;margin-top:12px}
+.bulle{position:absolute;left:-10px;top:48px;width:440px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(34,24,20,.12);padding:12px 14px;z-index:4}
+.bulle::before{content:'';position:absolute;top:-7px;left:60px;width:12px;height:12px;background:#fff;border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+.nvl{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--row-line);font-size:12.5px}
+.nvl:last-child{border-bottom:0}
+.nvl{white-space:nowrap}
+.nvl small{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}
+</style></head>
+<body>
+<div class="app">
+  <nav class="drail ann">
+    <img class="lg" src="/shared/public/assets/img/logo.png" alt="L'Atelier">
+    <a><span class="ic"></span>Boîte mail <span class="n">4</span></a>
+    <a class="ia"><span class="ic"></span>Assistant IA</a>
+    <div class="g">La journée</div><a class="on"><span class="ic"></span>Opérationnel</a><a><span class="ic"></span>Tâches</a><a><span class="ic"></span>Temps morts</a>
+    <div class="g">Les chiffres</div><a><span class="ic"></span>Semaine</a><a><span class="ic"></span>Mois</a><a><span class="ic"></span>Année</a><a><span class="ic"></span>Trésorerie</a><a><span class="ic"></span>Frais</a>
+    <div class="g">Vendre</div><a><span class="ic"></span>Analyse</a><a><span class="ic"></span>Produits</a><a><span class="ic"></span>Promotions</a><a><span class="ic"></span>Primes</a>
+    <div class="g">Marketing</div><a><span class="ic"></span>Mon marketing</a><a><span class="ic"></span>Fidélité</a><a><span class="ic"></span>Mon catalogue</a>
+    <div class="g ann" style="color:var(--accent)">Se former<span class="ann-n" style="left:96px;top:-5px">2</span></div><a><span class="ic"></span>Formations et suivi <span class="nv">2 nouv.</span></a>
+    <div class="g">Paramètres</div><a><span class="ic"></span>Mails</a>
+  </nav>
+  <main class="dmain">
+    <div class="dnav ann" style="position:relative">
+      <div><div class="kk">Opérationnel · dimanche 22 novembre</div><h1>L’Atelier by — Gosselies</h1></div><span class="sp"></span>
+      <span class="b">↻ Relire</span>
+      <span class="ann" style="display:inline-flex;position:relative"><span class="ann-n" style="left:-12px;top:-12px">1</span><span class="b form">🎓 Mon dossier de formation <span class="pas">2</span></span><div class="bulle"><div class="h3">En ce moment <i>au survol du bouton</i></div>
+        <div class="nvl"><span class="tag prod"><span class="pt"></span>Nouveau produit</span>Pistolet poulet-curry<small>en attente de Nadia K.</small></div>
+        <div class="nvl"><span class="st ret">En retard</span>Four ventilé : programme P7<small>40 % · échéance 15/11</small></div>
+        <div class="nvl"><span class="tag conn"><span class="pt"></span>Connaissance</span>Étiquette allergènes FIC 2027<small>55 % · avant le 15/12</small></div>
+        <div style="margin-top:8px"><span class="b form" style="width:100%;justify-content:center">Ouvrir mon dossier de formation →</span></div></div></span>
+      <span class="b iab">Assistant</span><span class="b">✉ Demande au bureau</span>
+      <span class="val">Valeur<b>104 450 €</b></span><span class="avt">ML</span>
+      
+    </div>
+    <div class="flou">
+      <div class="mur"><div class="tuile"><div class="l">Comptoir à 10:42</div><div class="v">1 184 €</div></div><div class="tuile"><div class="l">Objectif du jour</div><div class="v">2 166 €</div></div><div class="tuile"><div class="l">B2B</div><div class="v">134 €</div></div><div class="tuile"><div class="l">Tickets</div><div class="v">96</div></div></div>
+      <div class="grand"></div>
+      <div class="mur" style="margin-top:12px"><div class="tuile"></div><div class="tuile"></div><div class="tuile"></div><div class="tuile"></div></div>
+    </div>
+    <div class="legende"><b>Portail franchisé — le dashboard du magasin</b>
+      <ol><li><b>Le bouton abricot « Mon dossier de formation »</b>, dans la barre du haut, à côté de l’Assistant : présent sur tous les onglets, au bureau comme au téléphone (la barre du téléphone le garde en icône). Un clic ouvre la page Formation du magasin (<code>?vue=formation</code>). Le chiffre : ce qui demande une action (en retard, à faire). Au survol, les trois premières.</li>
+      <li>Dans le rail, un groupe <b>« Se former »</b> avec l’entrée « Formations et suivi » : la même page, pour qui passe par le menu. « 2 nouv. » : les nouveautés pas encore ouvertes.</li></ol>
+      L’Abricot de la marque (#F2C9A0, texte Ruby) est déjà celui de l’entrée « Assistant IA » du rail : on le réserve aux deux accès directs, l’assistant et le dossier de formation.</div>
+  </main>
+</div>
+</body></html>

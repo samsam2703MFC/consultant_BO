@@ -41,11 +41,86 @@ export function ffDocsCharge(app, shop, force){
   app.setState({ ffDocs: { shop, chargement: true, d: b && b.shop === shop ? b.d : null } });
   readOne('/franchises/documents?shop=' + encodeURIComponent(shop)).then(d => app.setState({ ffDocs: { shop, chargement: false, d: d || { error: 'injoignable' } } }));
 }
+/* Les grandes dates du coffre (22/11/2026, Sam : « un bouton avec les grandes dates — triennats des contrats de bail et
+ * autres ; un assistant lorsque j'importe un document ») : la frise des dates de la boutique, et l'assistant qui lit un
+ * document déposé (ou choisi) et PROPOSE ses dates ; rien ne se range sans « Ranger ». API : consultant/src/coffre_dates.php
+ * (les routes du coffre du magasin, ouvertes au siège avec ?shop=). Les dates d'un bail sont calculées par le serveur. */
+const GD_LISIBLE = /^(application\/pdf|image\/(jpeg|png|webp)|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/vnd\.oasis\.opendocument\.text|text\/plain)$/;
+const GD_MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const gdJours = e => e.cle === 'passee' ? 'passée' : e.cle === 'encours' ? (e.jours === 0 ? 'dernier jour' : 'en cours · encore ' + e.jours + ' j')
+  : e.jours === 0 ? 'aujourd’hui' : e.jours <= 90 ? 'dans ' + e.jours + ' j' : 'dans ' + Math.round(e.jours / 30.44) + ' mois';
+const gdFr = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '';
+export function ffGdCharge(app, shop, force){
+  const g = app.state.ffGd;
+  if (!shop || (!force && g && g.shop === shop && (g.d || g.chargement))) { return; }
+  app.setState({ ffGd: { shop, chargement: true, d: g && g.shop === shop ? g.d : null } });
+  readOne('/coffre/magasin/dates?shop=' + encodeURIComponent(shop)).then(d => app.setState({ ffGd: { shop, chargement: false, d: d || { error: 'injoignable' } } }));
+}
+function ffAssistant(app, shop, id, nom){
+  app.setState({ ffAs: { shop, docId: id, nom: nom || '', etat: 'lecture' } });
+  write('api', 'POST', '/coffre/magasin/assistant', { shop, id }).then(r => {
+    const A = app.state.ffAs; if (!A || A.docId !== id || A.shop !== shop) { return; }
+    app.setState({ ffAs: r.ok ? Object.assign({}, A, { etat: 'pret', r, coches: r.propositions.filter(p => p.coche).map(p => p.cle), le: {}, echOk: !!r.echeanceDoc, titreOk: !!r.titreDoc, passees: false })
+      : Object.assign({}, A, { etat: 'erreur', err: r.error }) });
+  });
+}
+function valsFFGd(app, f, shop, docs){
+  const S = app.state;
+  ffGdCharge(app, shop, false);
+  const G = S.ffGd && S.ffGd.shop === shop ? S.ffGd : {}, D = G.d && !G.d.error ? G.d : null;
+  const L = D ? D.dates : [], venir = L.filter(d => d.etat.cle !== 'passee'), passees = L.filter(d => d.etat.cle === 'passee');
+  const src = d => d.source === 'calcul' ? 'calculée' : d.source === 'assistant' ? 'relevée par l’assistant' : d.source === 'document' ? 'échéance du document' : 'ajoutée par ' + (d.par || 'le siège');
+  const ligne = d => ({ jour: String(+d.le.slice(8, 10)), mois: GD_MOIS[+d.le.slice(5, 7) - 1], an: d.le.slice(0, 4), titre: d.titre, cls: d.etat.cle,
+    sous: [d.sorteLib !== d.titre ? d.sorteLib : '', d.fin ? 'du ' + gdFr(d.le) + ' au ' + gdFr(d.fin) : '', src(d), d.docTitre || ''].filter(Boolean).join(' · '),
+    note: d.note || '', quand: gdJours(d.etat), par: d.role === 'franchise' && d.source !== 'manuel' ? 'rangée par le franchisé' : '',
+    retirer: d.id ? () => { if (!window.confirm('Retirer « ' + d.titre + ' » des grandes dates de ' + f.shopNom + ' ?')) { return; }
+      write('api', 'DELETE', '/coffre/magasin/dates?shop=' + encodeURIComponent(shop) + '&id=' + d.id).then(r => { if (!r.ok) { app.setState({ ffDocMsg: { ko: true, txt: 'Retrait impossible : ' + r.error } }); } ffGdCharge(app, shop, true); }); } : null });
+  // L'assistant : la lecture, les propositions (à venir d'abord, l'urgence dite ; les passées repliées), le rangement.
+  const A = S.ffAs && S.ffAs.shop === shop ? S.ffAs : null;
+  let as = null;
+  if (A) {
+    const fermer = () => app.setState({ ffAs: null });
+    as = { etat: A.etat, nom: A.nom, err: A.err || '', fermer, relancer: () => ffAssistant(app, shop, A.docId, A.nom) };
+    if (A.etat === 'pret') {
+      const R = A.r, P = R.propositions || [], maj = o => app.setState({ ffAs: Object.assign({}, app.state.ffAs, o) });
+      const prop = p => ({ titre: p.titre, coche: A.coches.includes(p.cle), deja: p.deja, le: A.le[p.cle] || p.le,
+        sous: (p.source === 'calcul' ? 'calculée depuis le bail' : 'lue dans le document' + (p.page ? ', p. ' + p.page : '')) + (p.fin ? ' · jusqu’au ' + gdFr(p.fin) : '') + (p.deja ? ' · déjà rangée' : ''),
+        urgence: p.etat.cle === 'encours' || p.etat.cle === 'bientot' ? gdJours(p.etat) : '', extrait: p.source !== 'calcul' ? p.extrait || '' : '',
+        basculer: e => maj({ coches: e.target.checked ? app.state.ffAs.coches.concat([p.cle]) : app.state.ffAs.coches.filter(k => k !== p.cle) }),
+        setLe: e => { app.state.ffAs.le[p.cle] = e.target.value; } });
+      const n = P.filter(p => A.coches.includes(p.cle)).length, calc = P.find(p => p.source === 'calcul' && p.extrait);
+      const ranger = () => {
+        if (S.ffGdEnvoi) { return; }
+        const B = app.state.ffAs;
+        const corps = { shop, depuis: 'cockpit', dates: P.filter(p => B.coches.includes(p.cle)).map(p => ({ sorte: p.sorte, titre: p.titre, le: B.le[p.cle] || p.le, fin: p.fin, note: p.note, docId: B.docId, source: p.source })) };
+        if (B.echOk && R.echeanceDoc) { corps.echeanceDoc = { docId: B.docId, le: R.echeanceDoc.proposee }; }
+        if (B.titreOk && R.titreDoc) { corps.titreDoc = { docId: B.docId, titre: R.titreDoc.propose }; }
+        app.setState({ ffGdEnvoi: true });
+        write('api', 'POST', '/coffre/magasin/dates', corps).then(r => {
+          app.setState({ ffGdEnvoi: false, ffAs: r.ok ? null : app.state.ffAs, ffDocMsg: { ko: !r.ok, txt: r.ok ? (r.ajoutees ? r.ajoutees + (r.ajoutees > 1 ? ' grandes dates rangées' : ' grande date rangée') + ' dans le coffre de ' + f.shopNom : 'Aucune nouvelle date') + (r.document && r.document.length ? ' ; document mis à jour (' + r.document.join(', ') + ')' : '') + '.' : 'Rangement impossible : ' + r.error } });
+          if (r.ok) { ffGdCharge(app, shop, true); ffDocsCharge(app, shop, true); }
+        });
+      };
+      Object.assign(as, { genre: R.genreLib, resume: R.resume || '', remarques: R.remarques || '', extraitBail: calc ? calc.extrait : '',
+        titreDoc: R.titreDoc ? { de: R.titreDoc.actuel, vers: R.titreDoc.propose, on: A.titreOk, basculer: e => maj({ titreOk: e.target.checked }) } : null,
+        echeanceDoc: R.echeanceDoc ? { le: gdFr(R.echeanceDoc.proposee), avant: R.echeanceDoc.actuelle ? gdFr(R.echeanceDoc.actuelle) : '', on: A.echOk, basculer: e => maj({ echOk: e.target.checked }) } : null,
+        venir: P.filter(p => p.etat.cle !== 'passee').map(prop), passees: P.filter(p => p.etat.cle === 'passee').map(prop), voirPassees: !!A.passees,
+        basculerPassees: () => maj({ passees: !app.state.ffAs.passees }), n, total: P.length, ranger, envoi: !!S.ffGdEnvoi });
+    }
+  }
+  f.docs.gd = { chargement: !!G.chargement && !D, erreur: G.d && G.d.error ? 'Les grandes dates ne se lisent pas : ' + G.d.error : '',
+    prochaine: venir[0] ? ligne(venir[0]) : null, venir: venir.map(ligne), passees: passees.map(ligne), voirPassees: !!S.ffGdPassees,
+    basculerPassees: () => app.setState({ ffGdPassees: !S.ffGdPassees }),
+    // Faire lire un document déjà déposé (PDF, photo, Word).
+    lisibles: docs.filter(x => GD_LISIBLE.test(x.mime || '')).map(x => ({ v: String(x.id), nom: x.titre })),
+    lire: e => { const x = docs.find(d => String(d.id) === e.target.value); if (x) { ffAssistant(app, shop, x.id, x.nom); } }, as };
+}
 function valsFFDocs(app, f, shop){
   const S = app.state;
   ffDocsCharge(app, shop, false);
   const B = S.ffDocs || {}, D = B.shop === shop && B.d && !B.d.error ? B.d : null;
-  const F = Object.assign({ sorte: 'reunion', titre: '', date: auj(), note: '' }, S.ffDocForm || {});
+  // Le coffre-fort du franchisé (22/11/2026) : l'échéance facultative, « dans le coffre du franchisé » coché d'office.
+  const F = Object.assign({ sorte: 'reunion', titre: '', date: auj(), note: '', echeance: '', coffre: true, piece: '' }, S.ffDocForm || {});
   const maj = k => e => app.setState({ ffDocForm: Object.assign({}, F, { [k]: e.target.value }) });
   const taille = o => o >= 1048576 ? nf(o / 1048576, 1) + ' Mo' : Math.max(1, Math.round(o / 1024)) + ' Ko';
   // Les fichiers choisis restent hors de l'état (des objets File) : un nouveau rendu ne les perd pas.
@@ -56,7 +131,7 @@ function valsFFDocs(app, f, shop){
     const lourds = choisis.filter(x => x.size > D.maxOctets);
     if (lourds.length) { app.setState({ ffDocMsg: { ko: true, txt: 'Trop lourd, ' + taille(D.maxOctets) + ' au plus par fichier : ' + lourds.map(x => x.name).join(', ') } }); return; }
     const fd = new FormData();
-    [['shop', shop], ['sorte', F.sorte], ['titre', F.titre], ['date', F.date], ['note', F.note]].forEach(([k, v]) => fd.append(k, v || ''));
+    [['shop', shop], ['sorte', F.sorte], ['titre', F.titre], ['date', F.date], ['note', F.note], ['echeance', F.echeance], ['coffre', F.coffre ? '1' : '0'], ['piece', F.piece]].forEach(([k, v]) => fd.append(k, v || ''));
     choisis.forEach(x => fd.append('fichiers[]', x, x.name));
     app.setState({ ffDocEnvoi: true, ffDocMsg: null });
     fetch(API_BASE + '/franchises/documents', { method: 'POST', body: fd, credentials: 'same-origin' })
@@ -64,9 +139,14 @@ function valsFFDocs(app, f, shop){
       .then(j => {
         const n = (j.ajoutes || []).length, refus = j.refuses || [];
         if (n) { app._ffDocFichiers = null; }
-        app.setState({ ffDocEnvoi: false, ffDocForm: n ? Object.assign({}, F, { titre: '', note: '' }) : F,
+        app.setState({ ffDocEnvoi: false, ffDocForm: n ? Object.assign({}, F, { titre: '', note: '', echeance: '', piece: '' }) : F,
           ffDocMsg: { ko: !n, txt: (n ? pl(n, 'document') + ' rangé' + (n > 1 ? 's' : '') + '.' : (j.error || 'Rien n’a été rangé.')) + (refus.length ? ' Refusé : ' + refus.map(x => x.nom + ' (' + x.motif + ')').join(', ') + '.' : '') } });
-        if (n) { ffDocsCharge(app, shop, true); }
+        if (n) {
+          ffDocsCharge(app, shop, true);
+          // L'assistant des grandes dates lit le premier document lisible déposé (Sam : « lorsque j'importe un document »).
+          const lu = j.ajoutes.find(x => GD_LISIBLE.test(x.mime || ''));
+          if (lu) { ffAssistant(app, shop, lu.id, lu.nom); }
+        }
       })
       .catch(e => app.setState({ ffDocEnvoi: false, ffDocMsg: { ko: true, txt: 'Envoi impossible : ' + e.message } }));
   };
@@ -74,18 +154,28 @@ function valsFFDocs(app, f, shop){
   f.docs = {
     chargement: !!B.chargement && !D, erreur: B.d && B.d.error ? 'Les documents ne se lisent pas : ' + B.d.error : '',
     sortes: (D ? D.sortes : []).map(o => ({ v: o.v, nom: o.nom, on: o.v === F.sorte })),
-    form: F, setSorte: maj('sorte'), setTitre: maj('titre'), setDate: maj('date'), setNote: maj('note'),
+    form: F, setSorte: maj('sorte'), setTitre: maj('titre'), setDate: maj('date'), setNote: maj('note'), setEcheance: maj('echeance'), setPiece: maj('piece'),
+    // Les pièces attendues du coffre (coffre v2, 22/11/2026) : le dépôt peut en remplir une ; groupées par onglet.
+    pieces: [['contrat', 'Contrat & DIP'], ['legal', 'Légal'], ['formation', 'Formation'], ['finances', 'Finances']].map(([k, nom]) => ({ nom,
+      l: (D && D.pieces ? D.pieces : []).filter(p => p.onglet === k).map(p => ({ v: p.cle, nom: p.nom, on: p.cle === F.piece })) })).filter(g => g.l.length),
+    setCoffre: e => app.setState({ ffDocForm: Object.assign({}, F, { coffre: !!e.target.checked }) }),
     max: D ? taille(D.maxOctets) : '', accept: D ? D.extensions.map(e => '.' + e).join(',') : '',
     choisis: choisis.map(x => x.name + ' · ' + taille(x.size)),
     setFichiers: e => { app._ffDocFichiers = { shop, l: Array.from(e.target.files || []) }; app.setState({ ffDocMsg: null }); },
     envoi: !!S.ffDocEnvoi, peutDeposer: !!D && choisis.length > 0 && !S.ffDocEnvoi, deposer, msg: S.ffDocMsg || null, n: docs.length,
     groupes: (D ? D.sortes : []).map(o => ({ nom: o.nom, docs: docs.filter(x => x.sorte === o.v).map(x => ({
-      titre: x.titre, note: x.note || '', fichier: x.nom + ' · ' + taille(x.octets), date: x.date ? fmtD(x.date) + '/' + x.date.slice(0, 4) : '—',
-      depose: 'déposé le ' + fmtD(x.deposeLe.slice(0, 10)) + '/' + x.deposeLe.slice(0, 4) + ' à ' + x.deposeLe.slice(11, 16),
+      titre: x.titre, note: x.note || '', piece: x.piece && D.pieces ? ((D.pieces.find(p => p.cle === x.piece) || {}).nom || '') : '', fichier: x.nom + ' · ' + taille(x.octets), date: x.date ? fmtD(x.date) + '/' + x.date.slice(0, 4) : '—',
+      depose: 'déposé le ' + fmtD(x.deposeLe.slice(0, 10)) + '/' + x.deposeLe.slice(0, 4) + ' à ' + x.deposeLe.slice(11, 16) + (x.deposePar ? ' par ' + x.deposePar : ''),
+      // Le coffre du franchisé : dedans ou pas, l'échéance, ce que le magasin en a ouvert ; un clic l'y met ou l'en retire.
+      coffre: !!x.coffre, echeance: x.echeance ? fmtD(x.echeance) + '/' + x.echeance.slice(0, 4) : '',
+      ouvert: x.ouvertures && x.ouvertures.n ? 'ouvert ' + x.ouvertures.n + ' fois par le magasin · le ' + fmtD(x.ouvertures.dernier.slice(0, 10)) + ' à ' + x.ouvertures.dernier.slice(11, 16) : (x.coffre ? 'pas encore ouvert par le magasin' : ''),
+      basculer: () => write('api', 'PATCH', '/franchises/documents', { id: x.id, coffre: !x.coffre }).then(r => { if (!r.ok) { app.setState({ ffDocMsg: { ko: true, txt: 'Coffre : ' + (r.error || 'HTTP ' + r.status) } }); } ffDocsCharge(app, shop, true); }),
       ouvrir: fichier(x.id), telecharger: fichier(x.id) + '&telecharger=1',
+      dates: GD_LISIBLE.test(x.mime || '') ? () => ffAssistant(app, shop, x.id, x.nom) : null,
       retirer: () => { if (!window.confirm('Retirer « ' + x.titre + ' » des documents de ' + f.shopNom + ' ? Le fichier est effacé.')) { return; }
         write('api', 'DELETE', '/franchises/documents?id=' + x.id).then(r => { if (!r.ok) { app.setState({ ffDocMsg: { ko: true, txt: 'Retrait impossible : ' + (r.error || 'HTTP ' + r.status) } }); } ffDocsCharge(app, shop, true); }); } })) }))
       .filter(g => g.docs.length) };
+  valsFFGd(app, f, shop, docs);
   // Le mail « matériel mis à disposition » (22/10/2026, maquette validée par Sam) : la liste du matériel, le contrat
   // joint (le plus récent par défaut), le destinataire ; l'aperçu se relit à chaque changement, puis l'envoi.
   const contrats = docs.filter(x => x.sorte === 'contrat');

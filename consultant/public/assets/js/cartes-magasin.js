@@ -20,7 +20,7 @@
   /**
    * L'année, mois par mois, face à l'an passé (24/10/2026, la carte de Cockpit › Résultat › Année pour le magasin,
    * demande de Sam) : la courbe de l'exercice en trait plein, celle de l'an passé en pointillé sur les douze mois — les
-   * mois à venir sont les mois à battre —, la bande bleue au-dessus du N-1, orange en dessous, l'écart de chaque mois et
+   * mois à venir sont les mois à battre —, la bande verte au-dessus du N-1, or en dessous, l'écart de chaque mois et
    * trois tuiles. Le sélecteur à trois positions des douze semaines : clients, panier moyen, articles par client.
    * Le mois en cours : les clients se prolongent au rythme de ses jours servis (pointillé, point creux), le panier et
    * les articles se lisent à date ; son écart compare toujours aux mêmes jours de l'an passé (`n1`). L'an passé se trace
@@ -46,7 +46,7 @@
     const pc = (a, b) => b ? 100 * a / b : 0;
     // Le signe se lit sur la valeur arrondie : −0,3 % s'écrit « 0 % », pas « −0 % ».
     const sg = v => { const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r); };
-    const HAUT = '#2E6DB4', BAS = '#C0632B';
+    const HAUT = '#3f7a52', BAS = '#B0792A';   // au-dessus du N-1 vert, en dessous or (Sam, 26/11/2026)
     const col = v => v >= 3 ? HAUT : (v <= -3 ? BAS : '#8b8177');
     const MO = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
     const T = Array.isArray(D.semaines) ? D.semaines.slice(0, 12) : [];

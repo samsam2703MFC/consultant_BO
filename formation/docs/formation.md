@@ -913,7 +913,9 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
 - **Journal** : 07/11/2026 — v1.0 des deux documents encodées et publiées, NL « à relire » ; réservés au responsable ;
   v1.1 (précision) : captures du P&L, du résultat et du téléphone refaites avec le seuil matière de Budget › Paramètres.
   Article v1.2 : partie 27 (Primes), le franchisé reste dans le tableau, en gris, hors primes ; capture `dash-primes` recadrée
-  sur sa ligne.
+  sur sa ligne. SOP v1.2 : étape 5.5 « Les charges face au modèle » (Budget › Paramètres › Répartition des charges, le
+  Compte de résultat du CRM fait foi ; capture `dash-charges`, prise au cockpit — plan `cockpit` + `defile` de
+  `captures_dashboard.js`), « Préparer la visite du consultant » passe en 5.6.
 - **Réservés au franchisé et au responsable** (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste
   (mot de passe) : celui du franchisé ou du responsable magasin ; pour le moment 1111 ; un petit cadenas, couleur or ») :
   colonne `for_sop.acces` (`tous` | `responsable`, posée par `ensureSop()`, réglable par `PATCH /formation/sop/fiche/{id}
@@ -924,6 +926,44 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   est le réglage `foPinResponsable` ; tant qu'il n'est pas posé, **1111, provisoire, à changer en fin de développement**
   (`FO_PIN_RESPONSABLE_PROVISOIRE`). Le portail (fiche, éditeur, PDF) n'est pas concerné. ART-PIL-01 et SOP-PIL-01 sont
   réservés (`"acces": "responsable"` dans leur fichier ; `encoder_sop.py` pose l'accès).
+- **10/11/2026 — v1.3 des deux documents** (commits du dashboard du 07/11 après `85d41cdb` au 09/11, `3fbd5c7d`) :
+  article (35 parties) — « Les onglets » (dix onglets, la revue du soir), « Ouvrir le dashboard » (seuls la revue du
+  soir et le relevé terrain enregistrent), Heure par heure (jusqu'à 20 h), Contrôles en photo (par checklist, carrousel,
+  obligatoire / facultative), Commandes et canaux (pro en paiement différé, remise déduite), téléphone (Tâches) ; sections
+  nouvelles « Tâches — les checklists du jour » (5 parties) et « Concurrence et Temps morts » (2) ; quiz de 7 questions.
+  SOP (30 étapes) — 1.3, 3.3, **3.4 « La revue du soir » (nouvelle, encodée sur accord du client)**, 4.4, 4.6 ; soir 10 min ;
+  quiz de 5 questions ; classement : la checklist 5.2.01 gardée (posée au serveur par la nomenclature). Captures nouvelles :
+  dash-onglet-taches, -organisation, -checklists-jour, -retours, -revue, -concurrence, -temps-morts ; refaites : dash-entete,
+  -frise, -heures, -controles, -mobile. NL à relire.
+- **10/11/2026 — ART-CHK-01 « Les checklists du magasin : la structure »** (client : « un article dans le manuel opératoire
+  avec l'explication des structures des checklists ») : source `formation/data/formation/checklists/` (9 parties, 3 questions,
+  photos du Document du cockpit — `formation/tools/formation/captures_checklists.js` — et du dashboard), créé en v1.0 « à valider »,
+  accès à tous, classé D5.1, FO-01, pré-ouverture, postes P1 à P12 (à confirmer).
+- **22/11/2026 — ART-PIL-01 v1.9, SOP-PIL-01 v1.6** (dashboard jusqu'à `77fd5176` du 21/11) : la source reprise dans
+  `formation/` depuis le serveur (v1.8 / v1.5 du matin, absentes du dépôt) ; captures refaites sur le dashboard au rail ;
+  parties 1, 2 (le rail et la barre du haut), 4, 7, 29 à 31 (l'onglet Trimestre rejoint l'Année, « Les 12 mois ») ;
+  SOP 6.1 et 6.2. La v1.5 de l'article (74 parties, écrasée le 16/11 par la v1.6) est gardée dans
+  `formation/data/formation/dashboard/archives/`. NL à relire.
+- **24/11/2026 — ART-PIL-01 v1.10, SOP-PIL-01 v1.7** (dashboard jusqu'à `8165154f` du 23/11) : les Frais deviennent un
+  onglet de la Trésorerie ; le rail du 23/11 (Mon équipe, Se former, la roue des Paramètres et Mon coffre-fort en bas, le
+  carré des vidéos) ; les vignettes sur l'Opérationnel seulement. Parties 1, 2, 4, 28 ; SOP 5.7 (le chemin de l'onglet
+  Frais). Captures dash-entete, dash-valeur, dash-frais. NL à relire.
+- **26/11/2026 — ART-PIL-01 v1.11, SOP-PIL-01 v1.8** (dashboard jusqu'à `555a9c3d` du 25/11) : les Primes quittent
+  Vendre et deviennent le troisième onglet de Mon équipe (Responsabilités, Planning, Primes) ; Commandes entre dans La
+  journée, Clients dans Vendre. Parties 2 et 35 ; SOP 5.4 (le chemin des Primes, même geste). Captures dash-entete,
+  dash-frise, dash-primes. NL à relire. Pas de partie pour Commandes, Clients ni la fiche d'une personne : à décider.
+- **27/11/2026 — rien à encoder** (dashboard jusqu'à `312efae6` du 26/11, 56 commits depuis `555a9c3d`) : vidéos
+  d'instruction, Clients › Bureaux, connexion TF Buddy, Coffre-fort, corrections (Mois : le dernier jour du mois compte ;
+  Concurrence : changer de sujet ferme le relevé ; Opérationnel : pluriels, étiquettes) sans effet sur le texte.
+  ART-PIL-01 v1.11 et SOP-PIL-01 v1.8 inchangées.
+- **28/11/2026 — ART-PIL-01 v1.12, SOP-PIL-01 v1.9** (dashboard jusqu'à `4c588047` du 27/11, 25 commits du dashboard
+  depuis `312efae6`) : le nouveau style (`docs/DESIGN_SYSTEM.md` §7.13) — un résumé et « À corriger » en tête de
+  l'Opérationnel, des Tâches, de Semaine, Mois, Année, des Frais, des Promotions et de la Concurrence ; une échelle de
+  couleur par mesure (atteinte < 90 / 90–100 / ≥ 100 %, marge brute 40 / 60 %, marge nette perte / 0–20 / ≥ 20 %) ; les
+  absences de Mon équipe hors poste et hors primes. Article : nouvelle partie 4 « Le résumé et « À corriger » » (37
+  parties), parties 2, 3, 11 à 16, 18, 22, 25, 26, 28 à 36, deux questions ; SOP 1.2 à 1.5, 3.3, 5.3 (les jours en rouge,
+  sous 90 %), 5.7, une question. 18 captures refaites (dont `dash-acorriger`, nouvelle). NL à relire. À décider : le seuil
+  de la SOP 5.3 (75 → 90 %).
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
@@ -1079,6 +1119,23 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
 - Source, état et prompt : `formation/data/formation/nouveautes/` (`LISEZMOI.md`, `ETAT.json`, `ROUTINE.md`). Aperçu sans
   écriture au serveur : `tools/formation/apercu_tablette.js <module> <sortie> <fichiers.json…>` (partie 1, sommaire,
   parties critiques, dernière partie, NL, onglet Manuel au bon bouton).
+
+### Passe du 22/11/2026 (première passe ; réponse de Sam : « Toujours encoder avec screenshot »)
+
+- 0.0.61 « Le dashboard : la Boîte mail et ses modes IA » — à valider, v1.0 (14 parties, 1 photo).
+- 0.0.62 « Le dashboard : la demande au bureau » — à valider, v1.0 (12 parties, 3 photos, noms floutés).
+- 0.0.63 « Le dashboard : l'onglet Frais » — à valider, v1.0 (13 parties, 5 photos).
+- Règle de Sam : chaque article encodé porte des captures de l'écran en ligne ; le dashboard se capture en lecture
+  seule (`data/formation/nouveautes/captures_lecture_seule.js`, voir `LISEZMOI.md` › Captures).
+
+### Passe du 23/11/2026 (réponse de Sam : « Encoder »)
+
+- 0.0.64 « Le dashboard : Mon coffre-fort » — à valider, v1.0 (12 parties, 6 photos ; coffre de Halle vide, pas de
+  capture du tiroir ni de l'assistant).
+- 0.0.65 « Le dashboard : Formations et suivi » — à valider, v1.0 (11 parties, 4 photos ; aucune formation continue
+  diffusée, pas de capture d'une formation ouverte). Recoupe les deux articles de `data/formation/continue/`, toujours
+  pas encodés (leurs codes proposés 0.0.61 et 0.0.62 sont pris : ils recevront le premier code libre).
+- Captures : `data/formation/nouveautes/captures_coffre_formation.js` (lecture seule).
 
 ## FO-41, pôle vente : « Les leviers du chiffre d'affaires » (16/11/2026, encodé le 18/11/2026)
 
@@ -1484,3 +1541,129 @@ typographie dans tous les manuels ».
     une recette, des étapes, une photo, des allergènes.
   - Un QR code ouvre le manuel.
 
+
+## La formation continue (22/11/2026)
+
+Sam : « dans le module Formation, la notion de formation continue : techniques, connaissances, nouveaux produits, nouvelles
+techniques ; le consultant vérifie, adapte et valide celles de ses franchisés, chaque validation tracée ; un bouton
+abricot vers le dossier de formation du franchisé, le Professeur relié ; les Nouveautés dans « Formations et suivi » » ;
+puis « la validation passe par des tâches uniques : pendant deux semaines, une photo qualité du produit par jour ; à la
+validation, on archive dans un document de formation du franchisé ». Plan, maquettes et captures du code :
+`formation/docs/maquettes/formation-continue/` (`PLAN.md`, `code/`).
+
+- **Le type** : une formation continue est un document du Manuel (`for_sop`, type `FC`, codes `FC-001`…, partie
+  `formation`, `nature` « continue ») — étapes, photos, vidéo, quiz, FR | NL, éditeur (`#/sop/<id>/editer`), tablette,
+  PDF. Elle porte une **catégorie** (`categorie` : technique, connaissance, nouveau_produit, nouvelle_technique), un
+  **statut** réseau (`statut` : brouillon → a_valider → publiee, affiché « Validée ») et des **jours de photo**
+  (`photos_jours` : 14 pour un nouveau produit, 0 sinon, réglable). La formation initiale (les FO de pré-ouverture et
+  d'ouverture) ne change pas. Le Manuel, la tablette et le sommaire du Professeur ne montrent une FC que validée.
+- **Le siège** (`#/rfcontinue`, `continue.js`) : créer (brouillon), envoyer à la validation, valider, diffuser aux
+  boutiques (échéance ; début des photos = mise en vente).
+- **Le dossier d'une boutique** (`for_fc_dossier`) : statut en_cours → a_valider (tout est fait, automatiquement) →
+  validee (le consultant) ; l'équipe déclarée par le franchisé (`for_fc_equipe` : lu, quiz, vu faire) et la mise en
+  place ; une **photo qualité par jour** (`for_fc_photo`, fichiers privés `public/uploads/formation-continue/{shop}/`),
+  relue conforme / à refaire ; un jour manqué ou une photo refusée ajoute un jour ; le **journal** (`for_fc_trace` :
+  qui, rôle, quand, chaque geste, aussi au journal du cockpit).
+- **Le consultant** (cockpit, Franchisés › Formations continues, `formation-continue-vals.js` / `-tpl.js`) : ses
+  boutiques (cadre de visite), vérifier, adapter pour une boutique (`contenu_adapte` : le texte des étapes ; qui la
+  suit, échéance, raison), relire les photos, valider ou renvoyer. **La validation** écrit son nom et l'heure, puis
+  archive le dossier (version, équipe, photos) dans le **coffre-fort** du franchisé, onglet Formation (`cofDeposer`,
+  PDF si le serveur en fait, sinon la page HTML).
+- **Le franchisé** (dashboard, `?vue=formation`, `panel/public/dashboard/formation.js`) : le **bouton abricot**
+  « Dossier de formation » (barre du rail, en-tête sans rail, icône du téléphone), le groupe de rail « Se former » ;
+  « Formations et suivi » : les **Nouveautés** (titre, catégorie, date, lien `?fc=`), le dossier, le suivi de l'équipe,
+  la photo du jour, le lien vers le document de formation ; le **Professeur** à côté, présélectionné.
+- **Le Professeur** : outils `dossier_formation` et `formation_lire` (panel/src/assistant_ia.php) — la version de la
+  boutique (adaptations comprises), jamais celle d'une autre ; le magasin vient de la question (`$demandeur`).
+- **Le Manuel** : deux articles à encoder sur demande (`formation/data/formation/continue/` : « Un nouveau produit
+  arrive : la procédure », « Comment fonctionnent les formations », codes proposés 0.0.61 et 0.0.62).
+- **Choix faits faute de réponse** (plan § 3, modifiables) : pas de connexion imposée (comme le coffre) ; avancement
+  déclaré par le franchisé ; photos déposées au dossier — le panel n'a pas de tâche par boutique et par période
+  (swagger relu le 22/11/2026), une tâche du panel pourra prendre le relais.
+- **À savoir** : l'éditeur du Manuel exige le néerlandais pour publier une nouvelle version ; une FC créée par le
+  formulaire du siège démarre avec une étape « À rédiger » à compléter dans l'éditeur (FR et NL).
+- Tests : `php formation/bin/tests_formation_continue.php` (37 points).
+
+### Passe du 24/11/2026 (réponse de Sam : « Push all online »)
+
+- 0.0.66 « Le dashboard : Mon équipe (responsabilités et horaires) » — à valider, v1.0 (13 parties, 6 photos, noms
+  floutés). La publication demandée n'a pas été faite : le PATCH du statut a été refusé par le contrôle des permissions
+  de la session.
+- 0.0.67 « Le dashboard : les vidéos d'instruction » — à valider, v1.0 (7 parties, 3 photos). Classement refusé par le
+  serveur (422 : « codes inconnus du référentiel v25 », compétence `C-ID.FB`) : la fiche est encodée sans classement ;
+  pas publiée.
+
+### Passe du 26/11/2026 (publication automatique, décision de Sam du 24/11/2026)
+
+- 0.0.61 à 0.0.65 (Boîte mail, demande au bureau, Frais, Mon coffre-fort, Formations et suivi) — publiées, v1.0.
+- 0.0.66 « Le dashboard : Mon équipe (responsabilités, planning, fiches, primes) » — publiée, v1.1 (ETP et CA par ETP,
+  fiche complète d'une personne, onglet Primes).
+- 0.0.67 « Le dashboard : les vidéos d'instruction » — publiée, v1.1 (onglet par onglet ; classement D6.3, sans
+  `C-ID.FB`).
+- 0.0.68 « Le dashboard : Vendre › Clients (particuliers, entreprises B2B, bureaux) » — publiée, v1.0 (thème 10).
+- 0.0.69 « L'autocontrôle qualité d'un produit, sur la tablette » — publiée, v1.0 (thème 8).
+- 0.0.70 « Le dashboard : la page Commandes » — publiée, v1.0 (thème 9).
+
+### Passe du 28/11/2026 (publication automatique, décision de Sam du 24/11/2026)
+
+- 0.0.71 « Le dashboard : Mon équipe › absences, congés et remplacements » — publiée, v1.0 (thème 11 ; 13 parties,
+  3 photos, noms floutés ; aucune absence posée à Halle : ni semaine hachurée, ni Opérationnel, ni app employés en
+  photo). Captures : `data/formation/nouveautes/captures_absences.js` (lecture seule ; « Poser l'absence » jamais cliqué).
+
+## L'autocontrôle qualité par produit, dans l'app Cuisine — maquettes (24/11/2026)
+
+Sam, sur la fiche produit de l'app Cuisine en tablette : « rajouter un bouton autocontrôle qualité (1. cuisson,
+2. structure, 3. organoleptique) avec des photos (oui / non) et des corrections, des boutons à variables (mou, très mou,
+dur, grosseur de la croûte, retombé après cuisson) ; rapide, intuitif et complet ».
+
+- **Maquettes** : `formation/docs/maquettes/autocontrole-qualite/` (dix captures et une planche, `LISEZMOI.md`). La
+  fiche est la vraie page de l'app (`ThaiZu/TFB-Kitchen`), relevée en local ; l'autocontrôle y est greffé et se clique.
+- **La grille** (`grilles.json`) : une par catégorie, surchargée par produit ; photo obligatoire / facultative / non
+  par étape ; chaque réponse hors cible porte sa cause probable, ce qu'on fait du lot maintenant et le réglage de la
+  prochaine fournée. Critères et corrections d'exemple, à valider par la production.
+- **4e étape « Présentation »** (même jour, Sam : « est-ce que le produit est semblable à la photo de référence ou au
+  planogramme ») : deux critères communs à tous les produits, la photo de la fiche à côté de celle du produit, et la
+  case du produit sur le module du planogramme standard du cockpit (`GET /planogramme`), que l'app Cuisine ne lit pas
+  encore.
+- **Construit dans le cockpit consultant** (même jour, Sam : « construire dans cockpit consultant, avec un lien test
+  tablette ») : `consultant/src/autocontrole.php`, la tablette `/consulant_bo/autocontrole/?shop=` et le siège
+  `/consulant_bo/autocontrole/grilles.html` (voir `consultant/CLAUDE.md`). Le bouton de la fiche de l'app Cuisine reste
+  à poser dans son dépôt : un lien vers la tablette avec `&produit=`.
+
+## La médiathèque et les examens théoriques, dans le rail du portail (26/11/2026)
+
+Deux entrées nouvelles du rail du portail de formation (le détail des routes : `shared/docs/contrat-api.md`, § Formation ·
+Médiathèque et § Formation · Examens théoriques).
+
+**Médiathèque** (`src/mediatheque.php`, `public/formation/mediatheque.js`, table `for_mediatheque_video`). Le rail porte
+une section *Médiathèque* : **Gérer les vidéos**, puis *Toute la médiathèque ↗* et un lien par collection du catalogue
+(*Utilisation du dashboard*, *Production*, *Vente et comptoir*, *Hygiène et sécurité*, *Ouverture et fermeture*).
+
+- La collection *Utilisation du dashboard* reste les vidéos d'instruction tournées sur l'écran (registre
+  `panel/public/dashboard/videos/videos.json`) : rien à faire ici quand l'une s'ajoute.
+- Les quatre autres reçoivent les **vidéos filmées** : dans *Gérer les vidéos*, choisir la collection, une catégorie
+  (texte libre : « Viennoiseries », « Caisse »…), le titre et le résumé en FR et en NL, puis la source — un **fichier**
+  (MP4, MOV ou WebM filmé au téléphone, 2 Go au plus, envoyé en morceaux de 4 Mo, gardé sur le serveur) ou un **lien**
+  (YouTube, Vimeo, Google Drive, adresse https d'un fichier vidéo) —, une affiche (JPEG) et la durée. La case
+  « Publiée » la rend visible dans la médiathèque des magasins ; sans elle, la vidéo reste un brouillon du siège.
+  « Voir dans la médiathèque ↗ » ouvre la collection ou la vidéo dans le catalogue.
+- Le catalogue (`#/videos`) range tout par collection et catégorie (`#/videos/c/<collection>[/<catégorie>]`), une
+  vidéo à `#/videos/v/<id>` (une vidéo filmée : `m<id>`), avec sa recherche. Tests : `php formation/bin/tests_mediatheque.php`.
+
+**Examens théoriques** (`src/examens.php`, `public/formation/examens.js`, tables `for_exam_*`). Rail › Formation ›
+**Examens théoriques** (`#/rfexamens`) : la banque de questions des candidats franchisés, que le CRM lit pour faire
+passer l'examen dans l'application du candidat (`GET /formation/examens/banque`). Rien n'entre dans un examen sans
+validation ici.
+
+- `#/rfexamens` : les thèmes — questions validées, brouillons, à revoir, nombre de questions tirées, seuil de réussite,
+  questions bloquantes, actif ou non.
+- `#/rfexamens/questions[/<thème>]` : la banque, filtrée par thème et par statut (Brouillon, Validée, À revoir, Écartée) ;
+  cocher des questions, puis « Valider les N questions cochées ».
+- `#/rfexamens/q/<id>` : une question — énoncé FR | NL, type (QCM · 1 bonne, Vrai / faux, Plusieurs bonnes, Mise en
+  situation), réponses, explication lue après correction, source (contrat de franchise, standard, programme de
+  fidélité, guide, autre), bloquante ou non ; « Valider la question », « Remettre en brouillon », « Écarter »,
+  « Supprimer » (impossible pour une question déjà validée : l'écarter). Une question *à revoir* montre sa source avant
+  et maintenant. `#/rfexamens/nouvelle[/<thème>]` crée une question en brouillon.
+- `#/rfexamens/releve` : **la relecture mensuelle** (la routine) — la dernière relecture, à qui part le rapport,
+  « Relire maintenant ». Elle tourne seule une fois par mois (`bin/examens_cron.sh`, cron 06:20) : une question validée
+  dont la source a changé passe *à revoir*.

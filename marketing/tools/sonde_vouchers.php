@@ -10,6 +10,8 @@ declare(strict_types=1);
  * (atelierby.tfbuddy.com/api/documentation/api.php) donne les corps ; cette sonde dit ce que l'API rend VRAIMENT
  * avec le compte admin du cockpit, et si ce compte a le droit d'écrire.
  *
+ * Sonde terminée : son workflow (.github/workflows/sonde-vouchers.yml) est retiré le 21/11/2026 ; pour la relancer, le
+ * reprendre de l'historique Git.
  * Lancée sur le serveur du cockpit par `.github/workflows/sonde-vouchers.yml` :
  *     php -- /var/www/consulant_bo < tools/sonde_vouchers.php
  *

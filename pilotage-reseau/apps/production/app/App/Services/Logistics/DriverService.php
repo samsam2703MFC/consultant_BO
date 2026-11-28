@@ -66,6 +66,7 @@ final class DriverService
         private WZService $wz,
         private WDTService $wdt,
         private \App\Repositories\Document\CmrSignatureRepository $cmrSignatures,
+        private \App\Services\Workshop\Quality\LotHoldService $holds,
     ) {
     }
 
@@ -163,6 +164,14 @@ final class DriverService
         $this->checkDate($date);
         $vehicleId = (int) $v->value('vehicle_id');
         $slot = (int) $v->value('slot');
+        // [416] Partie wstrzymana przez Jakość (tablet jakości) : paleta z jej kartonami nie jest ładowana (stany kartonów bez zmian).
+        if ((bool) $v->value('loaded')) {
+            foreach ($this->board->driverPlan($date, $vehicleId)['slots'] ?? [] as $s) {
+                if ((int) $s['slot'] !== $slot) continue;
+                $held = $this->holds->onPallet($s['pallet_id'] !== null ? (int) $s['pallet_id'] : null, (int) $s['customer_id'], $date);
+                if ($held) throw new ApiException('LOT_HELD_ON_PALLET', 409, [], ['pallet' => $held[0]['id_palet'], 'product' => (string) $held[0]['product'], 'lot' => (string) $held[0]['lot_code']]);
+            }
+        }
         $plan = $this->board->driverCheck($date, $vehicleId, $slot, (bool) $v->value('loaded'), (int) $device['id'], $context->employeeId)
             ?? throw ApiException::validation([['field' => 'slot', 'code' => 'DRIVER_LOAD_SLOT_UNKNOWN', 'params' => ['slot' => $slot]]]);
         return ['date' => $date, 'vehicle_id' => $vehicleId, 'plan' => $plan];

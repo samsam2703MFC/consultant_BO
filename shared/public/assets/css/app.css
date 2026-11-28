@@ -202,6 +202,25 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .rm-s6ch{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:10px}.rm-s6ch .ch{background:var(--color-background-secondary);border-radius:7px;padding:6px 8px;font-size:10.5px;display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;min-width:0;overflow:hidden}.rm-s6ch .ch>span{min-width:0;overflow:hidden;text-overflow:ellipsis;line-height:1.25}.rm-s6ch .ch>span>span{display:block;font-size:10px}.rm-s6ch .ch b{font-family:var(--font-ui)}.rm-s6ch .ch em.sans{background:transparent;color:var(--color-text);padding-right:0}.rm-s6ch .ch em{font-style:normal;font-weight:400;padding:1px 6px;border-radius:8px;color:#fff;font-size:10.5px;flex:none}
 .rm-s6t{display:grid;grid-template-rows:1fr 1fr 1fr;gap:8px}.rm-s6t .t{background:var(--color-background-secondary);border-radius:8px;padding:8px 11px;display:flex;flex-direction:column;justify-content:center;min-width:0}.rm-s6t .t .k{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}.rm-s6t .t .v{font-family:var(--font-display);font-size:21px;line-height:1.1;margin:2px 0}.rm-s6t .t .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.35}.rm-s6t .t.good .v{color:var(--green)}.rm-s6t .t.bad .v{color:var(--stop)}
 @media (max-width:900px){.rm-s6{grid-template-columns:1fr}.rm-s6ch{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Résultat › Mois : le CA du réseau sur douze mois glissants (ca-glissant-tpl.js, 27/11/2026) — trois chiffres à
+   gauche, la courbe à droite ; la bulle du mois survolé se pose à côté du trait (à droite sur le premier semestre,
+   à gauche sur le second) pour ne jamais cacher le point lu, et ne capte pas la souris (elle effacerait le survol). */
+.rg-carte{background:var(--color-background-secondary);border-radius:10px;padding:12px 14px 10px;margin-bottom:14px}
+.rg-cases{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.rg-case{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-width:0;border:1px solid transparent;background:var(--color-surface);border-radius:9px;padding:8px 11px;cursor:pointer;font-family:var(--font-ui);color:var(--color-text)}
+.rg-case:hover{border-color:var(--color-border-secondary)}.rg-case:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rg-case.is-on{border:2px solid var(--accent);padding:7px 10px}
+.rg-case__v{font-family:var(--font-display);font-size:17px;line-height:1.2;font-variant-numeric:tabular-nums}
+.rg-case__s{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.rg-case__s em{font-style:normal}
+.rg-corps{display:grid;grid-template-columns:210px minmax(0,1fr);gap:18px;align-items:start}
+.rg-kpis{display:flex;flex-direction:column;gap:8px}.rg-kpi{background:var(--color-surface);border-radius:9px;padding:9px 12px}
+.rg-zone{min-width:0}.rg-plot{position:relative}.rg-svg{width:100%;height:auto;display:block}
+.rg-bulle{position:absolute;top:4px;z-index:5;pointer-events:none;min-width:196px;background:var(--color-surface);border:1px solid var(--color-border-secondary);border-radius:9px;padding:9px 11px;box-shadow:0 6px 18px rgba(28,26,23,.10);font-size:11.5px}
+.rg-bulle--g{transform:translateX(16px)}.rg-bulle--d{transform:translateX(calc(-100% - 16px))}
+.rg-l{display:flex;justify-content:space-between;gap:14px;padding:2px 0;white-space:nowrap}.rg-l b{font-weight:400;font-variant-numeric:tabular-nums}
+.rg-l em{font-style:normal;margin-left:4px}.rg-l--mag{color:var(--color-text-muted)}.rg-sep{height:1px;background:var(--color-border-tertiary);margin:5px 0 4px}
+.rg-pt{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--chart-real);margin-right:6px;vertical-align:0}.rg-pt--n1{background:transparent;border:2px dashed #9A9288;width:6px;height:6px}
+@media (max-width:900px){.rg-cases{grid-template-columns:repeat(3,minmax(0,1fr))}.rg-corps{grid-template-columns:1fr}.rg-kpis{flex-direction:row;flex-wrap:wrap}.rg-kpi{flex:1 1 160px}}
 @media (max-width:1200px){.rm-kp{grid-template-columns:repeat(4,minmax(0,1fr))}.rm-3{grid-template-columns:1fr}}
 /* Objectifs produits d'une campagne (écran mktObjectifs). */
 .mko{display:flex;flex-direction:column;gap:14px;max-width:1240px}
@@ -1166,8 +1185,45 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 .ffd-mail{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:16px;margin-top:6px}@media (max-width:900px){.ffd-mail{grid-template-columns:1fr}}
 .ffd-mail-f{display:flex;flex-direction:column;gap:10px;min-width:0}.ffd-ta{height:84px;padding:8px 10px;resize:vertical;line-height:1.45}
 .ffd-ap{width:100%;height:760px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:#EFE9DF;display:block}.ffd-ap.maj{opacity:.55}
-.ffd-tab{table-layout:fixed;min-width:640px}.ffd-tab th:nth-child(1){width:36%}.ffd-tab th:nth-child(2){width:30%}.ffd-tab th:nth-child(3){width:12%}.ffd-tab td{overflow-wrap:anywhere}
-.ffd-tab td small{font-size:11.5px;margin-top:2px}.ffd-act{white-space:nowrap;text-align:right}.ffd-act .mko-pied-btn{margin-left:6px;text-decoration:none;display:inline-block}
+.ffd-tab{table-layout:fixed;min-width:760px}.ffd-tab th:nth-child(1){width:30%}.ffd-tab th:nth-child(2){width:24%}.ffd-tab th:nth-child(3){width:12%}.ffd-tab th:nth-child(4){width:15%}.ffd-tab td{overflow-wrap:anywhere}
+.ffd-tab td small{font-size:11.5px;margin-top:2px}
+.ffd-tab td small.ffd-piece{color:var(--green)}
+/* Le coffre-fort du franchisé (22/11/2026) : la case du dépôt, et dans la liste, dedans ou pas (un clic bascule). */
+.ffd-case{display:flex;align-items:center;gap:8px;height:34px;font-size:12.5px;color:var(--color-text)}
+.ffd-cf{border:1px solid var(--color-border-tertiary);background:#fff;border-radius:7px;padding:3px 8px;font:inherit;font-size:11.5px;color:var(--color-text-muted);cursor:pointer;white-space:nowrap}
+/* Grandes dates du coffre (22/11/2026) : la frise et l'assistant de l'onglet Documents (franchises-tpl.js). */
+.ffg-lay{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start;margin-top:6px}@media (max-width:1100px){.ffg-lay{grid-template-columns:1fr}}
+.ffg-p{display:flex;align-items:baseline;gap:10px;padding:9px 12px;border-radius:10px;background:#FFF8F1;border:1px solid #F2C9A0;font-size:13px;margin-bottom:6px;flex-wrap:wrap}
+.ffg-p span{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#9a6a45}.ffg-p b{font-weight:400;flex:1}.ffg-p em{font-style:normal;font-size:12px;color:#7A3E12}
+.ffg-p.bientot,.ffg-p.encours{background:var(--prize-soft);border-color:#E9CF8F}
+.ffg-l{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--color-border-tertiary)}
+.ffg-d{width:54px;flex:0 0 auto;text-align:center;border-radius:8px;background:#F6EDEE;color:var(--accent);padding:4px 0}
+.ffg-d b{display:block;font-size:16px;font-weight:700;line-height:1.1}.ffg-d small{display:block;font-size:9.5px;opacity:.85}
+.ffg-l.bientot .ffg-d,.ffg-l.encours .ffg-d{background:var(--prize-soft);color:var(--prize-ink)}.ffg-l.passee{opacity:.55}.ffg-l.passee .ffg-d{background:var(--chip);color:var(--muted-2)}
+.ffg-c{flex:1;min-width:0}.ffg-c b{display:block;font-weight:400;font-size:13px}.ffg-c small{display:block;font-size:11px;color:var(--color-text-muted)}.ffg-c i{display:block;font-style:normal;font-size:11px;color:var(--muted-2);margin-top:2px}
+.ffg-j{width:130px;flex:0 0 auto;text-align:right;font-size:12px;color:var(--muted-2)}.ffg-l.bientot .ffg-j,.ffg-l.encours .ffg-j{color:var(--prize-ink);font-weight:700}
+.ffg-x{width:18px;flex:0 0 auto;border:0;background:none;color:var(--color-text-muted);font-size:16px;cursor:pointer;padding:0}
+.ffg-pas{display:block;border:0;background:none;font:inherit;font-size:12px;color:var(--muted-2);padding:8px 0;cursor:pointer}
+.ffg-as{border:1px solid #F2C9A0;border-radius:12px;overflow:hidden;background:#fff}
+.ffg-ash{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#FFF8F1;border-bottom:1px solid #F2C9A0;color:#7A3E12}.ffg-ash b{font-weight:400;font-size:14px}
+.ffg-ash span{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#F2C9A0;font-size:11px}
+.ffg-asc{padding:12px 14px}
+.ffg-lit{display:flex;align-items:center;gap:10px;font-size:13px}
+.ffg-pt{display:inline-flex;gap:3px}.ffg-pt i{width:6px;height:6px;border-radius:50%;background:#E0A56E;animation:ffg-pt 1s infinite ease-in-out}.ffg-pt i:nth-child(2){animation-delay:.15s}.ffg-pt i:nth-child(3){animation-delay:.3s}
+@keyframes ffg-pt{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.ffg-res{font-size:12.5px;line-height:1.5;margin:4px 0 8px}
+.ffg-o{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:7px 9px;margin-bottom:6px;border-radius:8px;background:var(--table-head);cursor:pointer}.ffg-o small{display:block;font-size:11px;color:var(--color-text-muted)}
+.ffg-ex{font-size:11.5px;line-height:1.45;color:var(--muted-2);border-left:3px solid #F2C9A0;background:#FFF8F1;padding:6px 9px;border-radius:0 8px 8px 0;margin:6px 0 2px;font-style:italic}
+.ffg-ex span{display:block;font-style:normal;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9a6a45}
+.ffg-ap{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--color-border-tertiary);cursor:pointer}.ffg-ap.deja{opacity:.6}
+.ffg-ap input[type=checkbox]{margin-top:3px;accent-color:var(--accent)}
+.ffg-at{flex:1;min-width:0}.ffg-at b{display:block;font-weight:400;font-size:12.5px}.ffg-at small{display:block;font-size:11px;color:var(--color-text-muted)}
+.ffg-at em{display:inline-block;font-style:normal;font-size:10.5px;font-weight:700;background:var(--prize-soft);color:var(--prize-ink);border-radius:6px;padding:1px 6px;margin:2px 0}
+.ffg-at i{display:block;font-size:11px;color:var(--muted-2);margin-top:2px;line-height:1.35}
+.ffg-le{width:136px;flex:0 0 auto;height:30px}
+.ffg-rq{font-size:12px;line-height:1.45;background:var(--prize-soft);color:var(--prize-ink);border-radius:8px;padding:8px 10px;margin-top:10px}
+.ffg-btn{background:#FFF8F1;border-color:#F2C9A0;color:#7A3E12}
+.ffd-cf.on{background:#F6EDEE;border-color:#E8C9CD;color:var(--accent)}.ffd-act{white-space:nowrap;text-align:right}.ffd-act .mko-pied-btn{margin-left:6px;text-decoration:none;display:inline-block}
 /* Primes de l'app worker (23/10/2026, « optimiser pour desktop ») : la ligne d'une prime. Plus étroit, la liste en trois
    lignes (nom, ce qui compte, qui gagne · réseau) ; sur un écran large, une ligne en colonnes alignées sous un en-tête. */
 .prl{display:flex;align-items:center;gap:14px;padding-left:18px}

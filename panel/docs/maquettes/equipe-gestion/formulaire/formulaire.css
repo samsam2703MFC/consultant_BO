@@ -1,0 +1,159 @@
+/* Trois propositions pour la fenêtre d'un service (23/11/2026) — posées sur le vrai écran par capturer.cjs. Préfixe eqf-.
+   Les jetons (--accent, --ink, --chip…) et les marqueurs du budget (.eqp-m-*) sont ceux du dashboard. */
+.eqf-voile{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(24,18,20,.42)}
+.eqf{background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(24,18,20,.28);color:var(--ink);font-size:13px;line-height:1.45}
+.eqf .sub,.eqf-tiroir .sub{display:block;font-size:12px;color:var(--muted)}
+.eqf-tete{display:flex;align-items:center;gap:12px;padding:18px 22px 14px;border-bottom:1px solid var(--row-line)}
+.eqf-tete .eqp-av{width:38px;height:38px;font-size:13px}
+.eqf-tete b{font-size:16px;font-weight:600}
+.eqf-x{margin-left:auto;align-self:flex-start;width:30px;height:30px;border:0;border-radius:8px;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
+.eqf-sec{padding:14px 22px;border-bottom:1px solid var(--row-line)}
+.eqf-h{margin-bottom:9px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.eqf-pied{display:flex;align-items:center;gap:10px;padding:14px 22px}
+.eqf-pied .eqf-res{margin-right:auto;font-size:12.5px;color:var(--muted-2)}
+.eqf-pied .eqf-res b{color:var(--ink);font-weight:600}
+.eqf-num{font-variant-numeric:tabular-nums}
+
+/* Une heure en 24 h, au quart d'heure : − 07:00 + (pas d'AM/PM : le champ ne dépend plus de la langue du navigateur). */
+.eqf-heures{display:flex;align-items:center;gap:10px}
+.eqf-t{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.eqf-t .eqf-tv{display:inline-flex;align-items:center;padding:0 12px;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.eqf-pm{width:32px;border:0;background:var(--paper);color:var(--muted-2);font-size:17px;cursor:pointer}
+.eqf-pm:first-child{border-right:1px solid var(--line)}
+.eqf-pm:last-child{border-left:1px solid var(--line)}
+.eqf-fl{color:var(--muted)}
+.eqf-duree{margin-left:auto;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.eqf-duree small{display:block;font-size:11px;font-weight:400;color:var(--muted);text-align:right}
+
+/* Les créneaux de la matrice, en boutons. */
+.eqf-crens{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.eqf-cren{display:flex;flex-direction:column;align-items:flex-start;padding:6px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font:inherit;font-size:12.5px;color:var(--ink);cursor:pointer}
+.eqf-cren small{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.eqf-cren.on{border:2px solid var(--accent);padding:5px 10px;background:rgba(141,29,44,.04)}
+.eqf-cren.on small{color:var(--accent)}
+
+/* La petite journée : axe 4 h → 20 h, l'ouverture, les barres, le comptoir. */
+.eqf-axe{position:relative;height:14px;margin-left:var(--eqf-nom,0px)}
+.eqf-axe i{position:absolute;transform:translateX(-50%);font-style:normal;font-size:10px;color:var(--faint);white-space:nowrap}
+.eqf-axe i:first-child{transform:none}
+.eqf-axe i:last-child{transform:translateX(-100%)}
+.eqf-piste{position:relative;height:18px;border-radius:5px;background:rgba(34,34,34,.035)}
+.eqf-ouv{position:absolute;top:0;bottom:0;background:rgba(141,29,44,.05);border-left:1px dashed rgba(141,29,44,.3);border-right:1px dashed rgba(141,29,44,.3)}
+.eqf-g{position:absolute;top:0;bottom:0;border-left:1px solid rgba(34,34,34,.07)}
+.eqf-b{position:absolute;top:3px;bottom:3px;display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap;border-radius:4px;background:#E4DACB;border:1px solid rgba(34,34,34,.1);font-size:10.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.eqf-b.neuf{background:var(--accent);color:#fff;font-weight:600}
+.eqf-b.cv{background:var(--muted-2);opacity:.5}
+.eqf-b.comble{background:var(--green);color:#fff;opacity:.85}
+.eqf-b.trou{background:repeating-linear-gradient(135deg,var(--prize-soft) 0 4px,#EAD3AE 4px 7px);border:1px solid #E2C597;color:var(--prize-ink)}
+.eqf-ligne{display:grid;grid-template-columns:var(--eqf-nom,0px) 1fr;align-items:center;gap:0;margin-top:4px}
+.eqf-ligne>span:first-child{font-size:11.5px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+.eqf-ligne.elle>span:first-child{color:var(--accent);font-weight:600}
+.eqf-ligne.elle .eqf-piste{background:rgba(141,29,44,.06);outline:1px dashed rgba(141,29,44,.45)}
+.eqf-ligne.cpt{margin-top:9px;padding-top:8px;border-top:1px solid var(--row-line)}
+
+/* Ce que ça change. */
+.eqf-eff{display:grid;gap:7px}
+.eqf-eff>div{display:grid;grid-template-columns:150px auto 1fr;align-items:center;gap:10px}
+.eqf-eff>div>span{color:var(--muted-2)}
+.eqf-eff>div>b{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.eqf-eff>div>em{font-style:normal;font-size:12px;color:var(--muted);text-align:right}
+.eqf-eff .ok>b{color:var(--green)}
+.eqf-ok{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;font-weight:700}
+
+/* Proposition 1 : la fenêtre compacte. */
+.eqf-1{width:520px}
+.eqf-1 .eqf-mini{margin-top:14px;--eqf-nom:72px}
+
+/* Proposition 2 : les créneaux d'abord, chacun avec son effet ; la journée à droite. */
+.eqf-2{width:min(1000px,100%)}
+.eqf-2 .eqf-corps{display:grid;grid-template-columns:430px 1fr}
+.eqf-2 .eqf-gauche{padding:16px 22px;border-right:1px solid var(--row-line)}
+.eqf-2 .eqf-droite{padding:16px 22px;--eqf-nom:118px}
+.eqf-carte{display:grid;grid-template-columns:22px 1fr auto;gap:4px 10px;padding:11px 13px;margin-bottom:9px;border:1px solid var(--line);border-radius:11px;cursor:pointer}
+.eqf-carte.on{border:2px solid var(--accent);padding:10px 12px;background:rgba(141,29,44,.035)}
+.eqf-radio{width:16px;height:16px;margin-top:2px;border:2px solid var(--line);border-radius:50%}
+.eqf-carte.on .eqf-radio{border-color:var(--accent);box-shadow:inset 0 0 0 3px #fff;background:var(--accent)}
+.eqf-carte .t{font-size:14px;font-weight:600}
+.eqf-carte .t span{margin-left:6px;font-weight:400;color:var(--muted-2);font-variant-numeric:tabular-nums}
+.eqf-carte .d{grid-column:2/4;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted-2)}
+.eqf-carte .d .bon{color:var(--green)}
+.eqf-carte .prix{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.eqf-puces{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px}
+.eqf-puce{min-width:34px;padding:4px 0;border:1px solid var(--line);border-radius:7px;background:#fff;font:inherit;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink);text-align:center}
+.eqf-puce.on{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:600}
+.eqf-puce.min{min-width:40px;color:var(--muted-2)}
+.eqf-puce.min.on{color:#fff}
+.eqf-sm{grid-column:2/4}
+.eqf-sm .eqf-lab{display:block;margin-top:6px;font-size:11px;color:var(--muted)}
+.eqf-qui{margin-top:2px}
+
+/* Proposition 3 : le panneau à droite, le tableau reste visible. */
+.eqf-tiroir{position:fixed;top:0;right:0;bottom:0;z-index:60;display:flex;flex-direction:column;width:480px;background:#fff;box-shadow:-14px 0 40px rgba(24,18,20,.18);color:var(--ink);font-size:13px;line-height:1.45}
+.eqf-tiroir .eqf-defile{flex:1;overflow:auto}
+.eqf-tiroir .eqf-pied{border-top:1px solid var(--line);background:#fff}
+.eqf-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.eqf-sem>div{padding:5px 4px;border-radius:7px;background:var(--paper);text-align:center;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.3}
+.eqf-sem>div b{display:block;font-size:11px;font-weight:600;color:var(--ink)}
+.eqf-sem>div.ce{background:rgba(141,29,44,.08);outline:2px solid var(--accent)}
+.eqf-sem>div.ce b{color:var(--accent)}
+.eqf-sem>div.rep{background:#fff;border:1px dashed var(--line)}
+.eqf-semtot{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--muted-2)}
+.eqf-semtot b{color:var(--ink)}
+.eqf-rep{display:flex;gap:6px}
+.eqf-rep label{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;padding:6px 0;border:1px solid var(--line);border-radius:8px;font-size:11px;color:var(--muted-2)}
+.eqf-rep label b{font-size:12px;color:var(--ink);font-weight:600}
+.eqf-rep label.on{border:2px solid var(--accent);padding:5px 0;background:rgba(141,29,44,.04)}
+.eqf-rep label.on b{color:var(--accent)}
+.eqf-rep label.non{opacity:.45;background:var(--paper)}
+.eqf-rep .eqf-cb{width:14px;height:14px;border:1.5px solid var(--line);border-radius:3px;background:#fff}
+.eqf-rep label.on .eqf-cb{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 2px #fff}
+.eqf-note{margin-top:7px;font-size:11.5px;color:var(--muted)}
+.eqf-tiroir .eqf-jour{--eqf-nom:104px}
+.eqf-cell-on{box-shadow:inset 0 0 0 2px var(--accent)!important;background:rgba(141,29,44,.06)!important}
+.eqf-etiq{position:fixed;z-index:70;left:24px;bottom:18px;padding:7px 12px;border-radius:8px;background:#1c1a17;color:#fff;font-size:12.5px;letter-spacing:.02em}
+.eqf-etiq b{color:#F2C14E;font-weight:600}
+
+/* Proposition 2 bis (23/11/2026, « la 2, mais au lieu d'un input, tirer une ligne horizontale sur un axe des heures de
+   la journée, en rouge si plus courte que 4 h ou plus longue que 8 h ») : les créneaux en haut, la ligne à tirer au-dessus
+   de qui est là (même échelle), l'effet en bas. */
+.eqf-2b{width:min(1060px,100%)}
+.eqf-2b .eqf-cartes{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:10px;padding:14px 22px 4px}
+.eqf-2b .eqf-carte{margin:0}
+.eqf-2b .eqf-carte .d{flex-direction:column;gap:3px}
+.eqf-carte.rouge.on{border-color:#C0281F;background:rgba(192,40,31,.04)}
+.eqf-carte.rouge.on .eqf-radio{border-color:#C0281F;background:#C0281F}
+.eqf-carte .t .r{color:#C0281F;font-weight:600}
+.eqf-plan{padding:12px 22px 14px;--eqf-nom:150px;border-bottom:1px solid var(--row-line)}
+.eqf-axe2{position:relative;height:16px;margin-left:var(--eqf-nom)}
+.eqf-axe2 i{position:absolute;transform:translateX(-50%);white-space:nowrap;font-style:normal;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.eqf-axe2 i:first-child{transform:none}
+.eqf-axe2 i:last-child{transform:translateX(-100%)}
+.eqf-tl{display:grid;grid-template-columns:var(--eqf-nom) 1fr;align-items:center}
+.eqf-tl>.nom{font-weight:600;color:var(--ink)}
+.eqf-tl>.nom small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+.eqf-trace{position:relative;height:58px;border:1px solid var(--line);border-radius:9px;background:#fff;cursor:crosshair;overflow:visible}
+.eqf-trace .eqf-ouv{border-radius:0}
+.eqf-trace .h{position:absolute;top:0;bottom:0;border-left:1px solid rgba(34,34,34,.09)}
+.eqf-trace .hh{position:absolute;top:22px;bottom:22px;border-left:1px dashed rgba(34,34,34,.08)}
+.eqf-trait{position:absolute;top:31px;height:10px;border-radius:5px;background:var(--green)}
+.eqf-trait.rouge{background:#C0281F}
+.eqf-poi{position:absolute;top:28px;width:16px;height:16px;margin-left:-8px;border:3px solid var(--green);border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:ew-resize}
+.eqf-poi.rouge{border-color:#C0281F}
+.eqf-bul{position:absolute;top:5px;transform:translateX(-50%);padding:1px 6px;border-radius:5px;background:var(--green);color:#fff;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.eqf-bul.rouge{background:#C0281F}
+.eqf-duree2{position:absolute;top:5px;transform:translateX(-50%);font-size:12px;font-weight:700;color:var(--green);white-space:nowrap}
+.eqf-duree2.rouge{color:#C0281F}
+.eqf-main{position:absolute;top:36px;width:22px;height:22px;pointer-events:none}
+.eqf-regle{margin:6px 0 10px var(--eqf-nom);font-size:11.5px;color:var(--muted)}
+.eqf-regle b{font-weight:600;color:var(--green)}
+.eqf-regle b.r{color:#C0281F}
+.eqf-plan .eqf-ligne{margin-top:3px}
+.eqf-plan .eqf-ligne.cpt{margin-top:7px;padding-top:6px}
+.eqf-effs{display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:12px 22px;border-bottom:1px solid var(--row-line)}
+.eqf-effs>div{padding:2px 14px;border-left:1px solid var(--row-line)}
+.eqf-effs>div:first-child{padding-left:0;border-left:0}
+.eqf-effs>div>span{display:block;margin-bottom:5px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.eqf-effs b{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.eqf-effs em{display:block;margin-top:3px;font-style:normal;font-size:11.5px;color:var(--muted)}
+.eqf-effs .ok b{color:var(--green)}
+.eqf-pied .eqf-res .tag-r{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:5px;background:#C0281F;color:#fff;font-size:11.5px;font-weight:600}

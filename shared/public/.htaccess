@@ -1,5 +1,9 @@
 # Cockpit CEO — Apache (fonctionne à la racine d'un vhost comme en sous-répertoire)
 DirectoryIndex index.html
+# Un dossier sans page d'accueil (api/, assets/, tablette/img/…) répond 403, jamais la liste
+# de ses fichiers (21/11/2026). Relatif (« - ») : FollowSymLinks, posé par bin/deploy.sh pour
+# le site assemblé fait de liens, reste en place.
+Options -Indexes
 RewriteEngine On
 
 # Le shell et les modules JS/CSS sont REVALIDÉS à chaque visite. Sans en-tête
@@ -31,10 +35,10 @@ RewriteRule ^api/cockpit(/.*)?$ api/index.php [L,QSA]
 # alias Apache posé par bin/deploy.sh). Le contrôleur lit tout ce qui suit /api/cockpit.
 RewriteRule ^formation/api/cockpit(/.*)?$ api/index.php [L,QSA]
 
-# API de l'assistant de campagne (copie du module marketing). L'assistant
-# appelle ../api/v1/marketing/… depuis /assistant/ ; sans cette règle, le
-# repli SPA renverrait le shell HTML avec un statut 200.
-RewriteRule ^api/v1/marketing(/.*)?$ api/marketing/index.php [L,QSA]
+# (21/11/2026) La règle api/v1/marketing → api/marketing/index.php est retirée avec la copie de l'API du module
+# Marketing : l'assistant de campagne et son API vivent dans le Marketing (/marketing/), assistant/ n'est qu'un renvoi.
+# L'adresse répond 410 (Gone) plutôt que de tomber sur le repli SPA, qui rendrait le shell HTML avec un statut 200.
+RewriteRule ^api/v1/marketing(/.*)?$ - [R=410,L]
 
 # API du module RH / Dimona (page hr/). Elle appelle hr/api/v1/erp/dimona/… depuis hr/ ; sous l'alias
 # racine /hr/ (bin/deploy.sh) la même API répond à /hr/api/v1/erp/dimona/….

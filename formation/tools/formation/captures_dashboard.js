@@ -12,61 +12,126 @@ const OUT = process.argv[3] || 'data/formation/dashboard/photos';
 const SEULES = process.argv.slice(4);
 const SHOP = process.env.SHOP || '4', DATE = process.env.DATE || new Date().toISOString().slice(0, 10);
 const url = vue => `${BASE}?shop=${SHOP}&date=${DATE}&vue=${vue}`;
+// Une page du cockpit (plan.cockpit = sa route, « #/budget/parametres ») : à côté du dashboard, dans le même module.
+const urlCockpit = route => new URL('../', BASE).href + route;
+
+// Ouvre une puce repliée de Semaine ou Mois (data-qbplus).
+// Le dashboard garde les puces ouvertes d'une page à l'autre : on n'en ouvre qu'une, les autres sont refermées.
+const puce = x => async p => {
+  for (const b of await p.locator('.qb-puce[aria-expanded="true"]').all()) { if (await b.getAttribute('data-qbplus') !== x) await b.click().catch(() => {}); }
+  const b = p.locator(`[data-qbplus="${x}"]`);
+  if (await b.getAttribute('aria-expanded').catch(() => null) !== 'true') await b.click().catch(e => console.log('puce', x, e.message));
+  await p.waitForTimeout(2500);
+};
 
 // nom → vue, cible(s) entourée(s), cadrage (top = cadrer depuis le haut de la page), action avant capture.
+// defile : la page défile dans un panneau intérieur (le cockpit) — la cible est amenée en haut de l'écran, et l'écran capturé.
 const PLANS = [
   { nom: 'dash-entete', vue: 'ops', cibles: ['.db-nav'], top: true },
-  { nom: 'dash-valeur', vue: 'semaine', cibles: ['.db-vdl'], avant: async p => { await p.locator('[data-vdrop]').first().click().catch(e => console.log('clic', e.message)); await p.waitForTimeout(2500); }, top: true },
+  // Le résumé et « À corriger » (26/11/2026, DESIGN_SYSTEM.md §7.13) : en haut de l'Opérationnel, ce qui demande un geste aujourd'hui.
+  { nom: 'dash-acorriger', vue: 'ops', cibles: ['.ac'], top: true },
+  // Les vignettes ne sont plus que sur l'Opérationnel (22/11/2026, commit 1ab9119a) : la Valeur du magasin s'ouvre là.
+  { nom: 'dash-valeur', vue: 'ops', cibles: ['.db-vpop'], avant: async p => { await p.locator('[data-vdrop]').first().click().catch(e => console.log('clic', e.message)); await p.waitForTimeout(2500); }, top: true },
   { nom: 'dash-frise', vue: 'ops', cibles: ['.db-frise'], top: true },
   { nom: 'dash-reseau', vue: 'ops', cibles: ['.db-bench'] },
   { nom: 'dash-objectif', vue: 'ops', cibles: ['.op-duel:not(.b2b)'] },
   { nom: 'dash-heures', vue: 'ops', cibles: ['.db-card.op-bloc >> nth=0'] },
   { nom: 'dash-duel', vue: 'ops', cibles: ['.db-card.op-bloc >> nth=1'] },
   { nom: 'dash-pl', vue: 'ops', cibles: ['.db-card:has(.db-cascade)'] },
+  // L'onglet Frais (16/11/2026) : les frais du mois, « TVA comprise ? » et le taux de chaque poste (ART-PIL-01 partie 28, SOP 5.7).
+  // Les Frais deviennent un onglet de la Trésorerie (22/11/2026, commit 73e483b0) : vue=frais ouvre cet onglet.
+  { nom: 'dash-frais', vue: 'frais', cibles: ['.fx .ac', '.db-card:has(.fx-t)'], top: true },
   { nom: 'dash-categories', vue: 'ops', cibles: ['.db-card:has(.db-acc)'] },
   { nom: 'dash-journee', vue: 'ops', cibles: ['.db-card.op-bloc:has(.op-jr)'] },
   { nom: 'dash-vitrine', vue: 'ops', cibles: ['.db-card.vt'] },
   { nom: 'dash-controles', vue: 'ops', cibles: ['.db-cq'] },
   { nom: 'dash-stock', vue: 'ops', cibles: ['.op-stock'], bas: true },
-  { nom: 'dash-taches', vue: 'semaine', cibles: ['.db-taches'] },
-  { nom: 'dash-resultat', vue: 'semaine', cibles: ['.db-tuiles.huit'] },
-  { nom: 'dash-canaux', vue: 'semaine', cibles: ['.db-split.co'] },
-  { nom: 'dash-invendus', vue: 'semaine', cibles: ['.db-inv'] },
-  { nom: 'dash-cal-semaine', vue: 'semaine', cibles: ['.cal-a'] },
-  { nom: 'dash-douze', vue: 'semaine', cibles: ['.db-card:has-text("DOUZE DERNIÈRES SEMAINES")'] },
-  { nom: 'dash-heures-semaine', vue: 'semaine', cibles: ['.db-tuiles:not(.huit)'], avecSuite: true },
-  { nom: 'dash-leviers', vue: 'mois', cibles: ['.lv-card'] },
-  { nom: 'dash-cal-mois', vue: 'mois', cibles: ['.cal-a'] },
-  { nom: 'dash-rentab', vue: 'mois', cibles: ['.db-card:has-text("RENTABILITÉ")'], avecAvant: true },
-  { nom: 'dash-trimestre', vue: 'trimestre', cibles: ['.db-tuiles'], top: true },
-  { nom: 'dash-annotations', vue: 'trimestre', cibles: ['.db-g2'] },
-  { nom: 'dash-annee', vue: 'annee', cibles: ['.db-tuiles', '.db-card >> nth=0'], top: true },
-  { nom: 'dash-heatmap', vue: 'annee', cibles: ['.db-card:has-text("HEATMAP MENSUELLE")'] },
-  { nom: 'dash-promos', vue: 'promos', cibles: ['.db-card >> nth=0'], top: true },
+  // Semaine et Mois en quatre blocs (21/11/2026) : la jauge et les tuiles, les jours, le résultat et les heures, les douze
+  // semaines (ou mois) ; le reste derrière une puce repliée (« Tâches et contrôles », « Canaux… », « Invendus »…) qu'on ouvre.
+  { nom: 'dash-resultat', vue: 'semaine', cibles: ['section.chr'] },
+  { nom: 'dash-cal-semaine', vue: 'semaine', cibles: ['.qb-jours-c'] },
+  { nom: 'dash-heures-semaine', vue: 'semaine', cibles: ['.qb-pile'] },
+  { nom: 'dash-douze', vue: 'semaine', cibles: ['.qb-douze'] },
+  { nom: 'dash-taches', vue: 'semaine', cibles: ['.db-taches'], avant: puce('taches'), avecAvant: true },
+  { nom: 'dash-canaux', vue: 'semaine', cibles: ['.db-split.co'], avant: puce('canaux') },
+  { nom: 'dash-invendus', vue: 'semaine', cibles: ['.db-inv'], avant: puce('invendus'), avecAvant: true },
+  { nom: 'dash-leviers', vue: 'mois', cibles: ['.lv-card'], avant: puce('leviers'), avecAvant: true },
+  { nom: 'dash-cal-mois', vue: 'mois', cibles: ['.qb-jours-c'] },
+  { nom: 'dash-rentab', vue: 'mois', cibles: ['.db-card:has-text("RENTABILITÉ")'], avant: puce('tendance'), avecAvant: true },
+  // L'onglet Trimestre rejoint l'Année (21/11/2026) : les quatre trimestres, un toucher ouvre le détail ; la bande des douze mois.
+  { nom: 'dash-trimestre', vue: 'annee', cibles: ['.db-an-q'] },
+  { nom: 'dash-annotations', vue: 'annee', cibles: ['.db-an-q', '.db-an-det'] },
+  { nom: 'dash-annee', vue: 'annee', cibles: ['section.chr'], top: true },
+  { nom: 'dash-heatmap', vue: 'annee', cibles: ['.db-card:has(.db-an-12)'] },
+  { nom: 'dash-promos', vue: 'promos', cibles: ['.ac'], top: true },
   // La ligne du franchisé (07/11/2026) : dans le tableau, en gris, « franchisé · hors primes ».
-  { nom: 'dash-primes', vue: 'primes', cibles: ['tr:has(.pr-fr)'], avecAvant: true },
+  // Primes (24/11/2026) : un onglet de Mon équipe ; la rangée d'onglets entourée, et la ligne du franchisé quand elle y est.
+  { nom: 'dash-primes', vue: 'primes', cibles: ['nav.db-eqp-tabs', 'tr:has(.pr-fr)'], top: true },
+  // Le cockpit, Budget › Paramètres › Répartition des charges (07/11/2026) : % réseau du CRM, % validé, écart.
+  { nom: 'dash-charges', cockpit: '#/budget/parametres', cibles: ['[data-screen="budgetparam"] > div:has(:text-is("Répartition des charges"))'], defile: true },
+  // L'onglet Tâches (08/11/2026) : la semaine et les quatre tuiles, la structure des codes, les checklists du jour, les retours.
+  { nom: 'dash-onglet-taches', vue: 'taches', cibles: ['.tj-sem', '.ac'] },
+  { nom: 'dash-organisation', vue: 'taches', cibles: ['.db-card.tj-guide'] },
+  { nom: 'dash-checklists-jour', vue: 'taches', cibles: ['.db-card:has(.tj-f)'] },
+  { nom: 'dash-retours', vue: 'taches', cibles: ['.db-card.tj-ret'] },
+  // La revue du soir (08/11/2026) : le bouton de l'en-tête ouvre l'assistant, son premier écran (rien n'est écrit avant « Commencer »).
+  { nom: 'dash-revue', vue: 'ops', cibles: ['#rv .rv-tel'], defile: true, avant: async p => { await p.locator('button:has-text("Revue du soir")').first().click(); await p.waitForTimeout(5000); } },
+  // Concurrence (07/11/2026) : le Top 10 réseau face aux concurrents du magasin ; la lecture prend du temps.
+  { nom: 'dash-concurrence', vue: 'concurrence', cibles: ['.ac', '.db-card:has(.bm-tab)'], top: true, avant: async p => { await p.locator('.bm-tab').first().waitFor({ timeout: 90000 }).catch(() => {}); await p.waitForTimeout(1500); } },
+  // Temps morts (07/11/2026) : la journée minute par minute.
+  { nom: 'dash-temps-morts', vue: 'morts', cibles: ['.tm-res', '.db-card:has(.tm-frise)'], top: true },
 ];
 
 const W = 1200, H = 900;
 async function entourer(p, sel) {
   const loc = p.locator(sel).first();
   await loc.waitFor({ state: 'visible', timeout: 20000 });
-  await loc.evaluate(el => { el.style.outline = '4px solid #8D1D2C'; el.style.outlineOffset = '5px'; el.style.borderRadius = el.style.borderRadius || '10px'; });
-  return loc.boundingBox();
+  // La boîte dans la page (pas dans l'écran) : ouvrir une puce fait défiler la page.
+  return loc.evaluate(el => {
+    el.style.outline = '4px solid #8D1D2C'; el.style.outlineOffset = '5px'; el.style.borderRadius = el.style.borderRadius || '10px';
+    const r = el.getBoundingClientRect();
+    return { x: r.x + scrollX, y: r.y + scrollY, width: r.width, height: r.height };
+  });
 }
 
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 4 / 3 });
+  // En http (le https du serveur coupé), la garde des pages (assets/js/garde.js, 13/11/2026) renverrait vers https et la
+  // page resterait blanche : pour la capture seule, elle est remplacée par une garde qui laisse la page s'afficher
+  // (l'API est en accès « ouvert » sur le serveur ; rien n'est écrit).
+  if (BASE.startsWith('http:')) {
+    await ctx.route('**/assets/js/garde.js', r => r.fulfill({ contentType: 'application/javascript', body: 'window.ACCES = { connecte: true, role: "siege", nom: "Captures" };' }));
+  }
+  // Les vidéos d'instruction (23/11/2026) : l'annonce « Nouveau » s'accroche au carré du rail et couvrirait le haut des blocs.
+  // Pour la capture, chaque vidéo du registre est rangée « plus tard » pour la journée (localStorage de la capture seule).
+  try {
+    const reg = await (await ctx.request.get(new URL('videos/videos.json', BASE).href)).json();
+    const L = Array.isArray(reg) ? reg : (reg.videos || []);
+    const d = new Date(), jour = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const tard = Object.fromEntries(L.map(v => [v.id, jour]));
+    await ctx.addInitScript(t => { try { localStorage.setItem('db.videos.plusTard', t); } catch (e) { /* sans stockage */ } }, JSON.stringify(tard));
+  } catch (e) { console.log('registre des vidéos illisible :', e.message); }
   const pages = {};
   for (const plan of PLANS) {
     if (SEULES.length && !SEULES.includes(plan.nom)) continue;
     const p = await ctx.newPage();
-    await p.goto(url(plan.vue), { waitUntil: 'networkidle', timeout: 120000 }).catch(() => {});
+    await p.goto(plan.cockpit ? urlCockpit(plan.cockpit) : url(plan.vue), { waitUntil: 'networkidle', timeout: 120000 }).catch(() => {});
     await p.waitForTimeout(6000);
     if (plan.avant) await plan.avant(p);
     let boites = [];
     for (const s of plan.cibles || []) { try { boites.push(await entourer(p, s)); } catch (e) { console.log(plan.nom, 'cible absente', s); } }
+    if (plan.defile) {
+      await p.locator(plan.cibles[0]).first().evaluate(el => {
+        el.scrollIntoView({ block: 'start' });
+        for (let s = el.parentElement; s; s = s.parentElement) { if (s.scrollHeight > s.clientHeight + 5 && getComputedStyle(s).overflowY !== 'visible') { s.scrollTop -= 30; break; } }
+      });
+      await p.waitForTimeout(500);
+      await p.screenshot({ path: path.join(OUT, plan.nom + '.jpg'), type: 'jpeg', quality: 82 });
+      console.log('ok', plan.nom, '(écran)');
+      await p.close();
+      continue;
+    }
     await p.evaluate(() => scrollTo(0, 0));
     const hPage = await p.evaluate(() => document.documentElement.scrollHeight);
     let y = 0;

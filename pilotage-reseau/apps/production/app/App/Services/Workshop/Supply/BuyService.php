@@ -15,10 +15,13 @@ use App\Repositories\Workshop\SupplyRepository;
 use App\Services\Communication\OutgoingMessageService;
 use App\Services\Communication\TemplateRenderer;
 use App\Services\Purchasing\CostOptimizationService;
+use App\Services\Workshop\Quality\ColdVisitService;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
  * Zakupy tygodnia (makiety 1 à 5) : co tydzień surowce i opakowania na uzupełnienie stanów, w 3 krokach.
+ *  0. [432] Obchód chłodni (tablet jakości, ColdVisitService) : ostatni obchód i różnice ; bez pełnego obchodu z ostatnich
+ *     cold_visit.valid_hours godzin « Co kupić » jest zamknięte (nowe zakupy : 409 COLD_VISIT_REQUIRED).
  *  1. Co kupić : stan → co wyprodukować (arkusz tygodnia : zamówienia + uzupełnienie stanów) → receptury → potrzeba ;
  *     zapas +0 / +5 / +10 % potrzeby, w górę do pełnych opakowań ; ostatnia najtańsza cena i dostawca (historia cen).
  *  2. Komu i jak : 1 do 3 dostawców na pozycję (dostawcy pozycji, potem historia), warunki dla wszystkich : płatność 7 / 14 /
@@ -76,6 +79,7 @@ final class BuyService
         private ParamRepository $params,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private ColdVisitService $cold,
     ) {
     }
 
@@ -95,7 +99,7 @@ final class BuyService
         $products = $this->products($this->supply->lastSheets()[0] ?? ['rows' => []]);
         $base = ['week' => $week + ['this' => $week['week_start'] <= date('Y-m-d') && date('Y-m-d') <= $week['week_end']], 'products' => $products,
             'weeks' => $this->weekChoices(), 'can_write' => $context->can('prod.supply.write'),
-            'missing_suppliers' => $this->materialSuppliers(true, $context)['missing']];
+            'missing_suppliers' => $this->materialSuppliers(true, $context)['missing'], 'cold_visit' => $this->cold->summary($context->translator->lang())];
         // Propozycja : bez zakupów, w szkicu (powrót do kroku 1 : inny zapas) i po zakończeniu ; wysłane — tylko zakupy.
         $open = $round !== null && in_array($round['status'], ['sent', 'ordered'], true);
         $safety = in_array($safety, self::SAFETY, true) ? $safety : ($round !== null && $round['status'] === 'draft' ? (int) $round['safety_pct'] : 5);
@@ -168,6 +172,8 @@ final class BuyService
         if ($v->value('safety_pct') !== null && !in_array($v->value('safety_pct'), self::SAFETY, true)) $v->add('safety_pct', 'INVALID_CHOICE', ['allowed' => '0, 5, 10']);
         $lines = $this->lineInput($v, $body);
         $v->throwIfInvalid();
+        // [432] « Co kupić » : seulement après un obchód chłodni complet dans la fenêtre de validité.
+        if ($this->cold->blocked()) throw new ApiException('COLD_VISIT_REQUIRED', 409, [], ['hours' => $this->cold->validHours()]);
         $needs = $this->supply->needs((string) $v->value('week_start'), 1, $context);
         $week = $needs['weeks'][0];
         $existing = $this->repo->roundForWeek($week['week_start']);

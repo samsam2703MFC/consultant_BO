@@ -172,6 +172,153 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_proforma_payment WHERE recorded_at >= ? AND recorded_at < DATE_ADD(?, INTERVAL 1 DAY)', [$day, $day])[0]['n'] ?? 0);
     }
 
+    /** [369] Zamówienia dnia : résultats enregistrés pour le jour (n_order_check). */
+    public function orderChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_order_check WHERE day = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [370] Klienci bez zamówienia : résultats enregistrés le jour donné (n_customer_no_order). */
+    public function noOrderResults(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_customer_no_order WHERE day = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [371] Domówienia dnia : résultats enregistrés pour le jour (n_supplement_check). */
+    public function supplementChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplement_check WHERE day = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [374] Opóźnienia dostaw : décisions enregistrées pour le jour (n_delivery_delay_check). */
+    public function deliveryDelayChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_delivery_delay_check WHERE day = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [373] Płynność i gotówka : saldo wpisane i decyzje zapisane w tygodniu (poniedziałek). @return array{balance:bool, decisions:int} */
+    public function liquidityProgress(string $weekStart): array
+    {
+        $b = (int) ($this->all('SELECT COUNT(*) AS n FROM n_liquidity_balance WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+        $d = (int) ($this->all('SELECT COUNT(*) AS n FROM n_liquidity_decision WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+        return ['balance' => $b > 0, 'decisions' => $d];
+    }
+
+    /** [375] Terminowość tygodnia (OTIF) : actions enregistrées pour la semaine examinée (lundi, n_otif_week_action). */
+    public function otifActions(string $weekStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_otif_week_action WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+    }
+
+    /** [377] Partie i kontrola dnia : résultats enregistrés le jour du contrôle (n_lots_qc_check). */
+    public function lotsQcChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_lots_qc_check WHERE checked_on = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [378] Faktury i KSeF dnia : résultats enregistrés le jour du contrôle (n_invoice_ksef_check). */
+    public function invoiceKsefChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_invoice_ksef_check WHERE checked_on = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [379] Reklamacje klientów : décisions enregistrées pour la semaine examinée (lundi, n_complaint_review). */
+    public function complaintReviews(string $weekStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_complaint_review WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+    }
+
+    /** [380] HACCP miesiąca : décisions enregistrées pour le mois examiné (premier jour, n_haccp_month_review). */
+    public function haccpMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_haccp_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [384] Nowe produkty : décisions enregistrées pour le mois du contrôle (premier jour, n_launch_review). */
+    public function launchReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_launch_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [385] Dane klientów : décisions enregistrées pour le mois du contrôle (premier jour, n_customers_data_check). */
+    public function customersDataChecks(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_customers_data_check WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [404] Badania i szkolenia : décisions enregistrées pour le mois du contrôle (premier jour, n_staff_deadline_review). */
+    public function staffDeadlineReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_staff_deadline_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [405] Serwisy i przeglądy maszyn : décisions enregistrées pour le mois du contrôle (premier jour, n_maintenance_review). */
+    public function maintenanceReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_maintenance_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [406] Teczka do audytu i kontroli : décisions enregistrées pour le trimestre (premier jour, n_audit_folder_review). */
+    public function auditFolderReviews(string $quarterStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_audit_folder_review WHERE quarter_start = ?', [$quarterStart])[0]['n'] ?? 0);
+    }
+
+    /** [397] PPWR i opakowania : décisions enregistrées pour le mois du contrôle (premier jour, n_ppwr_month_review). */
+    public function ppwrMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_ppwr_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [400] Receptury i dane produktów : décisions enregistrées pour le mois du contrôle (premier jour, n_recipes_month_review). */
+    public function recipesMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_recipes_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [401] Kartoteka surowców : décisions enregistrées pour le mois du contrôle (premier jour, n_materials_month_review). */
+    public function materialsMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_materials_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [402] Dokumenty wysyłek : décisions enregistrées pour le mois examiné (premier jour, n_shipping_docs_review). */
+    public function shippingDocsReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_shipping_docs_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [403] Stany magazynowe : instantané enregistré et décisions pour le mois examiné (premier jour, n_stock_month_*). */
+    public function stockMonthProgress(string $monthStart): array
+    {
+        return ['snapshot' => (bool) $this->all('SELECT 1 AS x FROM n_stock_month_statement WHERE month_start = ?', [$monthStart]),
+            'decisions' => (int) ($this->all('SELECT COUNT(*) AS n FROM n_stock_month_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0)];
+    }
+
+    /** [398] Intrastat miesiąca : décisions enregistrées pour le mois examiné (premier jour, n_intrastat_review). */
+    public function intrastatMonthReviews(string $monthStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_intrastat_review WHERE month_start = ?', [$monthStart])[0]['n'] ?? 0);
+    }
+
+    /** [381] Palety zwrotne : décisions enregistrées pour la semaine examinée (lundi, n_pallet_return_review). */
+    public function palletReturnReviews(string $weekStart): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_pallet_return_review WHERE week_start = ?', [$weekStart])[0]['n'] ?? 0);
+    }
+
+    /** [382] Powiadomienia o dostawie : décisions enregistrées pendant le contrôle du jour (n_delivery_notice_check.checked_on). */
+    public function deliveryNoticeChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_delivery_notice_check WHERE checked_on = ?', [$day])[0]['n'] ?? 0);
+    }
+
+    /** [383] Poczta od klientów : décisions enregistrées pendant le contrôle du jour (n_customer_mail_check.checked_on). */
+    public function customerMailChecks(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_customer_mail_check WHERE checked_on = ?', [$day])[0]['n'] ?? 0);
+    }
+
     public function reviewsSaved(string $from, string $to): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);

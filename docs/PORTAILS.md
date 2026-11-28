@@ -18,6 +18,27 @@ Quatre domaines, un dossier et un préfixe de tables chacun, dans le dépôt `co
   `docs/maquettes/portail-commercial/`. La **Prospection** y est passée le 19/11/2026 (Sam : « transvaser tout le
   /prospection/ dans le /commercial ») : page `/commercial/prospection/`, code `commercial/src/prospection.php` et
   `scouting_osm.php`, table `sm_prospect` (migration 006) ; l'ancienne adresse `/consulant_bo/prospection/` y renvoie.
+- **L'application Marketing reste dans son dépôt** (décision du 21/11/2026) : le module Marketing autonome — campagnes,
+  catalogues imprimés, Social, signage, ses migrations `0xx` (dont la 045 des tables reprises du cockpit) et son API
+  (`mar_api_url` d'`erp_cles`) — vit dans le dépôt `marketing` (samsam2703MFC/marketing), qui ne sera pas versé ici :
+  l'étape « 0b » du plan du 06/11 est abandonnée pour lui. Le dossier `marketing/` d'ici est le marketing du cockpit
+  (newsletter, avis, Brand Guard, MétaDonnée, fidélité, promotions, visibilité Google) ; il parle au module par son API
+  d'intégration (`…/v1/integration/marketing/…`). L'ancienne copie de l'API du module (`marketing/public/api/marketing/`)
+  est retirée le 21/11/2026. Depuis le même jour, le cockpit n'écrit plus aucune table du module : le fonds
+  (mouvements, frais récurrents, redevances) et les types de campagne passent par son API (`marketingAppel`, jeton de
+  service `X-Marketing-Service`, migration 053 du module pour `is_investment`), et les écritures de campagnes, sans
+  écran, sont retirées (410). Les **lectures** suivent, par lots (décision du 21/11/2026) : le grand livre du fonds,
+  ses leviers, ses frais récurrents, les boutiques et les campagnes se lisent au module depuis le 21/11/2026
+  (`marketing/src/fonds.php`, GET /fonds), le calendrier, les campagnes et les types (GET /marketing) et les campagnes
+  du budget des campagnes aussi (`marketing/src/campagnes.php`), et la mesure des campagnes (`marketing/src/mesure.php` :
+  campagnes datées, boutiques, produits de l'offre, coefficient d'objectif et levier du type, à la fiche de la campagne).
+  La note de campagne aussi (`marketing/src/mkt_brief.php`, à la fiche de la campagne : type et levier, boutiques,
+  cibles par levier, canaux et agences, visuel maître, formats, rétroplanning). Le hub du marketing et « Mon marketing »
+  du dashboard, les campagnes des visites, les objectifs produits, l'existence d'une campagne pour ses annexes et ses
+  objectifs, les KPI par levier aussi (lot 5a : liste des campagnes avec leurs boutiques, `allLevers`), et les agences
+  (lot 5b, `marketing/src/mkt_agences.php` : liste, agence qui signe la note, création, modification, retrait par
+  `…/agencies`, marketing#81). Le cockpit ne lit ni n'écrit plus aucune des tables propres au module (contrôle du
+  21/11/2026 sur les 98 tables qui ne sont pas reprises du cockpit par la migration 045).
 - **Le Recrutement n'est plus un des quatre domaines** (décision du 19/11/2026). Le scouting (`ceo_scouting_*`) et le
   module RH (`hr_dimona_*`) restent dans `pilotage-reseau/`, hors périmètre, jusqu'à la décision de la phase 4.
 - **Les clés** : toujours `erp_cles` (la « erp_keys » de la réorganisation), non renommée, seule source des clés ;
@@ -91,7 +112,7 @@ pour vivre avec l'ERP), le site public `landing` (`lp_`, **à décider**), et le
 - **Entre portails** : `/api/v1/integration/{portail}/{ressource}`, jeton de service (`erp_jeton_service`
   d'`erp_cles`, en-tête `X-Service-Token`). En place (7 nov. 2026) : le Cockpit accepte ce jeton sur ses
   lectures `/stores` (avec `franchise` et `cp`), `/stores/perf`, `/exploitation/pro`, `/marketing/avis`,
-  `/formation/ref`… et publie son adresse https dans `pil_api_url` ; le Recrutement sert
+  `/formation/ref`…, `/fidelite/programme` (25/11/2026, lu par le Recrutement pour l'annexe 2 du Guide pré-ouverture) et publie son adresse https dans `pil_api_url` ; le Recrutement sert
   `/crm/api/v1/integration/recrutement/scouting-reseau` (positions et données d'étude des magasins, lues
   par le Cockpit) ; Social sert `…/social/integration/formulaires` ; le dashboard magasin du Cockpit relaie « Mon catalogue » au Marketing
   (`…/integration/marketing/shops/{shopId}/catalogues`, adresse `mar_api_url` d'`erp_cles`, 14 nov. 2026). Exemples :
@@ -132,25 +153,27 @@ Chaque étape est mise en ligne séparément, après accord.
 | 2c. Tables `mar_` du cockpit | **définitions** reprises par la migration `045_tables_reprises_du_cockpit.sql` (23 tables, sans clé étrangère vers `ceo_shop`). **Reste** : le code du cockpit qui les lit et les écrit (voir l'écart ci-dessous) |
 | 2d. Signage | à faire |
 | 0. Dépôt unique : le cockpit dans `pilotage-reseau/` | en cours |
-| 0b. `marketing/`, `recrutement-developpement/`, `formations/` versés dans le dépôt | à faire |
+| 0b. `marketing/`, `recrutement-developpement/`, `formations/` versés dans le dépôt | remplacée : `formation/` fait le 19/11/2026 ; le Recrutement n'est plus un domaine (19/11) ; le dépôt `marketing` reste séparé (21/11/2026) |
 | 0c. Table commune des clés : `erp_cles` (remplace `master_variable_keys`) | fait le 7 nov. 2026 — Recrutement, Marketing (Social compris) et Pilotage y lisent et écrivent leurs clés ; plus aucune lecture croisée de tables (Scouting du Recrutement dans `crm_scouting_*`, réglages dans `crm_settings`, boutiques par l'API du Cockpit) |
 | 3 à 7 | à faire |
 
-### Écart ouvert : le cockpit écrit encore dans les tables du Marketing
+### Écart ouvert : le cockpit écrit encore dans les tables reprises du Marketing
 
-Le cockpit lit et écrit des tables `mar_` dans ~40 000 lignes : une ancienne copie de l'API du
-module (`public/api/marketing/`), la mesure des campagnes (`src/mesure.php`), le contrôle des posts
-(`src/brand_guard.php`, `src/fbcontrole.php`), les posts sociaux (`src/social_publication.php`), la
-newsletter clients (`src/newsletter*.php`), les objectifs produits, le brief (`src/mkt_brief.php`) et
-des lectures dans `src/endpoints.php` / `src/writes.php`. Chaque bloc passe dans le Marketing (écran +
+Depuis le 21/11/2026, le cockpit ne lit ni n'écrit plus les tables propres au module (fonds, campagnes, types,
+leviers, boutiques des campagnes, agences : par son API, `marketingAppel`) ; l'ancienne copie de l'API du module
+(`public/api/marketing/`) est retirée. Il lit et écrit encore des tables `mar_` reprises du cockpit : la mesure des
+campagnes (`src/mesure.php` : `mar_campagne_mesure`, `…_snapshot`, `…_releve`), les objectifs
+(`mar_campagne_objectif`, `mar_campagne_produit`), le contrôle des posts (`src/brand_guard.php`, `src/fbcontrole.php`),
+les posts sociaux (`src/social_publication.php`, `mar_social_*`), la newsletter clients (`src/newsletter*.php`) et les
+avis (`mar_avis*`). Chaque bloc passe dans le Marketing (écran +
 API) ; le cockpit garde, au besoin, une lecture par `/api/v1/integration/marketing/…`. Jusque-là, le
 cockpit ne crée plus ces tables : c'est la migration 045 du Marketing qui les définit.
 
 ## À faire hors du code
 
 - Copier dans les secrets de `consultant_BO` ceux des dépôts versés (noms donnés à chaque étape, jamais les
-  valeurs), puis archiver `marketing`, `social`, `signage`, `atelier-espace-candidat`, `scouting`,
-  `pwa_consultant` une fois versés.
+  valeurs), puis archiver `social`, `signage`, `atelier-espace-candidat`, `scouting`, `pwa_consultant` une fois
+  versés. Le dépôt `marketing` n'est pas archivé : il reste le dépôt de l'application Marketing (21/11/2026).
 
 ## Registre des tables
 

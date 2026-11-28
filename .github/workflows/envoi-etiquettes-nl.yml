@@ -1,0 +1,62 @@
+name: Envoi — étiquettes NL à TF Buddy (écrit les allergènes des matières et les traductions)
+
+# Lance sur le serveur le script DÉPLOYÉ consultant/bin/envoi_etiquettes_nl.php (PR des étiquettes NL, 21/11/2026) :
+#  - allergènes des matières relevés dans les fiches techniques (PATCH /materials/{id} {allergens}, liste relue avant et
+#    après) ;
+#  - traductions FR / NL des produits sans point à vérifier (PATCH /products/{id}/aliases et /materials/{id}/aliases).
+# Le plan est consultant/docs/etiquettes-nl/plan_envoi.json ; le rapport reste sur le serveur, dans le dossier privé
+# (/var/lib/consulant_bo/prive/etiquettes-nl/).
+#
+# Déclenchement : À LA MAIN seulement (Actions › ce workflow › Run workflow). Il n'écrit que si l'on tape ECRIRE dans
+# « confirmer » ; toute autre valeur fait un essai à blanc. Relancer ne réécrit rien de ce qui est déjà en place.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmer:
+        description: "Taper ECRIRE pour écrire dans l'API ; sinon essai à blanc"
+        required: true
+        default: "essai"
+
+concurrency:
+  group: envoi-etiquettes-nl
+  cancel-in-progress: false
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+jobs:
+  envoi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      # Sortie 1 (introuvables : sous-recettes, produits sans correspondance dans l'API) = un constat attendu ;
+      # sortie 2 (compte admin, plan, allergènes non reconnus) = échec, rien n'est envoyé.
+      - name: Envoi (ou essai à blanc) depuis le serveur du cockpit
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+          CONFIRMER: ${{ github.event.inputs.confirmer }}
+        run: |
+          if [ "${CONFIRMER}" = "ECRIRE" ]; then MODE="--appliquer"; NOM="envoi"; else MODE=""; NOM="essai"; fi
+          echo "mode : ${NOM}"
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "mkdir -p /var/lib/consulant_bo/prive/etiquettes-nl && chmod 700 /var/lib/consulant_bo/prive/etiquettes-nl && \
+             cd '${TARGET_DIR}' && timeout 900 php consultant/bin/envoi_etiquettes_nl.php ${MODE} \
+               --rapport=/var/lib/consulant_bo/prive/etiquettes-nl/${NOM}_\$(date +%Y%m%d_%H%M).json; \
+             rc=\$?; echo \"sortie du script : \$rc\"; [ \$rc -le 1 ]"

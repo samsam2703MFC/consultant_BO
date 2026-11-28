@@ -42,6 +42,72 @@ final class TaskWizards
         'suppliers_reviewed' => ['Ocena dostawców', '/purchasing/supplier-review', 'ocena kwartału zatwierdzona', 3],
         // Lot « lżej » [247] (makiety 19–23) : zadania, które nie miały kreatora.
         'tomorrow_sent' => ['Plan na jutro', '/production/tomorrow', 'plan jutra wysłany na tablety', 3],
+        // [369] Zamówienia dnia (Kierownik operacyjny) : nouvelles et modifiées, à vérifier, validation.
+        'orders_day_checked' => ['Zamówienia dnia', '/client-orders/day-check', 'zamówienia dnia sprawdzone', 3],
+        // [370] Klienci bez zamówienia (Kierownik operacyjny) : clients réguliers sans la commande attendue, résultat, validation.
+        'customers_ordered_checked' => ['Klienci bez zamówienia', '/client-orders/missing', 'stali klienci bez zamówienia wyjaśnieni', 3],
+        // [371] Domówienia dnia (Kierownik operacyjny) : domówienia récentes et à venir, état côté production, résultat, validation.
+        'supplements_day_checked' => ['Domówienia dnia', '/client-orders/supplements', 'domówienia dnia przekazane do produkcji', 3],
+        // [373] Płynność i gotówka (Kierownik operacyjny, co tydzień) : 4 semaines d'entrées et de sorties, solde saisi, décision par signal.
+        'liquidity_checked' => ['Płynność i gotówka', '/finances/liquidity', 'płynność 4 tygodni sprawdzona, decyzje zapisane', 3],
+        // [374] Opóźnienia dostaw (Kierownik operacyjny) : livraisons du jour, en retard ou en transport trop long, décision par livraison.
+        'deliveries_delays_checked' => ['Opóźnienia dostaw', '/logistics/delays', 'opóźnienia i ryzyka dostaw wyjaśnione', 3],
+        // [375] Terminowość tygodnia (OTIF) (Kierownik operacyjny, co tydzień) : OTIF de la semaine écoulée, tendance, une action par cause principale.
+        'otif_week_reviewed' => ['Terminowość tygodnia (OTIF)', '/client-orders/otif', 'OTIF tygodnia oceniony, działanie dla każdej przyczyny', 3],
+        // [377] Partie i kontrola dnia (Specjalista ds. jakości) : journées de groupe closes, trous de traçabilité, un résultat par journée.
+        // Libellé distinct du nom proposé dans la matrice (« Partie i kontrola dnia ») : les UPDATE des migrations ne prennent que celui-ci.
+        'lots_qc_day_checked' => ['Partie i kontrola dnia (identyfikowalność)', '/workshop/traceability/day-check', 'braki identyfikowalności zatwierdzonych dni grup wyjaśnione', 3],
+        // [378] Faktury i KSeF dnia (Administracja i fakturowanie) : expéditions du jour, WDT et KSeF, un résultat par document signalé.
+        // Libellé distinct du nom proposé dans la matrice (« Faktury i KSeF dnia ») : les UPDATE des migrations ne prennent que celui-ci.
+        'invoices_ksef_checked' => ['Faktury i KSeF dnia (wysyłki)', '/shipments/ksef-day', 'faktury WDT wysyłek dnia przyjęte w KSeF albo wyjaśnione', 3],
+        // [379] Reklamacje klientów (Specjalista ds. jakości, co tydzień) : réclamations ouvertes ou mal suivies, semaine écoulée, une décision par réclamation signalée.
+        // Libellé distinct du nom proposé dans la matrice (« Reklamacje klientów ») : les UPDATE des migrations ne prennent que celui-ci.
+        'complaints_reviewed' => ['Reklamacje klientów (przegląd tygodnia)', '/franchise-complaints/review', 'reklamacje tygodnia przejrzane, decyzja dla każdej z sygnałem', 3],
+        // [380] HACCP miesiąca (Jakość, Kierownik produkcji, Brygadzista, Kierowca — co miesiąc) : zdarzenia HACCP, przeglądy i odchylenia SOP, temperatura w dostawach.
+        // Libellé distinct du nom proposé dans la matrice (« HACCP miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
+        'haccp_month_reviewed' => ['HACCP miesiąca (przegląd)', '/production/haccp-month', 'zdarzenia HACCP, SOP i temperatura miesiąca wyjaśnione', 3],
+        // [381] Palety zwrotne (Logistyka, Kierowca-dostawca — co tydzień) : saldo palet EUR klientów, brakujące i uszkodzone palety, decyzja dla klienta.
+        // Libellé distinct du nom proposé dans la matrice (« Palety zwrotne ») : les UPDATE des migrations ne prennent que celui-ci.
+        'pallets_returns_reviewed' => ['Palety zwrotne (saldo klientów)', '/logistics/pallets-returns', 'saldo palet EUR klientów przejrzane, decyzja dla każdego z sygnałem', 3],
+        // [382] Powiadomienia o dostawie (Logistyka — codziennie) : klienci dnia wysyłki z powiadomieniem, błędem e-mail / SMS albo bez kontaktu, decyzja dla klienta.
+        // Libellé distinct du nom proposé dans la matrice (« Powiadomienia o dostawie ») : les UPDATE des migrations ne prennent que celui-ci.
+        'delivery_notices_checked' => ['Powiadomienia o dostawie (dzień)', '/logistics/notices-check', 'powiadomienia klientów dnia wysyłki sprawdzone, decyzja dla każdego z sygnałem', 3],
+        // [383] Poczta od klientów (Administracja — codziennie) : e-maile od klientów bez odpowiedzi po customer_mail.reply_hours h, stan synchronizacji skrzynki, decyzja dla e-maila.
+        // Libellé distinct du nom proposé dans la matrice (« Poczta od klientów ») : les UPDATE des migrations ne prennent que celui-ci.
+        'customer_mail_checked' => ['Poczta od klientów (bez odpowiedzi)', '/mail/customer-check', 'e-maile od klientów bez odpowiedzi po terminie wyjaśnione, decyzja dla każdego', 3],
+        // [384] Nowe produkty (Kierownik produkcji — co miesiąc) : wprowadzenia ostatnich miesięcy, cele (koszt, cena, marża, wolumen) wobec wyniku, decyzja dla produktu.
+        // Libellé distinct du nom proposé dans la matrice (« Nowe produkty ») : les UPDATE des migrations ne prennent que celui-ci.
+        'launches_reviewed' => ['Nowe produkty (przegląd miesiąca)', '/products/launches-review', 'nowe produkty przejrzane (cele vs wynik), decyzja dla każdego z sygnałem', 3],
+        // [385] Dane klientów (Administracja — co miesiąc) : aktywni klienci z brakami w karcie (e-mail, telefon, język, termin płatności, NIP / VAT UE, adres, cennik), decyzja dla klienta.
+        // Libellé distinct du nom proposé dans la matrice (« Dane klientów ») : les UPDATE des migrations ne prennent que celui-ci.
+        'customers_data_checked' => ['Dane klientów (kompletność)', '/clients/data-check', 'karty aktywnych klientów sprawdzone, decyzja dla każdego z brakami', 3],
+        // [404] Badania i szkolenia (Kierownik produkcji — co miesiąc) : badania lekarskie (data z HR) i szkolenia (rejestr asystenta) po terminie, wkrótce albo bez daty, decyzja dla terminu.
+        // Libellé distinct du nom proposé dans la matrice (« Badania i szkolenia (terminy) ») : les UPDATE des migrations ne prennent que celui-ci.
+        'staff_deadlines_reviewed' => ['Badania i szkolenia (przegląd terminów)', '/hr/deadlines', 'terminy badań lekarskich i szkoleń sprawdzone, decyzja dla każdego z sygnałem', 3],
+        // [405] Serwisy i przeglądy maszyn (Kierownik produkcji — co miesiąc, w każdej chwili) : rejestry urządzeń, przeglądów i zgłoszeń, awarie z tabletów, decyzja dla elementu.
+        // Libellé distinct du nom proposé dans la matrice (« Serwisy i przeglądy maszyn ») : les UPDATE des migrations ne prennent que celui-ci.
+        'maintenance_reviewed' => ['Serwisy i przeglądy maszyn (przegląd miesiąca)', '/maintenance', 'przeglądy, serwisy i zgłoszenia w terminie albo z decyzją, każda awaria z tabletu zgłoszona', 3],
+        // [406] Teczka do audytu i kontroli (Kierownik produkcji — co kwartał) : asystenci kontroli i otwarte sprawy w ERP, dokumenty do teczki (papier i elektronicznie), decyzja, teczka PDF.
+        // Libellé distinct du nom proposé dans la matrice (« Teczka do audytu i kontroli ») : les UPDATE des migrations ne prennent que celui-ci.
+        'audit_folder_reviewed' => ['Teczka do audytu i kontroli (przegląd kwartału)', '/audit-folder', 'teczka kwartału sprawdzona, decyzja dla każdego elementu z sygnałem', 3],
+        // [397] PPWR i opakowania (Kierownik produkcji — co miesiąc) : braki PPWR / BDO opakowań i produktów, zmiany, dowody opakowań wysyłek, decyzja dla elementu.
+        // Libellé distinct du nom proposé dans la matrice (« PPWR i opakowania (kompletność) ») : les UPDATE des migrations ne prennent que celui-ci.
+        'ppwr_month_reviewed' => ['PPWR i opakowania (przegląd miesiąca)', '/ppwr/month', 'dane PPWR i BDO opakowań i produktów sprawdzone, decyzja dla każdego braku', 3],
+        // [398] Intrastat miesiąca (Kierownik produkcji — co miesiąc) : wywóz (WDT) i przywóz (faktury dostawców UE) poprzedniego miesiąca, kody CN, kursy, CSV, decyzja dla deklaracji.
+        // Libellé distinct du nom proposé dans la matrice (« Intrastat miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
+        'intrastat_month_reviewed' => ['Intrastat miesiąca (deklaracje)', '/intrastat/month', 'dane Intrastat poprzedniego miesiąca kompletne, każda deklaracja zgłoszona albo poniżej progu', 3],
+        // [400] Receptury i dane produktów (Kierownik produkcji — co miesiąc) : aktywne produkty bez receptury, z niepełną recepturą albo danymi, decyzja dla produktu.
+        // Libellé distinct du nom proposé dans la matrice (« Receptury i dane produktów ») : les UPDATE des migrations ne prennent que celui-ci.
+        'recipes_month_reviewed' => ['Receptury i dane produktów (przegląd miesiąca)', '/recipes/month', 'receptury i dane aktywnych produktów sprawdzone, decyzja dla każdego z brakami', 3],
+        // [401] Kartoteka surowców (Kierownik produkcji — co miesiąc) : surowce aktywnych receptur z brakami w karcie i nowe surowce, decyzja dla surowca.
+        // Libellé distinct du nom proposé dans la matrice (« Kartoteka surowców (kompletność) ») : les UPDATE des migrations ne prennent que celui-ci.
+        'materials_month_reviewed' => ['Kartoteka surowców (przegląd miesiąca)', '/materials/month', 'karty surowców aktywnych receptur i nowe surowce sprawdzone, decyzja dla każdego z brakami', 3],
+        // [402] Dokumenty wysyłek (Kierownik produkcji — co miesiąc) : wysyłki poprzedniego miesiąca z brakami w WZ, CMR, WDT, rozliczeniu różnic, potwierdzeniu odbioru, decyzja dla wysyłki.
+        // Libellé distinct du nom proposé dans la matrice (« Dokumenty wysyłek miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
+        'shipping_docs_reviewed' => ['Dokumenty wysyłek (przegląd miesiąca)', '/shipments/documents-month', 'dokumenty wysyłek poprzedniego miesiąca sprawdzone, decyzja dla każdej z brakami', 3],
+        // [403] Stany magazynowe (Kierownik produkcji — co miesiąc) : zestawienie stanów produktów i surowców na koniec poprzedniego miesiąca (PDF, CSV), decyzje, przekazanie do księgowości.
+        // Libellé distinct du nom proposé dans la matrice (« Stany magazynowe na koniec miesiąca ») : les UPDATE des migrations ne prennent que celui-ci.
+        'stock_month_reported' => ['Stany magazynowe — zestawienie miesiąca', '/stock/month-end', 'zestawienie stanów na koniec poprzedniego miesiąca zapisane, sprawdzone i przekazane do księgowości', 3],
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
@@ -81,6 +147,30 @@ final class TaskWizards
         'payments_reviewed' => 'po kroku 3 asystenta płatności (wpłaty, przypomnienia, różnice dostaw)',
         'suppliers_reviewed' => 'gdy ocena dostawców kwartału jest zatwierdzona (asystent oceny)',
         'tomorrow_sent' => 'gdy plan na jutro jest wysłany na tablety (asystent « Plan na jutro », krok 3)',
+        'orders_day_checked' => 'gdy nowe i zmienione zamówienia są sprawdzone, każde do wyjaśnienia z wynikiem (asystent « Zamówienia dnia », krok 3)',
+        'customers_ordered_checked' => 'gdy każdy stały klient bez oczekiwanego zamówienia ma wynik (kontakt, zamówienie przyszło, przerwa) — asystent « Klienci bez zamówienia », krok 3',
+        'supplements_day_checked' => 'gdy każde domówienie z sygnałem (nie w produkcji, po godzinie granicznej, data, produkt nieaktywny) ma wynik — asystent « Domówienia dnia », krok 3',
+        'deliveries_delays_checked' => 'gdy każda dostawa z sygnałem (po terminie, nie wyjechała, nic gotowego, bez pojazdu lub kierowcy, przeładowany pojazd, za długo w transporcie, problem przy dostawie, data zmieniana wiele razy) ma decyzję — asystent « Opóźnienia dostaw », krok 3',
+        'liquidity_checked' => 'gdy saldo tygodnia jest wpisane i każdy sygnał (zaległości klienta, duża płatność dostawcy, tydzień poniżej poduszki) ma decyzję — asystent « Płynność i gotówka », krok 3',
+        'otif_week_reviewed' => 'gdy OTIF poprzedniego tygodnia (na czas, w całości) jest oceniony i każda główna przyczyna zamówień nie-OTIF ma działanie (akceptowane, korygujące, do obserwacji) — asystent « Terminowość tygodnia (OTIF) », krok 3',
+        'lots_qc_day_checked' => 'gdy każdy zatwierdzony dzień grupy z brakiem (partia surowca bez numeru albo z powodem, partia bez kontroli jakości, partia surowca po DLC lub bez numeru w rejestrze) albo z notatką z tabletu ma wynik (uzupełnione, NC, zaakceptowane) — asystent « Partie i kontrola dnia », krok 3',
+        'invoices_ksef_checked' => 'gdy każda wysyłka z problemem (bez faktury WDT, WDT bez daty faktury, faktura niewysłana do KSeF albo bez odpowiedzi KSeF od ksef_day.pending_days dni, odrzucona, błąd wysyłki) ma wynik (wysłane ponownie / poprawione — sprawdzone, w toku, bez faktury — uzasadnione) — asystent « Faktury i KSeF dnia », krok 3',
+        'complaints_reviewed' => 'gdy każda reklamacja z sygnałem (bez decyzji od complaints_review.open_days dni, przyjęta bez odpowiedzi do magazynu, przyjęta i niewidziana przez grupę produktu, produkt bez grupy) ma decyzję (odpowiedź / zamknięta — sprawdzone, niezgodność NC, do obserwacji) — asystent « Reklamacje klientów », krok 3',
+        'haccp_month_reviewed' => 'gdy każdy element z sygnałem poprzedniego miesiąca (i bieżącego do dziś) — nieobsłużone przerwanie łańcucha chłodniczego, zdarzenie HACCP z wynikiem negatywnym albo audyt poniżej progu, procedura SOP po terminie przeglądu, odchylenie przy wykonaniu SOP, problem z temperaturą w dostawie — ma decyzję (wyjaśnione / zamknięte, działanie korygujące, NC) — asystent « HACCP miesiąca », krok 3',
+        'delivery_notices_checked' => 'gdy każdy klient dnia wysyłki (i następnego dnia roboczego, gdy automat wysyła dzień wcześniej) z sygnałem — błąd e-mail albo SMS, brak powiadomienia, brak e-maila i telefonu — ma decyzję (wysłane ponownie — sprawdzone, kontakt telefoniczny, bez powiadomienia — uzasadnione) — asystent « Powiadomienia o dostawie », krok 3',
+        'customer_mail_checked' => 'gdy każdy e-mail od klienta (skrzynka z Poczty) bez odpowiedzi po customer_mail.reply_hours h liczonych w dniach roboczych albo z odpowiedzią po terminie wysłaną dziś ma decyzję (odpowiedziane — sprawdzone w skrzynce, bez odpowiedzi — nie wymaga, przekazane), przy działającej skrzynce — asystent « Poczta od klientów », krok 3',
+        'pallets_returns_reviewed' => 'gdy każdy klient z sygnałem poprzedniego tygodnia — saldo palet EUR (dostarczone − zwrócone z tabletu kierowcy) powyżej pallets_returns.threshold, brakujące palety bez uzasadnienia, uszkodzona paleta — ma decyzję (przypomnienie / odbiór zaplanowany, OK — saldo uzgodnione, spisane / do faktury) — asystent « Palety zwrotne », krok 3',
+        'customers_data_checked' => 'gdy każdy aktywny klient (zamówienie w ostatnich customers_data.active_months miesiącach) z brakiem w karcie — brak e-maila albo e-mail błędny lub z błędem wysyłki, brak lub nieczytelny telefon, brak języka komunikacji, brak terminu płatności, brak NIP albo VAT UE bez prefiksu kraju przy WDT, niepełny adres, brak cennika albo produkt zamówiony bez ceny klienta — ma decyzję (poprawione — karta już bez braków, brak danych od klienta, nie dotyczy) — asystent « Dane klientów », krok 3',
+        'launches_reviewed' => 'gdy każdy nowy produkt (wprowadzony albo utworzony w ERP w ostatnich launches_review.months miesiącach) poza celem — koszt surowców powyżej celu, cena poniżej celu, marża poniżej minimum, sprzedaż na sklep / tydzień poniżej oczekiwanej albo brak sprzedaży — albo bez decyzji w module Kierownik produkcji ma decyzję (zostaje, korekta, wycofać) — asystent « Nowe produkty », krok 3',
+        'staff_deadlines_reviewed' => 'gdy każdy termin aktywnego pracownika z sygnałem — badania lekarskie po terminie, bez daty w HR albo kończące się w ciągu hr.alert_days dni, szkolenie z rejestru po terminie albo kończące się wkrótce, brak szkolenia BHP (staff_deadlines.bhp_required) — ma decyzję (umówione z datą, aktualne — sprawdzone, nie dotyczy) — asystent « Badania i szkolenia », krok 3',
+        'maintenance_reviewed' => 'gdy każdy element z sygnałem — przegląd, serwis lub pomiar po terminie, kończący się w ciągu maintenance.alert_days dni albo bez terminu, zgłoszenie awarii lub serwisu po terminie realizacji albo bez terminu, awaria z tabletu (co najmniej maintenance.breakdown_min_minutes min) bez zgłoszenia, aktywna maszyna bez wpisu w rejestrze — ma decyzję (umówione — termin, załatwione, nie dotyczy) — asystent « Serwisy i przeglądy maszyn », krok 3',
+        'audit_folder_reviewed' => 'gdy każdy element z sygnałem — asystent kontroli (HACCP, PPWR, niezgodności, reklamacje, partie, próbki, badania i szkolenia, serwisy) bez « Zakończ » w swoim rytmie + audit_folder.grace_days dni, otwarte sprawy w ERP (łańcuch chłodniczy, NC, reklamacje, profile PPWR opakowań), SOP po terminie przeglądu, dokument do teczki niesprawdzony, do sprawdzenia w ciągu audit_folder.alert_days dni, bez osoby albo miejsca — ma decyzję (gotowe — w teczce, do uzupełnienia z terminem, nie dotyczy) — asystent « Teczka do audytu i kontroli », krok 3',
+        'ppwr_month_reviewed' => 'gdy każdy element z sygnałem — opakowanie używane w aktywnym produkcie z brakiem w Rejestrze PPWR (numer, masa, poziom, rodzaj, materiał, recyklat, recykling, minimalizacja, wymiary) albo w danych BDO, aktywny produkt bez kartonu sprzedażowego, PPC albo poprawnej masy, opakowanie lub produkt zmienione od ostatniego przeglądu, wysyłka poprzedniego miesiąca bez kompletnego dowodu opakowań — ma decyzję (uzupełnione — sprawdzone, zapytanie do dostawcy wysłane, nie dotyczy) — asystent « PPWR i opakowania », krok 3',
+        'intrastat_month_reviewed' => 'gdy każdy sygnał poprzedniego miesiąca — produkt z WDT albo surowiec z faktury dostawcy z UE bez kodu CN lub masy netto, waluta bez kursu na miesiąc, odbiorca WDT bez VAT UE, faktura bez surowca albo w walucie obcej bez VAT UE sprzedawcy — ma decyzję (uzupełnione, nie dotyczy), a każda deklaracja (firma × wywóz / przywóz) jest zgłoszona w PUESC z numerem albo poniżej progu z uzasadnieniem — asystent « Intrastat miesiąca », krok 3',
+        'recipes_month_reviewed' => 'gdy każdy aktywny produkt z brakiem — bez receptury, receptura nieistniejąca, bez składników albo bez kosztu kartonu, surowce receptury bez ceny, receptura na 1 sztukę zamiast kartonu, brak poprawnej masy, sztuk w kartonie, danych palety, przydatności, kategorii albo działu — ma decyzję (uzupełnione — sprawdzone, przekazane do uzupełnienia, nie dotyczy) — asystent « Receptury i dane produktów », krok 3',
+        'materials_month_reviewed' => 'gdy każdy surowiec z sygnałem — używany w aktywnej recepturze z brakiem w karcie (kategoria, jednostka bazowa, aktualna cena, wielkość opakowania, dostawca albo dostawca nieaktywny, wartości odżywcze surowca spożywczego) albo nowy od ostatniego przeglądu — ma decyzję (uzupełnione — sprawdzone, zapytanie do dostawcy wysłane, nie dotyczy) — asystent « Kartoteka surowców », krok 3',
+        'shipping_docs_reviewed' => 'gdy każda wysyłka poprzedniego miesiąca z brakiem — brak WZ, CMR albo WDT, dokument bez pozycji, CMR bez przewoźnika, numeru rejestracyjnego albo listy opakowań, różne ilości WZ i WDT, różnica albo problem dostawy nierozliczony, brak potwierdzenia odbioru albo podpisu odbiorcy w dniu z tabletem kierowcy — ma decyzję (uzupełnione — sprawdzone, dokument papierowy kompletny, nie dotyczy) — asystent « Dokumenty wysyłek miesiąca », krok 3',
+        'stock_month_reported' => 'gdy zestawienie stanów produktów gotowych i surowców na koniec poprzedniego miesiąca jest zapisane, każda pozycja z sygnałem — stan ujemny, bez inwentaryzacji, bez ceny albo kosztu, kartony po dacie ważności, produkt nieaktywny ze stanem, duża zmiana wartości — ma decyzję (sprawdzone — stan poprawny, do korekty) i zestawienie jest przekazane do księgowości — asystent « Stany magazynowe na koniec miesiąca », krok 3',
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
@@ -212,6 +302,155 @@ final class TaskWizards
                 break;
             case 'tomorrow_sent':
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                break;
+            case 'orders_day_checked':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->orderChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'zamówienie wyjaśnione', 'zamówienia wyjaśnione', 'zamówień wyjaśnionych')] + $out;
+                break;
+            case 'customers_ordered_checked':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->noOrderResults($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klientów wyjaśnionych', 'klientów wyjaśnionych')] + $out;
+                break;
+            case 'supplements_day_checked':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->supplementChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'domówienie wyjaśnione', 'domówienia wyjaśnione', 'domówień wyjaśnionych')] + $out;
+                break;
+            case 'deliveries_delays_checked':
+                // [374] Codziennie : zakończenie dnia ; w toku = decyzje zapisane dziś.
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->deliveryDelayChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'dostawa wyjaśniona', 'dostawy wyjaśnione', 'dostaw wyjaśnionych')] + $out;
+                break;
+            case 'liquidity_checked':
+                // [373] Co tydzień : zakończenie w okresie zadania ; w toku = saldo wpisane albo decyzje w tygodniu.
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($p = $this->repo->liquidityProgress(\App\Services\Organization\Wizards\LiquidityCheckService::monday(substr($from, 0, 10))))['balance'] || $p['decisions'] > 0) {
+                    $out = ['step' => 2, 'step_label' => ($p['balance'] ? 'saldo wpisane' : 'saldo niewpisane') . ' · ' . $p['decisions'] . ' ' . self::pl($p['decisions'], 'decyzja', 'decyzje', 'decyzji')] + $out;
+                }
+                break;
+            case 'otif_week_reviewed':
+                // [375] Co tydzień : zakończenie w okresie zadania ; w toku = działania zapisane dla ocenianego tygodnia (poprzedni tydzień).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->otifActions(\App\Services\Organization\Wizards\OtifWeekService::reviewedWeek(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'przyczyna z działaniem', 'przyczyny z działaniem', 'przyczyn z działaniem')] + $out;
+                }
+                break;
+            case 'lots_qc_day_checked':
+                // [377] Codziennie : zakończenie dnia ; w toku = wyniki zapisane dziś.
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->lotsQcChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'dzień grupy wyjaśniony', 'dni grup wyjaśnione', 'dni grup wyjaśnionych')] + $out;
+                break;
+            case 'invoices_ksef_checked':
+                // [378] Codziennie : zakończenie dnia ; w toku = wyniki zapisane dziś.
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->invoiceKsefChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'dokument wyjaśniony', 'dokumenty wyjaśnione', 'dokumentów wyjaśnionych')] + $out;
+                break;
+            case 'complaints_reviewed':
+                // [379] Co tydzień : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego tygodnia (poprzedni tydzień).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->complaintReviews(\App\Services\Organization\Wizards\ComplaintsReviewService::reviewedWeek(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'reklamacja wyjaśniona', 'reklamacje wyjaśnione', 'reklamacji wyjaśnionych')] + $out;
+                }
+                break;
+            case 'haccp_month_reviewed':
+                // [380] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego miesiąca (poprzedni miesiąc).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->haccpMonthReviews(\App\Services\Organization\Wizards\HaccpMonthService::reviewedMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element wyjaśniony', 'elementy wyjaśnione', 'elementów wyjaśnionych')] + $out;
+                }
+                break;
+            case 'launches_reviewed':
+                // [384] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->launchReviews(\App\Services\Organization\Wizards\LaunchesReviewService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'produkt wyjaśniony', 'produkty wyjaśnione', 'produktów wyjaśnionych')] + $out;
+                }
+                break;
+            case 'staff_deadlines_reviewed':
+                // [404] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->staffDeadlineReviews(\App\Services\Organization\Wizards\StaffDeadlinesService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'termin z decyzją', 'terminy z decyzją', 'terminów z decyzją')] + $out;
+                }
+                break;
+            case 'maintenance_reviewed':
+                // [405] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->maintenanceReviews(\App\Services\Organization\Wizards\MaintenanceService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element z decyzją', 'elementy z decyzją', 'elementów z decyzją')] + $out;
+                }
+                break;
+            case 'audit_folder_reviewed':
+                // [406] Co kwartał : zakończenie w okresie zadania (kwartał) ; w toku = decyzje zapisane dla kwartału.
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->auditFolderReviews(\App\Services\Organization\Wizards\AuditFolderService::quarterStart(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element z decyzją', 'elementy z decyzją', 'elementów z decyzją')] + $out;
+                }
+                break;
+            case 'ppwr_month_reviewed':
+                // [397] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->ppwrMonthReviews(\App\Services\Organization\Wizards\PpwrMonthService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element z decyzją', 'elementy z decyzją', 'elementów z decyzją')] + $out;
+                }
+                break;
+            case 'intrastat_month_reviewed':
+                // [398] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego miesiąca (poprzedni miesiąc).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->intrastatMonthReviews(\App\Services\Organization\Wizards\IntrastatMonthService::reviewedMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'element z decyzją', 'elementy z decyzją', 'elementów z decyzją')] + $out;
+                }
+                break;
+            case 'recipes_month_reviewed':
+                // [400] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->recipesMonthReviews(\App\Services\Organization\Wizards\RecipesMonthService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'produkt z decyzją', 'produkty z decyzją', 'produktów z decyzją')] + $out;
+                }
+                break;
+            case 'materials_month_reviewed':
+                // [401] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->materialsMonthReviews(\App\Services\Organization\Wizards\MaterialsMonthService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'surowiec z decyzją', 'surowce z decyzją', 'surowców z decyzją')] + $out;
+                }
+                break;
+            case 'shipping_docs_reviewed':
+                // [402] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego miesiąca (poprzedni miesiąc).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->shippingDocsReviews(\App\Services\Organization\Wizards\ShippingDocsMonthService::reviewedMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'wysyłka z decyzją', 'wysyłki z decyzją', 'wysyłek z decyzją')] + $out;
+                }
+                break;
+            case 'stock_month_reported':
+                // [403] Co miesiąc : zakończenie w okresie zadania ; w toku = zestawienie poprzedniego miesiąca zapisane.
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($p = $this->repo->stockMonthProgress(\App\Services\Organization\Wizards\StockMonthService::reviewedMonth(substr($from, 0, 10))))['snapshot']) {
+                    $out = ['step' => 2, 'step_label' => 'zestawienie zapisane · ' . $p['decisions'] . ' ' . self::pl($p['decisions'], 'decyzja', 'decyzje', 'decyzji')] + $out;
+                }
+                break;
+            case 'customers_data_checked':
+                // [385] Co miesiąc : zakończenie w okresie zadania ; w toku = decyzje zapisane w miesiącu kontroli (pierwszy dzień okresu).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->customersDataChecks(\App\Services\Organization\Wizards\CustomersDataCheckService::reviewMonth(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klienci wyjaśnieni', 'klientów wyjaśnionych')] + $out;
+                }
+                break;
+            case 'delivery_notices_checked':
+                // [382] Codziennie : zakończenie dnia ; w toku = decyzje zapisane dziś.
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->deliveryNoticeChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klienci wyjaśnieni', 'klientów wyjaśnionych')] + $out;
+                break;
+            case 'customer_mail_checked':
+                // [383] Codziennie : zakończenie dnia ; w toku = decyzje zapisane dziś.
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->customerMailChecks($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'e-mail wyjaśniony', 'e-maile wyjaśnione', 'e-maili wyjaśnionych')] + $out;
+                break;
+            case 'pallets_returns_reviewed':
+                // [381] Co tydzień : zakończenie w okresie zadania ; w toku = decyzje zapisane dla ocenianego tygodnia (poprzedni tydzień).
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                elseif (($n = $this->repo->palletReturnReviews(\App\Services\Organization\Wizards\PalletsReturnsService::reviewedWeek(substr($from, 0, 10)))) > 0) {
+                    $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'klient wyjaśniony', 'klienci wyjaśnieni', 'klientów wyjaśnionych')] + $out;
+                }
                 break;
             case 'sop_daily':
                 $d = $this->container->get(\App\Services\Workshop\Production\SopService::class)->daily($day);

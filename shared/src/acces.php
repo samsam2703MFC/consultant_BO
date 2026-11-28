@@ -45,7 +45,19 @@ const ACCES_FRANCHISE = ['/exploitation', '/ventes', '/fidelite', '/analyse', '/
     // Le plan de trésorerie (14/11/2026) : chaque franchisé a le sien — le `shop` de la requête et du corps est vérifié.
     '/tresorerie',
     // Le helpdesk (15/11/2026) : le franchisé lit et envoie SES demandes au bureau ; le reste du helpdesk est au siège.
-    '/helpdesk/magasin'];
+    '/helpdesk/magasin',
+    // Le coffre-fort (22/11/2026) : les documents de SA boutique ; le dépôt (multipart) revérifie le magasin (cofShopOk).
+    '/coffre/magasin',
+    // La recherche de la formation (22/11/2026) : l’index du catalogue, en lecture, pour « Formations et suivi ».
+    '/formation/recherche',
+    // La formation continue (22/11/2026) : SON dossier de formation (« Formations et suivi ») ; la photo (multipart) revérifie
+    // le magasin (fcShopOk).
+    '/formation/continue/magasin',
+    // L'autocontrôle qualité (24/11/2026) : la tablette contrôle les produits de SA boutique ; les photos revérifient le
+    // magasin du contrôle (aqShopOk). Les grilles et les résultats du réseau restent au siège.
+    '/autocontrole/magasin',
+    // La médiathèque (26/11/2026) : les vidéos publiées, en lecture, pour le catalogue de formation ; le reste est au siège.
+    '/formation/mediatheque/liste'];
 
 /** Les paramètres qui désignent un magasin, dans l'adresse ou dans le corps JSON. */
 const ACCES_CLES_MAGASIN = ['shop', 'shops', 'shopId', 'shop_id', 'magasin', 'magasins', 'magasinId'];

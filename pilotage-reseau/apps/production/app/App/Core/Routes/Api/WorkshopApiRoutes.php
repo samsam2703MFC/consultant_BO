@@ -5,18 +5,21 @@ namespace App\Core\Routes\Api;
 
 use App\Controllers\Api\Workshop\AuthController;
 use App\Controllers\Api\Workshop\BuyController;
+use App\Controllers\Api\Workshop\ColdVisitController;
 use App\Controllers\Api\Workshop\DataSheetController;
 use App\Controllers\Api\Workshop\DeliveryController;
 use App\Controllers\Api\Workshop\DriverController;
 use App\Controllers\Api\Workshop\EmployeeController;
 use App\Controllers\Api\Workshop\ExecutionController;
 use App\Controllers\Api\Workshop\GroupController;
+use App\Controllers\Api\Workshop\HalaController;
 use App\Controllers\Api\Workshop\ItemController;
 use App\Controllers\Api\Workshop\ManagerController;
 use App\Controllers\Api\Workshop\OpenApiController;
 use App\Controllers\Api\Workshop\PackingController;
 use App\Controllers\Api\Workshop\ParamController;
 use App\Controllers\Api\Workshop\PlanningController;
+use App\Controllers\Api\Workshop\QualityRoundController;
 use App\Controllers\Api\Workshop\ReceivingController;
 use App\Controllers\Api\Workshop\SchedulingController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
@@ -125,6 +128,7 @@ final class WorkshopApiRoutes
             ['GET', '/planning/sheet', WeekController::class, 'sheet', 'prod.plan.read'],
             ['GET', '/planning/team-sheet', WeekController::class, 'teamSheet', 'prod.plan.read'],
             ['GET', '/planning/team-sheet/pdf', WeekController::class, 'teamSheetPdf', 'prod.plan.read'],
+            ['GET', '/planning/team-sheet/orders', WeekController::class, 'teamSheetOrders', 'prod.plan.read'],
             ['GET', '/planning/team-sheet/day', WeekController::class, 'teamDay', 'prod.plan.read'],
             ['GET', '/planning/team-sheet/day/pdf', WeekController::class, 'teamDayPdf', 'prod.plan.read'],
             // Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji.
@@ -178,6 +182,9 @@ final class WorkshopApiRoutes
             ['GET', '/supply/buy/results', BuyController::class, 'results', 'prod.supply.read'],
             ['GET', '/supply/buy/suppliers', BuyController::class, 'suppliers', 'prod.supply.read'],
             ['PUT', '/supply/buy/materials/{id:\d+}/suppliers', BuyController::class, 'saveSuppliers', 'prod.supply.write'],
+            // [432] Obchód chłodni : miejsca dodane w ERP (Magazyn suchy…) — chłodnie z rejestru urządzeń przychodzą same.
+            ['POST', '/supply/buy/cold-places', BuyController::class, 'addColdPlace', 'prod.supply.write'],
+            ['DELETE', '/supply/buy/cold-places/{id:\d+}', BuyController::class, 'removeColdPlace', 'prod.supply.write'],
             ['GET', '/supply/invoices', InvoiceController::class, 'list', 'prod.supply.read'],
             ['GET', '/supply/invoices/wizard', InvoiceController::class, 'wizard', 'prod.supply.read'],
             ['GET', '/supply/invoices/assistant-status', InvoiceController::class, 'assistantStatus', 'prod.supply.read'],
@@ -290,6 +297,7 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/complaints/summary', ExecutionController::class, 'complaintsSummary', 'kiosk'],
             ['GET', '/kiosk/complaints', ExecutionController::class, 'complaints', 'kiosk'],
             ['GET', '/kiosk/complaints/{id:\d+}/photos', ExecutionController::class, 'complaintPhotos', 'kiosk'],
+            ['POST', '/kiosk/complaints/{id:\d+}/seen', ExecutionController::class, 'complaintSeen', 'kiosk_employee'],
             ['GET', '/kiosk/bonus', ExecutionController::class, 'bonus', 'kiosk_employee'],
             ['POST', '/kiosk/waste', ExecutionController::class, 'recordWaste', 'kiosk_employee'],
             ['PATCH', '/kiosk/waste/{id:\d+}', ExecutionController::class, 'updateWaste', 'kiosk_employee'],
@@ -334,6 +342,21 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/receiving/orders/{id:\d+}', ReceivingController::class, 'order', 'kiosk'],
             ['POST', '/kiosk/receiving/orders/{id:\d+}', ReceivingController::class, 'check', 'kiosk'],
             // Komunikaty kierownika produkcji [232] (tablica « Zadania zespołu ») : tablet grupy, pakowania, kierowcy ; « Przeczytane » PIN-em.
+            // [409–411] Tablet hali « Mój dzień » : ścieżka dnia grupy (makieta A–G), « Pomoc », widok « Zmiana » brygadzisty (H).
+            ['GET', '/kiosk/hala/day', HalaController::class, 'day', 'kiosk_employee'],
+            ['PUT', '/kiosk/hala/made/{id:\d+}', HalaController::class, 'made', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/steps', HalaController::class, 'step', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/bags', HalaController::class, 'scan', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/chill', HalaController::class, 'chillStart', 'kiosk_employee'],
+            ['PUT', '/kiosk/hala/chill/{id:\d+}', HalaController::class, 'chillMeasure', 'kiosk_employee'],
+            ['PUT', '/kiosk/hala/clean/{id:\d+}', HalaController::class, 'clean', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/close', HalaController::class, 'close', 'kiosk_employee'],
+            ['GET', '/kiosk/hala/help', HalaController::class, 'helpState', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/help', HalaController::class, 'help', 'kiosk_employee'],
+            ['PATCH', '/kiosk/hala/help/{id:\d+}', HalaController::class, 'helpAction', 'kiosk_employee'],
+            ['GET', '/kiosk/hala/shift', HalaController::class, 'shift', 'kiosk_employee'],
+            ['POST', '/kiosk/hala/shift/validate', HalaController::class, 'validateShift', 'kiosk_employee'],
+            ['GET', '/kiosk/hala/photos/{id:\d+}', HalaController::class, 'photo', 'kiosk'],
             ['GET', '/kiosk/messages', TaskMessageController::class, 'list', 'kiosk'],
             ['POST', '/kiosk/messages/{id:\d+}/read', TaskMessageController::class, 'read', 'kiosk'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],
@@ -362,6 +385,28 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/clock-questions', ExecutionController::class, 'createClockQuestion', 'prod.employees.write'],
             ['PATCH', '/kiosk/clock-questions/{id:\d+}', ExecutionController::class, 'updateClockQuestion', 'prod.employees.write'],
             ['DELETE', '/kiosk/clock-questions/{id:\d+}', ExecutionController::class, 'deleteClockQuestion', 'prod.employees.write'],
+            // [415] Tablet jakości Kierownika produkcji (/tablet/quality) : osoby (Kierownik produkcji, Jakość), obchód dnia, kontrola
+            // partii (waga, wygląd, worki, próbka), brak skanu wysłany grupie ; [416] śledzenie partii, PDF, wstrzymanie partii.
+            ['GET', '/kiosk/quality-round/people', QualityRoundController::class, 'people', 'kiosk'],
+            ['GET', '/kiosk/quality-round', QualityRoundController::class, 'show', 'kiosk_employee'],
+            ['GET', '/kiosk/quality-round/batches/{id:\d+}', QualityRoundController::class, 'batch', 'kiosk_employee'],
+            ['POST', '/kiosk/quality-round/batches/{id:\d+}/controls', QualityRoundController::class, 'control', 'kiosk_employee'],
+            ['PUT', '/kiosk/quality-round/batches/{id:\d+}/lots/{material:\d+}', QualityRoundController::class, 'lot', 'kiosk_employee'],
+            ['POST', '/kiosk/quality-round/batches/{id:\d+}/lot-requests', QualityRoundController::class, 'requestLots', 'kiosk_employee'],
+            ['POST', '/kiosk/quality-round/batches/{id:\d+}/sample', QualityRoundController::class, 'sample', 'kiosk_employee'],
+            ['POST', '/kiosk/quality-round/photos', QualityRoundController::class, 'photo', 'kiosk_employee'],
+            ['GET', '/kiosk/quality-round/trace', QualityRoundController::class, 'scan', 'kiosk_employee'],
+            ['GET', '/kiosk/quality-round/trace/{id:\d+}', QualityRoundController::class, 'trace', 'kiosk_employee'],
+            ['GET', '/kiosk/quality-round/trace/{id:\d+}/pdf', QualityRoundController::class, 'pdf', 'kiosk_employee'],
+            ['POST', '/kiosk/quality-round/trace/{id:\d+}/hold', QualityRoundController::class, 'hold', 'kiosk_employee'],
+            ['POST', '/kiosk/quality-round/holds/{id:\d+}/release', QualityRoundController::class, 'release', 'kiosk_employee'],
+            // [432] Obchód chłodni przed zakupami (tablet jakości) : miejsca, jedno miejsce, « Zapisz chłodnię », surowce miejsca.
+            ['GET', '/kiosk/cold-visit', ColdVisitController::class, 'home', 'kiosk_employee'],
+            ['GET', '/kiosk/cold-visit/materials', ColdVisitController::class, 'search', 'kiosk_employee'],
+            ['GET', '/kiosk/cold-visit/places/{id:\d+}', ColdVisitController::class, 'place', 'kiosk_employee'],
+            ['POST', '/kiosk/cold-visit/places/{id:\d+}', ColdVisitController::class, 'save', 'kiosk_employee'],
+            ['PUT', '/kiosk/cold-visit/places/{id:\d+}/materials/{material:\d+}', ColdVisitController::class, 'assign', 'kiosk_employee'],
+            ['DELETE', '/kiosk/cold-visit/places/{id:\d+}/materials/{material:\d+}', ColdVisitController::class, 'unassign', 'kiosk_employee'],
         ];
     }
 

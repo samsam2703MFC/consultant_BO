@@ -1,31 +1,50 @@
-/* Dashboard magasin › Paramètres › Mails et automatisations (16/11/2026) : automatisations.js. Préfixe au-. */
+/* Dashboard magasin › Paramètres › Mails et automatisations (16/11/2026) : automatisations.js. Préfixe au-.
+   27/11/2026 (DESIGN_SYSTEM.md §7.13) : le résumé et « À corriger » remplacent les quatre tuiles (.au-res, la forme de .ac /
+   .pco-res recopiée sous le préfixe) ; les têtes des listes collées en haut de leur fenêtre ; les canaux en étiquettes
+   neutres (le mot suffit), les états sur les jetons ; pas de pilule. */
 .au-racine{display:block}
 .au-intro{margin:0 0 12px;font-size:13px;color:var(--muted-2)}
 .au-flash{margin:0 0 12px;padding:9px 12px;border-radius:9px;font-size:12.5px}
-.au-flash.ok{background:rgba(63,122,82,.1);color:#2f5e3e}.au-flash.ko{background:rgba(163,32,20,.08);color:#A32014}
-.au-ok{color:#3f7a52}.au-ko{color:#A32014}
+.au-flash.ok{background:rgba(63,122,82,.12);color:var(--green)}.au-flash.ko{background:rgba(179,38,30,.07);color:var(--danger)}
+.au-ok{color:var(--green)}.au-ko{color:var(--stop)}
 
-/* Quatre tuiles identiques : mêmes lignes, même hauteur. */
-.au-tuiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
-.au-tui{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;min-width:0}
-.au-tui .k{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.au-tui b{font-weight:400;font-size:20px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.au-tui .s{font-size:11.5px;line-height:16px;height:32px;overflow:hidden;color:var(--muted-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.au-tui.on b{color:#3f7a52}
+/* Le résumé : ligne 1, les rappels prévus demain (24 px, 700 : le seul gras) et l'état du rappel en mots, ce qu'ils couvrent,
+   l'horloge derrière un filet ; ligne 2 sous un filet, « À corriger » (des .btn--sm : un point suivi de mots). */
+.au-res{padding:16px 20px 14px;margin-bottom:12px}
+.au-res-l1{display:grid;grid-template-columns:auto minmax(240px,1.3fr) minmax(220px,1fr);gap:24px;align-items:center}
+.au-res-v{display:flex;flex-direction:column;gap:4px}
+.au-res-n{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);font-variant-numeric:tabular-nums}
+.au-res-et{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted-2);white-space:nowrap}
+.au-res-q{font-size:13px;line-height:1.35;color:var(--ink)}.au-res-q>span{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.au-res-h{display:flex;flex-direction:column;gap:3px;padding-left:18px;border-left:1px solid var(--line);font-size:13px;color:var(--ink)}
+.au-res-h>span+span{font-size:12px;color:var(--muted)}
+.au-pt{flex:none;width:8px;height:8px;border-radius:50%;background:#c9c1b4}
+.au-pt.green{background:var(--green)}.au-pt.prize{background:var(--prize)}.au-pt.stop{background:var(--stop)}
+.au-res-l2{display:flex;align-items:flex-start;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.au-res-t{flex:none;font-size:12.5px;line-height:30px;color:var(--muted-2)}
+.au-res-l{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.au-res-b{gap:8px;color:var(--muted-2)}.au-res-b:hover:not(:disabled){border-color:var(--accent)}
+.au-res-j{color:var(--ink)}
+.au-res-ok{margin:0;font-size:12.5px;color:var(--green)}
+/* La carte où mène un point : un liseré bordeaux un instant (pas d'ombre). */
+.au-vu{outline:2px solid var(--accent);outline-offset:3px;animation:au-vu 1.8s ease-out forwards}
+@keyframes au-vu{0%,55%{outline-color:var(--accent)}100%{outline-color:transparent}}
+@media (prefers-reduced-motion:reduce){.au-vu{animation:none}}
 
 .au-liste{margin-bottom:6px}
 .au-t{width:100%;border-collapse:collapse;font-size:12.5px}
-.au-t th{text-align:left;font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 14px;background:var(--color-background-secondary)}
+.au-t th{text-align:left;font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);padding:8px 14px;background:var(--table-head)}
 .au-t td{padding:9px 14px;border-top:1px solid var(--color-border-tertiary);vertical-align:middle}
 .au-t td b{font-weight:400}.au-t td small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .au-t .n{text-align:right;white-space:nowrap}
-.au-t tr.sel td{background:#fcf9f5}
+.au-t tr.sel td{background:var(--table-head)}
 .au-t tr.gris td{color:var(--faint)}.au-t tr.gris td>*{opacity:.6}.au-t tr.gris .au-chip.g{opacity:1}
 .au-t td .bx-bascule{display:inline-block;vertical-align:middle;margin-right:8px}
 .au-etat{font-size:12px;color:var(--muted-2)}
-.au-chip{display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border-radius:10px;background:var(--chip);font-size:11px;white-space:nowrap}
-.au-chip.m{background:#e8eef8;color:#1f4e8c}.au-chip.s{background:rgba(63,122,82,.12);color:#2f5e3e}.au-chip.p{background:rgba(141,29,44,.08);color:var(--accent)}
-.au-chip.g{background:var(--chip);color:var(--muted)}
+/* Un canal (e-mail, SMS, PDF) : une étiquette neutre, le mot suffit (le vert dit « réussi », le bordeaux « choisi ») ;
+   « à venir » : neutre aussi. Coins de 4 px, pas de pilule. */
+.au-chip{display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border-radius:4px;background:var(--chip);color:var(--muted-2);font-size:11px;white-space:nowrap}
+.au-chip.g{background:var(--chip);color:var(--muted-2)}
 
 /* Le réglage et l'aperçu : deux colonnes, cartes empilées. */
 .au-g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
@@ -33,7 +52,7 @@
 .au-f{padding:12px 16px 14px;display:grid;gap:10px}
 .au-row{display:flex;align-items:center;gap:10px;font-size:12.5px}
 .au-row .bx-in{width:auto}
-.au-lab{display:grid;gap:4px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.au-lab{display:grid;gap:4px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .au-lab .bx-in{text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)}
 .au-f textarea.bx-in{width:100%;resize:vertical;line-height:1.45}
 .au-f input.bx-in{width:100%}
@@ -41,26 +60,27 @@
 .au-seg button{border:0;background:none;padding:6px 14px;border-radius:7px;font:inherit;font-size:12.5px;color:var(--muted-2);cursor:pointer}
 .au-seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .au-vars{display:flex;flex-wrap:wrap;gap:4px}
-.au-var{font:400 11px ui-monospace,SFMono-Regular,Menlo,monospace;padding:2px 6px;border-radius:5px;background:rgba(141,29,44,.06);color:var(--accent);cursor:help}
+.au-var{font:400 11px var(--font-ui);padding:2px 6px;border-radius:4px;background:var(--chip);color:var(--muted-2);cursor:help}
 .au-off{opacity:.45}
 .au-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
 .au-actions .au-tel{width:220px}
-.au-modif{margin:6px 0 0;text-align:right;font-size:11.5px;color:var(--accent)}
+.au-modif{margin:6px 0 0;text-align:right;font-size:11.5px;color:var(--prize-ink)}
 
 .au-mail{margin:12px 16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.au-mail .h{padding:9px 12px;background:var(--color-background-secondary);font-size:12px;color:var(--muted-2)}.au-mail .h b{font-weight:400;color:var(--ink)}
+.au-mail .h{padding:9px 12px;background:var(--table-head);font-size:12px;color:var(--muted-2)}.au-mail .h b{font-weight:400;color:var(--ink)}
 .au-mail .c{padding:12px;font-size:13px;line-height:1.55}
-.au-sms{margin:0 16px 14px;padding:12px;border-radius:12px;background:#f2efe9}
-.au-sms .h{font-size:10.5px;color:var(--muted);margin-bottom:6px}
+.au-sms{margin:0 16px 14px;padding:12px;border-radius:12px;background:var(--chip)}
+.au-sms .h{font-size:10.5px;color:var(--muted-2);margin-bottom:6px}
 .au-sms .b{display:inline-block;max-width:85%;padding:9px 12px;border-radius:14px 14px 14px 4px;background:#fff;font-size:12.5px;line-height:1.45}
 .au-defile{max-height:300px;overflow:auto}
-.au-defile thead th{position:sticky;top:0;z-index:1}
+/* La tête collée en haut de la fenêtre de la liste ; un filet (une bordure ne suit pas une tête collée), pas une ombre. */
+.au-defile thead th{position:sticky;top:0;z-index:1;box-shadow:0 1px 0 var(--line)}
 .au-vide{margin:0;padding:14px 16px;font-size:12.5px;color:var(--muted-2)}
 
 .au-porte{max-width:560px;margin:40px auto;padding:22px 24px;display:grid;gap:8px;justify-items:start}
 .au-porte b{font-weight:400;font-size:16px}.au-porte p{margin:0;font-size:13px;color:var(--muted-2)}
 
-@media (max-width:1100px){.au-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}.au-g2{grid-template-columns:1fr}}
+@media (max-width:1100px){.au-g2{grid-template-columns:1fr}.au-res-l1{grid-template-columns:auto minmax(0,1fr)}.au-res-h{grid-column:1 / -1;padding:10px 0 0;border-left:0;border-top:1px solid var(--line)}}
 
 /* L'équipe qui reçoit les fiches des promotions (17/11/2026). */
 .au-eq .au-t td{padding:8px 16px}

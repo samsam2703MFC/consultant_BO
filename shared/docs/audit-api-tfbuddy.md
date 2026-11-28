@@ -182,7 +182,7 @@ existe, mais sa réponse n'est pas décrite.
 
 - **Fonctions** : `ep_consultants`, `ep_people`, `ep_roles`,
   `consultantAuthId`, `consultantNom`.
-- **Routes** : `/panel/consultants` (déjà lue par `mesure.php`),
+- **Routes** : `/panel/consultants` (déjà lue par `consultant/src/sonde_consultant.php`),
   `/consultant/responsibility-areas` et
   `/consultant-memberships/{id}/area-descriptions`.
 - **Verdict : Partiel.** Les consultants, oui. Les destinataires de rapports
@@ -287,6 +287,8 @@ Le cockpit a déjà ses sondes. Elles passent par le compte consultant configur�
 
 - `GET /api/cockpit/diagnostic/panel-consultant?shop=4` : un jeu fixe de routes
   consultant.
+- `GET /api/cockpit/diagnostic/marketing-service` (siège) : le canal vers le module Marketing (jeton de service), par
+  une lecture sans effet (`/campaign-types`) ; rend `{jetonLisible, code, erreur, types, ok}`, jamais le jeton.
 - `GET /api/cockpit/exploitation/invendus/sonde?shop=4&q=/shops/4/reports/sales/daily?date=2026-11-02,…`
   : des chemins libres, limités aux produits, au stock et aux rapports.
 - `ep_pwa_probe()` (`GET /pwa/probe?paths=…`) existe dans `endpoints.php`,

@@ -539,6 +539,7 @@ function rapVals(app, sv, id){
     score: scoreVals(d.score),
     evaluation: evalVals(d.evaluation),
     outils: outilsVals(d.outils),
+    qualite: qualiteVals(d.qualite),
     personnel: equipeVals(v.personnel),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
@@ -577,6 +578,16 @@ function equipeVals(pe){
  * L'évaluation rapide de fin de visite (05/11/2026) : le radar dessiné par le serveur (le même que dans le PDF), la moyenne
  * face à la précédente, chaque axe avec sa note, l'écart et le commentaire.
  */
+/** Le contrôle qualité des produits (26/11/2026, src/autocontrole.php) : chaque produit contrôlé, son niveau, ses écarts. */
+function qualiteVals(q){
+  if (!q || !q.controles || !q.controles.length) { return null; }
+  const CLS = { ok: 'ok', mineur: 'att', majeur: 'ko' };
+  const ko = q.controles.filter(k => k.niveau === 'majeur').length;
+  return { titre: q.titre, resume: q.controles.length + ' produit' + (q.controles.length > 1 ? 's' : '') + ' contrôlé' + (q.controles.length > 1 ? 's' : '') + (ko ? ' · ' + ko + ' non conforme' + (ko > 1 ? 's' : '') : ''),
+    lignes: q.controles.map(k => ({ produit: k.produit, niveau: k.niveauTxt, cls: CLS[k.niveau] || 'mu',
+      com: [k.decision, k.fournee ? 'fournée de ' + k.fournee : '', k.photo ? 'photo dans le rapport' : ''].filter(Boolean).join(' · '),
+      ecarts: (k.ecarts || []).map(e => e.libelle + (e.reponse ? ' : ' + e.reponse : '') + (e.prochaine ? ' — ' + e.prochaine : '')) })) };
+}
 /** Les outils de gestion (17/11/2026) : le score, l'écart à l'audit précédent, chaque outil jugé, le rappel. */
 function outilsVals(o){
   if (!o || !o.lignes) { return null; }

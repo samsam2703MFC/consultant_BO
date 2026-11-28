@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Dokumenty wysyłek miesiąca{% endblock %}
+
+{% block content %}
+{# [402] Assistant « Dokumenty wysyłek miesiąca » : App\Services\Organization\Wizards\ShippingDocsMonthService — écran dans
+   assets/js/shipping_docs_month/shipping-docs-month.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche
+   du mois du Kierownik produkcji se valide seule après « Zakończ ». Aucun document n'est changé ici (liens vers les écrans
+   existants), rien n'est envoyé. #}
+<section class="section">
+    <div id="sdApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="sdBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/shipping_docs_month/shipping-docs-month.js?v={{ asset_v() }}"></script>
+{% endblock %}

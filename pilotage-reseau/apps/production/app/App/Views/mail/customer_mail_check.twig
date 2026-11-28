@@ -1,0 +1,20 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Poczta od klientów{% endblock %}
+
+{% block content %}
+{# [383] Assistant « Poczta od klientów » : App\Services\Organization\Wizards\CustomerMailCheckService — écran dans
+   assets/js/mail/customer-mail-check.js, cadre commun dans assets/js/organization/task-wizard.js. La tâche du jour du poste
+   Administracja se valide seule après « Zakończ ». L'assistant n'envoie rien et ne touche pas aux messages : la réponse se
+   fait dans Poczta (lien par message) ; seule la boîte que la personne lit dans Poczta est montrée. #}
+<section class="section">
+    <div id="cmApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="cmBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/mail/customer-mail-check.js?v={{ asset_v() }}"></script>
+{% endblock %}

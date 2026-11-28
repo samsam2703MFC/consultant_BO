@@ -44,3 +44,48 @@ php -S 127.0.0.1:8099 -t .        # depuis pilotage-reseau/
 node docs/maquettes/matieres-reference/generer.js
 node docs/maquettes/matieres-reference/capturer.js
 ```
+
+## Le troisième affichage : « Références et pertes (réseau) » (26/11/2026)
+
+Demande du 26/11/2026 : « mettre tous les prix moyens Belgique au kg, et les % de perte ; d'abord sur la Tagliata,
+ensuite sur tous les autres produits ». Serveur : `src/verification_references.php` ; écran :
+`verification-refs-vals.js`, `verification-refs-tpl.js` ; contrat : `shared/docs/contrat-api.md`
+(`/verification/recettes/references`). Pas de maquette.
+
+- **Où** : Recettes à corriger › Matières premières, troisième bouton de l'affichage (après *Par fournisseur ou
+  catégorie* et *Toutes les matières, prix de référence au choix*). Lien direct :
+  `#/verification/recettes?vue=refs&recette=tagliata` (le nom ou le numéro de la recette ; sans `recette`, l'affichage
+  s'ouvre vide).
+- **En tête** : une recherche (« Recette : son nom ou son numéro »), « Ouvrir la recette », « Toute la carte » (les
+  recettes déjà lues), « Relire ». Plusieurs recettes portent le nom : l'écran les propose en pastilles.
+- **Six repères** : Matières, À changer (la proposition diffère du panel), Prix de marché (aucun magasin ne la chiffre),
+  Sans prix (ni magasin ni prix de marché : à saisir), Pertes à poser, Prix à aligner (un magasin paie autrement que la
+  référence).
+- **Une ligne par matière** (sous-recettes dépliées) : sa catégorie, centrale ou libre, son unité ; où elle est
+  employée ; son prix dans chaque magasin ; sa référence et sa perte au panel ; **le prix de référence proposé** (la
+  moyenne des magasins qui la chiffrent par leur propre prix, local ou fournisseur ; sinon un prix de marché belge
+  estimé, fichier `src/data/prix_reference_be.json`, daté) et **la perte proposée** (celle du fichier, sinon une perte
+  courante de la famille de matière : herbes 30 %, oignons et échalotes 10 %… ; les produits transformés n'en reçoivent
+  pas). Les deux restent modifiables ; une ligne cochée part.
+- **L'écriture** : « Vérifier ce qui sera écrit » puis « Appliquer au panel » — `PATCH /materials/{id}` (prix de
+  référence et perte, pour tout le réseau), par lots de 20, relu, noté au registre des corrections (« Annuler ») ; puis
+  le food cost des recettes touchées, relu avant et après dans chaque magasin. Les prix d'achat des magasins ne sont pas
+  touchés : au panel, le prix d'un magasin passe avant la référence. Case « avec le compte administrateur du cockpit ».
+- **« Même food cost dans tous les magasins »** (case, 26/11 au soir) : le prix propre d'un magasin qui s'écarte de la
+  référence la reprend (`POST /materials/{id}/manual-price`, au registre).
+- **« Pertes sur les lignes — toute la carte »** : le coût d'une recette ne compte que la perte posée sur sa ligne
+  (mesuré au panel sur la Tagliata) ; ce bloc pose, dans toutes les recettes et sous-recettes de la carte, la perte que
+  porte chaque matière. « Vérifier (15 premières recettes) », puis « Appliquer à toute la carte », par tranches de 15,
+  chaque recette écrite entière, relue, au registre.
+- **« Tout faire, toute la carte »** : en un clic, les matières cochées (prix, pertes, alignement si coché), puis les
+  pertes sur les lignes ; l'avancement s'affiche (« 1/2 · Prix, pertes et alignement : lot 3 sur 5 »…). Chaque écriture
+  s'annule depuis le registre.
+- **Le tarif d'un fournisseur intégré** (27/11/2026) : le panel refuse d'écrire le prix d'un magasin tenu par le tarif
+  d'un fournisseur intégré, la centrale (403 `SUPPLIER_MANAGED_PRICE`). Ce refus n'est plus une erreur : le cockpit
+  l'apprend (réglage `vrfVerrous`, par magasin et matière) et le rend en information (« ℹ … — tarif du fournisseur,
+  inchangé »). Ensuite, ce prix porte « tarif fournisseur » dans la colonne du magasin et n'est jamais « à aligner » ;
+  la référence proposée le reprend (origine « tarif fournisseur », source « tarif du fournisseur intégré (n
+  magasin(s)), que seul le fournisseur change : les autres magasins s'y alignent »), et un septième repère, **Tarif
+  fournisseur**, les compte quand il y en a. Si le refus arrive pendant l'alignement, la référence est réécrite au
+  tarif du fournisseur et les autres magasins s'alignent sur lui. « Tout faire » le dit à la fin de l'étape 1 (« n
+  prix laissé(s) au tarif du fournisseur (les autres magasins s'y alignent) »).

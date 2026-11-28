@@ -61,8 +61,10 @@ require __DIR__ . '/../../../consultant/src/verification.php';
 require __DIR__ . '/../../../consultant/src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
 require __DIR__ . '/../../../consultant/src/verification_matieres_prix.php';   // Recettes à corriger › Matières premières (14/11/2026)
 require __DIR__ . '/../../../consultant/src/verification_matiere_edition.php';   // … › la fiche d'une matière, modifiable (14/11/2026)
+require __DIR__ . '/../../../consultant/src/verification_references.php';   // … › références et pertes, par lot (26/11/2026)
 require __DIR__ . '/../../../consultant/src/produit_parametrage.php';         // Produits › Paramétrage : la fiche d'un produit, modifiable (14/11/2026)
 require __DIR__ . '/../../../consultant/src/helpdesk.php';                  // Le helpdesk des franchisés : demandes, missions de visite (15/11/2026)
+require __DIR__ . '/../../../consultant/src/reclamations.php';              // Réclamations fournisseur : photos, part du livré, tableau annuel (21/11/2026)
 require __DIR__ . '/../../../consultant/src/fil_franchise.php';             // Le fil du franchisé : notes, photos, captures, étiquettes, fils (19/11/2026)
 require __DIR__ . '/../../../consultant/src/verification_flux.php';
 require __DIR__ . '/../../../consultant/src/verification_base.php';
@@ -86,11 +88,13 @@ require __DIR__ . '/../../../consultant/src/rapports.php';
 require __DIR__ . '/../../../panel/src/planning_sync.php';
 require __DIR__ . '/../../../shared/src/panel_ventes.php';
 require __DIR__ . '/../../../consultant/src/analyse_produits.php';
+require __DIR__ . '/../../../consultant/src/ventes_groupes.php';   // Résultat › Mois : le CA par catégorie principale, mois par mois (27/11/2026)
 require __DIR__ . '/../../../panel/src/recette_produit.php';
 require __DIR__ . '/../../../panel/src/matiere_fiche.php';
 require __DIR__ . '/../../../consultant/src/pnl_mois.php';
 require __DIR__ . '/../../../consultant/src/dossiers_fichiers.php';
 require __DIR__ . '/../../../panel/src/produits_coef.php';
+require __DIR__ . '/../../../panel/src/prix_produit.php';              // Dashboard magasin › fiche produit › « Adapter mon prix de vente » (21/11/2026)
 require __DIR__ . '/../../../consultant/src/dossier.php';
 require __DIR__ . '/../../../consultant/src/ca_mail.php';
 require __DIR__ . '/../../../marketing/src/mkt_brief.php';
@@ -113,12 +117,25 @@ require __DIR__ . '/../../../consultant/src/kpis.php';
 require __DIR__ . '/../../../consultant/src/cadence.php';
 require __DIR__ . '/../../../shared/src/connecteurs.php';
 require __DIR__ . '/../../../marketing/src/mesure.php';
+require __DIR__ . '/../../../marketing/src/campagnes.php';        // GET /marketing et le budget des campagnes : lus au module Marketing (21/11/2026)
+require __DIR__ . '/../../../marketing/src/fonds.php';            // GET /fonds : le grand livre, lu au module Marketing (21/11/2026)
+// Sortis de mesure.php le 21/11/2026, chacun dans son domaine :
+require __DIR__ . '/../../../shared/src/magasins.php';              // magasinNom (réclamations, primes, invendus)
+require __DIR__ . '/../../../panel/src/reclamations_magasin.php';   // Réclamations matière : lecture, références, codes-barres, photos, dépôt
+require __DIR__ . '/../../../consultant/src/taches_classement.php'; // Le classement des tâches du réseau
+require __DIR__ . '/../../../consultant/src/profil_jour.php';       // Le profil de semaine des magasins (con_shop_profil_jour)
+require __DIR__ . '/../../../consultant/src/sonde_consultant.php';  // Diagnostic des routes « consultant » du panel
 require __DIR__ . '/../../../consultant/src/taches_suivi.php';
 require __DIR__ . '/../../../consultant/src/cq_mail.php';
 require __DIR__ . '/../../../panel/src/pointages_mail.php';
 require __DIR__ . '/../../../consultant/src/documents.php';
+// Le coffre-fort du franchisé (22/11/2026) : ses documents et ses rapports, une page à onglets du dashboard.
+require __DIR__ . '/../../../consultant/src/coffre.php';
+// Ses grandes dates (triennats du bail, échéances) et l'assistant qui les lit à l'import d'un document (22/11/2026).
+require __DIR__ . '/../../../consultant/src/coffre_dates.php';
 require __DIR__ . '/../../../consultant/src/ca_net_mois.php';
 require __DIR__ . '/../../../consultant/src/controles_qualite.php';
+require __DIR__ . '/../../../consultant/src/autocontrole.php';             // L'autocontrôle qualité des produits, à la tablette du magasin (24/11/2026)
 require __DIR__ . '/../../../consultant/src/kpi_table.php';
 require __DIR__ . '/../../../panel/src/tablette.php';
 require __DIR__ . '/../../../panel/src/tablette_objectifs.php';
@@ -146,9 +163,16 @@ require __DIR__ . '/../../../formation/src/tablettes.php';
 require __DIR__ . '/../../../formation/src/referentiel_guides.php';
 require __DIR__ . '/../../../formation/src/fiches_techniques.php';
 require __DIR__ . '/../../../formation/src/formation_postes.php';
+// La formation continue (22/11/2026) : un type de formation, ses dossiers par boutique, la validation du consultant.
+require __DIR__ . '/../../../formation/src/formation_continue.php';
+require __DIR__ . '/../../../formation/src/examens.php';   // les examens théoriques des candidats franchisés (26/11/2026)
+require __DIR__ . '/../../../formation/src/mediatheque.php';   // la médiathèque : les vidéos filmées (26/11/2026)
+// La recherche de la formation (22/11/2026) : l'index de tout le catalogue pour la méga-barre de « Formations et suivi ».
+require __DIR__ . '/../../../formation/src/formation_recherche.php';
 require __DIR__ . '/../../../consultant/src/benchmark.php';
 require __DIR__ . '/../../../consultant/src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
 require __DIR__ . '/../../../marketing/src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
+require __DIR__ . '/../../../marketing/src/ticket_client.php';       // La fiche produits du ticket de caisse : la page du QR (21/11/2026)
 require __DIR__ . '/../../../consultant/src/task_cadre.php';
 require __DIR__ . '/../../../shared/src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../../panel/src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
@@ -158,6 +182,13 @@ require __DIR__ . '/../../../panel/src/dashboard_marketing.php'; // Marketing �
 require __DIR__ . '/../../../panel/src/offres_newsletter.php';  // Vendre › Offres › Newsletter : le module newsletter, au rôle du magasin (15/11/2026)
 require __DIR__ . '/../../../panel/src/boite_mail.php';         // Boîte mail du magasin : IMAP/SMTP de sa boîte OVH, modèles, messages automatiques (15/11/2026)
 require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
+require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe : la carte des responsabilités, le planning et son budget d'heures (23/11/2026)
+require __DIR__ . '/../../../panel/src/equipe_fiche.php';       // Mon équipe › la fiche d'une personne : identité, contrat, taux, évaluations, ventes (24/11/2026)
+require __DIR__ . '/../../../panel/src/equipe_absences.php';    // Mon équipe › absences, congés et remplacements : le coût reste, le remplaçant s'ajoute (27/11/2026)
+require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
+require __DIR__ . '/../../../panel/src/tfb_magasin.php';               // Le compte TF Buddy du magasin : téléphone, PIN, SMS ; le jeton reste dans le navigateur (25/11/2026)
+require __DIR__ . '/../../../panel/src/clients_panel.php';
+require __DIR__ . '/../../../panel/src/bureaux_dev.php';                // Bureaux en développement : le questionnaire public du magasin, les demandes à valider (26/11/2026)             // Vendre › Clients : le module Klienci de TF Buddy, par les comptes du cockpit (25/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
 require __DIR__ . '/../../../commercial/src/commercial_semaine.php'; // … la semaine du commercial et l'app de terrain (rendez-vous, comptes rendus, suites)
@@ -209,6 +240,16 @@ try {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_franchises_document_fichier();   // sort le fichier, puis exit
     }
+    // Un document du coffre-fort du franchisé (22/11/2026) : de CE magasin et dans son coffre ; l'ouverture est notée.
+    if ($method === 'GET' && $path === '/coffre/magasin/fichier') {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
+        ep_coffre_fichier();   // sort le fichier, puis exit
+    }
+    // Les documents d'un bureau (25/11/2026) : l'affiche, les cartes, la brochure que TF Buddy rend (panel/src/clients_panel.php).
+    if ($method === 'POST' && $path === '/dashboard/clients/bureaux/pdf') {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); echo json_encode($r[1], JSON_UNESCAPED_UNICODE); exit; }
+        ep_clients_bureaux_pdf();   // sort le PDF, puis exit
+    }
     // Le PDF d'une offre client (15/11/2026) : celui que TF Buddy rend, tel quel (src/offres_client.php).
     if ($method === 'GET' && $path === '/exploitation/offres-client/pdf') {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); echo json_encode($r[1], JSON_UNESCAPED_UNICODE); exit; }
@@ -220,6 +261,24 @@ try {
         nlSuivi($m[1], $m[2]);   // sort en gif, redirection ou HTML, puis exit
     }
 
+    // Le questionnaire « bureau » d'un magasin (26/11/2026) : PUBLIC, la personne n'a pas de session — le jeton du
+    // questionnaire dans l'adresse est la clé (panel/src/bureaux_dev.php : limite par IP, champ piège) ; le lien court
+    // /m/{shop} (« 2 », Corbais) ouvre le même, avec en plus un plafond de réponses par jour et par magasin.
+    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/m/(\d{1,6})(/tva)?$#', $path, $m)) {
+        echo json_encode(bdvPublicMagasin($method, $m[1], isset($m[2]) ? 'tva' : ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/([a-f0-9]{32})(/tva)?$#', $path, $m)) {
+        echo json_encode(bdvPublic($method, $m[1], isset($m[2]) ? 'tva' : ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    // Une demande « Ma zone n'est pas dans la liste » (27/11/2026) : PUBLIC, les deux pages Livraison au bureau (la landing
+    // atelierby.be, la landing du webshop) y laissent leur copie ; depuis la landing, le cockpit la transmet à TF Buddy
+    // (panel/src/bureaux_dev.php : limite par IP et par magasin, champ piège). Le webshop l'envoie en text/plain (sendBeacon).
+    if ($method === 'POST' && $path === '/bureau-hors-zone') {
+        echo json_encode(bdvPublicHorsZone(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
     // Le flux ICS d'un consultant : Google Agenda le relit sans session — le jeton de l'adresse est sa clé.
     if ($method === 'GET' && preg_match('#^/consultants/([\w-]+)/visites\.ics$#', $path, $m)) {
         vcIcsSortie($m[1]);      // sort en text/calendar, puis exit
@@ -269,6 +328,14 @@ try {
         $out = ep_ventes_moi_jeton();
         tempsServeur($tCharge, $tInstall);
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    // La fiche produits du ticket de caisse (ticket/) : le client n'a pas de session ; la clé signée du QR ouvre ce
+    // ticket et lui seul (marketing/src/ticket_client.php).
+    if (($pub = tclRoutePublique($method, $path)) !== null) {
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($pub, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
 
@@ -365,6 +432,8 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // L'essai de la fiche du ticket (siège) : les tickets d'un jour et leurs liens signés (marketing/src/ticket_client.php).
+    if (($c = tclRoute($method, $path)) !== null) { return $c; }
     // Dashboard › Mon catalogue : relayé à l'API d'intégration du Marketing (src/catalogues_magasin.php).
     if (($c = cmRoute($method, $path)) !== null) { return $c; }
     // Dashboard › Mon marketing (15/11/2026) : le hub du marketing, pour le magasin de la requête (src/dashboard_marketing.php).
@@ -375,6 +444,16 @@ function route(string $method, string $path): mixed
     if (($c = bmRoute($method, $path)) !== null) { return $c; }
     // Vendre › Analyse (15/11/2026) : les lectures propres aux pages Analyse (src/franchise/dashboard_analyse.php).
     if (($c = daRoute($method, $path)) !== null) { return $c; }
+    // Mon équipe (23/11/2026) : la carte des responsabilités, le planogramme des horaires, le budget d'heures (panel/src/equipe.php).
+    if (($c = eqpRoute($method, $path)) !== null) { return $c; }
+    // Commandes (24/11/2026) : les commandes du jour par canal, les tournées et leurs bureaux (panel/src/commandes_tournees.php, tables panel_tournee*).
+    if (($c = pcoRoute($method, $path)) !== null) { return $c; }
+    // Vendre › Clients (25/11/2026) : particuliers, entreprises B2B, bureaux, analyse B2B, lus et écrits dans TF Buddy (panel/src/clients_panel.php).
+    if (($c = pclRoute($method, $path)) !== null) { return $c; }
+    // Le compte TF Buddy du magasin (25/11/2026) : connexion au panel depuis le dashboard (panel/src/tfb_magasin.php).
+    if (($c = tfbmRoute($method, $path)) !== null) { return $c; }
+    // Les bureaux en développement (26/11/2026) : demandes, questionnaire du magasin, validation (panel/src/bureaux_dev.php, tables panel_bureau_*).
+    if (($c = bdvRoute($method, $path)) !== null) { return $c; }
     // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
     if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.
@@ -389,9 +468,26 @@ function route(string $method, string $path): mixed
     if (str_starts_with($path, '/audits/')) { return auRoute($method, $path); }
     // Franchisés › Suivi des franchisés › Fil du franchisé (19/11/2026, src/fil_franchise.php).
     if ($path === '/fil' || str_starts_with($path, '/fil/')) { return filRoute($method, $path); }
+    // L'autocontrôle qualité (24/11/2026, consultant/src/autocontrole.php) : la tablette du magasin et les grilles du siège.
+    if (($c = aqRoute($method, $path)) !== null) { return $c; }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
+    // --- Formation › Médiathèque (26/11/2026, src/mediatheque.php) : les vidéos filmées ; /liste est lue par le catalogue.
+    if ($path === '/formation/mediatheque' || str_starts_with($path, '/formation/mediatheque/')) {
+        $f = mtRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
+    // --- Formation › Examens théoriques des candidats franchisés (26/11/2026, src/examens.php) ; /banque est lue par le Recrutement.
+    if ($path === '/formation/examens' || str_starts_with($path, '/formation/examens/')) {
+        $f = exRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
+    // --- Formation › La formation continue (22/11/2026, src/formation_continue.php) : le siège, le consultant, le magasin.
+    if ($path === '/formation/continue' || str_starts_with($path, '/formation/continue/')) {
+        $f = fcRoute($method, $path);
         if ($f !== null) { return $f; }
     }
     // --- Formation › Manuel du réseau › Tablettes des magasins : la gestion (src/tablettes.php, lot 5)
@@ -544,7 +640,14 @@ function route(string $method, string $path): mixed
             $path === '/fournisseurs/reclamations'     => ep_fournisseurs_reclamations(),
             $path === '/magasins/profil-jour'          => ep_profil_jour(),
             $path === '/fournisseurs/reclamation-refs' => ep_reclamation_refs(),
+            // La fiche d'une réclamation (photos, part du livré) et le tableau annuel réclamé / livré (21/11/2026,
+            // consultant/src/reclamations.php). Le tableau annuel couvre tout le réseau : hors des préfixes d'un
+            // magasin (ACCES_FRANCHISE), il est réservé au siège.
+            $path === '/fournisseurs/reclamation-fiche' => ep_reclamation_fiche(),
+            $path === '/reclamations/annuel'           => ep_reclamations_annuel(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
+            // Le canal vers le module Marketing (jeton de service), par une lecture sans effet (21/11/2026).
+            $path === '/diagnostic/marketing-service'  => ep_diagnostic_marketing_service(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
             // Et, dans chaque écran gardé, quels boutons servent vraiment.
@@ -622,6 +725,7 @@ function route(string $method, string $path): mixed
             $path === '/push/cle'                    => ep_push_cle(),
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/stats/reseau'          => ep_stats_ventes_reseau(),
+            $path === '/ventes/groupes-mois'          => ep_ventes_groupes_mois(),
             $path === '/historique/ventes'            => ep_historique_etat(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
@@ -642,12 +746,17 @@ function route(string $method, string $path): mixed
             $path === '/verification/recettes/registre' => ep_verification_registre(),
             $path === '/verification/recettes/matieres' => ep_verification_matieres_prix(),
             $path === '/verification/recettes/matiere'  => ep_verification_matiere(),
+            $path === '/verification/recettes/references' => ep_verification_references(),
             // Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) : la liste, la fiche d'un produit.
             $path === '/produits/parametrage/liste'   => ep_produits_parametrage_liste(),
             $path === '/produits/parametrage'         => ep_produits_parametrage(),
             // Le helpdesk des franchisés (15/11/2026, src/helpdesk.php).
             $path === '/helpdesk/demandes'            => ep_helpdesk_demandes(),
             $path === '/helpdesk/magasin'             => ep_helpdesk_magasin(),
+            $path === '/helpdesk/sms'                 => ep_helpdesk_sms(),   // le SMS au bureau à chaque demande (20/11/2026)
+            $path === '/helpdesk/relances/cron'       => ep_helpdesk_relances_cron(),   // l'horloge des relances SMS (20/11/2026)
+            $path === '/helpdesk/a-traiter'           => ep_helpdesk_a_traiter(),   // la carte « Demandes à traiter » de l'accueil (21/11/2026)
+            $path === '/helpdesk/sms/remise'          => ep_helpdesk_sms_remise(),   // le statut de remise d'un SMS d'essai (21/11/2026)
             (bool) preg_match('#^/helpdesk/demandes/(\d+)/consultants$#', $path, $mh) => ep_helpdesk_consultants((int) $mh[1]),
             // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
             $path === '/verification/flux'            => ep_verification_flux(),
@@ -746,6 +855,7 @@ function route(string $method, string $path): mixed
             $path === '/scouting/demarchage'            => ep_scouting_demarchage(),
             $path === '/marketing/newsletter'                    => ep_newsletter(),
             $path === '/fidelite'                      => ep_fidelite(),
+            $path === '/fidelite/programme'            => ep_fidelite_programme(),
             $path === '/fidelite/clients'              => ep_fidelite_clients(),
             $path === '/fidelite/profils'              => ep_fidelite_profils(),
             $path === '/fidelite/profils/tendance'     => ep_fidelite_profils_tendance(),
@@ -774,6 +884,9 @@ function route(string $method, string $path): mixed
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
             $path === '/franchises/documents'          => ep_franchises_documents(),
+            $path === '/coffre/magasin'                => ep_coffre_magasin(),
+            $path === '/coffre/magasin/dates'          => ep_coffre_dates(),
+            $path === '/formation/recherche'           => ep_formation_recherche(),
             $path === '/franchises/documents/mail-materiel' => ep_franchises_mail_materiel(),
             $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),
@@ -815,6 +928,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
     if ($method === 'POST' && $path === '/tresorerie/plan') { return wr_tresorerie_plan(); }
     if ($method === 'POST' && $path === '/exploitation/frais/tva') { return wr_exploitation_frais_tva(); }
+    if ($method === 'POST' && $path === '/exploitation/frais/ajout') { return wr_exploitation_frais_ajout(); }
+    if ($method === 'POST' && $path === '/exploitation/frais/annuler') { return wr_exploitation_frais_annuler(); }
+    if ($method === 'POST' && $path === '/analyse/produits/prix') { return wr_analyse_produit_prix(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
     if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }
@@ -966,12 +1082,18 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/franchises/documents') { return wr_franchises_documents(); }
     // Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026).
     if ($method === 'POST' && $path === '/rapports/ca-net/envoyer') { return wr_rapports_ca_net_envoyer(); }
+    if ($method === 'PATCH' && $path === '/franchises/documents') { return wr_franchises_document_maj(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/document') { return wr_coffre_document(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/dates') { return wr_coffre_dates(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/piece') { return wr_coffre_piece(); }
+    if ($method === 'DELETE' && $path === '/coffre/magasin/dates') { return wr_coffre_date_suppr(); }
+    if ($method === 'POST' && $path === '/coffre/magasin/assistant') { return wr_coffre_assistant(); }
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).
     // Un compte ADMINISTRATEUR du panel (14/11/2026) : connecté par la personne dans le formulaire du prix ou dans le cadre
     // des tâches (POST /task/connexion), son jeton voyage dans l'en-tête X-Panel-Jeton, le temps de la requête — jamais gardé.
-    if ($method === 'POST' && in_array($path, ['/verification/recettes/corriger', '/verification/recettes/matiere', '/produits/parametrage', '/verification/recettes/reception'], true)) {
+    if ($method === 'POST' && in_array($path, ['/verification/recettes/corriger', '/verification/recettes/matiere', '/verification/recettes/references', '/verification/recettes/pertes-lignes', '/produits/parametrage', '/verification/recettes/reception'], true)) {
         $jAdmin = trim((string) ($_SERVER['HTTP_X_PANEL_JETON'] ?? ''));
         if ($jAdmin !== '' && preg_match('/^[\w.\-]{20,4000}$/', $jAdmin)) { PanelApi::$jetonImpose = $jAdmin; }
         // Ou le compte administrateur du cockpit lui-même (Paramètres › ERP, src/erp_api.php) : {compte: "admin"}.
@@ -985,10 +1107,15 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/verification/recettes/reception') { return wr_verification_reception(); }
     if ($method === 'POST' && $path === '/verification/recettes/annuler') { return wr_verification_annuler(); }
     if ($method === 'POST' && $path === '/verification/recettes/matiere') { return wr_verification_matiere(); }
+    if ($method === 'POST' && $path === '/verification/recettes/references') { return wr_verification_references(); }
+    if ($method === 'POST' && $path === '/verification/recettes/pertes-lignes') { return wr_verification_pertes_lignes(); }
     if ($method === 'POST' && $path === '/produits/parametrage') { return wr_produits_parametrage(); }
     if ($method === 'POST' && $path === '/helpdesk/magasin') { return wr_helpdesk_magasin(); }
-    if ($method === 'POST' && preg_match('#^/helpdesk/demandes/(\d+)/(repondre|statut|consultant|visite)$#', $path, $m)) {
-        return match ($m[2]) { 'repondre' => wr_helpdesk_repondre((int) $m[1]), 'statut' => wr_helpdesk_statut((int) $m[1]), 'consultant' => wr_helpdesk_consultant((int) $m[1]), default => wr_helpdesk_visite((int) $m[1]) };
+    if ($method === 'PUT' && $path === '/helpdesk/sms') { return wr_helpdesk_sms(); }
+    if ($method === 'POST' && $path === '/helpdesk/sms/essai') { return wr_helpdesk_sms_essai(); }
+    if ($method === 'POST' && preg_match('#^/helpdesk/demandes/(\d+)/(repondre|statut|consultant|visite|delai|relances)$#', $path, $m)) {
+        return match ($m[2]) { 'repondre' => wr_helpdesk_repondre((int) $m[1]), 'statut' => wr_helpdesk_statut((int) $m[1]), 'consultant' => wr_helpdesk_consultant((int) $m[1]),
+            'delai' => wr_helpdesk_delai((int) $m[1]), 'relances' => wr_helpdesk_relances((int) $m[1]), default => wr_helpdesk_visite((int) $m[1]) };
     }
     if ($method === 'POST' && preg_match('#^/helpdesk/missions/(\d+)$#', $path, $m)) { return wr_helpdesk_mission((int) $m[1]); }
     if ($method === 'PUT' && $path === '/verification/recettes/liens') { return wr_verification_liens(); }

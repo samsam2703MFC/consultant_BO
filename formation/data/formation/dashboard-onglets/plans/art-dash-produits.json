@@ -1,0 +1,115 @@
+[
+ {
+  "nom": "do-produits-semaines",
+  "vue": "produits",
+  "cibles": [
+   ".pd-quand"
+  ],
+  "attendre": ".pd-quand",
+  "cadre": "haut",
+  "mobile": false,
+  "pause": 8000
+ },
+ {
+  "nom": "do-produits-magasin",
+  "vue": "produits",
+  "cibles": [
+   ".pd-c"
+  ],
+  "attendre": ".pd-c",
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 8000
+ },
+ {
+  "nom": "do-produits-categories",
+  "vue": "produits",
+  "cibles": [
+   ".pd-c:has(.pd-tuiles)"
+  ],
+  "attendre": ".pd-ti",
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 8000
+ },
+ {
+  "nom": "do-produits-fenetre",
+  "vue": "produits",
+  "clics": [
+   ".pd-ti"
+  ],
+  "cibles": [
+   "#db-pd .fi-modale"
+  ],
+  "attendre": ".pd-ti",
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 8000
+ },
+ {
+  "nom": "do-produits-deplie",
+  "vue": "produits",
+  "clics": [
+   ".pd-ti",
+   "#db-pd .pd-pr"
+  ],
+  "cibles": [
+   "#db-pd .pd-dd"
+  ],
+  "attendre": ".pd-ti",
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 8000
+ },
+ {
+  "nom": "do-produits-fiche",
+  "vue": "produits",
+  "clics": [
+   ".pd-ti",
+   "#db-pd .pd-pr",
+   "#db-pd .pd-fiche",
+   "#db-fiche [data-fong=\"1\"]"
+  ],
+  "cibles": [
+   "#db-fiche .fi-modale"
+  ],
+  "attendre": ".pd-ti",
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 8000
+ },
+ {
+  "nom": "do-produits-prix",
+  "vue": "produits",
+  "clics": [
+   ".pd-ti",
+   "#db-pd .pd-pr",
+   "#db-pd .pd-fiche",
+   "#db-fiche [data-fong=\"2\"]"
+  ],
+  "cibles": [
+   "#db-fiche .fi-modale"
+  ],
+  "attendre": ".pd-ti",
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 8000
+ },
+ {
+  "nom": "do-produits-recette",
+  "vue": "produits",
+  "clics": [
+   ".pd-ti",
+   "#db-pd .pd-pr",
+   "#db-pd .pd-fiche",
+   "#db-fiche [data-fong=\"3\"]"
+  ],
+  "cibles": [
+   "#db-fiche .fi-modale"
+  ],
+  "attendre": ".pd-ti",
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 8000
+ }
+]

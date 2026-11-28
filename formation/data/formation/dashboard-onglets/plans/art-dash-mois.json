@@ -1,0 +1,9 @@
+[
+ {"nom": "do-mois-haut", "vue": "mois", "date": "2026-11-13", "cibles": [".db-frise", ".db-bench"], "attendre": ".db-bench", "cadre": "haut", "mobile": false, "pause": 9000},
+ {"nom": "do-mois-leviers", "vue": "mois", "date": "2026-11-13", "cibles": [".lv-card"], "attendre": ".lv-g", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-mois-canaux", "vue": "mois", "date": "2026-11-13", "clics": ["[data-coc=c]"], "cibles": [".db-split-g.co4", ".co-graphe"], "attendre": ".co-tuile", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-mois-profil", "vue": "mois", "date": "2026-11-13", "cibles": [".db-card:has(.db-prof)"], "attendre": ".db-prof", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-mois-calendrier", "vue": "mois", "date": "2026-11-13", "cibles": [".cal-a"], "attendre": ".cal-a", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-mois-nc", "vue": "mois", "shop": 3, "date": "2026-10-31", "clics": [".db-ncbar[data-ncdrop]", ".db-ncgr[data-ncgrp]"], "cibles": [".db-ncbar", ".db-ncdl"], "attendre": ".db-ncbar[data-ncdrop]", "cadre": "haut", "mobile": false, "pause": 9000},
+ {"nom": "do-mois-evolution", "vue": "mois", "date": "2026-11-13", "clics": ["[data-levvue=annee]"], "cibles": [".lv-card"], "attendre": ".lv-evs", "cadre": "ecran", "mobile": false, "pause": 9000}
+]

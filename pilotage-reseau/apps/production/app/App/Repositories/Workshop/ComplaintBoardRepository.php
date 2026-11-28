@@ -36,6 +36,26 @@ final class ComplaintBoardRepository extends WorkshopRepository
         return $this->all('SELECT c.id ' . self::FROM . ' AND c.id = ?', [$groupId, $complaintId])[0] ?? null;
     }
 
+    /** [367] Reklamacje widziane przez grupę : id → {seen_at, name}. */
+    public function seen(array $complaintIds, int $groupId): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $complaintIds)));
+        if (!$ids) return [];
+        $out = [];
+        foreach ($this->all('SELECT s.id_complaint, s.seen_at, TRIM(CONCAT(pe.name, " ", pe.surname)) AS name FROM n_complaint_seen s
+                LEFT JOIN n_prod_employee e ON e.id = s.id_employee LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
+                WHERE s.id_group = ? AND s.id_complaint IN (' . implode(',', $ids) . ')', [$groupId]) as $r) {
+            $out[(int) $r['id_complaint']] = ['seen_at' => $r['seen_at'], 'name' => $r['name']];
+        }
+        return $out;
+    }
+
+    /** [367] Pierwsze « Widziane » grupy zostaje (kto i kiedy) ; kolejne nic nie zmieniają. */
+    public function markSeen(int $complaintId, int $groupId, int $employeeId): void
+    {
+        $this->db->prepare('INSERT IGNORE INTO n_complaint_seen (id_complaint, id_group, id_employee) VALUES (?, ?, ?)')->execute([$complaintId, $groupId, $employeeId]);
+    }
+
     /** @return list<array{id:int}> zdjęcia reklamacji */
     public function attachments(int $complaintId): array
     {

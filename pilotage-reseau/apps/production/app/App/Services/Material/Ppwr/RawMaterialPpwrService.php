@@ -28,7 +28,7 @@ class RawMaterialPpwrService
     public function getAudit(): array
     {
         return array_map(function (array $row): array {
-            $issues = $this->getIssues($row);
+            $issues = self::issues($row);
             $row['issues'] = $issues;
             $row['computed_status'] = empty($issues) ? 'COMPLETE' : 'REQUIRES_DATA';
             return $row;
@@ -51,7 +51,7 @@ class RawMaterialPpwrService
             : (int)$this->repository->insert(['id_raw_material' => $materialId]);
 
         $auditRow = array_merge($profileData, $dimensionData, ['id_profile' => $profileId, 'packaging_unit_weight_g' => $unitWeight]);
-        $issues = $this->getIssues($auditRow);
+        $issues = self::issues($auditRow);
         $profileData['verification_status'] = empty($issues) ? 'COMPLETE' : 'REQUIRES_DATA';
 
         $this->repository->update($profileId, $profileData);
@@ -117,7 +117,11 @@ class RawMaterialPpwrService
         return $data;
     }
 
-    private function getIssues(array $row): array
+    /**
+     * Braki profilu PPWR opakowania (kody) : jedna reguła dla rejestru PPWR i asystenta « PPWR i opakowania » [397].
+     * @return list<string>
+     */
+    public static function issues(array $row): array
     {
         $issues = [];
         if (empty($row['identification_number'])) $issues[] = 'MISSING_IDENTIFICATION_NUMBER';

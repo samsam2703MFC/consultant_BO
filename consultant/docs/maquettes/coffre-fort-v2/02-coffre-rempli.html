@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Coffre-fort v2 — Tout</title><link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/fc.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/dash.css"><link rel="stylesheet" href="/consultant/docs/maquettes/coffre-fort/coffre.css"><link rel="stylesheet" href="v2.css"></head>
+<body data-vue="coffre"><div id="page">
+<div class="v-corps"><div id="nav"></div>
+<div>
+<section class="v-carte"><div class="v-ch"><h2>Tous les documents</h2><small>18 · les plus récents d’abord</small><span class="sp"></span><span class="v-chip on">Tous</span><span class="v-chip">Nouveaux · 2</span><span class="v-chip">À renouveler · 1</span><span class="v-chip">Déposés par moi</span></div>
+<div class="v-grp">Ce mois-ci</div><div id="l1"></div>
+<div class="v-grp">Avant</div><div id="l2"></div>
+<div class="v-pied">+ 11 documents plus anciens · <a style="color:var(--accent)">tout afficher</a></div></section>
+</div></div>
+<div class="legende"><b>02 · Le coffre rempli : d’abord ce qui compte, puis les documents</b><ol>
+<li><b>L’état du coffre</b> : la complétude (11 pièces sur 16, ce qui manque et qui doit le déposer), <b>À traiter</b> (à renouveler, nouveaux, pièces manquantes, chacun avec son action), et la <b>prochaine grande date</b> en grand, sur fond abricot.</li>
+<li><b>La frise des 12 mois</b> : les grandes dates sur une ligne de temps (la fenêtre de renouvellement du bail en bande, aujourd’hui marqué). Un clic sur un point ouvre la date et son document.</li>
+<li><b>Les dossiers à gauche</b>, comme un explorateur : chacun dit qui le remplit et sa complétude (barre verte). « Grandes dates » y a son entrée.</li>
+<li><b>La liste</b> : un type de fichier lisible (PDF, Excel, Web), le dossier, la date, l’état ; des filtres (Nouveaux, À renouveler, Déposés par moi). L’aperçu ne prend plus de place tant qu’on n’a rien choisi (écran 03).</li></ol></div>
+</div>
+<script src="cadre.js"></script><script src="v2.js"></script>
+<script>
+V.monter(V.tete({ gd: 3 }) + V.etat({ a: 11, b: 16, titre: '11 pièces sur 16', texte: 'Il manque 3 pièces légales (à vous) et 2 pièces de Nadia K. : le dossier d’implantation et le budget 2027.', lien: 'Compléter le coffre',
+  afaire: [{ c: 'or', i: '⏳', t: 'Assurance RC exploitation à renouveler', s: 'échéance le 31/12/2026 · dans 39 jours', go: 'Déposer la nouvelle' }, { c: 'ac', i: '✨', t: '2 nouveaux documents', s: 'Rapport de visite du 18/11 · Produits et coefficients', go: 'Voir' }, { c: 'ab', i: '⚖️', t: '3 pièces légales manquent', s: 'Autorisation AFSCA · Permis d’environnement · Assurance incendie', go: 'Compléter' }],
+  proch: { j: '01', m: 'déc. 2026', t: 'Fin de la fenêtre pour demander le renouvellement du bail', u: 'encore 9 jours' } }) + V.frise());
+document.getElementById('nav').outerHTML = V.nav('tout');
+document.getElementById('l1').outerHTML = [
+  { ty: 'web', t: 'Rapport de visite — régulière', s: 'Nadia K. · envoyé le 19/11 · 4 points à corriger', dos: 'Rapports de visite', q: '18/11/2026', et: '<span class="v-st or">à lire</span>', nv: 1, ac: 'Lire' },
+  { ty: 'xls', t: 'Produits et coefficients (9 octobre 2026)', s: 'PDF + Excel · Nadia K. · 360 Ko', dos: 'Finances', q: '09/10/2026', et: '<span class="v-st gr">déposé</span>', nv: 1 },
+  { ty: 'pdf', t: 'Dossier investisseur, mars → septembre 2026 (v3, FR + NL)', s: 'PDF + Excel · Nadia K. · 1,8 Mo', dos: 'Finances', q: '09/10/2026', et: '<span class="v-st gr">déposé</span>' },
+].map(V.ligne).join('');
+document.getElementById('l2').outerHTML = [
+  { ty: 'pdf', t: 'Attestation d’assurance RC exploitation', s: 'M. Lambert · 293 Ko', dos: 'Légal', q: '01/01/2026', et: '<span class="v-st or">à renouveler · 39 j</span>', ac: 'Remplacer' },
+  { ty: 'pdf', t: 'Bail commercial — Halle', s: 'M. Lambert · 3 grandes dates relevées par l’assistant', dos: 'Légal', q: '01/03/2019', et: '<span class="v-st ok">jusqu’au 29/02/2028</span>' },
+  { ty: 'pdf', t: 'Contrat de franchise', s: 'Nadia K. · signé le 15/10/2024', dos: 'Contrat & DIP', q: '15/10/2024', et: '<span class="v-st ok">jusqu’au 14/10/2033</span>' },
+  { ty: 'pdf', t: 'Document de formation — Croissant pur beurre', s: 'Formation continue validée par Nadia K.', dos: 'Formation', q: '04/11/2026', et: '<span class="v-st ok">validée</span>' },
+].map(V.ligne).join('');
+</script>
+</body></html>

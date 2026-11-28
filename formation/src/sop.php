@@ -203,7 +203,8 @@ function foImporter(): int
 /** GET /formation/sops — les standards, rangés par famille, avec leur progression dans le réseau. */
 function ep_sop_sops(): array
 {
-    $rows = Db::rows('SELECT * FROM for_sop ORDER BY dossier, ordre, id');
+    // Une formation continue (type FC, 22/11/2026) n'entre au Manuel que validée : elle se rédige dans son écran.
+    $rows = Db::rows('SELECT * FROM for_sop WHERE type <> \'FC\' OR statut = \'publiee\' ORDER BY dossier, ordre, id');
     $prog = foProgressionReseau();
     $out = [];
     foreach ($rows as $r) { $out[] = foSopLigne($r) + ['progression' => $prog[(string) $r['id']] ?? ['vu' => 0, 'quiz' => 0, 'lu' => 0, 'aRevoir' => 0]]; }
@@ -312,7 +313,7 @@ function ep_sop_manuel(): array
 {
     $l = foLangueParam();
     $out = [];
-    foreach (Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' ORDER BY dossier, ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' AND (type <> \'FC\' OR statut = \'publiee\') ORDER BY dossier, ordre, id') as $r) {
         $c = foContenuVersion((string) $r['id'], (string) $r['version']);
         $out[] = foSopLigne($r) + ['contenu' => foContenuLangue($c, $l, true)];
     }
@@ -324,7 +325,7 @@ function ep_sop_manuel_pdf(): array
 {
     $l = foLangueParam();
     $d = isset($_GET['dossier']) && isset(FO_DOSSIERS[(string) $_GET['dossier']]) ? (string) $_GET['dossier'] : null;
-    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\'' . ($d !== null ? ' AND dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
+    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' AND (type <> \'FC\' OR statut = \'publiee\')' . ($d !== null ? ' AND dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
     $titre = ($l === 'nl' ? 'Operationeel handboek' : 'Manuel opératoire') . ($d !== null ? ' — ' . FO_DOSSIERS[$d][$l] : '');
     foPdfSortie($rows, $l, true, $titre, 'manuel-' . $l . ($d !== null ? '-' . $d : ''));
     return [];
@@ -528,7 +529,7 @@ function ep_sop_tablette_init(): array
     $shop = function_exists('tabAppareil') && tabAppareil() !== null ? foShopTablette() : null;
     $poste = isset($_GET['poste']) && in_array($_GET['poste'], FO_POSTES, true) ? (string) $_GET['poste'] : null;
     // Un brouillon (repris du CRM, pas encore relu) ne va pas sur la tablette du magasin.
-    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\'' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
+    $rows = Db::rows('SELECT * FROM for_sop WHERE statut <> \'brouillon\' AND (type <> \'FC\' OR statut = \'publiee\')' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
     $personnes = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'valideur' => $p['valideur'], 'langue' => $p['langue'], 'postes' => $p['postes'],
         'postesV25' => $p['postesV25'] ?? []], $shop !== null ? foEquipe($shop) : []);
     $app = function_exists('tabAppareil') ? tabAppareil() : null;
@@ -1789,7 +1790,7 @@ function foCourt(mixed $v, int $max): ?string
 }
 
 /** Le type d'un document du manuel ; « Article » (07/11/2026) = un article du manuel opératoire (lu comme une SOP sur la tablette). */
-function foType(mixed $v): string { return in_array($v, ['SOP', 'Checklist', 'Mémo', 'Fiche', 'Article'], true) ? (string) $v : 'SOP'; }
+function foType(mixed $v): string { return in_array($v, ['SOP', 'Checklist', 'Mémo', 'Fiche', 'Article', 'FC'], true) ? (string) $v : 'SOP'; }   // FC : la formation continue (22/11/2026)
 function foDossier(mixed $v): string { $v = str_pad(substr((string) $v, 0, 2), 2, '0', STR_PAD_LEFT); return isset(FO_DOSSIERS[$v]) ? $v : '01'; }
 function foPoste(mixed $v): string { return in_array($v, FO_POSTES, true) ? (string) $v : 'vente'; }
 
@@ -1837,4 +1838,67 @@ function sopSlug(string $s): string
     $s = mb_strtolower($s);
     $s = strtr($s, ['à' => 'a', 'â' => 'a', 'ä' => 'a', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'ö' => 'o', 'ù' => 'u', 'û' => 'u', 'ü' => 'u', 'ç' => 'c', '’' => '', "'" => '']);
     return trim((string) preg_replace('/[^a-z0-9]+/', '-', $s), '-') ?: 'sop';
+}
+
+/* ─────────── le lien tâche du panel ↔ étape de SOP (for_sop_tache) ─────────── */
+
+/*
+ * Le lien entre une tâche du panel et l'étape de SOP qu'elle contrôle (07/11/2026, propositions A et D).
+ * Le panel n'a aucun champ pour le porter : il vit ici, dans for_sop_tache. Une checklist se relie à un
+ * standard par son CODE en tête de nom (« CP-07 — Audit visuel intérieur ») : les codes du classement de
+ * la SOP (Manuel du réseau, référentiel v25) et le code de la SOP elle-même.
+ *
+ * Venu de consultant/src/task_cadre.php le 21/11/2026 (« une table, un domaine ») : le cadre des tâches du
+ * consultant ne lit ni n'écrit plus cette table, il appelle les quatre fonctions ci-dessous.
+ */
+function ensureSopTache(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS for_sop_tache (
+        task_id INT NOT NULL,
+        sop_id VARCHAR(32) NOT NULL,
+        etape VARCHAR(20) NULL,
+        cree_le DATETIME NOT NULL,
+        PRIMARY KEY (task_id, sop_id),
+        KEY k_sop (sop_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Relier une tâche du panel à une SOP (et à l'une de ses étapes). Ancien tkLierSop du cadre des tâches. */
+function sopTacheLier(int $taskId, string $sopId, ?string $etape): void
+{
+    if ($taskId <= 0) { return; }
+    try {
+        ensureSopTache();
+        Db::exec('INSERT INTO for_sop_tache (task_id, sop_id, etape, cree_le) VALUES (?,?,?,?)
+                  ON DUPLICATE KEY UPDATE etape = COALESCE(VALUES(etape), etape)', [$taskId, $sopId, $etape, date('Y-m-d H:i:s')]);
+    } catch (PDOException $e) { /* le panel a la tâche : le lien n'est qu'un confort */ }
+}
+
+/** Toutes les tâches reliées : task_id → [{sopId, code, titre, etape}, …] (l'écran les étiquette « SOP-… · étape … »). */
+function sopTacheLiens(): array
+{
+    $liens = [];
+    try {
+        ensureSopTache();
+        foreach (Db::rows('SELECT l.task_id, l.sop_id, l.etape, s.code, s.titre_fr FROM for_sop_tache l LEFT JOIN for_sop s ON s.id = l.sop_id') as $l) {
+            $liens[(string) $l['task_id']][] = ['sopId' => (string) $l['sop_id'], 'code' => (string) ($l['code'] ?? ''), 'titre' => (string) ($l['titre_fr'] ?? ''), 'etape' => $l['etape']];
+        }
+    } catch (PDOException $e) { /* sans le module Formation : pas d'étiquette */ }
+    return $liens;
+}
+
+/** Les tâches reliées à une SOP : task_id (entier) → étape (ou null). */
+function sopTachesDe(string $sopId): array
+{
+    $out = [];
+    try {
+        ensureSopTache();
+        foreach (Db::rows('SELECT task_id, etape FROM for_sop_tache WHERE sop_id = ?', [$sopId]) as $l) {
+            $out[(int) $l['task_id']] = $l['etape'];
+        }
+    } catch (PDOException $e) { /* aucun lien encore */ }
+    return $out;
 }

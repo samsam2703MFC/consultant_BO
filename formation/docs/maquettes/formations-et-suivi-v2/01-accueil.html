@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Formations et suivi v2 — l’accueil</title><link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="/formation/public/formation/portail.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/fc.css"><link rel="stylesheet" href="/formation/docs/maquettes/formation-continue/dash.css"><link rel="stylesheet" href="/consultant/docs/maquettes/coffre-fort/coffre.css"><link rel="stylesheet" href="fs.css">
+<style>.card{padding:0}</style></head>
+<body data-vue="formation"><div id="page"><div id="haut"></div><div id="acc"></div>
+<div class="legende"><b>01 · « Formations et suivi » : on tombe sur l’accueil de la formation</b><ol>
+<li><b>L’accueil du module Formation</b> (#/accueil), tel quel, <b>sans son rail</b> : la phrase et le tableau Formation · Manuel · SOP · Checklist. Chaque nom de colonne et chaque exemple restent des liens.</li>
+<li><b>La méga-barre</b> en tête : une seule recherche sur tout le catalogue — les formations, le manuel opératoire, les standards (SOP, mémos, fiches), les checklists, le manuel du réseau, la formation continue. Chaque catalogue a son étiquette, <b>un rectangle aux coins arrondis à sa couleur</b> (celle de sa couverture dans le catalogue). « / » place le curseur dans la barre.</li>
+<li><b>Le dossier de formation</b> (formation continue) reste à un clic, en haut à droite, avec ses quatre nombres ; le Professeur aussi.</li></ol></div></div>
+<script src="cadre.js"></script><script src="accueil-donnees.js"></script><script src="fs.js"></script>
+<script>document.getElementById('haut').outerHTML = FS.tete() + FS.barre(); document.getElementById('acc').outerHTML = FS.accueil();</script>
+</body></html>

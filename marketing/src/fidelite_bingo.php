@@ -135,6 +135,30 @@ function fidBingoConf(): array
     return $c;
 }
 
+/**
+ * GET /fidelite/programme — le programme de fidélité tel que l'expliquent les documents remis aux franchisés (le
+ * Recrutement l'imprime dans l'annexe 2 du Guide pré-ouverture, avec le jeton de service) : les règles de la carte à
+ * points et du bingo, et chaque saison (nom, début, bons, semaines). Ni client, ni campagne de l'ERP, ni note interne.
+ */
+function ep_fidelite_programme(): array
+{
+    $c = fidBingoConf();
+    $saisons = [];
+    foreach ((array) ($c['saisons'] ?? []) as $s) {
+        $saisons[] = ['id' => (string) ($s['id'] ?? ''), 'nom' => (string) ($s['nom'] ?? ''), 'du' => (string) ($s['du'] ?? ''),
+            'aValider' => (bool) ($s['aValider'] ?? false),
+            'bons' => array_values(array_map(static fn ($b) => (string) ($b['nom'] ?? ''), (array) ($s['bons'] ?? []))),
+            'semaines' => array_values(array_map(static fn ($w) => ['titre' => (string) ($w['titre'] ?? ''), 'sous' => (string) ($w['sous'] ?? ''),
+                'fete' => isset($w['fete']) ? (string) $w['fete'] : null], (array) ($s['semaines'] ?? [])))];
+    }
+    return ['seuilEuros' => (float) ($c['seuilEuros'] ?? 0), 'tousLes' => (int) ($c['tousLes'] ?? 0), 'validite' => (int) ($c['validite'] ?? 0),
+        'bons' => array_values(array_map('floatval', (array) ($c['bons'] ?? []))),
+        'superBon' => is_array($c['superBon'] ?? null) ? ['valeur' => (float) ($c['superBon']['valeur'] ?? 0), 'provisoire' => (bool) ($c['superBon']['provisoire'] ?? false)] : null,
+        'multiplicateurCase' => (float) ($c['multiplicateurCase'] ?? 1),
+        'palier' => is_array($c['palier'] ?? null) ? ['points' => (int) ($c['palier']['points'] ?? 0), 'valeur' => (float) ($c['palier']['valeur'] ?? 0)] : null,
+        'saisons' => $saisons];
+}
+
 /** Une saison du calendrier, vue un jour donné : ses semaines, chacune passée, en cours ou à venir. */
 function fidSaisonVue(array $s, string $jour): array
 {

@@ -72,6 +72,60 @@ function resJoursPanel(array $ids, array $jours, string $auj): array
 }
 
 /**
+ * L'objectif de chaque jour d'un magasin (23/11/2026, Mon équipe › Planning : le budget d'heures face au CA prévu) — la
+ * règle d'exPeriodeCalcul, pour des jours passés comme à venir : le budget du mois (con_shop_month_perf, à défaut le CA
+ * théorique) × le poids du jour de semaine (pjPoids) ÷ la somme des poids des jours ouverts du mois. Les jours ouverts :
+ * les jours de semaine vendus au moins une fois sur les 28 jours avant aujourd'hui (margin-heatmap, gardé un jour).
+ * @return array{jours: array<string, ?float>, source: ?string, motif: ?string}
+ */
+function resObjectifsJours(int $id, array $jours): array
+{
+    $out = ['jours' => array_fill_keys($jours, null), 'source' => null, 'motif' => null];
+    $pj = function_exists('pjPoids') ? pjPoids() : null;
+    if ($pj === null) { $out['motif'] = 'aucune pondération des jours adoptée'; return $out; }
+    $budgets = [];
+    foreach (array_unique(array_map(static fn ($d) => substr((string) $d, 0, 7), $jours)) as $ym) {
+        try {
+            $b = Db::row('SELECT revenue_budget, ca_theorique FROM con_shop_month_perf WHERE shop_id = ? AND year = ? AND month = ?',
+                [$id, (int) substr($ym, 0, 4), (int) substr($ym, 5, 2)]);
+        } catch (Throwable $e) { $b = null; }
+        if ($b !== null && (float) ($b['revenue_budget'] ?? 0) > 0) { $budgets[$ym] = [(float) $b['revenue_budget'], 'budget']; }
+        elseif ($b !== null && (float) ($b['ca_theorique'] ?? 0) > 0) { $budgets[$ym] = [(float) $b['ca_theorique'], 'theorique']; }
+    }
+    if ($budgets === []) { $out['motif'] = 'aucun budget pour ces mois'; return $out; }
+    $auj = date('Y-m-d');
+    $cle = 'resWdOuv:' . $id;
+    $g = setting($cle);
+    $ouv = is_array($g) && ($g['le'] ?? '') === $auj && is_array($g['wd'] ?? null) ? array_map('intval', $g['wd']) : null;
+    if ($ouv === null && class_exists('PanelApi') && PanelApi::configured()) {
+        $hm = PanelApi::get('/consultant/shops/' . $id . '/margin-heatmap?' . http_build_query(['from' => date('Y-m-d', strtotime($auj . ' -28 days')), 'to' => date('Y-m-d', strtotime($auj . ' -1 day'))]));
+        if (is_array($hm) && isset($hm['days'])) {
+            $ouv = [];
+            foreach ((array) $hm['days'] as $d) {
+                if (!empty($d['has_data']) && (float) ($d['ca'] ?? 0) > 0 && !empty($d['date'])) { $ouv[(int) date('N', strtotime((string) $d['date']))] = true; }
+            }
+            $ouv = array_keys($ouv);
+            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['le' => $auj, 'wd' => $ouv])]); }
+            catch (Throwable $e) { /* relu la prochaine fois */ }
+        }
+    }
+    // Sans ventes lisibles, tous les jours de semaine comptent : mieux qu'aucun objectif.
+    $ouv = array_fill_keys($ouv !== null && $ouv !== [] ? $ouv : range(1, 7), true);
+    $sources = [];
+    foreach ($jours as $d) {
+        $ym = substr((string) $d, 0, 7); $wd = (int) date('N', strtotime((string) $d));
+        if (!isset($budgets[$ym]) || !isset($ouv[$wd])) { continue; }
+        $n = (int) date('t', strtotime($ym . '-01')); $den = 0.0;
+        for ($i = 1; $i <= $n; $i++) { $w = (int) date('N', strtotime(sprintf('%s-%02d', $ym, $i))); if (isset($ouv[$w])) { $den += $pj['poids'][$w]; } }
+        if ($den <= 0) { continue; }
+        $out['jours'][$d] = round($budgets[$ym][0] * $pj['poids'][$wd] / $den, 2);
+        $sources[$budgets[$ym][1]] = true;
+    }
+    $out['source'] = isset($sources['theorique']) ? 'theorique' : ($sources !== [] ? 'budget' : null);
+    return $out;
+}
+
+/**
  * Le personnel et les frais généraux d'une période, jour par jour, tels que le panel les alloue
  * (daily-summary : employee_cost, shop_cost ; gravés par resJoursPanel) — les mois passés compris.
  * Mesuré le 11/10/2026 : le résumé quotidien les rend pour tout jour passé (14/03, 15/06, 15/09 à

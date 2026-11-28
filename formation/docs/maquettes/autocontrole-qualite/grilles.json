@@ -1,0 +1,946 @@
+{
+  "version": "maquette du 24/11/2026",
+  "note": "Grilles d'exemple : les critères, les niveaux, les corrections et l'emplacement au planogramme sont à valider par la production avant tout usage en magasin.",
+  "niveaux": { "ok": "Conforme", "mineur": "À surveiller", "majeur": "Non conforme" },
+  "decisions": { "vente": "Mettre en vente", "declasser": "Déclasser (vente du jour, prix réduit)", "jeter": "Jeter (encodé en pertes)" },
+  "etapes": [
+    { "cle": "cuisson", "titre": "Cuisson", "icone": "flamme" },
+    { "cle": "structure", "titre": "Structure", "icone": "regle" },
+    { "cle": "organoleptique", "titre": "Organoleptique", "icone": "gout" },
+    { "cle": "presentation", "titre": "Présentation", "icone": "vitrine" }
+  ],
+  "criteres_communs": [
+    {
+      "cle": "ressemblance",
+      "etape": "presentation",
+      "libelle": "Semblable à la photo de référence",
+      "type": "echelle",
+      "visuel": "comparaison",
+      "aide": "Poser le produit à côté de la photo de la fiche : forme, couleur, taille, finition.",
+      "options": [
+        { "cle": "identique", "libelle": "Identique", "niveau": "ok", "cible": true, "icone": "double-coche" },
+        {
+          "cle": "proche",
+          "libelle": "Proche, un détail diffère",
+          "niveau": "mineur",
+          "icone": "coche",
+          "cause": "Un point de la cuisson ou de la structure s'écarte de la référence (voir les écarts ci-dessus).",
+          "maintenant": "Vendable.",
+          "prochaine": "Comparer à la photo de la fiche avant d'enfourner et à la sortie du four.",
+          "decision": "vente"
+        },
+        {
+          "cle": "different",
+          "libelle": "Différent",
+          "niveau": "majeur",
+          "icone": "croix",
+          "cause": "Le produit ne ressemble pas à ce que le client voit sur la photo (site, vitrine, catalogue).",
+          "maintenant": "Ne pas mettre en vitrine : déclasser et prévenir le responsable.",
+          "prochaine": "Reprendre le pas-à-pas de la fiche avec le responsable.",
+          "decision": "declasser"
+        }
+      ]
+    },
+    {
+      "cle": "planogramme",
+      "etape": "presentation",
+      "libelle": "À sa place dans la vitrine (planogramme)",
+      "type": "oui_non",
+      "attendu": "oui",
+      "visuel": "planogramme",
+      "aide": "Comparer la vitrine au plan : emplacement, étage, nombre de pièces en façade.",
+      "non": {
+        "niveau": "mineur",
+        "cause": "Produit posé ailleurs, mélangé à un autre ou trop peu de pièces en façade.",
+        "maintenant": "Le remettre à sa place du plan, avec le nombre de pièces en façade.",
+        "prochaine": "Suivre le plan du comptoir à chaque réassort.",
+        "decision": "vente"
+      }
+    }
+  ],
+  "categories": [
+    {
+      "cle": "brioche",
+      "libelle": "Brioches & cougnous",
+      "quand": "À chaque fournée, 15 à 20 min après la sortie du four (produit refroidi)",
+      "photos": { "cuisson": "obligatoire", "structure": "facultative", "organoleptique": "non", "presentation": "facultative" },
+      "consignes_photo": {
+        "cuisson": "Le dessus, à plat, sous la lumière du passe",
+        "structure": "Une pièce coupée en deux, la mie face à l'objectif",
+        "presentation": "La vitrine, de face, le produit à sa place"
+      },
+      "criteres": [
+        {
+          "cle": "coloration_dessus",
+          "etape": "cuisson",
+          "libelle": "Coloration du dessus",
+          "type": "echelle",
+          "visuel": "teinte",
+          "options": [
+            {
+              "cle": "pale",
+              "libelle": "Pâle",
+              "niveau": "majeur",
+              "teinte": "pale",
+              "cause": "Four pas assez chaud, temps trop court ou dorure trop légère.",
+              "maintenant": "Remettre 2 min au four si la mie est cuite ; sinon déclasser.",
+              "prochaine": "Vérifier le préchauffage et ajouter 1 min de cuisson.",
+              "decision": "declasser"
+            },
+            { "cle": "dore", "libelle": "Doré", "niveau": "ok", "cible": true, "teinte": "dore" },
+            {
+              "cle": "fonce",
+              "libelle": "Trop foncé",
+              "niveau": "mineur",
+              "teinte": "fonce",
+              "cause": "Four trop chaud, plaques trop hautes ou dorure trop chargée.",
+              "maintenant": "Vendable si le goût n'est pas amer.",
+              "prochaine": "Baisser de 10 °C ou retirer 1 min ; plaques au milieu du four.",
+              "decision": "vente"
+            },
+            {
+              "cle": "brule",
+              "libelle": "Brûlé",
+              "niveau": "majeur",
+              "teinte": "brule",
+              "cause": "Programme du four erroné ou oubli à la sortie.",
+              "maintenant": "Retirer de la vente.",
+              "prochaine": "Contrôler le programme et lancer la minuterie à l'enfournement.",
+              "decision": "jeter"
+            }
+          ]
+        },
+        {
+          "cle": "coloration_dessous",
+          "etape": "cuisson",
+          "libelle": "Coloration du dessous",
+          "type": "echelle",
+          "visuel": "teinte",
+          "options": [
+            {
+              "cle": "pale",
+              "libelle": "Pâle",
+              "niveau": "mineur",
+              "teinte": "pale",
+              "cause": "Sole pas assez chaude, plaque froide.",
+              "maintenant": "Vendable si le dessous est ferme.",
+              "prochaine": "Enfourner sur plaque à température, four bien préchauffé.",
+              "decision": "vente"
+            },
+            { "cle": "dore", "libelle": "Doré", "niveau": "ok", "cible": true, "teinte": "dore" },
+            {
+              "cle": "fonce",
+              "libelle": "Trop foncé",
+              "niveau": "mineur",
+              "teinte": "brule",
+              "cause": "Chaleur du bas trop forte.",
+              "maintenant": "Vendable si non brûlé.",
+              "prochaine": "Glisser une deuxième plaque dessous (double plaque).",
+              "decision": "vente"
+            }
+          ]
+        },
+        {
+          "cle": "dorure",
+          "etape": "cuisson",
+          "libelle": "Dorure à l'œuf",
+          "type": "echelle",
+          "options": [
+            { "cle": "homogene", "libelle": "Homogène", "niveau": "ok", "cible": true },
+            {
+              "cle": "irreguliere",
+              "libelle": "Irrégulière / coulures",
+              "niveau": "mineur",
+              "cause": "Dorure trop épaisse ou appliquée en une seule fois.",
+              "maintenant": "Vendable.",
+              "prochaine": "Dorer au pinceau en couche fine, deux fois (avant et après la pousse).",
+              "sop": "Dorure des brioches",
+              "decision": "vente"
+            },
+            {
+              "cle": "absente",
+              "libelle": "Absente",
+              "niveau": "majeur",
+              "cause": "Étape de dorure oubliée.",
+              "maintenant": "Déclasser.",
+              "prochaine": "Cocher la dorure dans le pas-à-pas avant d'enfourner.",
+              "decision": "declasser"
+            }
+          ]
+        },
+        {
+          "cle": "cuisson_coeur",
+          "etape": "cuisson",
+          "libelle": "Cuisson à cœur",
+          "type": "echelle",
+          "aide": "Appuyer au centre : la mie doit reprendre sa forme.",
+          "options": [
+            {
+              "cle": "cru",
+              "libelle": "Pas assez cuit (collant)",
+              "niveau": "majeur",
+              "cause": "Temps trop court ou four trop chargé.",
+              "maintenant": "Ne pas vendre : recuire 3 min si possible, sinon jeter.",
+              "prochaine": "Ajouter 2 min ; ne pas dépasser le nombre de plaques du programme.",
+              "decision": "jeter"
+            },
+            { "cle": "cuit", "libelle": "Cuit à cœur", "niveau": "ok", "cible": true },
+            {
+              "cle": "sec",
+              "libelle": "Trop cuit (sec)",
+              "niveau": "mineur",
+              "cause": "Temps trop long.",
+              "maintenant": "Vendable aujourd'hui, à écouler en premier.",
+              "prochaine": "Retirer 1 à 2 min.",
+              "decision": "vente"
+            }
+          ]
+        },
+        {
+          "cle": "sonne_creux",
+          "etape": "cuisson",
+          "libelle": "Sonne creux quand on tapote le dessous",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "mineur",
+            "cause": "Mie encore humide au centre.",
+            "maintenant": "Laisser ressuer 10 min de plus sur grille avant de recontrôler.",
+            "prochaine": "Ajouter 1 min de cuisson.",
+            "decision": "vente"
+          }
+        },
+        {
+          "cle": "volume",
+          "etape": "structure",
+          "libelle": "Volume / développement",
+          "type": "echelle",
+          "visuel": "volume",
+          "options": [
+            {
+              "cle": "insuffisant",
+              "libelle": "Insuffisant",
+              "niveau": "majeur",
+              "dessin": "bas",
+              "cause": "Pousse trop courte ou trop froide, pâte crue en fin de date.",
+              "maintenant": "Déclasser.",
+              "prochaine": "Prolonger la pousse de 15 min ; vérifier la date du cru.",
+              "decision": "declasser"
+            },
+            { "cle": "juste", "libelle": "Juste", "niveau": "ok", "cible": true, "dessin": "juste" },
+            {
+              "cle": "excessif",
+              "libelle": "Trop développé",
+              "niveau": "mineur",
+              "dessin": "haut",
+              "cause": "Pousse trop longue.",
+              "maintenant": "Vendable si la forme tient.",
+              "prochaine": "Réduire la pousse de 10 min.",
+              "decision": "vente"
+            }
+          ]
+        },
+        {
+          "cle": "retombe",
+          "etape": "structure",
+          "libelle": "Retombé après cuisson",
+          "type": "oui_non",
+          "attendu": "non",
+          "visuel": "retombe",
+          "oui": {
+            "niveau": "majeur",
+            "cause": "Sur-pousse, ou porte du four ouverte trop tôt / choc à la sortie.",
+            "maintenant": "Déclasser le lot.",
+            "prochaine": "Réduire la pousse de 10 min ; ne pas ouvrir la porte les 10 premières minutes ; défourner sans cogner.",
+            "decision": "declasser"
+          }
+        },
+        {
+          "cle": "mie_toucher",
+          "etape": "structure",
+          "libelle": "Mie au toucher",
+          "type": "echelle",
+          "visuel": "souplesse",
+          "aide": "Presser doucement le côté de la pièce, deux doigts.",
+          "options": [
+            {
+              "cle": "tres_mou",
+              "libelle": "Très mou",
+              "niveau": "majeur",
+              "souplesse": 1,
+              "cause": "Sous-cuisson nette.",
+              "maintenant": "Ne pas vendre.",
+              "prochaine": "Ajouter 2 min de cuisson ; contrôler le programme.",
+              "decision": "jeter"
+            },
+            {
+              "cle": "mou",
+              "libelle": "Mou",
+              "niveau": "mineur",
+              "souplesse": 2,
+              "cause": "Cuisson un peu courte ou ressuage insuffisant.",
+              "maintenant": "Laisser refroidir 20 min sur grille avant de mettre en vitrine.",
+              "prochaine": "Ajouter 1 min de cuisson.",
+              "decision": "vente"
+            },
+            { "cle": "souple", "libelle": "Souple", "niveau": "ok", "cible": true, "souplesse": 3 },
+            {
+              "cle": "ferme",
+              "libelle": "Ferme",
+              "niveau": "mineur",
+              "souplesse": 4,
+              "cause": "Cuisson un peu longue ou produit laissé à l'air.",
+              "maintenant": "Vendable, à écouler en premier.",
+              "prochaine": "Retirer 1 min ; emballer dès le refroidissement.",
+              "decision": "vente"
+            },
+            {
+              "cle": "dur",
+              "libelle": "Dur",
+              "niveau": "majeur",
+              "souplesse": 5,
+              "cause": "Sur-cuisson ou produit rassis.",
+              "maintenant": "Retirer de la vente.",
+              "prochaine": "Retirer 2 min ; vérifier l'heure de cuisson (DLC 10 h).",
+              "decision": "jeter"
+            }
+          ]
+        },
+        {
+          "cle": "croute",
+          "etape": "structure",
+          "libelle": "Épaisseur de la croûte",
+          "type": "echelle",
+          "visuel": "croute",
+          "options": [
+            { "cle": "fine", "libelle": "Fine", "niveau": "ok", "cible": true, "epaisseur": 1 },
+            {
+              "cle": "moyenne",
+              "libelle": "Moyenne",
+              "niveau": "mineur",
+              "epaisseur": 2,
+              "cause": "Cuisson un peu longue à température trop basse.",
+              "maintenant": "Vendable.",
+              "prochaine": "Monter de 10 °C et retirer 1 min.",
+              "decision": "vente"
+            },
+            {
+              "cle": "epaisse",
+              "libelle": "Épaisse",
+              "niveau": "majeur",
+              "epaisseur": 3,
+              "cause": "Cuisson longue à température basse : le produit a séché.",
+              "maintenant": "Déclasser.",
+              "prochaine": "Vérifier la température réelle du four (sonde) et le programme.",
+              "decision": "declasser"
+            }
+          ]
+        },
+        {
+          "cle": "forme",
+          "etape": "structure",
+          "libelle": "Forme",
+          "type": "echelle",
+          "visuel": "forme",
+          "options": [
+            { "cle": "reguliere", "libelle": "Régulière", "niveau": "ok", "cible": true, "dessin": "reguliere" },
+            {
+              "cle": "asymetrique",
+              "libelle": "Asymétrique",
+              "niveau": "mineur",
+              "dessin": "asymetrique",
+              "cause": "Pièces crues déformées au transport ou serrées sur la plaque.",
+              "maintenant": "Vendable.",
+              "prochaine": "Espacer les pièces (6 par plaque) ; signaler si le cru arrive déformé.",
+              "decision": "vente",
+              "reclamation": true
+            },
+            {
+              "cle": "eclatee",
+              "libelle": "Soudure ouverte",
+              "niveau": "majeur",
+              "dessin": "eclatee",
+              "cause": "Façonnage du cru ou pousse trop sèche.",
+              "maintenant": "Déclasser.",
+              "prochaine": "Couvrir pendant la pousse ; signaler le lot à la production centrale.",
+              "decision": "declasser",
+              "reclamation": true
+            }
+          ]
+        },
+        {
+          "cle": "poids",
+          "etape": "structure",
+          "libelle": "Poids d'une pièce",
+          "type": "mesure",
+          "unite": "g",
+          "cible": 400,
+          "tolerance": 20,
+          "facultatif": true,
+          "hors": {
+            "niveau": "mineur",
+            "cause": "Pièce crue hors calibre ou perte en cuisson anormale.",
+            "maintenant": "Vendable si l'aspect est bon.",
+            "prochaine": "Peser 3 pièces crues à la réception ; signaler l'écart.",
+            "decision": "vente",
+            "reclamation": true
+          }
+        },
+        {
+          "cle": "odeur",
+          "etape": "organoleptique",
+          "libelle": "Odeur",
+          "type": "echelle",
+          "options": [
+            { "cle": "brioche", "libelle": "Beurre / brioche", "niveau": "ok", "cible": true },
+            {
+              "cle": "levure",
+              "libelle": "Levure forte",
+              "niveau": "mineur",
+              "cause": "Sur-pousse.",
+              "maintenant": "Vendable.",
+              "prochaine": "Réduire la pousse de 10 min.",
+              "decision": "vente"
+            },
+            {
+              "cle": "aigre",
+              "libelle": "Aigre",
+              "niveau": "majeur",
+              "cause": "Pâte crue trop vieille ou mal conservée.",
+              "maintenant": "Jeter le lot.",
+              "prochaine": "Vérifier la date et la chaîne du froid du cru ; signaler.",
+              "decision": "jeter",
+              "reclamation": true
+            },
+            {
+              "cle": "brule",
+              "libelle": "Brûlé",
+              "niveau": "majeur",
+              "cause": "Cuisson trop forte.",
+              "maintenant": "Jeter le lot.",
+              "prochaine": "Contrôler le programme du four.",
+              "decision": "jeter"
+            }
+          ]
+        },
+        {
+          "cle": "gout",
+          "etape": "organoleptique",
+          "libelle": "Goût",
+          "type": "echelle",
+          "options": [
+            { "cle": "conforme", "libelle": "Conforme", "niveau": "ok", "cible": true },
+            {
+              "cle": "fade",
+              "libelle": "Fade",
+              "niveau": "mineur",
+              "cause": "Recette du cru (sel, sucre) ou sous-cuisson.",
+              "maintenant": "Vendable.",
+              "prochaine": "Signaler à la production centrale avec la photo.",
+              "decision": "vente",
+              "reclamation": true
+            },
+            {
+              "cle": "trop_sucre",
+              "libelle": "Trop sucré",
+              "niveau": "mineur",
+              "cause": "Recette du cru.",
+              "maintenant": "Vendable.",
+              "prochaine": "Signaler à la production centrale.",
+              "decision": "vente",
+              "reclamation": true
+            },
+            {
+              "cle": "amer",
+              "libelle": "Amer / brûlé",
+              "niveau": "majeur",
+              "cause": "Sur-cuisson ou dorure brûlée.",
+              "maintenant": "Retirer de la vente.",
+              "prochaine": "Baisser de 10 °C ; plaques au milieu.",
+              "decision": "jeter"
+            }
+          ]
+        },
+        {
+          "cle": "mie_bouche",
+          "etape": "organoleptique",
+          "libelle": "Mie en bouche",
+          "type": "echelle",
+          "options": [
+            { "cle": "filante", "libelle": "Filante & moelleuse", "niveau": "ok", "cible": true },
+            {
+              "cle": "seche",
+              "libelle": "Sèche",
+              "niveau": "mineur",
+              "cause": "Sur-cuisson ou produit resté à l'air.",
+              "maintenant": "Vendable aujourd'hui, en premier.",
+              "prochaine": "Retirer 1 min ; emballer dès le refroidissement.",
+              "decision": "vente"
+            },
+            {
+              "cle": "pateuse",
+              "libelle": "Pâteuse",
+              "niveau": "mineur",
+              "cause": "Sous-cuisson légère.",
+              "maintenant": "Laisser ressuer avant la vente.",
+              "prochaine": "Ajouter 1 min de cuisson.",
+              "decision": "vente"
+            },
+            {
+              "cle": "elastique",
+              "libelle": "Élastique",
+              "niveau": "mineur",
+              "cause": "Pousse insuffisante.",
+              "maintenant": "Vendable.",
+              "prochaine": "Prolonger la pousse de 10 min.",
+              "decision": "vente"
+            }
+          ]
+        },
+        {
+          "cle": "vendeur",
+          "etape": "organoleptique",
+          "libelle": "Je le mettrais en vitrine",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "majeur",
+            "cause": "L'aspect général ne donne pas envie.",
+            "maintenant": "Déclasser.",
+            "prochaine": "Voir avec le responsable avant la fournée suivante.",
+            "decision": "declasser"
+          }
+        }
+      ]
+    },
+    {
+      "cle": "pain",
+      "libelle": "Pains",
+      "quand": "Première fournée du jour, puis une sur deux",
+      "photos": { "cuisson": "obligatoire", "structure": "obligatoire", "organoleptique": "non", "presentation": "facultative" },
+      "criteres": [
+        {
+          "cle": "coloration",
+          "etape": "cuisson",
+          "libelle": "Coloration",
+          "type": "echelle",
+          "visuel": "teinte",
+          "options": [
+            {
+              "cle": "pale",
+              "libelle": "Pâle",
+              "niveau": "majeur",
+              "teinte": "pale",
+              "cause": "Four pas assez chaud ou buée excessive.",
+              "maintenant": "Recuire 3 min.",
+              "prochaine": "Ajouter 2 min ; vérifier le préchauffage.",
+              "decision": "declasser"
+            },
+            { "cle": "dore", "libelle": "Doré", "niveau": "ok", "cible": true, "teinte": "dore" },
+            {
+              "cle": "fonce",
+              "libelle": "Trop foncé",
+              "niveau": "mineur",
+              "teinte": "fonce",
+              "cause": "Four trop chaud.",
+              "maintenant": "Vendable.",
+              "prochaine": "Baisser de 10 °C.",
+              "decision": "vente"
+            }
+          ]
+        },
+        {
+          "cle": "grigne",
+          "etape": "cuisson",
+          "libelle": "Grigne (coup de lame) ouverte",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "mineur",
+            "cause": "Pas de buée ou pâte trop poussée.",
+            "maintenant": "Vendable.",
+            "prochaine": "Vérifier l'injection de buée à l'enfournement.",
+            "decision": "vente"
+          }
+        },
+        {
+          "cle": "sonne_creux",
+          "etape": "cuisson",
+          "libelle": "Sonne creux",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": { "niveau": "majeur", "cause": "Sous-cuisson.", "maintenant": "Recuire 3 min.", "prochaine": "Ajouter 2 min.", "decision": "declasser" }
+        },
+        {
+          "cle": "croute",
+          "etape": "structure",
+          "libelle": "Croûte",
+          "type": "echelle",
+          "visuel": "croute",
+          "options": [
+            {
+              "cle": "molle",
+              "libelle": "Molle",
+              "niveau": "mineur",
+              "epaisseur": 1,
+              "cause": "Ressuage à l'étouffée.",
+              "maintenant": "Laisser à l'air sur grille.",
+              "prochaine": "Ne pas empiler à chaud.",
+              "decision": "vente"
+            },
+            { "cle": "croustillante", "libelle": "Croustillante", "niveau": "ok", "cible": true, "epaisseur": 2 },
+            {
+              "cle": "epaisse",
+              "libelle": "Épaisse / dure",
+              "niveau": "mineur",
+              "epaisseur": 3,
+              "cause": "Cuisson trop longue.",
+              "maintenant": "Vendable.",
+              "prochaine": "Retirer 2 min.",
+              "decision": "vente"
+            }
+          ]
+        },
+        {
+          "cle": "mie",
+          "etape": "structure",
+          "libelle": "Mie",
+          "type": "echelle",
+          "options": [
+            {
+              "cle": "serree",
+              "libelle": "Serrée",
+              "niveau": "mineur",
+              "cause": "Pousse insuffisante.",
+              "maintenant": "Vendable.",
+              "prochaine": "Prolonger la pousse.",
+              "decision": "vente"
+            },
+            { "cle": "alveolee", "libelle": "Alvéolée", "niveau": "ok", "cible": true },
+            {
+              "cle": "collante",
+              "libelle": "Collante",
+              "niveau": "majeur",
+              "cause": "Sous-cuisson.",
+              "maintenant": "Ne pas vendre.",
+              "prochaine": "Ajouter 3 min.",
+              "decision": "jeter"
+            }
+          ]
+        },
+        {
+          "cle": "retombe",
+          "etape": "structure",
+          "libelle": "Retombé / aplati",
+          "type": "oui_non",
+          "attendu": "non",
+          "visuel": "retombe",
+          "oui": { "niveau": "majeur", "cause": "Sur-pousse.", "maintenant": "Déclasser.", "prochaine": "Réduire la pousse.", "decision": "declasser" }
+        },
+        {
+          "cle": "gout",
+          "etape": "organoleptique",
+          "libelle": "Goût",
+          "type": "echelle",
+          "options": [
+            { "cle": "conforme", "libelle": "Conforme", "niveau": "ok", "cible": true },
+            {
+              "cle": "fade",
+              "libelle": "Fade",
+              "niveau": "mineur",
+              "cause": "Recette du cru.",
+              "maintenant": "Vendable.",
+              "prochaine": "Signaler à la production centrale.",
+              "decision": "vente",
+              "reclamation": true
+            },
+            {
+              "cle": "acide",
+              "libelle": "Trop acide",
+              "niveau": "mineur",
+              "cause": "Levain ou pâte trop vieille.",
+              "maintenant": "Vendable.",
+              "prochaine": "Vérifier la date du cru.",
+              "decision": "vente",
+              "reclamation": true
+            }
+          ]
+        }
+      ],
+      "consignes_photo": { "presentation": "La vitrine, de face, le produit à sa place" }
+    },
+    {
+      "cle": "viennoiserie",
+      "libelle": "Viennoiseries",
+      "quand": "À chaque fournée",
+      "photos": { "cuisson": "obligatoire", "structure": "facultative", "organoleptique": "non", "presentation": "facultative" },
+      "criteres": [
+        {
+          "cle": "coloration",
+          "etape": "cuisson",
+          "libelle": "Coloration",
+          "type": "echelle",
+          "visuel": "teinte",
+          "options": [
+            {
+              "cle": "pale",
+              "libelle": "Pâle",
+              "niveau": "majeur",
+              "teinte": "pale",
+              "cause": "Temps trop court.",
+              "maintenant": "Recuire 2 min.",
+              "prochaine": "Ajouter 1 min.",
+              "decision": "declasser"
+            },
+            { "cle": "dore", "libelle": "Doré", "niveau": "ok", "cible": true, "teinte": "dore" },
+            {
+              "cle": "fonce",
+              "libelle": "Trop foncé",
+              "niveau": "mineur",
+              "teinte": "fonce",
+              "cause": "Four trop chaud.",
+              "maintenant": "Vendable.",
+              "prochaine": "Baisser de 10 °C.",
+              "decision": "vente"
+            }
+          ]
+        },
+        {
+          "cle": "beurre_coule",
+          "etape": "cuisson",
+          "libelle": "Du beurre a coulé sur la plaque",
+          "type": "oui_non",
+          "attendu": "non",
+          "oui": {
+            "niveau": "mineur",
+            "cause": "Pousse trop chaude (beurre fondu avant cuisson).",
+            "maintenant": "Vendable.",
+            "prochaine": "Pousser à 26 °C maximum.",
+            "decision": "vente"
+          }
+        },
+        {
+          "cle": "feuilletage",
+          "etape": "structure",
+          "libelle": "Feuilletage visible",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "majeur",
+            "cause": "Cru décongelé trop longtemps ou écrasé.",
+            "maintenant": "Déclasser.",
+            "prochaine": "Respecter le temps de décongélation ; signaler.",
+            "decision": "declasser",
+            "reclamation": true
+          }
+        },
+        {
+          "cle": "volume",
+          "etape": "structure",
+          "libelle": "Volume",
+          "type": "echelle",
+          "visuel": "volume",
+          "options": [
+            {
+              "cle": "insuffisant",
+              "libelle": "Insuffisant",
+              "niveau": "majeur",
+              "dessin": "bas",
+              "cause": "Pousse trop courte.",
+              "maintenant": "Déclasser.",
+              "prochaine": "Prolonger la pousse.",
+              "decision": "declasser"
+            },
+            { "cle": "juste", "libelle": "Juste", "niveau": "ok", "cible": true, "dessin": "juste" },
+            {
+              "cle": "excessif",
+              "libelle": "Trop développé",
+              "niveau": "mineur",
+              "dessin": "haut",
+              "cause": "Pousse trop longue.",
+              "maintenant": "Vendable.",
+              "prochaine": "Réduire la pousse.",
+              "decision": "vente"
+            }
+          ]
+        },
+        {
+          "cle": "croustillant",
+          "etape": "organoleptique",
+          "libelle": "Croustillant dehors, fondant dedans",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "mineur",
+            "cause": "Cuisson trop courte ou ressuage à l'étouffée.",
+            "maintenant": "Vendable.",
+            "prochaine": "Ajouter 1 min ; refroidir sur grille.",
+            "decision": "vente"
+          }
+        }
+      ],
+      "consignes_photo": { "presentation": "La vitrine, de face, le produit à sa place" }
+    },
+    {
+      "cle": "patisserie",
+      "libelle": "Pâtisseries & tartes",
+      "quand": "Une fois par jour et par produit, à la mise en vitrine",
+      "photos": { "cuisson": "facultative", "structure": "obligatoire", "organoleptique": "non", "presentation": "obligatoire" },
+      "criteres": [
+        {
+          "cle": "fond",
+          "etape": "cuisson",
+          "libelle": "Fond de tarte cuit",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "majeur",
+            "cause": "Cuisson à blanc insuffisante.",
+            "maintenant": "Ne pas vendre.",
+            "prochaine": "Ajouter 3 min de cuisson à blanc.",
+            "decision": "jeter"
+          }
+        },
+        {
+          "cle": "garniture",
+          "etape": "structure",
+          "libelle": "Garniture prise et nette à la coupe",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "majeur",
+            "cause": "Crème pas assez refroidie ou mal dosée.",
+            "maintenant": "Déclasser.",
+            "prochaine": "Respecter le temps de froid avant découpe.",
+            "decision": "declasser"
+          }
+        },
+        {
+          "cle": "finition",
+          "etape": "structure",
+          "libelle": "Finition (nappage, décor)",
+          "type": "echelle",
+          "options": [
+            { "cle": "conforme", "libelle": "Conforme à la photo", "niveau": "ok", "cible": true },
+            {
+              "cle": "irreguliere",
+              "libelle": "Irrégulière",
+              "niveau": "mineur",
+              "cause": "Geste de finition.",
+              "maintenant": "Vendable.",
+              "prochaine": "Revoir le geste.",
+              "sop": "Finition des tartes",
+              "decision": "vente"
+            },
+            {
+              "cle": "abimee",
+              "libelle": "Abîmée",
+              "niveau": "majeur",
+              "cause": "Manipulation ou transport.",
+              "maintenant": "Déclasser.",
+              "prochaine": "Ranger en vitrine sans empiler.",
+              "decision": "declasser"
+            }
+          ]
+        },
+        {
+          "cle": "gout",
+          "etape": "organoleptique",
+          "libelle": "Goût et fraîcheur",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "majeur",
+            "cause": "Produit en fin de vie ou mal conservé.",
+            "maintenant": "Jeter.",
+            "prochaine": "Vérifier la DLC et la température de la vitrine.",
+            "decision": "jeter"
+          }
+        }
+      ],
+      "consignes_photo": { "presentation": "La vitrine, de face, le produit à sa place" }
+    },
+    {
+      "cle": "traiteur",
+      "libelle": "Traiteur chaud & snacking",
+      "quand": "À chaque remise en température",
+      "photos": { "cuisson": "facultative", "structure": "non", "organoleptique": "non", "presentation": "facultative" },
+      "criteres": [
+        {
+          "cle": "temperature",
+          "etape": "cuisson",
+          "libelle": "Température à cœur",
+          "type": "mesure",
+          "unite": "°C",
+          "minimum": 63,
+          "hors": {
+            "niveau": "majeur",
+            "cause": "Remise en température trop courte.",
+            "maintenant": "Remettre au four jusqu'à 63 °C à cœur.",
+            "prochaine": "Respecter le temps de remise en température de la fiche.",
+            "decision": "vente"
+          }
+        },
+        {
+          "cle": "aspect",
+          "etape": "structure",
+          "libelle": "Aspect / présentation",
+          "type": "echelle",
+          "options": [
+            { "cle": "conforme", "libelle": "Conforme à la photo", "niveau": "ok", "cible": true },
+            {
+              "cle": "desseche",
+              "libelle": "Desséché",
+              "niveau": "mineur",
+              "cause": "Trop longtemps au chaud.",
+              "maintenant": "Vendable.",
+              "prochaine": "Réchauffer par petites quantités.",
+              "decision": "vente"
+            },
+            {
+              "cle": "renverse",
+              "libelle": "Renversé / abîmé",
+              "niveau": "majeur",
+              "cause": "Manipulation.",
+              "maintenant": "Déclasser.",
+              "prochaine": "—",
+              "decision": "declasser"
+            }
+          ]
+        },
+        {
+          "cle": "etiquette",
+          "etape": "organoleptique",
+          "libelle": "Étiquette et allergènes présents",
+          "type": "oui_non",
+          "attendu": "oui",
+          "non": {
+            "niveau": "majeur",
+            "cause": "Étiquette oubliée.",
+            "maintenant": "Étiqueter avant la vente.",
+            "prochaine": "Imprimer l'étiquette à la mise en place.",
+            "decision": "vente"
+          }
+        }
+      ],
+      "consignes_photo": { "presentation": "La vitrine, de face, le produit à sa place" }
+    }
+  ],
+  "produits": {
+    "6700139": {
+      "nom": "Cougnou Nature - 400 g.",
+      "categorie": "brioche",
+      "surcharges": {
+        "poids": { "cible": 400, "tolerance": 20 }
+      },
+      "planogramme": {
+        "zone": "Sec · mortex blanc",
+        "module": 3,
+        "etage": "e1a",
+        "libelle": "module 3, étage du bas, à gauche",
+        "facade": 6,
+        "voisins": { "e1b": "Cougnou - Sucre", "e2": "Cougnou - Sucre & Chocolat", "e3": "Couque au Beurre" }
+      }
+    }
+  }
+}

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FCFBF8">
+<title>Vos produits en détail · L’Atelier By</title>
+<style>
+@font-face{font-family:'Gotham';src:url('../../../../shared/public/assets/ds/fonts/Gotham_Regular_New.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:'Gotham';src:url('../../../../shared/public/assets/ds/fonts/Gotham_Medium.otf') format('opentype');font-weight:500;font-display:swap}
+@font-face{font-family:'Gotham';src:url('../../../../shared/public/assets/ds/fonts/Gotham_Regular.otf') format('opentype');font-weight:600;font-display:swap}
+@font-face{font-family:'Gotham';src:url('../../../../shared/public/assets/ds/fonts/Gotham_Black.otf') format('opentype');font-weight:700;font-display:swap}
+@font-face{font-family:'Playwrite DEVA';src:url('../../../../shared/public/assets/ds/fonts/PlaywriteDEVA-Light.ttf') format('truetype');font-weight:300;font-display:swap}
+
+/* Jetons de la page d'accueil d'atelierby.be (relevés le 21/11/2026) */
+:root{
+  --paper:#FCFBF8; --ink:#232220; --muted:#8A847C; --faint:#B8B2A8;
+  --hair:rgba(35,34,32,.08); --hair-2:rgba(35,34,32,.12);
+  --ruby:#8D1D2C; --apricot:#F2C9A0; --lin:#EAE4DC; --sand:#F3EEE6;
+  --gutter:clamp(20px,4vw,56px); --ease:cubic-bezier(.2,.8,.2,1); --nav:63px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:'Gotham',system-ui,sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;cursor:pointer}
+h1,h2,h3,h4,p,ul{margin:0}
+ul{padding:0;list-style:none}
+.wrap{padding-left:var(--gutter);padding-right:var(--gutter);max-width:1240px;margin:0 auto;width:100%}
+.eyebrow{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.eyebrow--ruby{color:var(--ruby)}
+.script{font-family:'Playwrite DEVA','Gotham',cursive;font-weight:300;letter-spacing:0;color:var(--ruby)}
+.ic{width:16px;height:16px;flex:none;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;padding:16px 26px;border-radius:10px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:600}
+.btn .ic{width:15px;height:15px}
+.link{font-size:14px;font-weight:600;border-bottom:1px solid var(--ink);padding-bottom:3px;display:inline-flex;align-items:center;gap:8px}
+.link .ic{width:14px;height:14px}
+.th{flex:none;background:#ececec center/cover no-repeat}
+
+/* barre du haut */
+.nav{position:sticky;top:0;z-index:30;height:var(--nav);display:flex;align-items:center;justify-content:space-between;gap:16px;background:rgba(252,251,248,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--hair)}
+.nav.wrap{max-width:none;padding-left:max(var(--gutter),calc((100% - 1240px) / 2 + var(--gutter)));padding-right:max(var(--gutter),calc((100% - 1240px) / 2 + var(--gutter)))}
+.nav__logo img{height:28px;width:auto;display:block}
+.lang{display:flex;gap:2px;border:1px solid var(--hair-2);border-radius:9px;padding:3px}
+.lang span,.lang a{font-size:11px;font-weight:600;letter-spacing:.08em;padding:6px 10px;border-radius:6px;color:var(--muted)}
+.lang .on{background:var(--ink);color:var(--paper)}
+
+/* en-tête : compact, sans photo */
+.head{padding-top:26px;padding-bottom:24px}
+.head h1{font-size:40px;line-height:.98;letter-spacing:-.035em;font-weight:700;margin-top:12px}
+.head h1 .script{display:block;font-size:.7em;line-height:1.4;margin-top:2px}
+.head__lede{margin-top:10px;color:var(--muted);font-size:14.5px;line-height:1.55;font-weight:500;max-width:56ch}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.meta span{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;background:var(--sand);font-size:12px;font-weight:600;color:#4a4540}
+.meta .ic{width:13px;height:13px}
+
+/* fond sable et cartes */
+.sand{background:var(--sand);padding:20px 0 40px}
+.stack{display:grid;gap:12px}
+.card{background:var(--paper);border-radius:18px;padding:20px}
+.card__t{font-size:22px;line-height:1.1;letter-spacing:-.02em;font-weight:700;margin-top:8px}
+.card__p{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.55;font-weight:500}
+
+/* le ticket */
+.rows{display:grid;gap:8px;margin-top:14px}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr) auto 14px;gap:12px;align-items:center;min-height:60px;padding:8px 14px 8px 8px;border-radius:12px;background:var(--sand)}
+.row .th{width:44px;height:44px;border-radius:10px}
+.row b{display:block;font-size:14.5px;font-weight:600;line-height:1.25}
+.row small{display:block;font-size:12px;color:var(--muted);margin-top:3px;font-weight:500}
+.row em{font-style:normal;font-size:14px;font-weight:600}
+.row .ic{width:14px;height:14px}
+.total{display:flex;justify-content:space-between;align-items:baseline;margin-top:16px;padding-top:14px;border-top:1px solid var(--hair-2)}
+.total span{font-size:13px;color:var(--muted);font-weight:500}
+.total b{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.fine{margin-top:6px;font-size:11.5px;color:var(--faint);font-weight:500}
+
+/* allergènes du ticket */
+.alg-l{display:grid;gap:10px;margin-top:14px}
+.alg-r{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:start}
+.alg-r .chip{justify-self:start}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:6px;background:rgba(141,29,44,.08);color:var(--ruby);font-size:13px;font-weight:600;white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ruby)}
+.alg-r p{font-size:13px;line-height:1.45;color:var(--muted);font-weight:500;padding-top:7px}
+.sans{margin-top:14px;font-size:13px;line-height:1.55;font-weight:500}
+.sans b{font-weight:600}
+.note{display:flex;gap:10px;margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--sand);font-size:12.5px;line-height:1.5;color:#5d574f;font-weight:500}
+.note .ic{color:var(--ruby);margin-top:1px}
+
+/* ordre de fraîcheur */
+.tl{margin-top:16px}
+.tl li{position:relative;padding:0 0 16px 26px}
+.tl li::before{content:"";position:absolute;left:4px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--paper);box-shadow:inset 0 0 0 2px var(--faint)}
+.tl li::after{content:"";position:absolute;left:8.5px;top:18px;bottom:2px;width:1px;background:var(--hair-2)}
+.tl li:last-child{padding-bottom:0}.tl li:last-child::after{display:none}
+.tl li.now::before{background:var(--ruby);box-shadow:none}
+.tl b{display:block;font-size:14px;font-weight:600}
+.tl li.now b{color:var(--ruby)}
+.tl span{display:block;margin-top:3px;font-size:13px;color:var(--muted);font-weight:500;line-height:1.45}
+
+/* chapitre des fiches */
+.chap{padding-top:36px}
+.h2{font-size:34px;line-height:1;letter-spacing:-.03em;font-weight:700;margin-top:10px}
+.h2 .script{font-size:.72em}
+.bureau{display:none}
+.chap__lede{margin-top:10px;color:var(--muted);font-size:14.5px;line-height:1.55;font-weight:500;max-width:60ch;display:flex;gap:8px;align-items:center}
+
+/* barre des produits, collante sous la barre du haut */
+.pick{position:sticky;top:var(--nav);z-index:20;margin-top:14px;padding:10px 0;background:rgba(243,238,230,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.pick__in{display:flex;gap:6px;overflow-x:auto;padding:0 20px;scrollbar-width:none;scroll-behavior:smooth}
+.pick__in::-webkit-scrollbar{display:none}
+.pick__b{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border:0;border-radius:8px;background:var(--paper);font-size:13px;font-weight:600;white-space:nowrap;transition:background .25s,color .25s}
+.pick__b .th{width:30px;height:30px;border-radius:6px}
+.pick__b em{font-style:normal;font-size:11.5px;color:var(--muted);font-weight:600}
+.pick__b.on{background:var(--ink);color:var(--paper)}
+.pick__b.on em{color:var(--apricot)}
+
+/* commandes du carrousel : position, points, flèches (comme le carrousel du site) */
+.ctrl{display:flex;align-items:center;gap:14px;padding:4px 20px 12px}
+.ctrl__n{font-size:13px;font-weight:600;min-width:44px}
+.ctrl__n span{color:var(--muted)}
+.ctrl__dots{display:flex;gap:6px;align-items:center;flex:1}
+.ctrl__dots i{width:6px;height:6px;border-radius:2px;background:var(--faint);opacity:.55;transition:width .3s var(--ease),background .3s,opacity .3s}
+.ctrl__dots i.on{width:26px;background:var(--ruby);opacity:1}
+.arr{width:44px;height:44px;border-radius:10px;border:0;background:var(--paper);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(35,34,32,.08)}
+.arr:disabled{opacity:.4;cursor:default}
+.arr .ic{width:16px;height:16px}
+
+/* le carrousel */
+.track{display:grid;grid-auto-flow:column;grid-auto-columns:calc(100% - 44px);gap:12px;align-items:start;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-padding-inline:20px;padding:0 24px 4px 20px;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;transition:height .35s var(--ease)}
+.track::-webkit-scrollbar{display:none}
+.track>.prod{scroll-snap-align:start;scroll-snap-stop:always}
+
+/* une fiche produit */
+.prod{background:var(--paper);border-radius:18px;padding:18px 18px 22px;scroll-margin-top:calc(var(--nav) + 70px)}
+.prod__head{display:grid;grid-template-columns:76px minmax(0,1fr);gap:14px;align-items:center}
+.prod__th{position:relative;width:76px;height:76px;border-radius:14px}
+.prod__qty{position:absolute;right:-6px;top:-6px;min-width:26px;height:26px;padding:0 7px;border-radius:6px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;box-shadow:0 0 0 2px var(--paper)}
+.prod__name{font-size:25px;line-height:1.04;letter-spacing:-.03em;font-weight:700;margin-top:6px}
+.prod__px{margin-top:5px;font-size:13px;color:var(--muted);font-weight:600}
+.prod__hook{margin-top:14px;font-size:14px;line-height:1.5;color:var(--muted);font-weight:500}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:6px;background:var(--sand);font-size:12px;font-weight:600;color:#4a4540}
+.tag .ic{width:13px;height:13px}
+.tag--now{background:var(--ruby);color:#fff}
+.tag--abr{background:var(--apricot);color:#6b4420}
+.blk{margin-top:18px;padding-top:16px;border-top:1px solid var(--hair)}
+.blk>.eyebrow{display:block;margin-bottom:10px}
+.blk__txt{font-size:14px;line-height:1.6;font-weight:500;color:#3a3631}
+.blk__txt b{font-weight:700;color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.none{font-size:14px;font-weight:500;color:#3a3631}
+details.g14{margin-top:12px}
+details.g14 summary{cursor:pointer;list-style:none;font-size:12.5px;font-weight:600;color:var(--muted);display:inline-flex;gap:6px;align-items:center;padding:4px 0}
+details.g14 summary::-webkit-details-marker{display:none}
+details.g14 summary::after{content:"+";font-size:15px;line-height:1}
+details.g14[open] summary::after{content:"–"}
+.g14 ul{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:8px}
+.g14 li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--hair);font-size:12.5px;font-weight:500;color:var(--faint)}
+.g14 li.oui{color:var(--ink);font-weight:600}
+.g14 li.oui span{color:var(--ruby)}
+.how{display:grid;gap:8px}
+.how__i{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;padding:14px;border-radius:14px;background:var(--sand)}
+.how__ic{width:40px;height:40px;border-radius:10px;background:var(--paper);display:flex;align-items:center;justify-content:center}
+.how__ic .ic{width:20px;height:20px;stroke-width:1.5}
+.how__t{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.how__big{margin-top:4px;font-size:22px;line-height:1.05;letter-spacing:-.02em;font-weight:700}
+.how__big span{font-size:14px;letter-spacing:0;font-weight:600;color:var(--ruby);margin-left:4px;white-space:nowrap}
+.how__d{margin-top:6px;font-size:13px;line-height:1.5;color:#5d574f;font-weight:500}
+.how__d p{margin:0}
+.num{margin:0;padding-left:18px;display:grid;gap:6px}
+details.long summary{list-style:none;cursor:pointer;display:block}
+details.long summary::-webkit-details-marker{display:none}
+details.long:not([open]) .how__d{max-height:7.6em;overflow:hidden;-webkit-mask:linear-gradient(#000 55%,transparent);mask:linear-gradient(#000 55%,transparent)}
+.plus{display:inline-block;margin-top:6px;font-size:12.5px;font-weight:600;color:var(--ruby)}
+details.long[open] .plus{display:none}
+.steps{counter-reset:s;display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.steps li{position:relative;padding-left:34px;font-size:14px;line-height:1.5;font-weight:500;color:#3a3631;counter-increment:s}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:6px;background:rgba(141,29,44,.08);color:var(--ruby);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.th[data-vide]{background:var(--lin)}
+.avoid{margin-top:10px;font-size:12.5px;color:var(--muted);font-weight:500;display:flex;gap:8px;align-items:flex-start}
+.avoid .ic{width:14px;height:14px;color:var(--ruby);margin-top:1px}
+.tips{display:grid;gap:8px}
+.tips li{position:relative;padding-left:18px;font-size:14px;line-height:1.5;font-weight:500;color:#3a3631}
+.tips li::before{content:"";position:absolute;left:2px;top:8px;width:6px;height:6px;border-radius:50%;background:var(--apricot);box-shadow:0 0 0 2px rgba(242,201,160,.35)}
+.keep{display:grid;gap:10px}
+.until{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(141,29,44,.06);font-size:13.5px;font-weight:600;color:var(--ruby)}
+.prod__cta{margin-top:20px}
+.prod__cta .btn{width:100%}
+
+/* avis, application, boutique */
+.end{display:grid;gap:12px;margin-top:28px}
+.abr{background:var(--apricot);border-radius:18px;padding:24px 22px 26px}
+.abr .card__t{font-size:28px;line-height:1.05;letter-spacing:-.03em}
+.abr .card__p{color:#5b4632}
+.stars{display:flex;gap:4px;margin-top:14px;color:var(--ruby)}
+.stars .ic{width:26px;height:26px;stroke-width:1.4}
+.abr .btn{margin-top:16px}
+.dots{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:12px}
+.dots li{font-size:12.5px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:7px}
+.dots li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--faint)}
+.card .link{margin-top:16px}
+.shop dl{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:14px 0 0;font-size:13.5px;font-weight:500}
+.shop dt{color:var(--muted)}
+.shop dd{margin:0}
+.foot{padding-top:28px;padding-bottom:40px}
+.foot p{font-size:12px;line-height:1.6;color:var(--muted);font-weight:500;max-width:70ch}
+.foot p+p{margin-top:10px}
+.foot b{font-weight:600;color:var(--ink)}
+
+/* tablette et bureau : plus de carrousel, une grille */
+@media (min-width:860px){
+  :root{--nav:68px}
+  .head{padding-top:44px;padding-bottom:36px}
+  .head h1{font-size:64px}
+  .head__lede{font-size:16px}
+  .top{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+  .top .stack{gap:16px}
+  .h2{font-size:48px}
+  .pick__in{max-width:1240px;margin:0 auto;padding:0 var(--gutter)}
+  .ctrl,.mobile{display:none}
+  .bureau{display:inline}
+  .track{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-columns:auto;overflow:visible;height:auto!important;max-width:1240px;margin:8px auto 0;padding:0 var(--gutter);gap:16px}
+  .prod{padding:26px 28px 30px}
+  .prod__head{grid-template-columns:96px minmax(0,1fr)}
+  .prod__th{width:96px;height:96px}
+  .prod__name{font-size:30px}
+  .prod__cta .btn{width:auto}
+  .end{grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:stretch}
+}
+</style>
+</head>
+<body>
+<header class="nav wrap">
+  <a class="nav__logo" href="https://atelierby.be/"><img src="https://atelierby.be/landing/img/brand/logo.png" alt="L’Atelier By — sucré, salé, à emporter"></a>
+  <div class="lang" aria-label="Langue · Taal"><span class="on">FR</span><a href="corbais-nl.html" hreflang="nl" lang="nl">NL</a></div>
+</header>
+<main>
+  <section class="head wrap">
+    <p class="eyebrow eyebrow--ruby">Votre ticket · Corbais</p>
+    <h1>Vos produits,<span class="script">en détail.</span></h1>
+    <p class="head__lede">Composition, allergènes, cuisson, finition et conservation : tout sur les produits de votre ticket.</p>
+    <div class="meta"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Samedi 21 novembre 2026 · 11 h 52</span><span>9 articles · 56,70 €</span></div>
+  </section>
+
+  <div class="sand">
+    <div class="wrap top">
+      <section class="card">
+        <p class="eyebrow">Votre ticket · transaction n° 104 583</p>
+        <h2 class="card__t">5 produits, 9 articles</h2>
+        <div class="rows"><a class="row" href="#p-2110005"><span class="th" style="background-image:url('img/2110005.jpg')"></span><span><b>Cannelloni - poulet &amp; estragon</b><small>1 × 12,90 €</small></span><em>12,90 €</em><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="row" href="#p-1410005"><span class="th" data-vide="1"></span><span><b>Quiche Grecque</b><small>1 × 24,90 €</small></span><em>24,90 €</em><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="row" href="#p-2300013"><span class="th" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2300013/820449557d1ad245e49d8f890d8fa4e9.webp')"></span><span><b>Brie, Pommes &amp; Miel</b><small>1 × 6,10 €</small></span><em>6,10 €</em><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="row" href="#p-1610006"><span class="th" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1610006/5d0612168d974dc0bc4ae76910ccada0.webp')"></span><span><b>Croissant</b><small>4 × 1,70 €</small></span><em>6,80 €</em><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="row" href="#p-1540001"><span class="th" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1540001/1a90821b005d64d102b368f8cd410330.webp')"></span><span><b>Éclair chocolat</b><small>2 × 3,00 €</small></span><em>6,00 €</em><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+        <div class="total"><span>Total payé, TVA comprise</span><b>56,70 €</b></div>
+        <p class="fine">Atelier by Berlo – Corbais · Caisse 1 · Samedi 21 novembre 2026 · 11 h 52</p>
+      </section>
+      <div class="stack">
+        <section class="card">
+          <p class="eyebrow eyebrow--ruby">Allergènes</p>
+          <h2 class="card__t">Ce que contient votre ticket</h2>
+          <div class="alg-l"><div class="alg-r"><span class="chip">Gluten</span><p>Cannelloni - poulet &amp; estragon, Quiche Grecque, Brie, Pommes &amp; Miel, Croissant, Éclair chocolat</p></div><div class="alg-r"><span class="chip">Œufs</span><p>Quiche Grecque, Croissant, Éclair chocolat</p></div><div class="alg-r"><span class="chip">Lait</span><p>Cannelloni - poulet &amp; estragon, Quiche Grecque, Brie, Pommes &amp; Miel, Croissant, Éclair chocolat</p></div></div>
+          <p class="sans"><b>Aucun de vos produits</b> ne contient, d’après nos fiches : arachides, crustacés, céleri, fruits à coque, lupin, mollusques, moutarde, poisson, soja, sulfites, sésame.</p>
+          <p class="note"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 21 19H3z"/><path d="M12 10v4M12 16.5v.01"/></svg><span>Nos ateliers travaillent aussi fruits à coque, sésame, moutarde, poisson, arachides et soja : des traces restent possibles. Une allergie sévère ? Parlez-en en boutique avant de déguster.</span></p>
+        </section>
+        <section class="card">
+          <p class="eyebrow">Fraîcheur</p>
+          <h2 class="card__t">Dans quel ordre les déguster</h2>
+          <ul class="tl"><li class="now"><b>Aujourd’hui, avant 23 h 45</b><span>Brie, Pommes &amp; Miel</span></li><li class=""><b>Jusqu’à demain matin, dimanche 22 novembre</b><span>Quiche Grecque, Croissant × 4, Éclair chocolat × 2</span></li><li class=""><b>Jusqu’au mardi 24 novembre</b><span>Cannelloni - poulet &amp; estragon</span></li></ul>
+        </section>
+      </div>
+    </div>
+
+    <section id="fiches" class="fiches">
+      <div class="wrap chap">
+        <p class="eyebrow">Fiche par fiche</p>
+        <h2 class="h2">Tout ce qu’il faut <span class="script">savoir.</span></h2>
+        <p class="chap__lede"><span class="mobile">Glissez d’un produit à l’autre, ou touchez-en un dans la barre.</span><span class="bureau">Touchez un produit dans la barre pour aller à sa fiche.</span></p>
+      </div>
+      <nav class="pick" aria-label="Produits du ticket"><div class="pick__in"><button type="button" class="pick__b on" aria-controls="p-2110005"><span class="th" style="background-image:url('img/2110005.jpg')"></span>Cannelloni - poulet &amp; estragon</button><button type="button" class="pick__b" aria-controls="p-1410005"><span class="th" data-vide="1"></span>Quiche Grecque</button><button type="button" class="pick__b" aria-controls="p-2300013"><span class="th" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2300013/820449557d1ad245e49d8f890d8fa4e9.webp')"></span>Brie, Pommes &amp; Miel</button><button type="button" class="pick__b" aria-controls="p-1610006"><span class="th" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1610006/5d0612168d974dc0bc4ae76910ccada0.webp')"></span>Croissant<em>×4</em></button><button type="button" class="pick__b" aria-controls="p-1540001"><span class="th" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1540001/1a90821b005d64d102b368f8cd410330.webp')"></span>Éclair chocolat<em>×2</em></button></div></nav>
+      <div class="ctrl">
+        <p class="ctrl__n"><b>1</b><span> / 5</span></p>
+        <div class="ctrl__dots" aria-hidden="true"><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div>
+        <button type="button" class="arr arr--prev" aria-label="Produit précédent" disabled><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+        <button type="button" class="arr arr--next" aria-label="Produit suivant"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="track" id="track" tabindex="0" aria-roledescription="carrousel" aria-label="Fiches des produits">
+<article class="prod" id="p-2110005" aria-roledescription="fiche" aria-label="1 sur 5 : Cannelloni - poulet &amp; estragon">
+  <header class="prod__head">
+    <span class="th prod__th" role="img" aria-label="Cannelloni - poulet &amp; estragon" style="background-image:url('img/2110005.jpg')"><span class="prod__qty">×1</span></span>
+    <div><p class="eyebrow eyebrow--ruby">Plat Prepare - Chaud</p><h3 class="prod__name">Cannelloni - poulet &amp; estragon</h3><p class="prod__px">12,90 €</p></div>
+  </header>
+  <ul class="tags"><li class="tag"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Jusqu’au 24 novembre</li><li class="tag"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l2 12H4z"/><circle cx="12" cy="5.5" r="2"/></svg>400 g</li></ul>
+  <div class="blk"><span class="eyebrow">Composition</span><p class="blk__txt">Béchamel, Cannelloni - Poulet Estragon (<b>gluten</b>), Crème debic 40 % (<b>lait</b>), Parmesan (<b>lait</b>), Poche Sauce Arrabiata.</p></div>
+  <div class="blk"><span class="eyebrow">Allergènes</span><div class="chips"><span class="chip">Gluten</span><span class="chip">Lait</span></div><details class="g14"><summary>Les 14 allergènes, un par un</summary><ul><li class="oui">Gluten<span>Contient</span></li><li class="">Crustacés<span>—</span></li><li class="">Œufs<span>—</span></li><li class="">Poisson<span>—</span></li><li class="">Arachides<span>—</span></li><li class="">Soja<span>—</span></li><li class="oui">Lait<span>Contient</span></li><li class="">Fruits à coque<span>—</span></li><li class="">Céleri<span>—</span></li><li class="">Moutarde<span>—</span></li><li class="">Sésame<span>—</span></li><li class="">Sulfites<span>—</span></li><li class="">Lupin<span>—</span></li><li class="">Mollusques<span>—</span></li></ul></details></div>
+  <div class="blk"><span class="eyebrow">Cuisson</span><div class="how"><div class="how__i"><span class="how__ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="7" cy="6.5" r=".6"/><circle cx="10" cy="6.5" r=".6"/><rect x="6.5" y="12" width="11" height="5" rx="1"/></svg></span><div><p class="how__t">Réchauffer au four</p><p class="how__big">180 °C<span>· 10 min</span></p></div></div></div></div>
+  <div class="blk"><span class="eyebrow">Préparation et finition</span><ol class="steps"><li>Préparer la base : Verser uniformément la sauce tomate et la crème dans le fond de la barquette.</li><li>Disposer les pièces : Placer soigneusement les 3 cannelloni côte à côte sur la sauce.</li><li>Napper : Recouvrir les cannelloni d’une couche régulière de béchamel.</li><li>Finition : Saupoudrer généreusement le dessus de parmesan râpé.</li></ol></div>
+  <div class="blk"><span class="eyebrow">Conservation</span><div class="keep"><p class="blk__txt">À conserver entre 2 °C et 4 °C.</p><p class="until"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>À déguster jusqu’au mardi 24 novembre</span></p></div></div>
+  
+</article>
+<article class="prod" id="p-1410005" aria-roledescription="fiche" aria-label="2 sur 5 : Quiche Grecque">
+  <header class="prod__head">
+    <span class="th prod__th" role="img" aria-label="Quiche Grecque" data-vide="1"><span class="prod__qty">×1</span></span>
+    <div><p class="eyebrow eyebrow--ruby">Quiches</p><h3 class="prod__name">Quiche Grecque</h3><p class="prod__px">24,90 €</p></div>
+  </header>
+  <ul class="tags"><li class="tag"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Jusqu’à demain matin</li><li class="tag tag--abr"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/></svg>Végétarien</li><li class="tag"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l2 12H4z"/><circle cx="12" cy="5.5" r="2"/></svg>900 g</li></ul>
+  <div class="blk"><span class="eyebrow">Composition</span><p class="blk__txt">Quiche Greque (<b>œufs</b>, <b>lait</b>, <b>gluten</b>).</p></div>
+  <div class="blk"><span class="eyebrow">Allergènes</span><div class="chips"><span class="chip">Gluten</span><span class="chip">Œufs</span><span class="chip">Lait</span></div><details class="g14"><summary>Les 14 allergènes, un par un</summary><ul><li class="oui">Gluten<span>Contient</span></li><li class="">Crustacés<span>—</span></li><li class="oui">Œufs<span>Contient</span></li><li class="">Poisson<span>—</span></li><li class="">Arachides<span>—</span></li><li class="">Soja<span>—</span></li><li class="oui">Lait<span>Contient</span></li><li class="">Fruits à coque<span>—</span></li><li class="">Céleri<span>—</span></li><li class="">Moutarde<span>—</span></li><li class="">Sésame<span>—</span></li><li class="">Sulfites<span>—</span></li><li class="">Lupin<span>—</span></li><li class="">Mollusques<span>—</span></li></ul></details></div>
+  <div class="blk"><span class="eyebrow">Cuisson</span><div class="how"><div class="how__i"><span class="how__ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="7" cy="6.5" r=".6"/><circle cx="10" cy="6.5" r=".6"/><rect x="6.5" y="12" width="11" height="5" rx="1"/></svg></span><div><p class="how__t">Comment nous le cuisons</p><details class="long"><summary><div class="how__d"><p>Contrairement aux tartes sans cuisson, ces tartes sont préparées avec une base de pâte et garnies avant d’être mises directement crues au four, comme pour les cookies. Cette méthode permet de cuire la pâte et la garniture en même temps, offrant une texture plus homogène. Préchauffez le four à 180 °C et faites cuire entre 25 et 35 minutes, jusqu’à ce que la pâte soit dorée et la garniture bien cuite.</p></div><span class="plus">Lire la suite</span></summary></details></div></div></div></div>
+  
+  <div class="blk"><span class="eyebrow">Conservation</span><div class="keep"><p class="blk__txt">À conserver entre 2 °C et 4 °C.</p><p class="until"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>À déguster jusqu’à demain matin, dimanche 22 novembre</span></p></div></div>
+  <div class="prod__cta"><a class="btn" href="https://webshop.atelierby.be/?shop=2&amp;product=1410005&amp;open=product&amp;lang=fr">Le recommander <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+</article>
+<article class="prod" id="p-2300013" aria-roledescription="fiche" aria-label="3 sur 5 : Brie, Pommes &amp; Miel">
+  <header class="prod__head">
+    <span class="th prod__th" role="img" aria-label="Brie, Pommes &amp; Miel" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/2300013/820449557d1ad245e49d8f890d8fa4e9.webp')"><span class="prod__qty">×1</span></span>
+    <div><p class="eyebrow eyebrow--ruby">Traiteur</p><h3 class="prod__name">Brie, Pommes &amp; Miel</h3><p class="prod__px">6,10 €</p></div>
+  </header>
+  <ul class="tags"><li class="tag tag--now"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Aujourd’hui, avant 23 h 45</li><li class="tag tag--abr"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/></svg>Végétarien</li><li class="tag"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l2 12H4z"/><circle cx="12" cy="5.5" r="2"/></svg>350 g</li></ul>
+  <div class="blk"><span class="eyebrow">Composition</span><p class="blk__txt">Brie de Meaux (<b>lait</b>), Roquette, Tomates grappe, Miel liquide, Pommes Granny, Raisins secs golden, Thym, Baguette Tradition.</p></div>
+  <div class="blk"><span class="eyebrow">Allergènes</span><div class="chips"><span class="chip">Gluten</span><span class="chip">Lait</span></div><details class="g14"><summary>Les 14 allergènes, un par un</summary><ul><li class="oui">Gluten<span>Contient</span></li><li class="">Crustacés<span>—</span></li><li class="">Œufs<span>—</span></li><li class="">Poisson<span>—</span></li><li class="">Arachides<span>—</span></li><li class="">Soja<span>—</span></li><li class="oui">Lait<span>Contient</span></li><li class="">Fruits à coque<span>—</span></li><li class="">Céleri<span>—</span></li><li class="">Moutarde<span>—</span></li><li class="">Sésame<span>—</span></li><li class="">Sulfites<span>—</span></li><li class="">Lupin<span>—</span></li><li class="">Mollusques<span>—</span></li></ul></details></div>
+  
+  <div class="blk"><span class="eyebrow">Préparation et finition</span><ol class="steps"><li>Déposer la roquette de manière uniforme sur toute la longueur de la plaquette FlipFlap.</li><li>Répartir les tomates grappe tranchées régulièrement sur la roquette afin d’assurer une base homogène.</li><li>Disposer les tranches de Brie de Meaux de façon alternée sur la plaquette</li><li>Ajouter les Pommes Granny coupées en bâtonnets par-dessus le fromage</li><li>Parsemer les raisins secs golden de manière régulière</li><li>napper de miel liquide en filet contrôlé et terminer par une pincée de thym répartie uniformément.</li></ol></div>
+  <div class="blk"><span class="eyebrow">Conservation</span><div class="keep"><p class="until"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>À déguster aujourd’hui, avant 23 h 45</span></p></div></div>
+  <div class="prod__cta"><a class="btn" href="https://webshop.atelierby.be/?shop=2&amp;product=2300013&amp;open=product&amp;lang=fr">Le recommander <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+</article>
+<article class="prod" id="p-1610006" aria-roledescription="fiche" aria-label="4 sur 5 : Croissant">
+  <header class="prod__head">
+    <span class="th prod__th" role="img" aria-label="Croissant" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1610006/5d0612168d974dc0bc4ae76910ccada0.webp')"><span class="prod__qty">×4</span></span>
+    <div><p class="eyebrow eyebrow--ruby">Viennoiserie</p><h3 class="prod__name">Croissant</h3><p class="prod__px">4 × 1,70 € · 6,80 €</p></div>
+  </header>
+  <ul class="tags"><li class="tag"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Jusqu’à demain matin</li></ul>
+  <div class="blk"><span class="eyebrow">Composition</span><p class="blk__txt">Croissant (<b>œufs</b>, <b>lait</b>, <b>gluten</b>).</p></div>
+  <div class="blk"><span class="eyebrow">Allergènes</span><div class="chips"><span class="chip">Gluten</span><span class="chip">Œufs</span><span class="chip">Lait</span></div><details class="g14"><summary>Les 14 allergènes, un par un</summary><ul><li class="oui">Gluten<span>Contient</span></li><li class="">Crustacés<span>—</span></li><li class="oui">Œufs<span>Contient</span></li><li class="">Poisson<span>—</span></li><li class="">Arachides<span>—</span></li><li class="">Soja<span>—</span></li><li class="oui">Lait<span>Contient</span></li><li class="">Fruits à coque<span>—</span></li><li class="">Céleri<span>—</span></li><li class="">Moutarde<span>—</span></li><li class="">Sésame<span>—</span></li><li class="">Sulfites<span>—</span></li><li class="">Lupin<span>—</span></li><li class="">Mollusques<span>—</span></li></ul></details></div>
+  <div class="blk"><span class="eyebrow">Cuisson</span><div class="how"><div class="how__i"><span class="how__ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="7" cy="6.5" r=".6"/><circle cx="10" cy="6.5" r=".6"/><rect x="6.5" y="12" width="11" height="5" rx="1"/></svg></span><div><p class="how__t">Comment nous le cuisons</p><details class="long"><summary><div class="how__d"><ol class="num"><li>Préchauffage du four Température : Entre 170°C et 180°C (chaleur tournante) ou 190°C à 200°C (chaleur statique). Pourquoi ? Une chaleur bien répartie permet une cuisson homogène et un bon développement du feuilletage.</li><li>Préparation avant cuisson Dorure : Appliquer une fine couche de dorure (œuf battu) à l’aide d’un pinceau. Repos (facultatif) : Laisser sécher la dorure 5-10 min avant d’enfourner.</li><li>Cuisson Temps de cuisson : Croissants &amp; pains au chocolat : 15 à 20 min Brioches : 25 à 30 min Astuce : Tourner la plaque à mi-cuisson pour une coloration uniforme.</li><li>Vérification &amp; Finition Couleur : Les viennoiseries doivent être bien dorées sur le dessus. Fond : Vérifier que le dessous est légèrement coloré et non trop pâle. Refroidissement : Laisser tiédir sur une grille pour éviter la condensation et préserver le croustillant.</li></ol></div><span class="plus">Lire la suite</span></summary></details></div></div></div></div>
+  
+  <div class="blk"><span class="eyebrow">Conservation</span><div class="keep"><p class="blk__txt">À conserver entre 2 °C et 4 °C.</p><p class="until"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>À déguster jusqu’à demain matin, dimanche 22 novembre</span></p></div></div>
+  <div class="prod__cta"><a class="btn" href="https://webshop.atelierby.be/?shop=2&amp;product=1610006&amp;open=product&amp;lang=fr">Le recommander <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+</article>
+<article class="prod" id="p-1540001" aria-roledescription="fiche" aria-label="5 sur 5 : Éclair chocolat">
+  <header class="prod__head">
+    <span class="th prod__th" role="img" aria-label="Éclair chocolat" style="background-image:url('https://pub-fc35ffe3a6ef44d0a562b4776c00e211.r2.dev/webshop/products/1540001/1a90821b005d64d102b368f8cd410330.webp')"><span class="prod__qty">×2</span></span>
+    <div><p class="eyebrow eyebrow--ruby">Pâtisserie</p><h3 class="prod__name">Éclair chocolat</h3><p class="prod__px">2 × 3,00 € · 6,00 €</p></div>
+  </header>
+  <ul class="tags"><li class="tag"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Jusqu’à demain matin</li></ul>
+  <div class="blk"><span class="eyebrow">Composition</span><p class="blk__txt">Fondant chocolat, Eclair (<b>œufs</b>, <b>lait</b>, <b>gluten</b>), Crème pâtissière (Crème pâtissière (Poche)).</p></div>
+  <div class="blk"><span class="eyebrow">Allergènes</span><div class="chips"><span class="chip">Gluten</span><span class="chip">Œufs</span><span class="chip">Lait</span></div><details class="g14"><summary>Les 14 allergènes, un par un</summary><ul><li class="oui">Gluten<span>Contient</span></li><li class="">Crustacés<span>—</span></li><li class="oui">Œufs<span>Contient</span></li><li class="">Poisson<span>—</span></li><li class="">Arachides<span>—</span></li><li class="">Soja<span>—</span></li><li class="oui">Lait<span>Contient</span></li><li class="">Fruits à coque<span>—</span></li><li class="">Céleri<span>—</span></li><li class="">Moutarde<span>—</span></li><li class="">Sésame<span>—</span></li><li class="">Sulfites<span>—</span></li><li class="">Lupin<span>—</span></li><li class="">Mollusques<span>—</span></li></ul></details></div>
+  
+  
+  <div class="blk"><span class="eyebrow">Conservation</span><div class="keep"><p class="blk__txt">À conserver entre 2 °C et 4 °C.</p><p class="until"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>À déguster jusqu’à demain matin, dimanche 22 novembre</span></p></div></div>
+  <div class="prod__cta"><a class="btn" href="https://webshop.atelierby.be/?shop=2&amp;product=1540001&amp;open=product&amp;lang=fr">Le recommander <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+</article></div>
+    </section>
+
+    <div class="wrap end">
+      <section class="abr">
+        <p class="eyebrow eyebrow--ruby">Votre avis</p>
+        <h2 class="card__t">Comment était votre passage à Corbais ?</h2>
+        <p class="card__p">Un mot sur Google aide l’équipe de la boutique, et les clients qui hésitent encore.</p>
+        <div class="stars"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></svg><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></svg><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></svg><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></svg><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></svg></div>
+        <a class="btn" href="#">Laisser un avis <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </section>
+      <section class="card">
+        <p class="eyebrow">Mobile</p>
+        <h2 class="card__t">Tous vos tickets, au même endroit</h2>
+        <p class="card__p">Dans l’application : vos fiches produits, le programme de fidélité et vos commandes.</p>
+        <ul class="dots"><li>Fidélité</li><li>Bundles &amp; promotions</li><li>Abonnements</li></ul>
+        <a class="link" href="#">Télécharger l’application <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </section>
+      <section class="card shop">
+        <p class="eyebrow">Votre boutique</p>
+        <h2 class="card__t">Atelier by Berlo – Corbais</h2>
+        <dl><dt>Adresse</dt><dd>Grand Route 20, 1435 Corbais</dd><dt>Horaires</dt><dd>Tous les jours, de 6 h 30 à 18 h 30</dd><dt>Téléphone</dt><dd>010.65.83.83</dd></dl>
+        <a class="link" href="https://webshop.atelierby.be/?shop=2&lang=fr">Commander pour demain <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </section>
+    </div>
+  </div>
+
+  <footer class="foot wrap">
+    <p>Les informations de cette page viennent des fiches techniques de nos produits, à la date de votre achat. Une recette peut évoluer : en cas d’allergie ou d’intolérance, <b>demandez conseil en boutique</b>.</p>
+    <p>© 2026 L’Atelier By · Mentions légales · Confidentialité</p>
+  </footer>
+</main>
+<script>
+(function(){
+  var track=document.getElementById('track'); if(!track) return;
+  var cards=[].slice.call(track.children), picks=[].slice.call(document.querySelectorAll('.pick__b'));
+  var dots=[].slice.call(document.querySelectorAll('.ctrl__dots i')), n=document.querySelector('.ctrl__n b');
+  var prev=document.querySelector('.arr--prev'), next=document.querySelector('.arr--next'), pickIn=document.querySelector('.pick__in');
+  var bureau=window.matchMedia('(min-width:860px)'), i=0, t=null;
+  function haut(){ return document.querySelector('.nav').offsetHeight + document.querySelector('.pick').offsetHeight + 8; }
+  function marquer(k){
+    i=k;
+    picks.forEach(function(b,j){ b.classList.toggle('on', j===k); b.setAttribute('aria-current', j===k ? 'true' : 'false'); });
+    dots.forEach(function(d,j){ d.classList.toggle('on', j===k); });
+    if(n) n.textContent=k+1;
+    if(prev) prev.disabled = k===0; if(next) next.disabled = k===cards.length-1;
+    var b=picks[k]; if(b) pickIn.scrollLeft = b.offsetLeft - (pickIn.clientWidth - b.offsetWidth)/2;
+    if(!bureau.matches) track.style.height = cards[k].offsetHeight + 'px';
+  }
+  function remonter(){ var y=track.getBoundingClientRect().top; if(y < haut()) window.scrollBy({top: y - haut(), behavior:'smooth'}); }
+  function aller(k){
+    k=Math.max(0, Math.min(cards.length-1, k));
+    if(bureau.matches){ cards[k].scrollIntoView({behavior:'smooth', block:'start'}); marquer(k); return; }
+    track.scrollTo({left: cards[k].offsetLeft - cards[0].offsetLeft, behavior:'smooth'});
+    marquer(k); remonter();
+  }
+  track.addEventListener('scroll', function(){
+    clearTimeout(t);
+    t=setTimeout(function(){
+      var pas = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : 1;
+      var k=Math.round(track.scrollLeft / pas);
+      if(k!==i){ marquer(k); remonter(); }
+    }, 90);
+  }, {passive:true});
+  picks.forEach(function(b,j){ b.addEventListener('click', function(){ aller(j); }); });
+  if(prev) prev.addEventListener('click', function(){ aller(i-1); });
+  if(next) next.addEventListener('click', function(){ aller(i+1); });
+  // Les lignes du ticket mènent à la fiche du produit, dans le carrousel.
+  [].slice.call(document.querySelectorAll('a.row')).forEach(function(a){
+    a.addEventListener('click', function(ev){
+      var k=cards.findIndex(function(c){ return '#'+c.id === a.getAttribute('href'); }); if(k<0) return;
+      ev.preventDefault(); document.getElementById('fiches').scrollIntoView({behavior:'smooth'}); setTimeout(function(){ aller(k); }, 350);
+    });
+  });
+  // Les flèches du clavier, pour qui consulte la page sur un ordinateur étroit.
+  track.addEventListener('keydown', function(ev){ if(ev.key==='ArrowRight') aller(i+1); if(ev.key==='ArrowLeft') aller(i-1); });
+  window.addEventListener('resize', function(){ marquer(i); });
+  if('ResizeObserver' in window) new ResizeObserver(function(){ marquer(i); }).observe(cards[0].parentNode);
+  [].slice.call(document.querySelectorAll('details')).forEach(function(d){ d.addEventListener('toggle', function(){ marquer(i); }); });
+  window.carrousel = {aller: aller, marquer: marquer};
+  marquer(0);
+})();
+</script>
+</body>
+</html>

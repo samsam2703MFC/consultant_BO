@@ -22,7 +22,8 @@ final class OpenApiBuy
                 'description' => "Semaine de production : produits à faire (commandes + réapprovisionnement des stocks, en cartons) ; achats de la semaine s'il y en a (round), sinon proposition : "
                     . "besoin × (1 + réserve) contre stock + en commande, mode stock (jusqu'au max quand on passe sous le min) ou commande, arrondi aux emballages entiers ; dernier prix le moins cher et son fournisseur ; arrivée au prochain jour de livraison habituel. " . $units],
             'POST /supply/buy/rounds' => ['tag' => $t, 'id' => 'createBuyRound', 'summary' => 'Krok 1 : utwórz zakupy tygodnia / Étape 1 : créer les achats', 'body' => 'BuyRoundCreateInput', 'response' => 'BuyRound', 'ok' => 201, 'errors' => [400, 404, 409, 422],
-                'description' => "Brouillon avec les lignes choisies ; conditions par défaut : paiement 7 jours, livraison chez nous, réponse sous buy.reply_hours heures. BUY_ROUND_EXISTS (409) : achats déjà ouverts pour la semaine. " . $units],
+                'description' => "Brouillon avec les lignes choisies ; conditions par défaut : paiement 7 jours, livraison chez nous, réponse sous buy.reply_hours heures. BUY_ROUND_EXISTS (409) : achats déjà ouverts pour la semaine. "
+                    . "[432] COLD_VISIT_REQUIRED (409) : pas d'obchód chłodni complet (tablette qualité) depuis cold_visit.valid_hours heures, alors qu'il y a des miejsca à obejść. " . $units],
             'GET /supply/buy/rounds/{id:\d+}' => ['tag' => $t, 'id' => 'getBuyRound', 'summary' => 'Zakupy : pozycje, zapytania, oferty / Achats : lignes, demandes, offres', 'response' => 'BuyRound', 'errors' => [404],
                 'description' => "Par ligne : fournisseurs demandés (ou fournisseurs de la ligne, 3 au plus), candidats (fournisseurs de la ligne, historique de prix, même catégorie), offres triées par prix, "
                     . "best_offer_id = la moins chère dont le minimum de commande est atteint, hint = la moins chère sous le minimum (quantité pour l'atteindre, semaines couvertes, gain), décision et commande fournisseur."],
@@ -103,6 +104,7 @@ final class OpenApiBuy
             'BuyWeek' => ['type' => 'object', 'properties' => [
                 'week' => $free, 'weeks' => ['type' => 'array', 'items' => $free], 'can_write' => $bool,
                 'missing_suppliers' => ['type' => 'integer', 'description' => 'articles consommés avec moins de 3 fournisseurs'],
+                'cold_visit' => ['allOf' => [['$ref' => '#/components/schemas/ColdVisitSummary']], 'nullable' => true, 'description' => '[432] krok « Obchód chłodni » (null : migration 255 absente)'],
                 'products' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => ['type' => 'string'], 'to_produce' => $num, 'stock' => $nNum, 'min' => $nNum, 'refill' => $num, 'orders' => $num],
                     'description' => 'en cartons']],
                 'round' => ['allOf' => [['$ref' => '#/components/schemas/BuyRound']], 'nullable' => true],

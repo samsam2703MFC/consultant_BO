@@ -184,12 +184,18 @@ check(WeekSplit::place(3900.0, ['d1', 'd2'], 60.0, ['d1' => 5.0, 'd2' => 8.0], $
     'week without batch: whole cartons');
 check(WeekSplit::place(1300.0, ['d1', 'd2'], 1300.0, ['d1' => 1.0, 'd2' => 8.0], $perBatch) === ['d2' => 1300.0],
     'week: a batch is never cut — it goes whole to the first day with room');
-// Prosta reguła magazynu : dostępne < stan min. → uzupełnienie do stanu maks. ; inaczej nic.
+// Prosta reguła magazynu : dostępne < stan min. → uzupełnienie do stanu min. [399] ; inaczej nic.
 $r = DemandCalculator::refill(1200, 1800, 3600);
-check($r['qty'] === 2400.0 && $r['reason'] === 'below_min', 'refill: below the minimum, back up to the maximum (croissant 1200 → 3600)');
+check($r['qty'] === 600.0 && $r['reason'] === 'below_min', '[399] refill: below the minimum, back up to the minimum (croissant 1200 → 1800), not the maximum');
 check(DemandCalculator::refill(1800, 1800, 3600)['qty'] === 0.0 && DemandCalculator::refill(2500, 1800, 3600)['qty'] === 0.0, 'refill: nothing at or above the minimum');
-check(DemandCalculator::refill(-500, 1800, 3600)['qty'] === 4100.0, 'refill: orders above stock (negative available) included');
+check(DemandCalculator::refill(-500, 1800, 3600)['qty'] === 2300.0 && DemandCalculator::refill(792, 1854, 5544)['qty'] === 1062.0, 'refill: orders above stock (negative available) included');
 check(DemandCalculator::refill(100, null, 300)['qty'] === 200.0 && DemandCalculator::refill(300, null, 300)['qty'] === 0.0, 'refill without a minimum: threshold = maximum');
+// [389] MTO : à produire = commandé − en stock, le stock servant d'abord le départ le plus proche.
+$ns = DemandCalculator::netStock(['b' => ['due_date' => '2026-11-26', 'qty' => 100.0], 'a' => ['due_date' => '2026-11-24', 'qty' => 216.0]], 250.0);
+check($ns === ['a' => 216.0, 'b' => 34.0], 'net stock: 250 in stock covers 216 (24.11) then 34 of 100 (26.11) — earliest departure first');
+check(DemandCalculator::netStock(['a' => ['due_date' => '2026-11-24', 'qty' => 16.0]], 32.0) === ['a' => 16.0], 'net stock: more stock than ordered → nothing to produce, surplus stays');
+check(DemandCalculator::netStock(['a' => ['due_date' => '2026-11-24', 'qty' => 1512.0]], 1386.0) === ['a' => 1386.0], 'net stock: 1 512 ordered − 1 386 in stock → 126 to produce');
+check(DemandCalculator::netStock(['a' => ['due_date' => '2026-11-24', 'qty' => 45.0]], 0.0) === [] && DemandCalculator::netStock([], 50.0) === [], 'net stock: no stock or no order → nothing taken');
 check(DemandCalculator::roundBatch(2400, null, 240) / 240 === 10.0, 'refill 2400 with batches of 240 = 10 batches');
 $cap = DemandCalculator::capFreezer([['key' => 'a', 'qty' => 600, 'ppc' => 60, 'multiple' => 60], ['key' => 'b', 'qty' => 240, 'ppc' => 24, 'multiple' => 24]], 1010, 1000);
 check($cap['limited'] && ($cap['lines']['a'] / 60 + $cap['lines']['b'] / 24) <= 10, 'freezer: proposed cartons fit the free space');
@@ -420,13 +426,39 @@ preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SE
 preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/203_stock_pallets_access.sql'), $m203);
 // 210 [353] : Procedury SOP (kierownik produkcji, jakość, kto ma produkcję).
 preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/210_sop.sql'), $m210);
-$seeded = array_values(array_unique(array_merge($m[1], $later[1], $m146[1], $m149[1], $m152[1], $m162[1], $m166[1], $m170[1], $m171[1], $m203[1], $m210[1])));
+// 223 [373] : Płynność i gotówka (osobne prawo : kto miał « margins » + Kierownik operacyjny).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/223_liquidity_access.sql'), $m223);
+// 235 [392] : Poczta od klientów (osobne prawo : Administracja).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/235_customer_mail_access.sql'), $m235);
+// 238 [397] : PPWR i opakowania (osobne prawo asystenta + PPWR i BDO : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/238_ppwr_month.sql'), $m238);
+// 239 [398] : Intrastat miesiąca (osobne prawo : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/239_intrastat_month.sql'), $m239);
+// 240 [400] : Receptury i dane produktów (osobne prawo asystenta : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/240_recipes_month.sql'), $m240);
+// 241 [401] : Kartoteka surowców (osobne prawo asystenta : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/241_materials_month.sql'), $m241);
+// 242 [402] : Dokumenty wysyłek miesiąca (osobne prawo asystenta : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/242_shipping_docs_month.sql'), $m242);
+// 243 [403] : Stany magazynowe na koniec miesiąca (osobne prawo asystenta : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/243_stock_month.sql'), $m243);
+// 244 [404] : Badania i szkolenia (osobne prawo : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/244_staff_deadlines.sql'), $m244);
+// 245 [405] : Serwisy i przeglądy maszyn (osobne prawo : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/245_maintenance.sql'), $m245);
+// 246 [406] : Teczka do audytu i kontroli (osobne prawo : Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/246_audit_folder.sql'), $m246);
+// 249 [411] : Tablet hali, kroki i strefy (osobne prawo : Jakość, Kierownik produkcji).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/249_hala_help.sql'), $m249);
+// 257 [440] : Różnice kursowe (osobne prawo : Finanse — Administracja).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/257_fx_differences_access.sql'), $m257);
+$seeded = array_values(array_unique(array_merge($m[1], $later[1], $m146[1], $m149[1], $m152[1], $m162[1], $m166[1], $m170[1], $m171[1], $m203[1], $m210[1], $m223[1], $m235[1], $m238[1], $m239[1], $m240[1], $m241[1], $m242[1], $m243[1], $m244[1], $m245[1], $m246[1], $m249[1], $m257[1])));
 // [256] Strony, które od tego czasu są tylko dla administratora (budżet personelu) : dawne wpisy nic nie dają (canSee je pomija).
 $seeded = array_values(array_filter($seeded, fn($k) => isset(PageAccess::PAGES[$k]) && !PageAccess::adminOnly($k)));
 sort($seeded);
 $grantable = PageAccess::grantable();
 sort($grantable);
-check($seeded === $grantable, 'access: migrations 050 + 059 + 063 + 146 + 149 + 152 + 162 + 166 + 170 + 171 + 203 + 210 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
+check($seeded === $grantable, 'access: migrations 050 + 059 + 063 + 146 + 149 + 152 + 162 + 166 + 170 + 171 + 203 + 210 + 223 + 235 + 238 + 239 + 240 + 241 + 242 + 243 + 244 + 245 + 246 + 249 + 257 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
 
 // --- Aktywność w ERP : trasa (identyfikatory → {id}), ścieżka bez zapytania, okres uporządkowany i ograniczony
 check(ActivityService::route('/products/12/edit') === '/products/{id}/edit' && ActivityService::route('/workshop/gantt') === '/workshop/gantt'

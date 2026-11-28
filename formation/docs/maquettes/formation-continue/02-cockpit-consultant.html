@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>02 — Cockpit consultant : les formations continues de mes franchisés</title>
+<link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="fc.css">
+<style>
+body{background:#F3EEE7}
+.crail{width:250px;flex:0 0 auto;background:#F6F1EA;border-right:1px solid var(--line);padding:18px 14px}
+.crail .logo{font-size:22px;letter-spacing:.32em;margin:0 6px}
+.crail .sl{font-size:8px;letter-spacing:.22em;color:var(--muted);margin:0 6px 4px}
+.crail .pr{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);margin:0 6px 14px;font-weight:700}
+.crail .g{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin:16px 6px 6px;font-weight:700}
+.crail a{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;color:var(--muted-2);font-size:12.5px}
+.crail a.on{background:#fff;color:var(--accent);box-shadow:0 0 0 1px var(--line)}
+.crail a .bd{margin-left:auto;background:var(--accent);color:#fff;border-radius:9px;font-size:10px;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+.crail a .nv{margin-left:auto;font-size:9px;letter-spacing:.1em;background:var(--prize-soft);color:var(--prize-ink);border-radius:6px;padding:2px 6px;text-transform:uppercase}
+.crail .qui{margin-top:22px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding:12px 6px 0;font-size:12px}
+.crail .qui .av{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.fr{display:flex;flex-direction:column;gap:8px}
+.frc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.frc.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.frc b{font-weight:400;font-size:14px}
+.frc .m{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.frc .av{width:auto;margin-top:8px}
+.tiroir{min-width:0}
+.frc.off{background:transparent;border-style:dashed;color:var(--faint)}
+.lay{display:grid;grid-template-columns:205px minmax(0,1fr) 410px;gap:14px;align-items:start}
+.tiroir .sec{border-top:1px solid var(--line);padding:12px 16px}
+.tiroir .sec:first-of-type{border-top:0}
+.sec .t{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sec .t .n{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11.5px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+.sec .t b{font-weight:400;font-size:14px}
+.sec .t i{margin-left:auto;font-style:normal;color:var(--muted);font-size:11.5px}
+.pers{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--row-line)}
+.pers:last-child{border-bottom:0}
+.pers .nm{flex:1}
+.pers .nm small{color:var(--muted);font-size:10.5px;margin-left:4px}
+.pers .c{width:46px;text-align:center;font-size:11px;color:var(--muted)}
+.diff{font-size:12px;line-height:1.5;border-left:3px solid #F2C9A0;background:#FFF8F1;padding:8px 10px;border-radius:0 8px 8px 0;margin:6px 0}
+.diff s{color:var(--muted)}
+.diff b{font-weight:700;color:var(--accent)}
+.g14{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.ph14{position:relative;border-radius:6px;overflow:hidden;height:44px;background:linear-gradient(135deg,#E2B985,#8E5A2B)}
+.ph14 i{position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,255,255,.25),rgba(0,0,0,.1))}
+.ph14 b{position:absolute;top:3px;right:3px;width:15px;height:15px;border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;color:#fff;background:var(--green)}
+.ph14.ko b{background:var(--stop)}
+.ph14.ko{outline:2px solid var(--stop);outline-offset:-2px}
+.ph14 small{position:absolute;left:4px;bottom:2px;font-size:9px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+</style></head>
+<body>
+<div class="app">
+  <nav class="crail">
+    <div class="logo">L’ATELIER</div><div class="sl">SUCRÉ · SALÉ · À EMPORTER</div><div class="pr">Pilotage réseau</div>
+    <div class="g">Pilotage</div><a>Résultat</a><a>Demandes des franchisés <span class="bd">3</span></a><a>Tâches &amp; contrôles</a>
+    <div class="g">Franchisés</div><a>Fiche &amp; scoring</a><a>Visites</a><a class="on">Formations continues <span class="bd">3</span></a><a>Budget</a><a>Équipe &amp; ventes</a><a>Audit fournisseurs</a>
+    <div class="g">Vérification</div><a>Flux &amp; poubelle</a><a>Matières &amp; inventaires</a><a>Recettes à corriger</a>
+    <div class="g">Produits</div><a>Catalogue</a><a>Comptoir</a>
+    <div class="g">Applications</div><a>Formation ↗</a><a>Catalogue des manuels ↗</a>
+    <div class="qui"><span class="av">NK</span><div>Nadia K.<br><span class="mut petit">consultante · 2 franchisés</span></div></div>
+  </nav>
+  <main class="main">
+    <div class="top"><div><div class="kk">Franchisés · Formations continues</div><h1>Les formations de mes franchisés</h1></div><span class="sp"></span>
+      <span class="seg"><span class="on">Mes franchisés <i>2</i></span><span class="fnt">Tout le réseau <i>siège</i></span></span></div>
+
+    <div class="kpis">
+      <div class="kpi or"><div class="l">À valider</div><div class="v">3</div><div class="s">terminées par le franchisé, en attente de vous</div></div>
+      <div class="kpi ac"><div class="l">En retard</div><div class="v">1</div><div class="s">échéance passée, pas terminée</div></div>
+      <div class="kpi"><div class="l">Avancement moyen</div><div class="v">71 %</div><div class="s">formations en cours, 2 franchisés</div></div>
+      <div class="kpi ok"><div class="l">Validées en novembre</div><div class="v">5</div><div class="s">par vous · tracées au journal</div></div>
+    </div>
+
+    <div class="lay">
+      <div class="fr ann"><span class="ann-n" style="left:-10px;top:-10px">1</span>
+        <div class="frc sel"><b>Gosselies</b><div class="mut petit">franchisé : M. Lambert · 6 en équipe</div><div class="m"><span class="st aval">2 à valider</span><span class="st ret">1 en retard</span></div><div class="av"><span class="bar"><i class="o" style="width:64%"></i></span><span>64 %</span></div></div>
+        <div class="frc"><b>Corbais</b><div class="mut petit">franchisée : Mme Dupuis · 4 en équipe</div><div class="m"><span class="st aval">1 à valider</span></div><div class="av"><span class="bar"><i style="width:82%"></i></span><span>82 %</span></div></div>
+        <div class="frc off petit">Halle et Sombreffe ne s’affichent pas : ils sont suivis par un autre consultant (cadre de visite).</div>
+      </div>
+
+      <section class="carte">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--line)"><div style="display:flex;gap:8px;align-items:baseline;margin-bottom:8px"><b style="font-weight:400;font-size:15px">Gosselies</b><span class="mut petit">7 formations continues</span></div>
+          <span class="seg"><span class="on">Toutes <i>7</i></span><span>Technique <i>1</i></span><span>Connaissance <i>1</i></span><span>Nouveau produit <i>4</i></span><span>Nouvelle technique <i>1</i></span></span></div>
+        <div class="tete"><span class="c-nom">Formation</span><span style="width:90px">Statut</span><span style="width:150px">Avancement</span><span style="width:64px">Échéance</span></div>
+        <div class="ligne sel"><span class="c-nom"><b>FC-023 · Pistolet poulet-curry du traiteur</b><small><span class="tag prod"><span class="pt"></span>Nouveau produit</span> <span class="tag" style="background:#FFF1E4;color:#7A3E12">adaptée pour Gosselies</span></small></span><span style="width:90px"><span class="st aval">À valider</span></span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w" style="width:64px">25/11</span></div>
+        <div class="ligne"><span class="c-nom"><b>FC-021 · Cramique aux pépites de chocolat</b><small><span class="tag prod"><span class="pt"></span>Nouveau produit</span></small></span><span style="width:90px"><span class="st aval">À valider</span></span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w" style="width:64px">10/11</span></div>
+        <div class="ligne"><span class="c-nom"><b>FC-018 · Four ventilé : le programme P7 viennoiserie</b><small><span class="tag ntech"><span class="pt"></span>Nouvelle technique</span></small></span><span style="width:90px"><span class="st ret">En retard</span></span><span class="av"><span class="bar"><i class="o" style="width:40%"></i></span><span>40 %</span></span><span class="c-w" style="width:64px;color:var(--stop)">15/11</span></div>
+        <div class="ligne"><span class="c-nom"><b>FC-015 · Étiquette allergènes : la règle FIC 2027</b><small><span class="tag conn"><span class="pt"></span>Connaissance</span></small></span><span style="width:90px"><span class="st brou">En cours</span></span><span class="av"><span class="bar"><i class="o" style="width:55%"></i></span><span>55 %</span></span><span class="c-w" style="width:64px">15/12</span></div>
+        <div class="ligne"><span class="c-nom"><b>FC-011 · Façonnage de la baguette tradition</b><small><span class="tag tech"><span class="pt"></span>Technique</span></small></span><span style="width:90px"><span class="st val">Validée</span></span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w" style="width:64px">31/10</span></div>
+        <div class="ligne"><span class="c-nom"><b>FC-019 · Tartelette tatin individuelle</b><small><span class="tag prod"><span class="pt"></span>Nouveau produit</span></small></span><span style="width:90px"><span class="st val">Validée</span></span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w" style="width:64px">20/10</span></div>
+        <div class="ligne"><span class="c-nom"><b>FC-024 · Bûche praliné-noisette — fêtes 2026</b><small><span class="tag prod"><span class="pt"></span>Nouveau produit</span> <span class="fnt">· pas encore diffusée par le siège</span></small></span><span style="width:90px"><span class="st brou">Brouillon</span></span><span class="av"><span class="bar"></span><span>—</span></span><span class="c-w" style="width:64px">01/12</span></div>
+        <div class="pad petit mut" style="border-top:1px solid var(--line)">Statut de la formation <b style="font-weight:400;color:var(--ink)">pour ce franchisé</b> : brouillon (préparée, pas encore visible) · en cours · à valider (terminée) · validée (par vous). Le statut réseau de la formation se règle dans le module Formation.</div>
+      </section>
+
+      <aside class="carte tiroir">
+        <div class="pad" style="border-bottom:1px solid var(--line)">
+          <div class="h3">Gosselies · FC-023</div>
+          <div style="font-size:18px;line-height:1.25">Pistolet poulet-curry du traiteur</div>
+          <div style="display:flex;gap:6px;margin-top:8px"><span class="tag prod"><span class="pt"></span>Nouveau produit</span><span class="st aval">À valider</span><span class="tag">v1.0 · adaptée</span></div>
+        </div>
+        <div class="sec ann"><span class="ann-n" style="left:-12px;top:10px">2</span>
+          <div class="t"><span class="n">1</span><b>Vérifier</b><i>contenu et avancement</i></div>
+          <div class="pers" style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em"><span class="nm">Personne</span><span class="c">Lu</span><span class="c">Quiz</span><span class="c">Vu faire</span></div>
+          <div class="pers"><span class="nm">Julie R.<small>P2 traiteur</small></span><span class="c"><span class="chk on">✓</span></span><span class="c">3/3</span><span class="c"><span class="chk on">✓</span></span></div>
+          <div class="pers"><span class="nm">Karim B.<small>P6 chef traiteur</small></span><span class="c"><span class="chk on">✓</span></span><span class="c">3/3</span><span class="c"><span class="chk on">✓</span></span></div>
+          <div class="pers"><span class="nm">Mise en place en magasin<small>déclarée par M. Lambert</small></span><span class="c"></span><span class="c"></span><span class="c"><span class="chk on">✓</span></span></div>
+          <div class="h3" style="margin:12px 0 6px">Photos qualité du produit <i>tâche unique · 08/11 → 21/11 · photo obligatoire</i></div>
+          <div class="g14"><div class="ph14 ok"><i></i><b>✓</b><small>08/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>09/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>10/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>11/11</small></div><div class="ph14 ko"><i></i><b>✗</b><small>12/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>13/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>14/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>15/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>16/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>17/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>18/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>19/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>20/11</small></div><div class="ph14 ok"><i></i><b>✓</b><small>21/11</small></div></div>
+          <div class="note" style="margin-top:8px">14 jours, 14 photos ; le 12/11 refusée (sauce débordante), refaite le jour même à 16:05. Chaque photo est relue comme les autres contrôles (avis conforme / à refaire). · <span class="lien">voir les photos</span> · <span class="lien">lire le contenu (5 étapes)</span></div>
+        </div>
+        <div class="sec ann"><span class="ann-n" style="left:-12px;top:10px">3</span>
+          <div class="t"><span class="n">2</span><b>Adapter</b><i>pour Gosselies seulement</i></div>
+          <div class="diff">Étape 3 · Cuisson : <s>four à sole, 8 min à 230 °C</s> → <b>four ventilé, programme P4, 7 min</b> (pas de four à sole au traiteur de Gosselies)</div>
+          <div class="diff">Qui la suit : <s>P2, P6 (tout le traiteur)</s> → <b>Julie R. et Karim B.</b> · échéance <s>20/11</s> → <b>25/11</b></div>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><span class="b sm">Modifier le contenu</span><span class="b sm">Modifier l’assignation</span><span class="b sm">Revenir au modèle réseau</span></div>
+        </div>
+        <div class="sec ann"><span class="ann-n" style="left:-12px;top:10px">4</span>
+          <div class="t"><span class="n">3</span><b>Valider</b><i>tracé : qui, quand</i></div>
+          <div class="champ mut" style="margin-bottom:8px">Un mot pour le franchisé (facultatif) — « Bravo, vitrine conforme. »</div>
+          <div class="note or" style="margin-bottom:8px">En validant : la tâche photo est <b>désactivée et gardée</b> au panel ; ses 14 photos et leurs avis sont <b>archivés dans le document de formation de Gosselies</b>, avec votre nom et l’heure.</div>
+          <div style="display:flex;gap:8px"><span class="b v g">✓ Valider pour Gosselies</span><span class="b g">Renvoyer en cours</span></div>
+          <div class="h3" style="margin-top:14px">Journal de cette formation</div>
+          <div class="trace"><span class="d">21/11 15:10</span><span class="x">14<sup>e</sup> photo conforme — passe « à valider »<small>tâche unique terminée · M. Lambert · franchisé</small></span></div>
+          <div class="trace"><span class="d">18/11 09:32</span><span class="x">Adaptée : étape 3, assignation, échéance<small>Nadia K. · consultante</small></span></div>
+          <div class="trace"><span class="d">08/11 06:00</span><span class="x">Tâche unique « Photo qualité · Pistolet poulet-curry » créée, 14 jours<small>automatique, à la mise en vente</small></span></div>
+          <div class="trace"><span class="d">05/11 08:00</span><span class="x">Reçue dans le dossier (diffusion réseau)<small>Claire D. · siège</small></span></div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="legende"><b>Cockpit consultant — Franchisés › Formations continues</b> (le rail du cockpit n’a plus de groupe « Gestion » depuis le 18/10 : l’entrée se range sous Franchisés, à côté des Visites)
+      <ol><li>Seulement <b>ses</b> franchisés : ceux dont il est le consultant dans le cadre de visite. Le siège bascule sur « Tout le réseau ».</li>
+      <li><b>Vérifier</b> : le contenu (tel que le franchisé le lit, adaptations comprises), l’avancement personne par personne, et surtout <b>les 14 photos qualité</b> de la tâche unique (une par jour, photo obligatoire).</li>
+      <li><b>Adapter</b> pour un franchisé : le contenu (une étape, une photo) ou l’assignation (qui, échéance). Le modèle réseau ne bouge pas, l’écart reste visible.</li>
+      <li><b>Valider</b> : un clic. Le nom et l’heure entrent au journal ; la tâche est désactivée (gardée) et ses photos sont archivées dans le <b>document de formation du franchisé</b> (écran 08). Rien ne s’efface.</li></ol></div>
+  </main>
+</div>
+</body></html>

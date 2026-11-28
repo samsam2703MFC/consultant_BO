@@ -311,13 +311,7 @@ function tkCadre(): array
     } catch (PDOException $e) { /* table impossible : les listes restent vides */ }
 
     // Les tâches reliées à une étape de standard (for_sop_tache) : l'écran les étiquette « SOP-… · étape … ».
-    $sopLiens = [];
-    try {
-        ensureSopTache();
-        foreach (Db::rows('SELECT l.task_id, l.sop_id, l.etape, s.code, s.titre_fr FROM for_sop_tache l LEFT JOIN for_sop s ON s.id = l.sop_id') as $l) {
-            $sopLiens[(string) $l['task_id']][] = ['sopId' => (string) $l['sop_id'], 'code' => (string) ($l['code'] ?? ''), 'titre' => (string) ($l['titre_fr'] ?? ''), 'etape' => $l['etape']];
-        }
-    } catch (PDOException $e) { /* sans le module Formation : pas d'étiquette */ }
+    $sopLiens = sopTacheLiens();   // formation/src/sop.php ; [] sans le module Formation
 
     return [
         'api' => tkCompte(),
@@ -1094,7 +1088,7 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
         if ($arret !== null) { $plan['items'][$n]['statut'] = in_array($item['mode'], ['rien', 'doublon'], true) ? ($item['mode'] === 'rien' ? 'existe déjà' : 'doublon ignoré') : 'non tenté'; continue; }
         if ($item['mode'] === 'rien') {
             $plan['items'][$n]['statut'] = 'existe déjà';
-            if (!empty($item['sop']) && $item['existe']) { tkLierSop((int) $item['existe'], $item['sop']['id'], $item['sop']['etape']); }
+            if (!empty($item['sop']) && $item['existe']) { sopTacheLier((int) $item['existe'], $item['sop']['id'], $item['sop']['etape']); }
             continue;
         }
         if ($item['mode'] === 'doublon') { $plan['items'][$n]['statut'] = 'doublon ignoré'; continue; }
@@ -1107,7 +1101,7 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
             $plan['items'][$n]['statut'] = $op['ok'] ? 'ajoutée à la checklist' : 'ajout refusé';
             if ($op['ok']) {
                 $plan['ajoutees']++;
-                if (!empty($item['sop']) && $item['existe']) { tkLierSop((int) $item['existe'], $item['sop']['id'], $item['sop']['etape']); }
+                if (!empty($item['sop']) && $item['existe']) { sopTacheLier((int) $item['existe'], $item['sop']['id'], $item['sop']['etape']); }
             }
             continue;
         }
@@ -1146,7 +1140,7 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
         $plan['items'][$n]['statut'] = $ratees === 0 ? 'créée' : 'créée, ' . $ratees . ' étape(s) refusée(s)';
         $plan['creees']++;
         tkTracer('tache', $id, $item['nom'], $item['jour'], $item['heure'], $cidFinal !== null ? (int) $cidFinal : null, $item['modeleId']);
-        if (!empty($item['sop'])) { tkLierSop($id, $item['sop']['id'], $item['sop']['etape']); }
+        if (!empty($item['sop'])) { sopTacheLier($id, $item['sop']['id'], $item['sop']['etape']); }
         journalAdd('CEO', 'Cadre des tâches', null, 'Tâche « ' . $item['nom'] . ' » créée au panel (#' . $id . ')'
             . ($item['jour'] !== '' ? ', jour ' . $item['jour'] : '') . ($item['heure'] !== '' ? ', ' . $item['heure'] : '')
             . ($item['modeleId'] ? ', copie de #' . $item['modeleId'] : '') . ($ratees ? ' — ' . $ratees . ' étape(s) refusée(s)' : ''));
@@ -1157,36 +1151,8 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
 
 /* ─────────── les standards (SOP) : checklist depuis un standard, contrôles d'un standard ─────────── */
 
-/*
- * Le lien entre une tâche du panel et l'étape de SOP qu'elle contrôle (07/11/2026, propositions A et D).
- * Le panel n'a aucun champ pour le porter : il vit ici, dans for_sop_tache. Une checklist se relie à un
- * standard par son CODE en tête de nom (« CP-07 — Audit visuel intérieur ») : les codes du classement de
- * la SOP (Manuel du réseau, référentiel v25) et le code de la SOP elle-même.
- */
-function ensureSopTache(): void
-{
-    static $fait = false;
-    if ($fait) { return; }
-    $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS for_sop_tache (
-        task_id INT NOT NULL,
-        sop_id VARCHAR(32) NOT NULL,
-        etape VARCHAR(20) NULL,
-        cree_le DATETIME NOT NULL,
-        PRIMARY KEY (task_id, sop_id),
-        KEY k_sop (sop_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-}
-
-function tkLierSop(int $taskId, string $sopId, ?string $etape): void
-{
-    if ($taskId <= 0) { return; }
-    try {
-        ensureSopTache();
-        Db::exec('INSERT INTO for_sop_tache (task_id, sop_id, etape, cree_le) VALUES (?,?,?,?)
-                  ON DUPLICATE KEY UPDATE etape = COALESCE(VALUES(etape), etape)', [$taskId, $sopId, $etape, date('Y-m-d H:i:s')]);
-    } catch (PDOException $e) { /* le panel a la tâche : le lien n'est qu'un confort */ }
-}
+/* Le lien tâche du panel ↔ étape de SOP (for_sop_tache) est au domaine Formation depuis le 21/11/2026 :
+ * formation/src/sop.php (ensureSopTache, sopTacheLier, sopTacheLiens, sopTachesDe). */
 
 /**
  * Le code en tête d'un nom de checklist : « 1.1.01 · Ouverture de la boutique » → 1.1.01 (la nomenclature du
@@ -1416,13 +1382,9 @@ function tkSopControles(string $id): array
             $taches[$tid] = ['checklist' => $matchs[(int) $cid]['nom'], 'checklistId' => (int) $cid, 'etape' => null];
         }
     }
-    try {
-        ensureSopTache();
-        foreach (Db::rows('SELECT task_id, etape FROM for_sop_tache WHERE sop_id = ?', [(string) $S['row']['id']]) as $l) {
-            $tid = (int) $l['task_id'];
-            $taches[$tid] = ['checklist' => $taches[$tid]['checklist'] ?? null, 'checklistId' => $taches[$tid]['checklistId'] ?? null, 'etape' => $l['etape']];
-        }
-    } catch (PDOException $e2) { /* aucun lien encore */ }
+    foreach (sopTachesDe((string) $S['row']['id']) as $tid => $etape) {   // formation/src/sop.php ; [] sans lien
+        $taches[$tid] = ['checklist' => $taches[$tid]['checklist'] ?? null, 'checklistId' => $taches[$tid]['checklistId'] ?? null, 'etape' => $etape];
+    }
 
     $parId = [];
     if ($taches) {

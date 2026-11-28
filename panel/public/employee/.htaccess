@@ -3,6 +3,13 @@
 # pas ici : un RewriteEngine à soi remplace celui du parent.
 RewriteEngine On
 
+# L'adresse du dossier (/employee/, celle du QR des fiches du personnel et le start_url
+# « ./?source=pwa » de l'app installée) sert index.php. Le DirectoryIndex du parent
+# (index.html) s'appliquait ici : le dossier existe, la réécriture plus bas ne le prend
+# pas, et Apache montrait la liste des fichiers au lieu de l'écran de connexion.
+DirectoryIndex index.php
+Options -Indexes
+
 # Rien ne s'exécute dans les assets.
 RewriteRule ^assets/.*\.(php|phtml|phar|phps)$ - [F,L]
 

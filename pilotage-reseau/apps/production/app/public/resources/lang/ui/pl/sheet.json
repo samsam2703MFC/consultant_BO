@@ -4,7 +4,7 @@
   "lang_switch": "Français",
   "loading": "Wczytywanie…",
   "cart": "kart.",
-  "rule": "Reguła : 📦 uzupełnienie tylko gdy dostępne < min. — do maks. (dostępne = stan − zamówienia z magazynu + w produkcji ; partie zrobione w tym tygodniu zostają w tygodniu). Do produkcji = 🚚 zamówienia + 📦 uzupełnienie, w górę do pełnych partii. Partie wchodzą najpierw na dni 📌 (do liczby przypiętej), nadmiar ⏳ czeka w « Do zrobienia » ; za mało partii = dzień 📌 zostaje pusty.",
+  "rule": "Reguła : 📦 uzupełnienie tylko gdy dostępne < min. — do min. (maks. = najwyżej) (dostępne = stan − zamówienia z magazynu + w produkcji ; partie zrobione w tym tygodniu zostają w tygodniu). Do produkcji = 🚚 zamówienia + 📦 uzupełnienie, w górę do pełnych partii. Partie wchodzą najpierw na dni 📌 (do liczby przypiętej), nadmiar ⏳ czeka w « Do zrobienia » ; za mało partii = dzień 📌 zostaje pusty.",
   "calc_refill": "maks. {max} − dost. {available}",
   "calc_enough": "dostępne {available} ≥ min. {min} — nic do produkcji",
   "calc_no_max": "brak stanu maks. — ustaw go, żeby liczyć uzupełnienie",

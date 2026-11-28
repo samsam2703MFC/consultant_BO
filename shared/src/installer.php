@@ -535,11 +535,8 @@ function ensurePlanogramme(): void
         // La photo est rangée sur le disque et sa SEULE référence vit ici : un
         // fichier de 2 Mo en base serait relu à chaque lecture du planogramme.
         'con_pla_note' => ['photo' => 'VARCHAR(255) NULL'],
-        // Une dépense du fonds peut être un INVESTISSEMENT — un four, une
-        // enseigne — et non un frais courant : le grand livre les distingue
-        // et les sous-totalise. La table vient du module marketing disparu,
-        // d'où l'ALTER ici comme pour les autres colonnes tardives.
-        'mar_fund_movement' => ['is_investment' => 'TINYINT(1) NOT NULL DEFAULT 0'],
+        // (21/11/2026) `mar_fund_movement.is_investment` n'est plus ajoutée ici : la table est au module
+        // Marketing, et la colonne vient de sa migration 053.
     ] as $table => $cols) {
         foreach ($cols as $col => $type) {
             try { Db::exec('ALTER TABLE ' . $table . ' ADD COLUMN ' . $col . ' ' . $type); }

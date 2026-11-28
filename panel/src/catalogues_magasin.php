@@ -51,6 +51,15 @@ declare(strict_types=1);
  *   POST   /dashboard/catalogues/marque/{id}/adaptation                 (« L'adapter à ma boutique » : une copie à moi)
  *   POST   /dashboard/catalogues/marque/{id}/impression {lang}          (lien d'impression de MA version)
  *
+ * Le bon de commande (25/11/2026, client : « conditions par magasin – contenu exact de ce qu'il y a dans le catalogue »,
+ * puis « cadre vide à remplir, délai boutique sous chaque catégorie ») :
+ *   GET    /dashboard/catalogues/conditions          → …/order-conditions (mes conditions, une fois pour tous mes bons)
+ *   PUT    /dashboard/catalogues/conditions          → …/order-conditions {minDelay, depositPct, holidayDeadlines, pickup,
+ *                                                       delivery, note} (le Marketing valide : 422 champ nommé)
+ *   GET    {base}/{id}/bon?lang=fr|nl                → …/{catalogues|brand-catalogues}/{id}/order-form (le bon composé)
+ * Le PDF du bon : la page d'impression du Marketing, par le même lien signé que le catalogue (…/impression), avec
+ * `&bon=fr,nl` (`&mode=printer` : traits de coupe).
+ *
  * Réglages (aucun écrit en dur) :
  *   - l'adresse de l'API du Marketing : `mar_api_url` d'erp_cles (portail commun, comme rec_api_url / pil_api_url ;
  *     ex. « https://<hôte>/marketing/api »), à défaut `marketingApi` de config/config.php ;
@@ -59,7 +68,11 @@ declare(strict_types=1);
 
 /** `offers` ({type, id, on} : les promotions de TFBuddy cochées) et `showAvailability` (booléen) : 14/11/2026. */
 const CM_CHAMPS_CREER = ['title', 'source', 'format', 'pageCount', 'langs', 'products', 'pages', 'offers', 'showAvailability'];
-const CM_CHAMPS_MODIFIER = ['title', 'format', 'pageCount', 'langs', 'products', 'pages', 'status', 'printQty', 'offers', 'showAvailability'];
+/** Les conditions du bon de commande que la boutique règle (25/11/2026). */
+const CM_CHAMPS_CONDITIONS = ['minDelay', 'depositPct', 'holidayDeadlines', 'pickup', 'delivery', 'note'];
+/** Gamme par gamme (Marketing v1.23, 27/11/2026) : `gammeBlocks`, `gammesOk`, `presentations` passent aussi (le
+ * Marketing les valide ; le dashboard ne les envoie pas encore, il les garde en ne les envoyant pas). */
+const CM_CHAMPS_MODIFIER = ['title', 'format', 'pageCount', 'langs', 'products', 'pages', 'status', 'printQty', 'offers', 'showAvailability', 'gammeBlocks', 'gammesOk', 'presentations'];
 
 /** Une erreur au format du standard (celui du Marketing), pour ce que le cockpit dit lui-même. */
 function cmErreur(int $http, string $code, string $message): array
@@ -179,6 +192,12 @@ function cmRoute(string $method, string $path): ?array
         $cible = '/catalogue-media';
         $b = body();
         $corps = ['name' => mb_substr(trim((string) ($b['name'] ?? '')), 0, 120), 'contentBase64' => (string) ($b['contentBase64'] ?? '')];
+    } elseif ($suite === '/conditions' && in_array($method, ['GET', 'PUT'], true)) {
+        $cible = '/order-conditions';
+        if ($method === 'PUT') { $corps = cmCorps(CM_CHAMPS_CONDITIONS); }
+    } elseif (preg_match('#^(/marque)?/(\d{1,10})/bon$#', $suite, $m) && $method === 'GET') {
+        $cible = ($m[1] !== '' ? '/brand-catalogues/' : '/catalogues/') . $m[2] . '/order-form';
+        $requete = ['lang' => ($_GET['lang'] ?? 'fr') === 'nl' ? 'nl' : 'fr'];
     } elseif ($suite === '' && $method === 'GET') {
         $cible = '/catalogues';
         $requete = ['perPage' => 100, 'sort' => '-updatedAt'];

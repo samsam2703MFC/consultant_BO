@@ -301,7 +301,7 @@ function ssSuivre(string $depart, array $index, array $mPanel, array $mErp): arr
 function ssOrigine(string $t, array $creees): string
 {
     if (isset(CON_TABLES[$t])) { return 'con'; }
-    // mar_campaign… : le module marketing autonome (public/api/marketing), sur le même serveur — local, pas TFBuddy.
+    // mar_campaign… : les tables du module Marketing autonome (dépôt marketing), dans la même base — local, pas TFBuddy.
     if (isset($creees[$t]) || (defined('MAR_TABLES') && isset(MAR_TABLES[$t])) || str_starts_with($t, 'mar_')) { return 'cockpit'; }
     return 'tfbuddy';
 }

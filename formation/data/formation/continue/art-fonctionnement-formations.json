@@ -1,0 +1,457 @@
+{
+ "id": "art-fonctionnement-formations",
+ "code": "",
+ "type": "Article",
+ "dossier": "04",
+ "poste": "vente",
+ "moment": null,
+ "acces": "tous",
+ "statut": "a_valider",
+ "version": "1.0",
+ "langue_origine": "FR",
+ "duree": "8 min de lecture",
+ "titre": {
+  "fr": "Comment fonctionnent les formations",
+  "nl": "Hoe de opleidingen werken"
+ },
+ "objectif": {
+  "fr": "Connaître les deux types de formation du réseau, les quatre sortes de formation continue, le chemin d’une formation du siège jusqu’au magasin, qui fait quoi et où trouver ses formations.",
+  "nl": "De twee soorten opleiding van het netwerk kennen, de vier soorten permanente opleiding, de weg van een opleiding van het hoofdkantoor tot de winkel, wie wat doet en waar men zijn opleidingen vindt."
+ },
+ "pour": {
+  "fr": "Tout le réseau (P1 à P12) : l’équipe, le responsable et le franchisé. La formation apprend le métier ; elle ne s’arrête pas à l’ouverture.",
+  "nl": "Het hele netwerk (P1 tot P12): het team, de verantwoordelijke en de franchisenemer. De opleiding leert het vak; ze stopt niet bij de opening."
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Deux types de formation",
+    "nl": "Twee soorten opleiding"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "La formation initiale",
+      "nl": "De initiële opleiding"
+     },
+     "texte": {
+      "fr": "Avant et pendant le lancement : les formations FO de pré-ouverture et d’ouverture, dont les six semaines avec le garant d’ouverture.\nElle donne le métier et mène à l’attestation.",
+      "nl": "Vóór en tijdens de lancering: de FO-opleidingen van vóór de opening en van de opening, met de zes weken bij de openingsbegeleider.\nZe geeft het vak en leidt tot het attest."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "La formation continue",
+      "nl": "De permanente opleiding"
+     },
+     "texte": {
+      "fr": "Après le lancement, toute la vie du magasin : les recyclages des FO, et les contenus que le siège publie au fil de l’année.\nElle arrive dans le dossier de formation du franchisé.",
+      "nl": "Na de lancering, het hele leven van de winkel: de opfrissingen van de FO’s, en de inhoud die het hoofdkantoor in de loop van het jaar publiceert.\nZe komt in het opleidingsdossier van de franchisenemer."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les quatre sortes de formation continue",
+    "nl": "De vier soorten permanente opleiding"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Technique",
+      "nl": "Techniek"
+     },
+     "texte": {
+      "fr": "Un geste du métier à reprendre ou à perfectionner : façonnage, laminage, cuisson.",
+      "nl": "Een handeling van het vak om te herhalen of te verfijnen: opmaken, lamineren, bakken."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Connaissance",
+      "nl": "Kennis"
+     },
+     "texte": {
+      "fr": "Ce qu’il faut savoir : une règle (allergènes, hygiène), un chiffre de gestion, un produit.",
+      "nl": "Wat men moet weten: een regel (allergenen, hygiëne), een beheerscijfer, een product."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Nouveau produit",
+      "nl": "Nieuw product"
+     },
+     "texte": {
+      "fr": "Un produit qui entre dans la gamme. La procédure du lancement est dans l’article « Un nouveau produit arrive : la procédure ».",
+      "nl": "Een product dat in het assortiment komt. De procedure van de lancering staat in het artikel « Een nieuw product komt eraan: de procedure »."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Nouvelle technique",
+      "nl": "Nieuwe techniek"
+     },
+     "texte": {
+      "fr": "Un procédé ou un équipement nouveau : un programme de four, une méthode de glaçage.",
+      "nl": "Een nieuw procedé of een nieuw toestel: een ovenprogramma, een glaceermethode."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Quand faut-il des photos",
+      "nl": "Wanneer er foto’s nodig zijn"
+     },
+     "texte": {
+      "fr": "« Nouveau produit » : toujours 14 jours de photo qualité du produit.\n« Technique » et « nouvelle technique » : 14 jours de photo quand la formation est reliée à un produit.\n« Connaissance » : jamais de photo.",
+      "nl": "« Nieuw product »: altijd 14 dagen kwaliteitsfoto van het product.\n« Techniek » en « nieuwe techniek »: 14 dagen foto als de opleiding aan een product gekoppeld is.\n« Kennis »: nooit een foto."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le chemin d’une formation continue",
+    "nl": "De weg van een permanente opleiding"
+   },
+   "etapes": [
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Brouillon : le siège rédige",
+      "nl": "Ontwerp: het hoofdkantoor schrijft"
+     },
+     "texte": {
+      "fr": "Au réseau, une formation continue a trois statuts : brouillon, à valider, validée.\nEn brouillon, le siège la rédige : étapes, photos, vidéo, quiz. Il la relie aux FO et aux compétences. Aucun magasin ne la voit encore.",
+      "nl": "In het netwerk heeft een permanente opleiding drie statussen: ontwerp, te valideren, gevalideerd.\nAls ontwerp schrijft het hoofdkantoor ze: stappen, foto’s, video, quiz. Het koppelt ze aan de FO’s en aan de competenties. Nog geen enkele winkel ziet ze."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "À valider : le siège relit",
+      "nl": "Te valideren: het hoofdkantoor leest na"
+     },
+     "texte": {
+      "fr": "Le siège relit le contenu et la traduction NL.",
+      "nl": "Het hoofdkantoor leest de inhoud en de Nederlandse vertaling na."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "Validée, puis diffusée : le siège",
+      "nl": "Gevalideerd, dan verspreid: het hoofdkantoor"
+     },
+     "texte": {
+      "fr": "Une fois validée, la formation est diffusée : elle arrive dans le dossier de formation des franchisés concernés et dans les Nouveautés.",
+      "nl": "Eens gevalideerd, wordt de opleiding verspreid: ze komt in het opleidingsdossier van de betrokken franchisenemers en bij de Nieuwigheden."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Adaptée : le consultant",
+      "nl": "Aangepast: de consultant"
+     },
+     "texte": {
+      "fr": "Si besoin, le consultant l’adapte pour un franchisé : le contenu (une étape, une photo), l’échéance, qui la suit.\nLe modèle du réseau ne bouge pas. L’adaptation reste visible, avec son auteur et sa date.",
+      "nl": "Indien nodig past de consultant ze aan voor een franchisenemer: de inhoud (een stap, een foto), de deadline, wie ze volgt.\nHet model van het netwerk blijft ongewijzigd. De aanpassing blijft zichtbaar, met haar auteur en haar datum."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Suivie : le franchisé et l’équipe",
+      "nl": "Gevolgd: de franchisenemer en het team"
+     },
+     "texte": {
+      "fr": "L’équipe lit la formation, passe le quiz et est vue faire par le responsable.\nPour un nouveau produit, ou une technique reliée à un produit, le magasin envoie chaque jour, pendant 14 jours, une photo qualité du produit dans son dossier de formation (page « Formations et suivi » du dashboard). La photo est obligatoire.\nLe consultant relit chaque photo : conforme ou à refaire. Un jour sans photo, ou une photo refusée, ajoute un jour. Une photo refusée le jour même peut encore être refaite ce jour-là.",
+      "nl": "Het team leest de opleiding, legt de quiz af en de verantwoordelijke bevestigt « voorgedaan ».\nVoor een nieuw product, of een techniek die aan een product gekoppeld is, stuurt de winkel 14 dagen lang elke dag een kwaliteitsfoto van het product in zijn opleidingsdossier (pagina « Opleidingen en opvolging » van het dashboard). De foto is verplicht.\nDe consultant bekijkt elke foto: conform of opnieuw te doen. Een dag zonder foto, of een geweigerde foto, voegt een dag toe. Een foto die dezelfde dag geweigerd wordt, kan die dag nog opnieuw gemaakt worden."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "Validée pour le franchisé : le consultant",
+      "nl": "Gevalideerd voor de franchisenemer: de consultant"
+     },
+     "texte": {
+      "fr": "Le consultant valide la formation pour le franchisé quand l’équipe a lu la formation, réussi le quiz et été vue faire, et, pour un produit, quand les 14 photos sont conformes. Une formation « connaissance » n’a pas de photo.\nSon nom et la date sont enregistrés.\nL’archive (les 14 photos, qui, quand) entre dans le document de formation du franchisé, rangé dans son coffre-fort, onglet Formation.",
+      "nl": "De consultant valideert de opleiding voor de franchisenemer als het team de opleiding gelezen en de quiz gehaald heeft en « voorgedaan » bevestigd is, en, voor een product, als de 14 foto’s conform zijn. Een opleiding « kennis » heeft geen foto.\nZijn naam en de datum worden vastgelegd.\nHet archief (de 14 foto’s, wie, wanneer) komt in het opleidingsdocument van de franchisenemer, opgeborgen in zijn kluis, tabblad Opleiding."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Qui fait quoi",
+    "nl": "Wie doet wat"
+   },
+   "etapes": [
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "Le siège (formation)",
+      "nl": "Het hoofdkantoor (opleiding)"
+     },
+     "texte": {
+      "fr": "Il rédige, relit, valide et diffuse les formations du réseau.\nIl voit tout le réseau.",
+      "nl": "Het schrijft, leest na, valideert en verspreidt de opleidingen van het netwerk.\nHet ziet het hele netwerk."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "15",
+     "titre": {
+      "fr": "Le consultant",
+      "nl": "De consultant"
+     },
+     "texte": {
+      "fr": "Il vérifie le contenu, l’avancement et les photos du produit, adapte pour un franchisé et valide.\nIl ne voit que les franchisés qu’il suit.",
+      "nl": "Hij controleert de inhoud, de voortgang en de foto’s van het product, past aan voor een franchisenemer en valideert.\nHij ziet alleen de franchisenemers die hij opvolgt."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "16",
+     "titre": {
+      "fr": "Le franchisé",
+      "nl": "De franchisenemer"
+     },
+     "texte": {
+      "fr": "Il suit ses formations, forme son équipe et déclare la mise en place. Il veille à ce que la photo du jour soit envoyée.\nIl ne voit que son dossier.",
+      "nl": "Hij volgt zijn opleidingen, leidt zijn team op en meldt de invoering. Hij zorgt ervoor dat de foto van de dag gestuurd wordt.\nHij ziet alleen zijn eigen dossier."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "17",
+     "titre": {
+      "fr": "L’équipe",
+      "nl": "Het team"
+     },
+     "texte": {
+      "fr": "Elle lit sur la tablette, passe le quiz, est vue faire par le responsable et fait la photo du jour.\nElle voit les formations de son magasin.",
+      "nl": "Het leest op de tablet, legt de quiz af, doet het voor bij de verantwoordelijke en maakt de foto van de dag.\nHet ziet de opleidingen van zijn winkel."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Où les trouver",
+    "nl": "Waar men ze vindt"
+   },
+   "etapes": [
+    {
+     "numero": "18",
+     "titre": {
+      "fr": "Le bouton abricot « Mon dossier de formation »",
+      "nl": "De abrikooskleurige knop « Mijn opleidingsdossier »"
+     },
+     "texte": {
+      "fr": "Dans le dashboard du magasin, en haut, sur tous les onglets.\nUn clic ouvre la page « Formations et suivi » : le dossier de formation, l’avancement, le suivi de l’équipe, la photo du jour et le document de formation.",
+      "nl": "In het dashboard van de winkel, bovenaan, op alle tabbladen.\nEén klik opent de pagina « Opleidingen en opvolging »: het opleidingsdossier, de voortgang, de opvolging van het team, de foto van de dag en het opleidingsdocument."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "19",
+     "titre": {
+      "fr": "Les Nouveautés",
+      "nl": "De Nieuwigheden"
+     },
+     "texte": {
+      "fr": "Dans « Formations et suivi » : chaque nouvelle formation, sa catégorie, sa date et son lien.\n« Nouveau » s’affiche tant qu’elle n’a pas été ouverte.",
+      "nl": "In « Opleidingen en opvolging »: elke nieuwe opleiding, haar categorie, haar datum en haar link.\n« Nieuw » staat erbij zolang ze niet geopend is."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "20",
+     "titre": {
+      "fr": "Le Professeur",
+      "nl": "De Professeur"
+     },
+     "texte": {
+      "fr": "Depuis le dossier : il répond à partir des formations du magasin, adaptations comprises, puis du Manuel opératoire.\nIl cite la formation et l’étape qu’il a lues. Il ne voit aucun autre magasin.",
+      "nl": "Vanuit het dossier: hij antwoordt op basis van de opleidingen van de winkel, aanpassingen inbegrepen, en daarna van het operationeel handboek.\nHij vermeldt de opleiding en de stap die hij gelezen heeft. Hij ziet geen enkele andere winkel."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "21",
+     "titre": {
+      "fr": "La tablette",
+      "nl": "De tablet"
+     },
+     "texte": {
+      "fr": "La partie Formation continue du Manuel, pour l’équipe, en français et en néerlandais.",
+      "nl": "Het deel Permanente opleiding van het handboek, voor het team, in het Frans en in het Nederlands."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Une formation continue n’est validée pour le magasin que par le consultant : équipe formée (lu, quiz, « vu faire ») et, pour un produit, 14 photos qualité conformes.",
+   "nl": "Een permanente opleiding wordt voor de winkel alleen door de consultant gevalideerd: team opgeleid (gelezen, quiz, « voorgedaan ») en, voor een product, 14 conforme kwaliteitsfoto’s."
+  },
+  {
+   "fr": "Chacun ne voit que ce qui le regarde : le franchisé son dossier, le consultant ses franchisés, le siège tout le réseau.",
+   "nl": "Iedereen ziet alleen wat hem aangaat: de franchisenemer zijn dossier, de consultant zijn franchisenemers, het hoofdkantoor het hele netwerk."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Quelle sorte de formation continue ne demande jamais de photo ?",
+    "nl": "Welke soort permanente opleiding vraagt nooit een foto?"
+   },
+   "choix": {
+    "fr": [
+     "Nouveau produit",
+     "Connaissance",
+     "Nouvelle technique reliée à un produit"
+    ],
+    "nl": [
+     "Nieuw product",
+     "Kennis",
+     "Nieuwe techniek gekoppeld aan een product"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Qui valide une formation continue pour un franchisé ?",
+    "nl": "Wie valideert een permanente opleiding voor een franchisenemer?"
+   },
+   "choix": {
+    "fr": [
+     "Le franchisé lui-même, quand l’équipe a lu",
+     "Le siège, à la diffusion",
+     "Le consultant qui le suit"
+    ],
+    "nl": [
+     "De franchisenemer zelf, als het team gelezen heeft",
+     "Het hoofdkantoor, bij de verspreiding",
+     "De consultant die hem opvolgt"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Comment le franchisé ouvre-t-il son dossier de formation ?",
+    "nl": "Hoe opent de franchisenemer zijn opleidingsdossier?"
+   },
+   "choix": {
+    "fr": [
+     "Par le bouton abricot « Mon dossier de formation » du dashboard",
+     "En le demandant au siège par mail",
+     "Sur la tablette, avec le code de gestion"
+    ],
+    "nl": [
+     "Met de abrikooskleurige knop « Mijn opleidingsdossier » van het dashboard",
+     "Door het per mail aan het hoofdkantoor te vragen",
+     "Op de tablet, met de beheerscode"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "classement": {
+  "souscat": "D6.3",
+  "phases": [
+   "formation"
+  ],
+  "postes": [
+   "P1",
+   "P2",
+   "P3",
+   "P4",
+   "P5",
+   "P6",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-RH.Évaluation"
+  ],
+  "formations": [
+   "FO-06"
+  ],
+  "checklists": []
+ }
+}

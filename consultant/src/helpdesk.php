@@ -10,12 +10,22 @@ declare(strict_types=1);
  *   GET  /helpdesk/demandes                      — toutes les demandes (GET /cases, compte administrateur du cockpit),
  *                                                  les missions de visite, les visites à venir de chaque magasin
  *   GET  /helpdesk/demandes/{id}/consultants      — les consultants du domaine de la demande
- *   POST /helpdesk/demandes/{id}/repondre {reponse, statut?}       — PATCH /cases/{id}/reply (+ /status)
+ *   POST /helpdesk/demandes/{id}/repondre {reponse, statut?, shop?, titre?, ref?} — PATCH /cases/{id}/reply (+ /status) ;
+ *        le franchisé est prévenu par SMS (21/11/2026)
  *   POST /helpdesk/demandes/{id}/statut {statut}                   — PATCH /cases/{id}/status
  *   POST /helpdesk/demandes/{id}/consultant {consultant}           — PATCH /cases/{id}/consultant
  *   POST /helpdesk/demandes/{id}/visite {visite, quand, points[]}  — la demande devient une mission de la visite :
  *        deux tâches du consultant (contrôler pendant, répondre après : con_consultant_tache, source « helpdesk »,
  *        que l'application terrain montre sur la fiche) et ses points à contrôler ; la demande passe « En cours »
+ *   POST /helpdesk/demandes/{id}/delai {jours, statut?, shop?, ref?} — la date limite que le consultant fixe à la
+ *        réception (2, 5, 10, 30 ou 90 jours ; 0 la retire) ; une demande « Nouvelle » passe « En cours » (20/11/2026)
+ *   GET  /helpdesk/sms · PUT /helpdesk/sms {actif, destinataires[{nom, tel, consultant}], relances{…}} — à qui part le
+ *        SMS de chaque nouvelle demande et les relances (20/11/2026, plus bas : « Le SMS au bureau », « Les relances »)
+ *   POST /helpdesk/sms/essai {tel} — un SMS d'essai à un numéro du réglage ; rend l'identifiant SMSAPI, le jeton, la
+ *        plateforme, l'expéditeur et le compte ; GET /helpdesk/sms/remise?id= — son statut de remise (21/11/2026)
+ *   POST /helpdesk/demandes/{id}/relances {action: suspendre | reprendre | maintenant}
+ *   GET  /helpdesk/relances/cron?jeton= — l'horloge des relances (bin/helpdesk_cron.sh)
+ *   GET  /helpdesk/a-traiter — les demandes pas encore en cours, pour la carte de l'accueil (21/11/2026)
  *   POST /helpdesk/missions/{id} {points[{etat, constat}], cloturer?, repondre?}
  *        — le constat de chaque point ; à la clôture, le constat repart en réponse et le statut suit (Résolue si tout
  *          est conforme, sinon En cours), les tâches de la mission sont faites
@@ -23,14 +33,19 @@ declare(strict_types=1);
  *   GET  /helpdesk/magasin?shop=                 — les domaines et les demandes du magasin (GET /shops/{id}/cases)
  *   POST /helpdesk/magasin {shop, domaine, titre, description, passage, photos[]} — POST /cases ; les photos sont gardées
  *        par le cockpit (public/uploads/helpdesk, nom aléatoire) et leurs liens partent dans la description
+ *        ; un SMS avec le résumé de la demande part au bureau (réglage `helpdeskSms`)
  *
  * Contrat : swagger test.tfbuddy.com, lu le 15/11/2026 (POST /cases {*area_key, *title, *description, shop_id}).
  */
 
 const HDK_DOMAINES = ['strategy' => 'Stratégie', 'product' => 'Produit', 'operational_activities' => 'Activités opérationnelles',
-    'sales' => 'Ventes', 'app_development' => 'Application', 'social_media' => 'Réseaux sociaux'];
+    'sales' => 'Ventes', 'app_development' => 'Application', 'social_media' => 'Réseaux sociaux',
+    // Les demandes que le panel crée tout seul (27/11/2026) : sans magasin, rédigées en polonais par le panel.
+    'webshop_billing_vat_conflict' => 'Webshop : n° de TVA en double'];
 const HDK_STATUTS = ['NEW' => 'Nouvelle', 'IN_PROGRESS' => 'En cours', 'RESOLVED' => 'Résolue', 'CLOSED' => 'Fermée', 'CANCELLED' => 'Annulée'];
 const HDK_ETATS = ['conforme', 'a_suivre', 'non_conforme'];
+/** Les délais que le consultant donne à une demande à sa réception, en jours (Sam, 20/11/2026 : « 2 5 10 30 j +90 »). */
+const HDK_DELAIS = [2, 5, 10, 30, 90];
 
 function hdkTable(): void
 {
@@ -57,7 +72,23 @@ function hdkTable(): void
         passage TINYINT NOT NULL DEFAULT 0,
         photos TEXT NULL,
         cree_le DATETIME NOT NULL)');
+    // La date limite que le consultant fixe à la réception (20/11/2026) : 2, 5, 10, 30 ou 90 jours.
+    foreach (['delai_jours INT NULL', 'echeance DATE NULL', "echeance_par VARCHAR(120) NOT NULL DEFAULT ''", 'echeance_le DATETIME NULL'] as $col) { hdkColonne('con_hdk_demande', $col); }
+    // La demande urgente (21/11/2026) : cochée par le franchisé dans le formulaire.
+    hdkColonne('con_hdk_demande', 'urgent TINYINT NOT NULL DEFAULT 0');
+    // Le statut que le cockpit vient de poser (23/11/2026) : gardé un quart d'heure, voir hdkStatutsPoses.
+    Db::exec('CREATE TABLE IF NOT EXISTS con_hdk_statut (
+        case_id INT PRIMARY KEY,
+        statut VARCHAR(16) NOT NULL,
+        pose_le DATETIME NOT NULL)');
     $fait = true;
+}
+
+/** Une colonne ajoutée si elle manque (la table existe déjà en ligne). */
+function hdkColonne(string $table, string $def): void
+{
+    if (function_exists('suColonne')) { suColonne($table, $def); return; }
+    try { Db::exec('ALTER TABLE `' . $table . '` ADD COLUMN ' . $def); } catch (Throwable $e) { /* déjà là */ }
 }
 
 /** Le jeton du compte administrateur du cockpit (Paramètres › ERP) pour les appels qui suivent ; false s'il manque. */
@@ -71,9 +102,31 @@ function hdkAdmin(): bool
     return true;
 }
 
+/**
+ * Les demandes que le panel écrit lui-même, en polonais, remises en français (Sam, 27/11/2026 : « ne pas avoir de
+ * polonais, soit du français soit du néerlandais »). Le panel garde son texte ; le cockpit lit le modèle connu et le
+ * réécrit, avec les mêmes valeurs. Un texte qui ne suit aucun modèle connu reste tel quel. Fonction pure.
+ * Modèle « Konflikt NIP Webshop » (area_key webshop_billing_vat_conflict) : plusieurs fiches société ont le même n° de
+ * TVA ; le panel cite les fiches clients B2B et le compte client où l'ajout a échoué.
+ */
+function hdkFrancais(string $titre, string $desc): array
+{
+    if (preg_match('/^Konflikt NIP Webshop:\s*(\S+)\s*$/u', $titre, $m)) {
+        $titre = 'Conflit de n° de TVA sur le webshop : ' . $m[1];
+    }
+    if (preg_match('/^Kilka rekordów firmowych ma ten sam numer VAT\s+(\S+?)\.\s*Sprawdź rekordy klientów B2B:\s*([0-9 ,]+?)\.\s*(?:Próba dodania firmy do faktur na koncie klienta\s*#?(\d+)\.?)?\s*$/u', $desc, $m)) {
+        $fiches = array_values(array_filter(array_map('trim', explode(',', $m[2])), 'strlen'));
+        $liste = count($fiches) > 1 ? implode(', ', array_slice($fiches, 0, -1)) . ' et ' . end($fiches) : ($fiches[0] ?? '');
+        $desc = 'Plusieurs fiches société ont le même n° de TVA ' . $m[1] . '. Vérifiez les fiches des clients B2B ' . $liste . '.'
+            . (!empty($m[3]) ? ' Le problème est apparu en ajoutant la société aux factures du compte client n° ' . $m[3] . '.' : '');
+    }
+    return [$titre, $desc];
+}
+
 /** Une demande du panel, ramenée à ce que l'écran montre (jamais le courriel du demandeur). Fonction pure. */
 function hdkDemande(array $c): array
 {
+    [$c['title'], $c['description']] = hdkFrancais(trim((string) ($c['title'] ?? '')), trim((string) ($c['description'] ?? '')));
     $st = (string) ($c['status'] ?? 'NEW');
     return ['id' => (int) ($c['id'] ?? 0), 'ref' => (string) ($c['ref'] ?? ''), 'domaine' => (string) ($c['area_key'] ?? ''), 'domaineNom' => HDK_DOMAINES[$c['area_key'] ?? ''] ?? (string) ($c['area_key'] ?? ''),
         'statut' => $st, 'statutNom' => HDK_STATUTS[$st] ?? $st, 'ouverte' => in_array($st, ['NEW', 'IN_PROGRESS'], true),
@@ -111,10 +164,24 @@ function ep_helpdesk_demandes(): array
     PanelApi::$lastError = null;
     $r = PanelApi::get('/cases');
     if (!is_array($r)) { return ['indispo' => true, 'motif' => 'Le helpdesk du panel n’a pas répondu (' . (PanelApi::$lastError ?? 'pas de réponse') . ').' . ($admin ? '' : ' Le compte administrateur du cockpit (Paramètres › ERP) n’est pas configuré : seules les demandes d’un magasin se lisent.')]; }
-    $D = array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array')));
+    $D = hdkStatutsPoses(array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array'))));
     usort($D, static fn ($a, $b) => strcmp($b['cree'], $a['cree']));
     $M = hdkMissions(array_column($D, 'id'));
-    foreach ($D as &$d) { $d['missions'] = $M[$d['id']] ?? []; } unset($d);
+    $E = hdkEcheances(array_column($D, 'id'));
+    $U = hdkUrgentes(array_column($D, 'id'));
+    foreach ($D as &$d) { $d['missions'] = $M[$d['id']] ?? []; $d += hdkEcheanceVue($E[$d['id']] ?? null, $d['ouverte']); $d['urgent'] = isset($U[$d['id']]); } unset($d);
+    // Les urgentes encore ouvertes en tête (21/11/2026), puis de la plus récente à la plus ancienne.
+    usort($D, static fn ($a, $b) => [(int) ($b['urgent'] && $b['ouverte']), $b['cree']] <=> [(int) ($a['urgent'] && $a['ouverte']), $a['cree']]);
+    // Les relances par SMS (20/11/2026) : les envois de chaque demande, la prochaine, ce qui part ces prochains jours.
+    $relances = null;
+    try {
+        $R = hdkSmsReglage(); $depuis = hdkRelancesDepuis(); $ids = array_column($D, 'id');
+        $J = hdkRelancesJournal($ids); $S = hdkRelancesSuspendues($ids);
+        foreach ($D as &$d) { $d['relances'] = hdkRelanceVue($d, $J[$d['id']] ?? null, $S[$d['id']] ?? null, $R, $depuis); } unset($d);
+        $arretees = count(array_filter($D, static fn ($d) => $d['relances']['n'] > 0 && $d['relances']['arret'] !== null && !in_array($d['relances']['arret'], ['suspendue', 'relances coupées'], true)));
+        $relances = ['actif' => $R['relances']['actif'], 'depuis' => $depuis, 'sms' => (int) (hdkDerniereRelance()['sms'] ?? 0), 'arretees' => $arretees,
+            'aVenir' => hdkRelancesAVenir($D, $R, date('Y-m-d'))];
+    } catch (Throwable $e) { $relances = ['erreur' => 'relances illisibles : ' . $e->getMessage()]; }
     // Les visites où reprendre une demande : celles des 14 derniers jours et à venir, non annulées, par magasin.
     $visites = [];
     try {
@@ -125,7 +192,7 @@ function ep_helpdesk_demandes(): array
     } catch (Throwable $e) { /* pas de visites lisibles : la reprise se fera plus tard */ }
     $mags = [];
     foreach ((function_exists('viMagasins') ? viMagasins() : []) as $id => $m) { $mags[] = ['id' => (string) $id, 'nom' => $m['court'] ?? $m['nom']]; }
-    return ['demandes' => $D, 'domaines' => HDK_DOMAINES, 'statuts' => HDK_STATUTS, 'visites' => $visites, 'magasins' => $mags, 'compte' => $admin ? 'admin' : 'consultant',
+    return ['demandes' => $D, 'domaines' => HDK_DOMAINES, 'statuts' => HDK_STATUTS, 'delais' => HDK_DELAIS, 'relances' => $relances, 'visites' => $visites, 'magasins' => $mags, 'compte' => $admin ? 'admin' : 'consultant',
         'lu' => date('c'), 'source' => 'helpdesk du panel : GET /cases (compte administrateur du cockpit) · missions : visites du cockpit (con_visite, con_consultant_tache)'];
 }
 
@@ -149,9 +216,56 @@ function hdkEnvoi(string $m, string $route, array $corps): array
 {
     PanelApi::$lastError = null;
     [$ok, $res] = PanelApi::envoi($m, $route, $corps);
-    if ($ok) { return ['ok' => true, 'res' => $res]; }
+    if ($ok) {
+        if ($m === 'PATCH' && preg_match('#^/cases/(\d+)/status$#', $route, $x) && isset(HDK_STATUTS[$corps['status'] ?? ''])) { hdkStatutPose((int) $x[1], (string) $corps['status']); }
+        return ['ok' => true, 'res' => $res];
+    }
     $msg = is_array($res) ? (string) ($res['description'] ?? ($res['message'] ?? '')) : '';
     return ['ok' => false, 'error' => 'Le panel a refusé ' . $m . ' ' . $route . ($msg !== '' ? ' : ' . $msg : '') . ' (' . (PanelApi::$lastError ?? 'pas de réponse') . ')'];
+}
+
+/*
+ * Le statut posé, gardé un quart d'heure (23/11/2026, Sam : « quand je rends une demande annulée ou résolue, elle ne
+ * disparaît pas ; quand je recharge la page, elle revient ») : le panel répond OK au PATCH /cases/{id}/status et garde
+ * le statut (relu en ligne : les demandes annulées l'étaient bien), mais sa liste (GET /cases, GET /shops/{id}/cases)
+ * peut rendre l'ancien quelques instants. Le cockpit garde donc ce qu'il a posé et le préfère à la liste tant qu'elle
+ * ne l'a pas rattrapé, quinze minutes au plus ; au-delà, si la liste ne l'a toujours pas, le journal le dit.
+ */
+const HDK_STATUT_GARDE_S = 900;
+
+function hdkStatutPose(int $id, string $st): void
+{
+    try {
+        hdkTable();
+        Db::exec('DELETE FROM con_hdk_statut WHERE case_id = ?', [$id]);
+        Db::exec('INSERT INTO con_hdk_statut (case_id, statut, pose_le) VALUES (?, ?, ?)', [$id, $st, date('Y-m-d H:i:s')]);
+    } catch (Throwable $e) { /* sans la table, la liste du panel fait foi */ }
+}
+
+/** Les demandes de la liste, avec le statut que le cockpit vient de poser ; la liste qui l'a rattrapé lève la garde. */
+function hdkStatutsPoses(array $D): array
+{
+    try {
+        hdkTable();
+        $P = [];
+        foreach (Db::rows('SELECT case_id, statut, pose_le FROM con_hdk_statut') as $r) { $P[(int) $r['case_id']] = $r; }
+    } catch (Throwable $e) { return $D; }
+    if ($P === []) { return $D; }
+    $limite = date('Y-m-d H:i:s', time() - HDK_STATUT_GARDE_S);
+    foreach ($D as &$d) {
+        $p = $P[$d['id']] ?? null;
+        if ($p === null) { continue; }
+        if ($p['statut'] === $d['statut']) { Db::exec('DELETE FROM con_hdk_statut WHERE case_id = ?', [$d['id']]); continue; }
+        if ((string) $p['pose_le'] < $limite) {
+            Db::exec('DELETE FROM con_hdk_statut WHERE case_id = ?', [$d['id']]);
+            hdkJournal('Demande ' . ($d['ref'] ?: $d['id']) . ' : le panel rend toujours « ' . $d['statutNom'] . ' » un quart d’heure après « ' . (HDK_STATUTS[$p['statut']] ?? $p['statut']) . ' »');
+            continue;
+        }
+        $d['statut'] = (string) $p['statut']; $d['statutNom'] = HDK_STATUTS[$d['statut']] ?? $d['statut'];
+        $d['ouverte'] = in_array($d['statut'], ['NEW', 'IN_PROGRESS'], true); $d['statutAttente'] = true;
+    }
+    unset($d);
+    return $D;
 }
 
 function hdkJournal(string $quoi): void
@@ -170,8 +284,46 @@ function wr_helpdesk_repondre(int $id): array
     if (!$r['ok']) { return $r; }
     $st = (string) ($b['statut'] ?? '');
     if ($st !== '' && isset(HDK_STATUTS[$st])) { $s = hdkEnvoi('PATCH', '/cases/' . $id . '/status', ['status' => $st]); if (!$s['ok']) { return ['ok' => false, 'error' => 'Réponse envoyée, mais ' . $s['error']]; } }
-    hdkJournal('Réponse à la demande ' . $id . ($st !== '' ? ' (statut ' . (HDK_STATUTS[$st] ?? $st) . ')' : ''));
-    return ['ok' => true];
+    // Le franchisé prévenu par SMS (21/11/2026). Le magasin : celui de la demande, sinon celui gardé au cockpit.
+    $shop = preg_replace('/\D/', '', (string) ($b['shop'] ?? '')) ?? '';
+    if ($shop === '') { try { $shop = (string) (Db::row('SELECT shop_id FROM con_hdk_demande WHERE case_id = ?', [$id])['shop_id'] ?? ''); } catch (Throwable $e) { $shop = ''; } }
+    $sms = hdkSmsFranchise($shop, trim((string) ($b['titre'] ?? '')), $txt);
+    hdkJournal('Réponse à la demande ' . (trim((string) ($b['ref'] ?? '')) ?: $id) . ($st !== '' ? ' (statut ' . (HDK_STATUTS[$st] ?? $st) . ')' : '') . ' · ' . $sms['resume']);
+    return ['ok' => true, 'sms' => $sms, 'avertissement' => 'Réponse envoyée. ' . $sms['resume'] . '.'];
+}
+
+/**
+ * Le SMS au franchisé quand le bureau répond (21/11/2026, Sam : « informer le franchisé par SMS lors de la réponse du
+ * consultant ») : au GSM du magasin (Qui fait quoi, sinon les alertes SMS des leads : suTel), dans sa langue, avec le
+ * titre et le début de la réponse ; la réponse entière se lit dans son dashboard. Coupé dans « SMS au bureau ».
+ * Rend {envoye, a, motif, resume}.
+ */
+function hdkSmsFranchise(string $shop, string $titre, string $reponse): array
+{
+    $out = ['envoye' => false, 'a' => null, 'motif' => null, 'resume' => ''];
+    if (!hdkSmsReglage()['franchise']) { $out['resume'] = 'pas de SMS au franchisé (coupé dans SMS au bureau)'; return $out; }
+    if ($shop === '' || !function_exists('suTel') || !function_exists('smsPartir')) { $out['resume'] = 'pas de SMS au franchisé (magasin ou module SMS inconnu)'; return $out; }
+    try { $tel = suTel($shop); } catch (Throwable $e) { $tel = ['tel' => null]; }
+    if (($tel['tel'] ?? null) === null) { $out['resume'] = 'pas de SMS au franchisé : aucun GSM pour ce magasin (Qui fait quoi)'; return $out; }
+    $l = 'fr';
+    try { if (function_exists('suLangue')) { $l = suLangue($shop); } } catch (Throwable $e) { $l = 'fr'; }
+    $texte = hdkSmsFranchiseTexte($titre, $reponse, $l);
+    $r = smsPartir((string) $tel['tel'], $texte);
+    $lisible = function_exists('smsLisible') ? smsLisible($r['a']) : (string) $r['a'];
+    $out = ['envoye' => (bool) $r['ok'], 'a' => $lisible, 'motif' => $r['erreur'], 'texte' => $texte,
+        'resume' => $r['ok'] ? 'SMS au franchisé (' . $lisible . ')' : 'SMS au franchisé non parti (' . $r['erreur'] . ')'];
+    return $out;
+}
+
+/** Le texte du SMS au franchisé, en français ou en néerlandais, sans lien. Fonction pure. */
+function hdkSmsFranchiseTexte(string $titre, string $reponse, string $langue = 'fr'): string
+{
+    $titre = hdkCoupe($titre, 70);
+    $rep = hdkResume($reponse, 200);
+    $t = $langue === 'nl'
+        ? "L'Atelier By - Het kantoor heeft uw aanvraag" . ($titre !== '' ? ' "' . $titre . '"' : '') . ' beantwoord: ' . $rep . "\nVolledig antwoord in uw dashboard, Aanvraag aan het kantoor."
+        : "L'Atelier By - Le bureau a répondu à votre demande" . ($titre !== '' ? ' "' . $titre . '"' : '') . ' : ' . $rep . "\nRéponse complète dans votre dashboard, Demande au bureau.";
+    return hdkGsm($t);
 }
 
 /** POST /helpdesk/demandes/{id}/statut {statut} */
@@ -182,7 +334,7 @@ function wr_helpdesk_statut(int $id): array
     if (!hdkAdmin()) { return ['ok' => false, 'error' => 'Le compte administrateur du cockpit (Paramètres › ERP) n’est pas configuré.']; }
     $r = hdkEnvoi('PATCH', '/cases/' . $id . '/status', ['status' => $st]);
     if ($r['ok']) { hdkJournal('Demande ' . $id . ' : ' . HDK_STATUTS[$st]); }
-    return $r['ok'] ? ['ok' => true] : $r;
+    return $r['ok'] ? ['ok' => true, 'statut' => $st, 'statutNom' => HDK_STATUTS[$st], 'ouverte' => in_array($st, ['NEW', 'IN_PROGRESS'], true)] : $r;
 }
 
 /** POST /helpdesk/demandes/{id}/consultant {consultant} */
@@ -268,11 +420,92 @@ function wr_helpdesk_mission(int $mid): array
         if (!$r['ok']) { return $r; }
         $s = hdkEnvoi('PATCH', '/cases/' . (int) $m['case_id'] . '/status', ['status' => $statut]);
         if (!$s['ok']) { $err = 'Réponse envoyée, mais le statut n’a pas suivi : ' . $s['error']; }
+        $smsF = hdkSmsFranchise((string) $m['shop_id'], (string) $m['titre'], $texte);
+        $err = trim(($err !== null ? $err . ' ' : '') . ucfirst($smsF['resume']) . '.');
     }
     Db::exec('UPDATE con_hdk_mission SET cloture_le = ?, reponse = ?, maj_le = ? WHERE id = ?', [$now, $texte, $now, $mid]);
     foreach (array_filter(array_map('intval', explode(',', (string) $m['tache_ids']))) as $t) { Db::exec('UPDATE con_consultant_tache SET statut = \'fait\', fait_le = ?, maj_le = ? WHERE id = ?', [$now, $now, $t]); }
     hdkJournal('Mission ' . $m['case_ref'] . ' clôturée : ' . ($tout ? 'résolue' : 'à suivre') . (!empty($b['repondre']) ? ', constat envoyé au franchisé' : ''));
     return ['ok' => true, 'statut' => $statut, 'reponse' => $texte, 'avertissement' => $err, 'missions' => hdkMissions([(int) $m['case_id']])[(int) $m['case_id']] ?? []];
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * La date limite (20/11/2026)
+ * Demande de Sam : « lors de la réception, le consultant met une date limite (2, 5, 10, 30 j, +90) qu'il est censé
+ * respecter suivant ses demandes ». Gardée au cockpit (con_hdk_demande), le panel n'a pas de champ pour elle. Une demande
+ * ouverte au-delà de sa date est en retard ; le franchisé voit la date (« réponse prévue d'ici le … »).
+ * ------------------------------------------------------------------------------------------- */
+
+/** Les dates limites d'une liste de demandes : [case_id => {delai, echeance, par, le}]. */
+function hdkEcheances(array $caseIds): array
+{
+    $ids = array_values(array_filter(array_map('intval', $caseIds)));
+    if ($ids === []) { return []; }
+    hdkTable();
+    $out = [];
+    try {
+        foreach (Db::rows('SELECT case_id, delai_jours, echeance, echeance_par, echeance_le FROM con_hdk_demande WHERE echeance IS NOT NULL AND case_id IN (' . implode(',', $ids) . ')') as $r) {
+            $out[(int) $r['case_id']] = ['delai' => $r['delai_jours'] !== null ? (int) $r['delai_jours'] : null, 'echeance' => substr((string) $r['echeance'], 0, 10),
+                'par' => (string) $r['echeance_par'], 'le' => $r['echeance_le'] !== null ? (string) $r['echeance_le'] : null];
+        }
+    } catch (Throwable $e) { /* pas de dates limites lisibles */ }
+    return $out;
+}
+
+/** Les demandes marquées urgentes par le franchisé : [case_id => true] (21/11/2026). */
+function hdkUrgentes(array $caseIds): array
+{
+    $ids = array_values(array_filter(array_map('intval', $caseIds)));
+    if ($ids === []) { return []; }
+    hdkTable();
+    try { return array_fill_keys(array_map('intval', array_column(Db::rows('SELECT case_id FROM con_hdk_demande WHERE urgent = 1 AND case_id IN (' . implode(',', $ids) . ')'), 'case_id')), true); }
+    catch (Throwable $e) { return []; }
+}
+
+/** La date limite d'une demande, telle que le cockpit la montre : jours restants, retard (ouverte au-delà). Fonction pure. */
+function hdkEcheanceVue(?array $e, bool $ouverte, ?string $auj = null): array
+{
+    if ($e === null || ($e['echeance'] ?? '') === '') { return ['echeance' => null, 'delai' => null, 'echeancePar' => null, 'echeanceLe' => null, 'joursRestants' => null, 'enRetard' => false]; }
+    $auj = $auj ?? date('Y-m-d');
+    $reste = (int) round((strtotime($e['echeance'] . ' 12:00') - strtotime($auj . ' 12:00')) / 86400);
+    return ['echeance' => $e['echeance'], 'delai' => $e['delai'] ?? null, 'echeancePar' => ($e['par'] ?? '') !== '' ? $e['par'] : null, 'echeanceLe' => $e['le'] ?? null,
+        'joursRestants' => $reste, 'enRetard' => $ouverte && $reste < 0];
+}
+
+/**
+ * POST /helpdesk/demandes/{id}/delai {jours, statut?, shop?, ref?} — la date limite, aujourd'hui + 2, 5, 10, 30 ou 90
+ * jours ; `jours` 0 la retire. Une demande encore « Nouvelle » (`statut` NEW) passe « En cours » : elle est reçue.
+ */
+function wr_helpdesk_delai(int $id): array
+{
+    hdkTable();
+    $b = body();
+    $j = (int) ($b['jours'] ?? -1);
+    if ($id <= 0) { http_response_code(422); return ['ok' => false, 'error' => 'Demande inconnue.']; }
+    $ref = trim((string) ($b['ref'] ?? '')) ?: (string) $id;
+    $existe = Db::row('SELECT case_id FROM con_hdk_demande WHERE case_id = ?', [$id]) !== null;
+    if ($j === 0) {
+        if ($existe) { Db::exec('UPDATE con_hdk_demande SET delai_jours = NULL, echeance = NULL, echeance_par = \'\', echeance_le = NULL WHERE case_id = ?', [$id]); }
+        hdkJournal('Demande ' . $ref . ' : date limite retirée');
+        return ['ok' => true, 'echeance' => null, 'delai' => null];
+    }
+    if (!in_array($j, HDK_DELAIS, true)) { http_response_code(422); return ['ok' => false, 'error' => 'Délai inconnu : ' . implode(', ', HDK_DELAIS) . ' jours.']; }
+    $ech = date('Y-m-d', strtotime('+' . $j . ' days'));
+    $qui = function_exists('accesIdentite') ? trim((string) ((accesIdentite() ?? [])['nom'] ?? '')) : '';
+    $qui = mb_substr($qui !== '' ? $qui : 'Cockpit', 0, 120);
+    $now = date('Y-m-d H:i:s');
+    if ($existe) { Db::exec('UPDATE con_hdk_demande SET delai_jours = ?, echeance = ?, echeance_par = ?, echeance_le = ? WHERE case_id = ?', [$j, $ech, $qui, $now, $id]); }
+    else {
+        Db::exec('INSERT INTO con_hdk_demande (case_id, shop_id, passage, photos, cree_le, delai_jours, echeance, echeance_par, echeance_le) VALUES (?,?,?,?,?,?,?,?,?)',
+            [$id, preg_replace('/\D/', '', (string) ($b['shop'] ?? '')) ?? '', 0, null, $now, $j, $ech, $qui, $now]);
+    }
+    $avert = null;
+    if ((string) ($b['statut'] ?? '') === 'NEW' && hdkAdmin()) {
+        $s = hdkEnvoi('PATCH', '/cases/' . $id . '/status', ['status' => 'IN_PROGRESS']);
+        if (!$s['ok']) { $avert = 'Date limite enregistrée, mais la demande n’est pas passée « En cours » : ' . $s['error']; }
+    }
+    hdkJournal('Demande ' . $ref . ' : date limite à ' . $j . ' j, avant le ' . date('d/m/Y', strtotime($ech)) . ' (' . $qui . ')');
+    return ['ok' => true, 'echeance' => $ech, 'delai' => $j, 'avertissement' => $avert];
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -287,10 +520,14 @@ function ep_helpdesk_magasin(): array
     $r = PanelApi::get('/shops/' . $shop . '/cases');
     if (!is_array($r) && hdkAdmin()) { $r = PanelApi::get('/shops/' . $shop . '/cases'); }
     if (!is_array($r)) { return ['domaines' => HDK_DOMAINES, 'demandes' => [], 'erreur' => 'Vos demandes n’ont pas pu être lues (' . (PanelApi::$lastError ?? 'pas de réponse') . ').']; }
-    $D = array_values(array_filter(array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array'))), static fn ($d) => $d['shop'] === '' || $d['shop'] === (string) $shop));
+    $D = hdkStatutsPoses(array_values(array_filter(array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array'))), static fn ($d) => $d['shop'] === '' || $d['shop'] === (string) $shop)));
     usort($D, static fn ($a, $b) => strcmp($b['cree'], $a['cree']));
     $M = hdkMissions(array_column($D, 'id'));
+    $E = hdkEcheances(array_column($D, 'id'));
+    $U = hdkUrgentes(array_column($D, 'id'));
     foreach ($D as &$d) {
+        $d['echeance'] = $E[$d['id']]['echeance'] ?? null;
+        $d['urgent'] = isset($U[$d['id']]);   // « réponse prévue d'ici le … » ; ni qui l'a fixée ni le retard
         $ms = array_values(array_filter($M[$d['id']] ?? [], static fn ($x) => $x['cloture'] === null));
         $d['visite'] = $ms !== [] ? ['le' => $ms[0]['visiteLe'], 'consultant' => $ms[0]['consultant']] : null;
         unset($d['demandeur']);
@@ -335,6 +572,8 @@ function wr_helpdesk_magasin(): array
     $base = rtrim((string) (function_exists('setting') ? (setting('urlPublique', '') ?: '') : ''), '/');
     if ($base === '' && !empty($_SERVER['HTTP_HOST'])) { $base = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . preg_replace('#/api/.*$#', '', (string) ($_SERVER['SCRIPT_NAME'] ?? '')); }
     $texte = mb_substr($desc, 0, 8000);
+    $urgent = !empty($b['urgent']);
+    if ($urgent) { $texte .= "\n\n— URGENT : le franchisé a marqué cette demande urgente."; }
     if (!empty($b['passage'])) { $texte .= "\n\n— Passage du consultant souhaité à la prochaine visite."; }
     if ($liens !== []) { $texte .= "\n\nPhotos :\n" . implode("\n", array_map(static fn ($c) => $base . '/' . $c, $liens)); }
     $corps = ['area_key' => $dom, 'title' => $titre, 'description' => $texte, 'shop_id' => $shop];
@@ -343,7 +582,653 @@ function wr_helpdesk_magasin(): array
     if (!$r['ok']) { return $r; }
     $c = is_array($r['res']) ? (vrcDeballer($r['res'], ['data', 'case']) ?? $r['res']) : [];
     $id = (int) ($c['id'] ?? 0);
-    if ($id > 0) { Db::exec('INSERT INTO con_hdk_demande (case_id, shop_id, passage, photos, cree_le) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE passage = VALUES(passage)', [$id, (string) $shop, !empty($b['passage']) ? 1 : 0, json_encode($liens), date('Y-m-d H:i:s')]); }
-    if (function_exists('journalAdd')) { journalAdd('Magasin ' . $shop, 'Helpdesk', null, 'Nouvelle demande au bureau : ' . $titre); }
+    if ($id > 0) {
+        Db::exec('INSERT INTO con_hdk_demande (case_id, shop_id, passage, photos, cree_le) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE passage = VALUES(passage)', [$id, (string) $shop, !empty($b['passage']) ? 1 : 0, json_encode($liens), date('Y-m-d H:i:s')]);
+        if ($urgent) { Db::exec('UPDATE con_hdk_demande SET urgent = 1 WHERE case_id = ?', [$id]); }
+    }
+    // Le SMS au bureau (20/11/2026) : la demande est enregistrée ; un SMS qui ne part pas ne la fait jamais échouer.
+    $sms = '';
+    try {
+        $s = hdkSmsBureau(['shop' => (string) $shop, 'magasin' => trim((string) ($c['shop_name'] ?? '')), 'domaine' => HDK_DOMAINES[$dom], 'titre' => $titre, 'description' => $desc,
+            'passage' => !empty($b['passage']), 'photos' => count($liens), 'ref' => (string) ($c['ref'] ?? ''), 'demandeur' => trim((string) ($c['requester_name'] ?? '')), 'urgent' => $urgent]);
+        $sms = ' · ' . $s['resume'];
+    } catch (Throwable $e) { $sms = ' · SMS au bureau non parti : ' . $e->getMessage(); }
+    if (function_exists('journalAdd')) { journalAdd('Magasin ' . $shop, 'Helpdesk', null, ($urgent ? 'Nouvelle demande URGENTE au bureau : ' : 'Nouvelle demande au bureau : ') . $titre . $sms); }
     return ['ok' => true, 'id' => $id, 'ref' => (string) ($c['ref'] ?? '')];
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Le SMS au bureau (20/11/2026)
+ * Demande de Sam : « fais en sorte que je reçoive un SMS (+48725038049) et Pierre Boseret avec un résumé de la demande
+ * quand un franchisé en fait une ». À chaque demande envoyée depuis le dashboard franchisé, un SMS part à chaque numéro
+ * du réglage `helpdeskSms` (cockpit › Demandes des franchisés › SMS au bureau), par le fournisseur en place
+ * (shared/src/sms.php : SMSAPI, sinon Twilio). Le dernier envoi se garde (`helpdeskSmsDernier`) et se lit au cockpit.
+ * Le franchisé ne voit ni les numéros ni le résultat de l'envoi.
+ * ------------------------------------------------------------------------------------------- */
+
+/** Le réglage de départ, tant que le cockpit n'en a pas enregistré : Sam, et Pierre Boseret (numéro à compléter). */
+const HDK_SMS_DEFAUT = ['actif' => true, 'destinataires' => [['nom' => 'Sam', 'tel' => '+48725038049'], ['nom' => 'Pierre Boseret', 'tel' => '']]];
+const HDK_SMS_RESUME = 220;   // caractères de la demande repris dans le SMS (le SMS entier tient en trois SMS de 153)
+
+/**
+ * Les destinataires, nettoyés : un nom, un numéro tel que tapé, le consultant du panel qu'il est (« Sam V. », pour les
+ * relances ; vide : rapproché par le nom) ; une ligne sans nom ni numéro tombe ; 10 au plus.
+ */
+function hdkSmsDestinataires(mixed $liste): array
+{
+    $out = [];
+    foreach (is_array($liste) ? $liste : [] as $x) {
+        if (!is_array($x)) { continue; }
+        $nom = mb_substr(trim((string) ($x['nom'] ?? '')), 0, 80);
+        $tel = mb_substr(trim((string) ($x['tel'] ?? '')), 0, 32);
+        if ($nom === '' && $tel === '') { continue; }
+        $out[] = ['nom' => $nom, 'tel' => $tel, 'consultant' => mb_substr(trim((string) ($x['consultant'] ?? '')), 0, 80)];
+    }
+    return array_slice($out, 0, 10);
+}
+
+/** Le réglage tel qu'il s'applique : {actif, destinataires[{nom, tel, consultant}], relances{…}}. */
+function hdkSmsReglage(): array
+{
+    $s = setting('helpdeskSms', null);
+    $s = is_array($s) ? $s : HDK_SMS_DEFAUT;
+    return ['actif' => array_key_exists('actif', $s) ? (bool) $s['actif'] : true, 'destinataires' => hdkSmsDestinataires($s['destinataires'] ?? []),
+        'relances' => hdkRelancesReglage(is_array($s['relances'] ?? null) ? $s['relances'] : []),
+        // Le franchisé prévenu par SMS quand le bureau répond (21/11/2026).
+        'franchise' => array_key_exists('franchise', $s) ? (bool) $s['franchise'] : true];
+}
+
+/**
+ * Un texte ramené à l'alphabet des SMS (GSM 03.38) : apostrophes et guillemets droits, accents hors alphabet sans
+ * accent (ê → e, ç → c), le reste (émojis…) retiré. Un seul caractère hors alphabet fait passer tout le SMS à 70
+ * caractères au lieu de 160. Fonction pure.
+ */
+function hdkGsm(string $t): string
+{
+    $t = (string) preg_replace(['/«[\s\x{00A0}\x{202F}]*/u', '/[\s\x{00A0}\x{202F}]*»/u'], ['"', '"'], $t);   // « fête » → "fete"
+    $t = strtr($t, ['’' => "'", '‘' => "'", 'ʼ' => "'", '´' => "'", '`' => "'", '“' => '"', '”' => '"', '„' => '"', '«' => '"', '»' => '"', '…' => '...', '–' => '-', '—' => '-', '•' => '-',
+        "\u{00A0}" => ' ', "\u{202F}" => ' ', "\t" => ' ', "\r" => '', 'œ' => 'oe', 'Œ' => 'OE',
+        'â' => 'a', 'á' => 'a', 'ã' => 'a', 'ê' => 'e', 'ë' => 'e', 'î' => 'i', 'ï' => 'i', 'í' => 'i', 'ô' => 'o', 'ó' => 'o', 'õ' => 'o', 'û' => 'u', 'ú' => 'u', 'ÿ' => 'y', 'ç' => 'c',
+        'À' => 'A', 'Â' => 'A', 'Á' => 'A', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Î' => 'I', 'Ï' => 'I', 'Ô' => 'O', 'Û' => 'U', 'Ù' => 'U', 'Ÿ' => 'Y']);
+    $t = (string) preg_replace('/[^A-Za-z0-9 \n@£$¥èéùìòÇØøÅåÆæßÉÄÖÑÜäöñüà§¿¡!"#%&\'()*+,\-.\/:;<=>?_€\[\]{}~^|\\\\]/u', '', $t);
+    return trim((string) preg_replace(['/ {2,}/', '/ *\n */', '/\n{3,}/'], [' ', "\n", "\n\n"], $t));
+}
+
+/** Les premiers mots de la demande, sur une ligne, coupés à `$max` caractères entre deux mots. Fonction pure. */
+function hdkResume(string $t, int $max = HDK_SMS_RESUME): string
+{
+    $t = trim((string) preg_replace('/\s+/u', ' ', $t));
+    if (mb_strlen($t) <= $max) { return $t; }
+    $c = mb_substr($t, 0, $max);
+    $p = mb_strrpos($c, ' ');
+    return rtrim($p !== false && $p > $max * 0.6 ? mb_substr($c, 0, $p) : $c, " ,;:.-") . '...';
+}
+
+/**
+ * Le SMS d'une demande : le magasin, le sujet, qui l'envoie, le titre, le début de la demande, le passage souhaité, les
+ * photos, la référence. Sans lien (Sam, 20/11/2026 : « ne pas mettre le lien dans le SMS »). Une demande urgente
+ * commence par « URGENT - » (21/11/2026). Fonction pure.
+ *
+ * @param array{magasin: string, domaine: string, titre: string, description: string, passage?: bool, photos?: int, ref?: string, demandeur?: string, urgent?: bool} $d
+ */
+function hdkSmsTexte(array $d): string
+{
+    $suite = [];
+    if (!empty($d['passage'])) { $suite[] = 'Passage du consultant souhaité.'; }
+    $n = (int) ($d['photos'] ?? 0);
+    if ($n > 0) { $suite[] = $n . ' photo' . ($n > 1 ? 's' : '') . '.'; }
+    $ref = preg_replace('/^CASE-/', '', (string) ($d['ref'] ?? ''));
+    if ($ref !== '') { $suite[] = 'Réf. ' . $ref; }
+    $l = [(!empty($d['urgent']) ? 'URGENT - ' : '') . 'Demande au bureau - ' . $d['magasin'] . ' (' . $d['domaine'] . ')' . (trim((string) ($d['demandeur'] ?? '')) !== '' ? ', de ' . trim((string) $d['demandeur']) : ''),
+        $d['titre'], hdkResume($d['description'])];
+    if ($suite !== []) { $l[] = implode(' ', $suite); }
+    return hdkGsm(implode("\n", array_filter($l, static fn ($x) => trim((string) $x) !== '')));
+}
+
+/**
+ * Le SMS d'une nouvelle demande à chaque destinataire du réglage (un numéro en double ne reçoit qu'un SMS). Rend
+ * {texte, destinataires[{nom, ok, motif}], resume} ; jamais d'exception de l'envoi lui-même.
+ */
+function hdkSmsBureau(array $d): array
+{
+    $R = hdkSmsReglage();
+    $out = ['texte' => '', 'destinataires' => [], 'resume' => ''];
+    if (!$R['actif']) { $out['resume'] = 'SMS au bureau coupés'; return $out; }
+    if (!function_exists('smsPartir')) { $out['resume'] = 'SMS au bureau : module SMS absent'; return $out; }
+    if (trim((string) ($d['magasin'] ?? '')) === '') {
+        try { $d['magasin'] = function_exists('viMagasins') ? (viMagasins()[(string) ($d['shop'] ?? '')]['court'] ?? '') : ''; } catch (Throwable $e) { $d['magasin'] = ''; }
+    }
+    $d['magasin'] = preg_replace('/^.* - /', '', trim((string) $d['magasin'])) ?: ('magasin ' . ($d['shop'] ?? '?'));
+    $out['texte'] = $texte = hdkSmsTexte($d);
+    $vus = [];
+    foreach ($R['destinataires'] as $x) {
+        $nom = $x['nom'] !== '' ? $x['nom'] : $x['tel'];
+        $num = smsNorme($x['tel']);
+        if ($num === null) { $out['destinataires'][] = ['nom' => $nom, 'ok' => false, 'motif' => $x['tel'] === '' ? 'pas de numéro' : 'numéro illisible']; continue; }
+        if (isset($vus[$num])) { continue; }
+        $vus[$num] = true;
+        $r = smsPartir($num, $texte);
+        $out['destinataires'][] = ['nom' => $nom, 'ok' => (bool) $r['ok'], 'motif' => $r['erreur']];
+    }
+    $ok = array_column(array_filter($out['destinataires'], static fn ($x) => $x['ok']), 'nom');
+    $ko = array_map(static fn ($x) => $x['nom'] . ' (' . $x['motif'] . ')', array_filter($out['destinataires'], static fn ($x) => !$x['ok']));
+    $out['resume'] = $out['destinataires'] === [] ? 'SMS au bureau : aucun destinataire' : trim(($ok ? 'SMS à ' . implode(', ', $ok) : '') . ($ko ? ($ok ? ' ; ' : '') . 'SMS non parti : ' . implode(', ', $ko) : ''));
+    try {
+        settingEcrire('helpdeskSmsDernier', ['le' => date('c'), 'ref' => (string) ($d['ref'] ?? ''), 'magasin' => $d['magasin'], 'titre' => (string) $d['titre'], 'destinataires' => $out['destinataires']]);
+    } catch (Throwable $e) { /* le journal garde la trace */ }
+    return $out;
+}
+
+/** GET /helpdesk/sms — le réglage des SMS au bureau et des relances, le fournisseur en place, les derniers envois. */
+function ep_helpdesk_sms(): array
+{
+    $R = hdkSmsReglage();
+    $R['destinataires'] = array_map(static fn ($x) => $x + ['lisible' => ($n = smsNorme($x['tel'])) !== null ? smsLisible($n) : null], $R['destinataires']);
+    $dernier = setting('helpdeskSmsDernier', null);
+    return $R + ['fournisseur' => function_exists('smsFournisseur') ? smsFournisseur() : null, 'dernier' => is_array($dernier) ? $dernier : null,
+        'relancesDepuis' => setting('helpdeskRelancesDepuis', null), 'derniereRelance' => hdkDerniereRelance()];
+}
+
+/**
+ * PUT /helpdesk/sms {actif, destinataires[{nom, tel, consultant}], relances{actif, jours, heure, ouvres, quelles, aQui,
+ * regrouper, plafond}} — le réglage des SMS au bureau. Un numéro illisible est refusé. Des relances qu'on rallume
+ * repartent d'aujourd'hui : les demandes déjà en attente sont relancées le premier lundi.
+ */
+function wr_helpdesk_sms(): array
+{
+    $b = body();
+    $dest = hdkSmsDestinataires($b['destinataires'] ?? []);
+    foreach ($dest as $x) {
+        if ($x['tel'] !== '' && smsNorme($x['tel']) === null) { http_response_code(422); return ['ok' => false, 'error' => 'Numéro illisible : ' . $x['tel'] . ' (format international, par exemple +32 470 12 34 56).']; }
+    }
+    $avant = hdkSmsReglage();
+    $rel = hdkRelancesReglage(is_array($b['relances'] ?? null) ? $b['relances'] : $avant['relances']);
+    if (is_array($b['relances'] ?? null) && isset($b['relances']['heure']) && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string) $b['relances']['heure'])) {
+        http_response_code(422); return ['ok' => false, 'error' => 'Heure des relances illisible : ' . $b['relances']['heure'] . ' (par exemple 08:30).'];
+    }
+    $s = ['actif' => array_key_exists('actif', $b) ? (bool) $b['actif'] : true, 'destinataires' => $dest, 'relances' => $rel,
+        'franchise' => array_key_exists('franchise', $b) ? (bool) $b['franchise'] : $avant['franchise']];
+    settingEcrire('helpdeskSms', $s);
+    if ($rel['actif'] && !$avant['relances']['actif']) { settingEcrire('helpdeskRelancesDepuis', date('Y-m-d')); }
+    hdkJournal('SMS au bureau : ' . ($s['actif'] ? 'envoyés à ' . (implode(', ', array_map(static fn ($x) => $x['nom'] !== '' ? $x['nom'] : $x['tel'], $dest)) ?: 'personne') : 'coupés')
+        . ' ; relances ' . ($rel['actif'] ? 'tous les ' . $rel['jours'] . ' jours à ' . $rel['heure'] : 'coupées'));
+    return ['ok' => true] + ep_helpdesk_sms();
+}
+
+/** POST /helpdesk/sms/essai {tel} — un SMS d'essai à un numéro du réglage enregistré (pas à un numéro quelconque). */
+function wr_helpdesk_sms_essai(): array
+{
+    $num = smsNorme((string) (body()['tel'] ?? ''));
+    $R = hdkSmsReglage();
+    $dest = null;
+    foreach ($R['destinataires'] as $x) { if ($num !== null && smsNorme($x['tel']) === $num) { $dest = $x; break; } }
+    if ($dest === null) { http_response_code(422); return ['ok' => false, 'error' => 'Enregistrez d’abord ce numéro, puis envoyez l’essai.']; }
+    $texte = hdkGsm('Essai du cockpit (SMS au bureau). Ce numéro (' . ($dest['nom'] ?: $num) . ') reçoit le résumé de chaque nouvelle demande des franchisés'
+        . ($R['relances']['actif'] ? ', et les relances des demandes sans réponse tous les ' . $R['relances']['jours'] . ' jours à ' . $R['relances']['heure'] : '') . '.');
+    $r = smsPartir($num, $texte);
+    // D'où il est parti, et le compte SMSAPI qui l'a pris (21/11/2026 : « SMS parti » au cockpit, rien reçu).
+    $det = is_array($r['details'] ?? null) ? $r['details'] : null;
+    $details = $det !== null ? ['id' => $det['id'], 'origine' => $det['origine'], 'plateforme' => (string) parse_url((string) $det['base'], PHP_URL_HOST),
+        'expediteur' => $det['from'], 'statut' => $det['statut'], 'points' => $det['points']] : null;
+    $compte = null;
+    if ($r['ok'] && class_exists('MdSms') && method_exists('MdSms', 'profil')) { try { [$okP, $infoP] = MdSms::profil(); $compte = $okP ? $infoP : null; } catch (Throwable $e) { $compte = null; } }
+    hdkJournal('SMS d’essai à ' . ($dest['nom'] ?: $num) . ' : ' . ($r['ok'] ? 'accepté par SMSAPI' . ($details ? ' (id ' . $details['id'] . ', jeton ' . $details['origine'] . ', ' . $details['plateforme']
+        . ', expéditeur ' . ($details['expediteur'] !== '' ? $details['expediteur'] : 'aucun') . ')' : '') : 'non parti (' . $r['erreur'] . ')'));
+    return $r['ok'] ? ['ok' => true, 'a' => smsLisible($num), 'via' => $r['via'], 'texte' => $texte, 'id' => $r['id'] ?? null, 'details' => $details, 'compte' => $compte]
+        : ['ok' => false, 'error' => 'SMS non parti : ' . $r['erreur']];
+}
+
+/** GET /helpdesk/sms/remise?id= — le statut de remise d'un SMS chez SMSAPI (remis, non remis, en file…). */
+function ep_helpdesk_sms_remise(): array
+{
+    $id = (string) ($_GET['id'] ?? '');
+    if (!preg_match('/^[\w.-]{1,64}$/', $id)) { http_response_code(422); return ['ok' => false, 'erreur' => 'identifiant illisible']; }
+    if (!class_exists('MdSms') || !method_exists('MdSms', 'statut')) { return ['ok' => false, 'erreur' => 'statut de remise indisponible (fournisseur autre que SMSAPI)']; }
+    return MdSms::statut($id);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Les relances (20/11/2026, maquette docs/maquettes/helpdesk-relances, validée : « ok valide les choix, code les
+ * relances »). Une demande qui attend une réponse du bureau revient par SMS 7 jours après son envoi, puis tous les
+ * 7 jours, à 08:30, les jours ouvrés, au consultant de la demande (sinon à tous les numéros du réglage) ; plusieurs le
+ * même jour pour la même personne : un seul SMS qui les liste. Fin : la réponse du bureau, un statut final, la
+ * suspension sur la fiche. À la mise en route, les demandes déjà en attente partent le premier lundi. Sans lien.
+ * L'horloge : GET /helpdesk/relances/cron?jeton= (bin/helpdesk_cron.sh, toutes les 10 minutes).
+ * ------------------------------------------------------------------------------------------- */
+
+// La règle (Sam, 21/11/2026) : « les relances se font tous les 7 jours tant que pas en cours » — une demande encore
+// « Nouvelle » ; elle s'arrête quand la demande passe « En cours » (une date limite fixée l'y fait passer).
+const HDK_RELANCES_DEFAUT = ['actif' => true, 'jours' => 7, 'heure' => '08:30', 'ouvres' => true, 'quelles' => 'nouvelles', 'aQui' => 'consultant', 'regrouper' => true, 'plafond' => 0];
+const HDK_RELANCES_JOURS = [3, 7, 14];
+const HDK_RELANCES_QUELLES = ['nouvelles' => 'pas encore en cours', 'sans_reponse' => 'sans réponse', 'ouvertes' => 'en attente', 'retard' => 'en retard'];
+const HDK_RELANCES_FIN = '20:00';   // rien ne part après 20:00 : une relance en retard attend le lendemain matin
+const HDK_RELANCES_LISTE = 5;       // demandes citées dans un SMS qui les regroupe ; au-delà, « + N autres »
+
+/**
+ * Le réglage des relances, nettoyé sur les choix de la maquette. Un réglage enregistré avant la règle du 21/11/2026
+ * (sans `v`) avec l'ancien choix par défaut « sans réponse du bureau » prend la nouvelle règle « pas encore en cours ».
+ */
+function hdkRelancesReglage(array $r): array
+{
+    $d = HDK_RELANCES_DEFAUT;
+    if ((int) ($r['v'] ?? 1) < 2 && ($r['quelles'] ?? '') === 'sans_reponse') { $r['quelles'] = 'nouvelles'; }
+    $h = (string) ($r['heure'] ?? $d['heure']);
+    return ['actif' => array_key_exists('actif', $r) ? (bool) $r['actif'] : $d['actif'],
+        'jours' => in_array((int) ($r['jours'] ?? 0), HDK_RELANCES_JOURS, true) ? (int) $r['jours'] : $d['jours'],
+        'heure' => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $h) ? $h : $d['heure'],
+        'ouvres' => array_key_exists('ouvres', $r) ? (bool) $r['ouvres'] : $d['ouvres'],
+        'quelles' => isset(HDK_RELANCES_QUELLES[$r['quelles'] ?? '']) ? (string) $r['quelles'] : $d['quelles'],
+        'aQui' => in_array($r['aQui'] ?? '', ['consultant', 'tous'], true) ? (string) $r['aQui'] : $d['aQui'],
+        'regrouper' => array_key_exists('regrouper', $r) ? (bool) $r['regrouper'] : $d['regrouper'],
+        'plafond' => in_array((int) ($r['plafond'] ?? 0), [0, 6], true) ? (int) ($r['plafond'] ?? 0) : $d['plafond'], 'v' => 2];
+}
+
+function hdkRelancesTables(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    hdkTable();
+    Db::exec('CREATE TABLE IF NOT EXISTS con_hdk_relance (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        case_id INT NOT NULL,
+        case_ref VARCHAR(40) NOT NULL DEFAULT \'\',
+        shop_id VARCHAR(32) NOT NULL DEFAULT \'\',
+        le DATETIME NOT NULL,
+        rang INT NOT NULL DEFAULT 1,
+        a_nom VARCHAR(80) NOT NULL DEFAULT \'\',
+        a_tel VARCHAR(32) NOT NULL DEFAULT \'\',
+        ok TINYINT NOT NULL DEFAULT 0,
+        motif VARCHAR(255) NULL,
+        manuel TINYINT NOT NULL DEFAULT 0,
+        KEY k_case (case_id), KEY k_le (le))');
+    foreach (['relance_suspendue DATETIME NULL', "relance_suspendue_par VARCHAR(120) NOT NULL DEFAULT ''"] as $col) { hdkColonne('con_hdk_demande', $col); }
+    $fait = true;
+}
+
+/** Le jour où les relances ont commencé (posé au premier appel) : ce qui attendait avant part le premier lundi. */
+function hdkRelancesDepuis(): string
+{
+    $d = setting('helpdeskRelancesDepuis', null);
+    if (is_string($d) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) { return $d; }
+    $d = date('Y-m-d');
+    try { settingEcrire('helpdeskRelancesDepuis', $d); } catch (Throwable $e) { /* reposé au prochain appel */ }
+    return $d;
+}
+
+/** Un jour, ou le lundi qui suit s'il tombe un samedi ou un dimanche. Fonction pure. */
+function hdkOuvre(string $j): string
+{
+    $w = (int) date('N', strtotime($j . ' 12:00'));
+    return $w <= 5 ? $j : date('Y-m-d', strtotime($j . ' 12:00 +' . (8 - $w) . ' days'));
+}
+
+/** Le premier lundi à partir d'un jour (lui-même si c'est un lundi). Fonction pure. */
+function hdkLundi(string $j): string
+{
+    $w = (int) date('N', strtotime($j . ' 12:00'));
+    return $w === 1 ? $j : date('Y-m-d', strtotime($j . ' 12:00 +' . (8 - $w) . ' days'));
+}
+
+/** Un nom ramené à sa forme simple : minuscules, sans accent ni point. Fonction pure. */
+function hdkNorme(string $t): string
+{
+    $t = mb_strtolower(trim($t));
+    $t = strtr($t, ['é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'à' => 'a', 'â' => 'a', 'ä' => 'a', 'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'ö' => 'o', 'û' => 'u', 'ü' => 'u', 'ù' => 'u', 'ç' => 'c', '.' => ' ']);
+    return trim((string) preg_replace('/\s+/', ' ', $t));
+}
+
+/**
+ * Ce numéro est-il celui du consultant de la demande ? Par le « consultant du panel » du numéro s'il est réglé ; sinon
+ * par le nom : même prénom, et même initiale du nom quand les deux en ont un (« Pierre Boseret » ~ « Pierre B. »,
+ * « Sam » ~ « Sam V. »). Fonction pure.
+ */
+function hdkEstConsultant(array $dest, string $consultant): bool
+{
+    $c = hdkNorme($consultant);
+    if ($c === '') { return false; }
+    if (trim((string) ($dest['consultant'] ?? '')) !== '') { return hdkNorme((string) $dest['consultant']) === $c; }
+    $a = explode(' ', hdkNorme((string) ($dest['nom'] ?? ''))); $b = explode(' ', $c);
+    if ($a[0] === '' || $a[0] !== $b[0]) { return false; }
+    return !isset($a[1], $b[1]) || $a[1][0] === $b[1][0];
+}
+
+/** À qui part la relance d'une demande : [{nom, num}] — son consultant s'il a un numéro, sinon tous les numéros. */
+function hdkRelanceDestinataires(array $d, array $R): array
+{
+    $valides = [];
+    foreach ($R['destinataires'] as $x) {
+        $num = smsNorme($x['tel']);
+        if ($num !== null) { $valides[$num] = $x + ['num' => $num]; }   // un numéro en double ne compte qu'une fois
+    }
+    $valides = array_values($valides);
+    if ($R['relances']['aQui'] === 'consultant' && trim((string) ($d['consultant'] ?? '')) !== '') {
+        $siens = array_values(array_filter($valides, static fn ($x) => hdkEstConsultant($x, (string) $d['consultant'])));
+        if ($siens !== []) { return $siens; }
+    }
+    return $valides;
+}
+
+/** Pourquoi une demande ne se relance plus (null : elle se relance). Fonction pure. */
+function hdkRelanceArret(array $d, array $rel, int $n, ?array $suspendue): ?string
+{
+    if (!$d['ouverte']) { return HDK_STATUTS[$d['statut']] ?? 'fermée'; }
+    if ($rel['quelles'] === 'nouvelles' && $d['statut'] !== 'NEW') { return 'passée en cours'; }
+    if ($rel['quelles'] === 'sans_reponse' && trim((string) $d['reponse']) !== '') {
+        $le = substr((string) ($d['reponseLe'] ?? ''), 0, 10);
+        return 'réponse' . ($le !== '' ? ' le ' . date('d/m', strtotime($le)) : '');
+    }
+    if ($rel['quelles'] === 'retard' && empty($d['enRetard'])) { return 'pas en retard'; }
+    if ($suspendue !== null) { return 'suspendue'; }
+    if ($rel['plafond'] > 0 && $n >= $rel['plafond']) { return $rel['plafond'] . ' relances faites'; }
+    return null;
+}
+
+/**
+ * Le jour de la prochaine relance d'une demande (Y-m-d) : `jours` après son envoi, puis après la dernière relance ; une
+ * demande qui attendait déjà avant la mise en route (`depuis`) part le premier lundi ; jours ouvrés : samedi et dimanche
+ * passent au lundi. Fonction pure.
+ */
+function hdkProchaineRelance(array $d, array $rel, ?string $derniere, string $depuis): ?string
+{
+    if ($derniere !== null && $derniere !== '') { $j = date('Y-m-d', strtotime(substr($derniere, 0, 10) . ' 12:00 +' . $rel['jours'] . ' days')); }
+    else {
+        $cree = substr((string) ($d['cree'] ?? ''), 0, 10);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $cree)) { return null; }
+        $j = date('Y-m-d', strtotime($cree . ' 12:00 +' . $rel['jours'] . ' days'));
+        if ($j < $depuis) { $j = hdkLundi($depuis); }
+    }
+    return $rel['ouvres'] ? hdkOuvre($j) : $j;
+}
+
+/** La relance du jour `$prochaine` part-elle à `$maintenant` (Y-m-d H:i) ? Entre l'heure réglée et 20:00. Fonction pure. */
+function hdkRelanceDue(string $prochaine, array $rel, string $maintenant): bool
+{
+    $jour = substr($maintenant, 0, 10); $h = substr($maintenant, 11, 5);
+    if ($prochaine > $jour) { return false; }
+    if ($rel['ouvres'] && (int) date('N', strtotime($jour . ' 12:00')) >= 6) { return false; }
+    return $h >= $rel['heure'] && $h < HDK_RELANCES_FIN;
+}
+
+/** Le magasin d'une demande, en court (« Sombreffe »). */
+function hdkCourt(array $d): string
+{
+    $m = preg_replace('/^.* - /', '', trim((string) ($d['magasin'] ?? ''))) ?: '';
+    if ($m === '' && function_exists('viMagasins')) { try { $m = viMagasins()[(string) ($d['shop'] ?? '')]['court'] ?? ''; } catch (Throwable $e) { $m = ''; } }
+    return $m !== '' ? $m : 'magasin ' . ((string) ($d['shop'] ?? '') !== '' ? $d['shop'] : '?');
+}
+
+/** Un texte coupé à `$max` caractères entre deux mots. Fonction pure. */
+function hdkCoupe(string $t, int $max): string
+{
+    $t = trim((string) preg_replace('/\s+/u', ' ', $t));
+    return mb_strlen($t) <= $max ? $t : hdkResume($t, $max);
+}
+
+/**
+ * Le SMS de relance d'une personne : une demande (avec son rang, le consultant, la date limite, la référence), ou
+ * plusieurs (une ligne chacune, 5 au plus). Le consultant n'est pas nommé quand c'est le destinataire. Sans lien.
+ * Fonction pure.
+ *
+ * @param list<array{d: array, rang: int}> $lot
+ */
+function hdkRelanceTexte(array $lot, array $dest, array $rel, string $auj): string
+{
+    $n = count($lot);
+    $qualif = HDK_RELANCES_QUELLES[$rel['quelles']] ?? 'sans réponse';
+    $age = static fn (array $d): int => max(0, (int) round((strtotime($auj . ' 12:00') - strtotime(substr((string) $d['cree'], 0, 10) . ' 12:00')) / 86400));
+    $qui = static function (array $d) use ($dest): string {
+        $c = trim((string) ($d['consultant'] ?? ''));
+        if ($c === '') { return ', pas de consultant'; }
+        return hdkEstConsultant($dest, $c) ? '' : ', ' . $c;
+    };
+    if ($n === 1) {
+        $d = $lot[0]['d']; $rang = (int) $lot[0]['rang'];
+        $ech = empty($d['echeance']) ? ', pas de date limite' : (!empty($d['enRetard']) ? ', date limite dépassée de ' . abs((int) $d['joursRestants']) . ' j' : ', date limite ' . date('d/m', strtotime($d['echeance'])));
+        $ref = preg_replace('/^CASE-/', '', (string) ($d['ref'] ?? ''));
+        return hdkGsm('Relance' . ($rang > 1 ? ' (' . $rang . 'e)' : '') . ' - 1 demande ' . $qualif . "\n"
+            . hdkCourt($d) . ' (' . ($d['domaineNom'] ?? '') . ') : ' . hdkCoupe((string) $d['titre'], 120) . ' - ' . $age($d) . ' j' . $qui($d) . $ech . '.' . ($ref !== '' ? ' Réf. ' . $ref : ''));
+    }
+    $l = ['Relance - ' . $n . ' demandes ' . $qualif];
+    foreach (array_slice($lot, 0, HDK_RELANCES_LISTE) as $i => $x) {
+        $d = $x['d'];
+        $l[] = ($i + 1) . '. ' . hdkCourt($d) . ' (' . ($d['domaineNom'] ?? '') . ') : ' . hdkCoupe((string) $d['titre'], 60) . ' - ' . $age($d) . ' j' . $qui($d) . (!empty($d['enRetard']) ? ', en retard' : '');
+    }
+    if ($n > HDK_RELANCES_LISTE) { $l[] = '+ ' . ($n - HDK_RELANCES_LISTE) . ' autre' . ($n - HDK_RELANCES_LISTE > 1 ? 's' : ''); }
+    return hdkGsm(implode("\n", $l));
+}
+
+/** Le journal des relances d'une liste de demandes : [case_id => {n, derniere, envois[{le, manuel, a[{nom, ok, motif}]}]}]. */
+function hdkRelancesJournal(array $caseIds): array
+{
+    $ids = array_values(array_filter(array_map('intval', $caseIds)));
+    if ($ids === []) { return []; }
+    hdkRelancesTables();
+    $out = [];
+    foreach (Db::rows('SELECT case_id, le, a_nom, ok, motif, manuel FROM con_hdk_relance WHERE case_id IN (' . implode(',', $ids) . ') ORDER BY le, id') as $r) {
+        $c = (int) $r['case_id']; $le = (string) $r['le'];
+        $out[$c] ??= ['n' => 0, 'derniere' => null, 'envois' => []];
+        if (!isset($out[$c]['envois'][$le])) { $out[$c]['envois'][$le] = ['le' => $le, 'manuel' => (bool) (int) $r['manuel'], 'a' => []]; $out[$c]['n']++; $out[$c]['derniere'] = $le; }
+        $out[$c]['envois'][$le]['a'][] = ['nom' => (string) $r['a_nom'], 'ok' => (bool) (int) $r['ok'], 'motif' => $r['motif']];
+    }
+    foreach ($out as &$x) { $x['envois'] = array_values($x['envois']); } unset($x);
+    return $out;
+}
+
+/** Les demandes dont les relances sont suspendues : [case_id => {le, par}]. */
+function hdkRelancesSuspendues(array $caseIds): array
+{
+    $ids = array_values(array_filter(array_map('intval', $caseIds)));
+    if ($ids === []) { return []; }
+    hdkRelancesTables();
+    $out = [];
+    foreach (Db::rows('SELECT case_id, relance_suspendue, relance_suspendue_par FROM con_hdk_demande WHERE relance_suspendue IS NOT NULL AND case_id IN (' . implode(',', $ids) . ')') as $r) {
+        $out[(int) $r['case_id']] = ['le' => (string) $r['relance_suspendue'], 'par' => (string) $r['relance_suspendue_par']];
+    }
+    return $out;
+}
+
+/** La dernière relance partie (pour le bloc « SMS au bureau ») : {le, demandes, a[{nom, ok}]}, et le nombre de SMS. */
+function hdkDerniereRelance(): ?array
+{
+    try {
+        hdkRelancesTables();
+        $r = Db::row('SELECT MAX(le) AS le FROM con_hdk_relance');
+        if ($r === null || $r['le'] === null) { return null; }
+        $rows = Db::rows('SELECT case_ref, a_nom, ok FROM con_hdk_relance WHERE le = ?', [$r['le']]);
+        $a = [];
+        foreach ($rows as $x) { $a[(string) $x['a_nom']] = ($a[(string) $x['a_nom']] ?? true) && (bool) (int) $x['ok']; }
+        $n = Db::row('SELECT COUNT(DISTINCT CONCAT(le, \'|\', a_tel)) AS n FROM con_hdk_relance WHERE ok = 1');
+        return ['le' => (string) $r['le'], 'demandes' => count(array_unique(array_column($rows, 'case_ref'))), 'a' => array_map(static fn ($k, $v) => ['nom' => $k, 'ok' => $v], array_keys($a), array_values($a)),
+            'sms' => (int) ($n['n'] ?? 0)];
+    } catch (Throwable $e) { return null; }
+}
+
+/** Les demandes du panel, lues avec le compte administrateur du cockpit (null : le panel ne répond pas). */
+function hdkLireDemandes(): ?array
+{
+    hdkAdmin();
+    $r = PanelApi::get('/cases');
+    if (!is_array($r)) { return null; }
+    return array_map('hdkDemande', array_values(array_filter(PanelApi::liste($r) ?: (array_is_list($r) ? $r : []), 'is_array')));
+}
+
+/**
+ * Ce que le cockpit montre des relances d'une demande : les envois, la prochaine (jour, heure, à qui) ou pourquoi elle
+ * n'en aura plus. `$d` porte déjà sa date limite (hdkEcheanceVue).
+ */
+function hdkRelanceVue(array $d, ?array $j, ?array $susp, array $R, string $depuis): array
+{
+    $rel = $R['relances'];
+    $n = (int) ($j['n'] ?? 0);
+    $arret = $rel['actif'] ? hdkRelanceArret($d, $rel, $n, $susp) : 'relances coupées';
+    $prochaine = $arret === null ? hdkProchaineRelance($d, $rel, $j['derniere'] ?? null, $depuis) : null;
+    return ['n' => $n, 'envois' => $j['envois'] ?? [], 'arret' => $arret, 'suspendue' => $susp, 'prochaine' => $prochaine, 'heure' => $rel['heure'],
+        'a' => $prochaine !== null ? array_map(static fn ($x) => $x['nom'] !== '' ? $x['nom'] : smsLisible($x['num']), hdkRelanceDestinataires($d, $R)) : []];
+}
+
+/**
+ * Les relances à venir, regroupées comme elles partiront (un SMS par personne et par jour) : [{jour, heure, a, demandes[{ref,
+ * titre, magasin, rang}], texte}], les `$max` premiers jours. `$D` : les demandes avec leur vue de relance (`relances`).
+ */
+function hdkRelancesAVenir(array $D, array $R, string $auj, int $max = 3): array
+{
+    $parJour = [];
+    foreach ($D as $d) {
+        $v = $d['relances'] ?? null;
+        if (!is_array($v) || $v['prochaine'] === null) { continue; }
+        $jour = max($v['prochaine'], $R['relances']['ouvres'] ? hdkOuvre($auj) : $auj);
+        foreach (hdkRelanceDestinataires($d, $R) as $dest) { $parJour[$jour][$dest['num']]['dest'] = $dest; $parJour[$jour][$dest['num']]['lot'][] = ['d' => $d, 'rang' => $v['n'] + 1]; }
+    }
+    ksort($parJour);
+    $out = [];
+    foreach (array_slice($parJour, 0, $max, true) as $jour => $g) {
+        foreach ($g as $x) {
+            $lots = $R['relances']['regrouper'] ? [$x['lot']] : array_map(static fn ($i) => [$i], $x['lot']);
+            foreach ($lots as $lot) {
+                $out[] = ['jour' => $jour, 'heure' => $R['relances']['heure'], 'a' => $x['dest']['nom'] !== '' ? $x['dest']['nom'] : smsLisible($x['dest']['num']),
+                    'demandes' => array_map(static fn ($i) => ['ref' => $i['d']['ref'], 'titre' => $i['d']['titre'], 'magasin' => hdkCourt($i['d']), 'rang' => $i['rang'], 'consultant' => $i['d']['consultant']], $lot),
+                    'texte' => hdkRelanceTexte($lot, $x['dest'], $R['relances'], $jour)];
+            }
+        }
+    }
+    return $out;
+}
+
+/**
+ * Envoie un lot de relances : un SMS par personne (ou par demande), une ligne de journal par demande et par personne,
+ * toutes à la même heure. Rend {sms, ok, ko[], demandes}.
+ *
+ * @param list<array{d: array, rang: int}> $dues
+ */
+function hdkRelancesEnvoyer(array $dues, array $R, string $maintenant, bool $manuel = false): array
+{
+    hdkRelancesTables();
+    $le = substr($maintenant, 0, 16) . ':00';
+    $parTel = [];
+    foreach ($dues as $x) { foreach (hdkRelanceDestinataires($x['d'], $R) as $dest) { $parTel[$dest['num']]['dest'] = $dest; $parTel[$dest['num']]['lot'][] = $x; } }
+    $out = ['sms' => 0, 'ok' => 0, 'ko' => [], 'demandes' => count($dues), 'a' => []];
+    foreach ($parTel as $num => $g) {
+        $lots = $R['relances']['regrouper'] ? [$g['lot']] : array_map(static fn ($i) => [$i], $g['lot']);
+        $nom = $g['dest']['nom'] !== '' ? $g['dest']['nom'] : smsLisible($num);
+        foreach ($lots as $lot) {
+            $r = smsPartir($num, hdkRelanceTexte($lot, $g['dest'], $R['relances'], substr($maintenant, 0, 10)));
+            $out['sms']++;
+            if ($r['ok']) { $out['ok']++; $out['a'][$nom] = true; } else { $out['ko'][] = $nom . ' (' . $r['erreur'] . ')'; }
+            foreach ($lot as $x) {
+                Db::exec('INSERT INTO con_hdk_relance (case_id, case_ref, shop_id, le, rang, a_nom, a_tel, ok, motif, manuel) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                    [(int) $x['d']['id'], (string) $x['d']['ref'], (string) $x['d']['shop'], $le, (int) $x['rang'], mb_substr($nom, 0, 80), $num, $r['ok'] ? 1 : 0, $r['ok'] ? null : mb_substr((string) $r['erreur'], 0, 255), $manuel ? 1 : 0]);
+            }
+        }
+    }
+    $out['a'] = array_keys($out['a']);
+    return $out;
+}
+
+/**
+ * L'horloge des relances : les demandes dont la relance est due partent. Hors des heures (avant l'heure réglée, après
+ * 20:00, le week-end en jours ouvrés), sans fournisseur SMS ou relances coupées, rien n'est lu. `$D` : pour les tests.
+ */
+function hdkRelancesHorloge(?string $maintenant = null, ?array $D = null): array
+{
+    $maintenant = $maintenant ?? date('Y-m-d H:i');
+    $auj = substr($maintenant, 0, 10);
+    $R = hdkSmsReglage(); $rel = $R['relances'];
+    if (!$rel['actif']) { return ['ok' => true, 'rien' => 'relances coupées']; }
+    if (!function_exists('smsPartir') || !function_exists('smsFournisseur') || smsFournisseur() === null) { return ['ok' => true, 'rien' => 'aucun fournisseur SMS réglé']; }
+    if (!hdkRelanceDue($auj, $rel, $maintenant)) { return ['ok' => true, 'rien' => 'hors des heures des relances']; }
+    $verrou = true;
+    try { $l = Db::row('SELECT GET_LOCK(\'hdk_relances\', 0) AS l'); $verrou = $l === null || (int) $l['l'] === 1; } catch (Throwable $e) { /* sans verrou (SQLite) */ }
+    if (!$verrou) { return ['ok' => true, 'rien' => 'une horloge tourne déjà']; }
+    try {
+        $D = $D ?? hdkLireDemandes();
+        if ($D === null) { return ['ok' => false, 'error' => 'le helpdesk du panel n’a pas répondu (' . (PanelApi::$lastError ?? 'pas de réponse') . ')']; }
+        $depuis = hdkRelancesDepuis();
+        $ids = array_column($D, 'id');
+        $J = hdkRelancesJournal($ids); $S = hdkRelancesSuspendues($ids); $E = hdkEcheances($ids);
+        $dues = [];
+        foreach ($D as $d) {
+            $d += hdkEcheanceVue($E[$d['id']] ?? null, $d['ouverte'], $auj);
+            $n = (int) ($J[$d['id']]['n'] ?? 0);
+            if (hdkRelanceArret($d, $rel, $n, $S[$d['id']] ?? null) !== null) { continue; }
+            $p = hdkProchaineRelance($d, $rel, $J[$d['id']]['derniere'] ?? null, $depuis);
+            if ($p !== null && hdkRelanceDue($p, $rel, $maintenant) && hdkRelanceDestinataires($d, $R) !== []) { $dues[] = ['d' => $d, 'rang' => $n + 1]; }
+        }
+        if ($dues === []) { return ['ok' => true, 'rien' => 'aucune relance due']; }
+        $r = hdkRelancesEnvoyer($dues, $R, $maintenant);
+        hdkJournal('Relances : ' . $r['demandes'] . ' demande' . ($r['demandes'] > 1 ? 's' : '') . ', ' . $r['ok'] . ' SMS partis' . ($r['a'] ? ' (' . implode(', ', $r['a']) . ')' : '') . ($r['ko'] ? ' ; non partis : ' . implode(', ', $r['ko']) : ''));
+        return ['ok' => true] + $r;
+    } finally {
+        try { Db::row('SELECT RELEASE_LOCK(\'hdk_relances\') AS l'); } catch (Throwable $e) { /* pas de verrou */ }
+    }
+}
+
+/** GET /helpdesk/relances/cron?jeton= — l'horloge des relances (le jeton des visites, comme leur horloge). */
+function ep_helpdesk_relances_cron(): array
+{
+    $jeton = (string) ($_GET['jeton'] ?? '');
+    if ($jeton === '' || !hash_equals((string) setting('visitesJeton', ''), $jeton)) { http_response_code(403); return ['error' => 'jeton invalide']; }
+    return hdkRelancesHorloge();
+}
+
+/**
+ * POST /helpdesk/demandes/{id}/relances {action: suspendre | reprendre | maintenant, shop?} — suspendre ou reprendre les
+ * relances d'une demande, ou la relancer tout de suite (le compte repart de là).
+ */
+function wr_helpdesk_relances(int $id): array
+{
+    hdkRelancesTables();
+    $b = body(); $action = (string) ($b['action'] ?? '');
+    if ($id <= 0) { http_response_code(422); return ['ok' => false, 'error' => 'Demande inconnue.']; }
+    $qui = function_exists('accesIdentite') ? trim((string) ((accesIdentite() ?? [])['nom'] ?? '')) : '';
+    $qui = mb_substr($qui !== '' ? $qui : 'Cockpit', 0, 120);
+    if ($action === 'suspendre' || $action === 'reprendre') {
+        $quand = $action === 'suspendre' ? date('Y-m-d H:i:s') : null;
+        if (Db::row('SELECT case_id FROM con_hdk_demande WHERE case_id = ?', [$id]) !== null) {
+            Db::exec('UPDATE con_hdk_demande SET relance_suspendue = ?, relance_suspendue_par = ? WHERE case_id = ?', [$quand, $quand !== null ? $qui : '', $id]);
+        } elseif ($quand !== null) {
+            Db::exec('INSERT INTO con_hdk_demande (case_id, shop_id, passage, photos, cree_le, relance_suspendue, relance_suspendue_par) VALUES (?,?,?,?,?,?,?)',
+                [$id, preg_replace('/\D/', '', (string) ($b['shop'] ?? '')) ?? '', 0, null, $quand, $quand, $qui]);
+        }
+        hdkJournal('Demande ' . (trim((string) ($b['ref'] ?? '')) ?: $id) . ' : relances ' . ($quand !== null ? 'suspendues' : 'reprises') . ' (' . $qui . ')');
+        return ['ok' => true];
+    }
+    if ($action !== 'maintenant') { http_response_code(422); return ['ok' => false, 'error' => 'Action inconnue : suspendre, reprendre ou maintenant.']; }
+    if (!function_exists('smsFournisseur') || smsFournisseur() === null) { return ['ok' => false, 'error' => 'Aucun fournisseur SMS réglé (ni jeton dans MétaDonnée › Alertes SMS, ni clé « smsapi_token » dans erp_cles).']; }
+    $D = hdkLireDemandes();
+    $d = null;
+    foreach ($D ?? [] as $x) { if ($x['id'] === $id) { $d = $x; break; } }
+    if ($d === null) { return ['ok' => false, 'error' => 'Le panel n’a pas rendu cette demande (' . (PanelApi::$lastError ?? 'pas de réponse') . ').']; }
+    $d += hdkEcheanceVue(hdkEcheances([$id])[$id] ?? null, $d['ouverte']);
+    $R = hdkSmsReglage();
+    if (hdkRelanceDestinataires($d, $R) === []) { return ['ok' => false, 'error' => 'Aucun numéro valable dans le réglage des SMS au bureau.']; }
+    $n = (int) (hdkRelancesJournal([$id])[$id]['n'] ?? 0);
+    $r = hdkRelancesEnvoyer([['d' => $d, 'rang' => $n + 1]], $R, date('Y-m-d H:i'), true);
+    hdkJournal('Demande ' . $d['ref'] . ' relancée maintenant (' . $qui . ') : ' . ($r['ok'] ? 'SMS à ' . implode(', ', $r['a']) : 'non partie') . ($r['ko'] ? ' ; ' . implode(', ', $r['ko']) : ''));
+    return $r['ok'] > 0 ? ['ok' => true, 'a' => $r['a'], 'avertissement' => $r['ko'] ? 'Non parti : ' . implode(', ', $r['ko']) : null] : ['ok' => false, 'error' => 'SMS non parti : ' . implode(', ', $r['ko'])];
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * L'accueil du cockpit (21/11/2026, demande de Sam : les demandes « se mettent dans la liste de suivi tous les jours »,
+ * choix : « Accueil du cockpit ») : la carte « Demandes à traiter » de l'écran Résultat, relue à chaque ouverture.
+ * ------------------------------------------------------------------------------------------- */
+
+/** GET /helpdesk/a-traiter — les demandes pas encore en cours, de la plus ancienne à la plus récente. */
+function ep_helpdesk_a_traiter(): array
+{
+    $D = hdkLireDemandes();
+    if ($D === null) { return ['indispo' => true, 'motif' => 'le helpdesk du panel n’a pas répondu (' . (PanelApi::$lastError ?? 'pas de réponse') . ')']; }
+    $auj = date('Y-m-d');
+    $N = array_values(array_filter($D, static fn ($d) => $d['statut'] === 'NEW'));
+    $U = hdkUrgentes(array_column($N, 'id'));
+    // Les urgentes en tête (21/11/2026), puis de la plus ancienne à la plus récente.
+    usort($N, static fn ($a, $b) => [(int) isset($U[$b['id']]), $a['cree']] <=> [(int) isset($U[$a['id']]), $b['cree']]);
+    $relances = [];
+    try {
+        $J = hdkRelancesJournal(array_column($N, 'id'));
+        foreach ($J as $id => $x) { $relances[$id] = $x['n']; }
+    } catch (Throwable $e) { /* sans journal des relances */ }
+    $age = static fn (array $d): int => max(0, (int) round((strtotime($auj . ' 12:00') - strtotime(substr($d['cree'], 0, 10) . ' 12:00')) / 86400));
+    return ['n' => count($N), 'lu' => date('c'), 'demandes' => array_map(static fn ($d) => ['id' => $d['id'], 'ref' => $d['ref'], 'titre' => $d['titre'], 'magasin' => hdkCourt($d),
+        'domaine' => $d['domaineNom'], 'cree' => substr($d['cree'], 0, 10), 'age' => $age($d), 'consultant' => $d['consultant'], 'relances' => $relances[$d['id']] ?? 0,
+        'urgent' => isset($U[$d['id']])], $N), 'urgentes' => count($U)];
 }

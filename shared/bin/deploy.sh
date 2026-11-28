@@ -724,6 +724,8 @@ chmod +x "$TARGET_DIR/marketing/bin/metadonnee_cron.sh"
 chmod +x "$TARGET_DIR/consultant/bin/stock_cron.sh"
 chmod +x "$TARGET_DIR/pilotage-reseau/bin/hr_dimona_cron.sh"
 chmod +x "$TARGET_DIR/panel/bin/boite_cron.sh"
+chmod +x "$TARGET_DIR/consultant/bin/helpdesk_cron.sh"
+chmod +x "$TARGET_DIR/formation/bin/examens_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -746,6 +748,12 @@ chmod +x "$TARGET_DIR/panel/bin/boite_cron.sh"
   # La boîte mail des magasins : les messages automatiques (accusé, relance d'une offre, rappel la veille), toutes les
   # 10 minutes ; rien tant qu'aucun magasin n'en a allumé un (src/franchise/boite_mail.php).
   echo "*/10 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/panel/bin/boite_cron.sh >/dev/null 2>&1"
+  # Le helpdesk des franchisés : les relances SMS des demandes sans réponse (tous les 7 jours, à 08:30 les jours
+  # ouvrés) ; hors de ces heures, l'appel ne lit rien (consultant/src/helpdesk.php).
+  echo "*/10 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/consultant/bin/helpdesk_cron.sh >/dev/null 2>&1"
+  # Examens théoriques : la relecture mensuelle des sources (chaque jour à 06:20 ; ne relit que si rien ne l'a été ce
+  # mois-ci — formation/src/examens.php, exReleveAuto).
+  echo "20 6 * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/formation/bin/examens_cron.sh >/dev/null 2>&1"
   # Module RH / Dimona : chaque minute, la relecture des déclarations en attente (5 s, 15 s, 30 s… : le
   # script tourne 55 s) et l'alerte des certificats à moins de 60 jours. Sous www-data : c'est lui qui
   # possède le dossier privé et la clé maître du module.

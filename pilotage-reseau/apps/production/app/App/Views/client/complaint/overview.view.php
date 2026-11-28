@@ -172,6 +172,14 @@ $nextShipping = $next_shipping ?? [];
                                                     <?php if ($waitDays !== null): ?>
                                                         <span class="at-pill <?= $waitClass ?>"><i class="bi bi-clock"></i> czeka <?= $waitDays ?> <?= $waitDays === 1 ? 'dzień' : 'dni' ?></span>
                                                     <?php endif; ?>
+                                                    <?php /* [367] Grupa produkcji widziała reklamację (przycisk « Widziane » na tablecie grupy). */ ?>
+                                                    <?php if ($accStatus === 'ACCEPTED' && !$isNonProduct): ?>
+                                                        <?php if (!empty($complaint['seen_label'])): ?>
+                                                            <span class="at-pill at-pill-ok" title="Grupa widziała na tablecie"><i class="bi bi-eye"></i> <?= htmlspecialchars($complaint['seen_label']) ?></span>
+                                                        <?php else: ?>
+                                                            <span class="at-pill at-pill-warn" title="Grupa produkcji jeszcze nie potwierdziła na tablecie"><i class="bi bi-eye-slash"></i> grupa nie widziała</span>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <div class="text-muted small">
                                                     <i class="bi bi-calendar-event me-1"></i>
@@ -400,14 +408,13 @@ $nextShipping = $next_shipping ?? [];
                                                         </h6>
 
                                                         <?php if ($hasAtt): ?>
-                                                            <div class="d-flex flex-wrap gap-2">
+                                                            <?php /* [367] Zdjęcia od razu (wczytane po rozwinięciu reklamacji) ; dotknięcie → powiększenie, inny plik → pobranie. */ ?>
+                                                            <div class="rk-photos" data-att-thumbs>
                                                                 <?php foreach ($attachments as $attIdx => $attachment): ?>
-                                                                    <button class="btn btn-outline-primary btn-sm"
-                                                                            onclick="showAttachment('<?= htmlspecialchars($attachment['id']) ?>')">
-                                                                        <i class="bi bi-file-earmark me-1"></i>Załącznik <?= $attIdx + 1 ?>
-                                                                    </button>
+                                                                    <a href="#" class="rk-photo" data-att-id="<?= (int) $attachment['id'] ?>" data-att-n="<?= $attIdx + 1 ?>"><span>Wczytywanie…</span></a>
                                                                 <?php endforeach; ?>
                                                             </div>
+                                                            <div class="rk-zoom" data-att-zoom hidden></div>
                                                         <?php else: ?>
                                                             <div class="text-muted text-sm fst-italic">Brak załączników.</div>
                                                         <?php endif; ?>
@@ -793,6 +800,43 @@ $nextShipping = $next_shipping ?? [];
                 if (btn) btn.disabled = false;
             });
     }
+
+    // [367] Zdjęcia reklamacji na liście : adresy podpisane z serwera magazynu, ładowane przy pierwszym rozwinięciu.
+    // Klucz pliku bez rozszerzenia → każdy załącznik próbujemy jako obraz ; nie-obraz → odnośnik « Załącznik N ».
+    function loadAttachmentThumbs(scope) {
+        scope.querySelectorAll('[data-att-id]:not([data-att-done])').forEach(async (a) => {
+            a.dataset.attDone = '1';
+            let url = null;
+            try {
+                const r = await fetch('<?= ROOT ?>/ajax/franchise-complaints/attachment/' + encodeURIComponent(a.dataset.attId) + '/presigned-url', {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+                const j = await r.json().catch(() => null);
+                url = r.ok && j ? (j.url || (j.data && j.data.url) || null) : null;
+            } catch (e) { url = null; }
+            if (!url) { a.innerHTML = '<span>Brak podglądu</span>'; return; }
+            a.dataset.attUrl = url;
+            const img = new Image();
+            img.alt = 'Zdjęcie ' + a.dataset.attN;
+            img.onload = () => { a.innerHTML = ''; a.appendChild(img); a.classList.add('is-img'); };
+            img.onerror = () => { a.classList.add('is-file'); a.innerHTML = '<i class="bi bi-file-earmark"></i><span>Załącznik ' + a.dataset.attN + '</span>'; };
+            img.src = url;
+        });
+    }
+    document.addEventListener('shown.bs.collapse', (e) => { if (e.target.querySelector('[data-att-thumbs]')) loadAttachmentThumbs(e.target); });
+    document.addEventListener('click', (e) => {
+        const z = e.target.closest('[data-att-zoom]');
+        if (z) { z.hidden = true; z.innerHTML = ''; return; }
+        const a = e.target.closest('[data-att-id]');
+        if (!a) return;
+        e.preventDefault();
+        const zoom = a.closest('.card-body').querySelector('[data-att-zoom]');
+        if (a.classList.contains('is-img') && zoom) {
+            const u = a.dataset.attUrl.replace(/"/g, '&quot;');
+            zoom.innerHTML = '<img src="' + u + '" alt=""><a href="' + u + '" target="_blank" rel="noopener" class="rk-zoom-open">Otwórz oryginał ↗</a>';
+            zoom.hidden = false;
+            return;
+        }
+        if (a.dataset.attUrl) window.open(a.dataset.attUrl, '_blank', 'noopener'); else showAttachment(a.dataset.attId);
+    });
 
     function showAttachment(id) {
         api(`/ajax/franchise-complaints/attachment/${id}/presigned-url`, {

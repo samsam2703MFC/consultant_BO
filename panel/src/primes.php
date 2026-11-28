@@ -567,6 +567,8 @@ function primesHeuresMois(string $m): array
 {
     [$du, $au] = venteBornes($m);
     $duree = '((TIME_TO_SEC(s.end_hour) - TIME_TO_SEC(s.start_hour) + 86400) % 86400)';
+    // Les heures travaillées : sans les services d'une absence payée de Mon équipe (27/11/2026, panel/src/equipe_absences.php).
+    $sansAbs = function_exists('eqaSansAbsencesSql') ? eqaSansAbsencesSql('s') : '';
     // Le magasin de chacune vient du référentiel (table locale et panel) : une embauche récente a
     // déjà des heures au planning avant d'être dans la table locale, une jointure la perdrait.
     $emps = venteEmployes();
@@ -577,7 +579,7 @@ function primesHeuresMois(string $m): array
                                   SUM(CASE WHEN s.work_date < ? THEN ' . $duree . ' ELSE 0 END) / 3600 hf,
                                   MAX(s.work_date) fin
                              FROM franchisee_employee_schedule s
-                            WHERE s.work_date >= ? AND s.work_date < ?
+                            WHERE s.work_date >= ? AND s.work_date < ?' . $sansAbs . '
                             GROUP BY s.id_employee',
             [date('Y-m-d'), substr($du, 0, 10), substr($au, 0, 10)]) as $r) {
             $id = (int) $r['id_employee'];
@@ -1084,11 +1086,13 @@ function primesMoi(int $emp, string $m, bool $frais = false, bool $leger = false
 function primesHeuresSemaines(int $emp, string $du, string $au): array
 {
     $duree = '((TIME_TO_SEC(s.end_hour) - TIME_TO_SEC(s.start_hour) + 86400) % 86400)';
+    // Les heures travaillées : sans les services d'une absence payée de Mon équipe (27/11/2026, panel/src/equipe_absences.php).
+    $sansAbs = function_exists('eqaSansAbsencesSql') ? eqaSansAbsencesSql('s') : '';
     $out = [];
     try {
         foreach (Db::rows('SELECT YEARWEEK(s.work_date, 3) sem, SUM(' . $duree . ') / 3600 h
                              FROM franchisee_employee_schedule s
-                            WHERE s.id_employee = ? AND s.work_date >= ? AND s.work_date <= ?
+                            WHERE s.id_employee = ? AND s.work_date >= ? AND s.work_date <= ?' . $sansAbs . '
                             GROUP BY YEARWEEK(s.work_date, 3)', [$emp, $du, $au]) as $r) {
             $yw = (string) $r['sem'];
             $lundi = date('Y-m-d', strtotime(substr($yw, 0, 4) . 'W' . substr($yw, 4, 2)));
@@ -1119,10 +1123,12 @@ function primesSemainesMoyennes(): array
     // Les heures de chacune, semaine par semaine, en une lecture du planning.
     $heures = [];
     $duree = '((TIME_TO_SEC(s.end_hour) - TIME_TO_SEC(s.start_hour) + 86400) % 86400)';
+    // Les heures travaillées : sans les services d'une absence payée de Mon équipe (27/11/2026, panel/src/equipe_absences.php).
+    $sansAbs = function_exists('eqaSansAbsencesSql') ? eqaSansAbsencesSql('s') : '';
     try {
         foreach (Db::rows('SELECT s.id_employee emp, YEARWEEK(s.work_date, 3) sem, SUM(' . $duree . ') / 3600 h
                              FROM franchisee_employee_schedule s
-                            WHERE s.work_date >= ? AND s.work_date <= ?
+                            WHERE s.work_date >= ? AND s.work_date <= ?' . $sansAbs . '
                             GROUP BY s.id_employee, YEARWEEK(s.work_date, 3)', [$du, $au]) as $r) {
             $yw = (string) $r['sem'];
             $heures[date('Y-m-d', strtotime(substr($yw, 0, 4) . 'W' . substr($yw, 4, 2)))][(int) $r['emp']] = (float) $r['h'];
@@ -1505,8 +1511,11 @@ function primesAnnee(int $y, bool $frais = false): array
             if (!isset($pers[$id])) { $pers[$id] = ['id' => $id, 'nom' => $p['nom'], 'shopId' => (string) $p['shopId'], 'magasinNom' => $p['magasinNom'], 'total' => 0.0, 'mois' => [], 'cases' => []]; }
             foreach ($g as $k => $x) {
                 $libDe[$k] = $x['lib'];
-                $c = $pers[$id]['cases'][$k] ?? ['montant' => 0.0, 'fois' => 0];
-                $pers[$id]['cases'][$k] = ['montant' => round($c['montant'] + $x['montant'], 2), 'fois' => $c['fois'] + 1];
+                $c = $pers[$id]['cases'][$k] ?? ['montant' => 0.0, 'fois' => 0, 'foisClos' => 0];
+                // `foisClos` : les mois clos seulement (25/11/2026) — l'anneau de l'année divise par les mois clos ; avec le
+                // mois en cours, il pouvait afficher 10 / 10 malgré un mois manqué, ou dépasser 100 %.
+                $pers[$id]['cases'][$k] = ['montant' => round($c['montant'] + $x['montant'], 2), 'fois' => $c['fois'] + 1,
+                    'foisClos' => ($c['foisClos'] ?? 0) + ($m === date('Y-m') ? 0 : 1)];
                 $pers[$id]['total'] = round($pers[$id]['total'] + $x['montant'], 2);
                 $totalM += $x['montant'];
             }

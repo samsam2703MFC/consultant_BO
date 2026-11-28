@@ -61,7 +61,7 @@
   --prize: #B0792A;      /* or : attention, interrupteur allumé, prime */
   --prize-soft: #F6E7CE; /* fond d'avertissement */
   --prize-ink: #7A5207;  /* texte d'avertissement */
-  --stop: #A32014;       /* arrêt : uniquement une valeur devenue négative (marge…) */
+  --stop: #A32014;       /* arrêt : une valeur devenue négative (marge…), le palier « rouge » d'un budget */
   --stop-soft: #F7E0DC;  /* fond de l'arrêt */
 
   /* Réservées à l'identification — jamais pour un texte courant ni un fond de bloc */

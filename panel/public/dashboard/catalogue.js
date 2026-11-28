@@ -66,7 +66,7 @@
     ['Gammes', 'mes gammes, mes produits, à mes prix'],
     ['Présentation', 'catégorie par catégorie, puis l’ordre'],
     ['Validation', 'ce qui s’imprimera'],
-    ['Export PDF', 'imprimer, QR, affiche'],
+    ['Export PDF', 'imprimer, QR, affiche, bon'],
   ];
   const CADENAS = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.2" width="8" height="5.8" rx="1.2" fill="currentColor"/><path d="M4 5.4V3.8a2 2 0 0 1 4 0v1.6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
 
@@ -162,7 +162,9 @@
     appel('GET', chemin(S) + '/document' + qs(S) + '&lang=' + S.lang)
       .then(j => { S.doc[k] = j.data; }).catch(e => { delete S.doc[k]; S.docErr[k] = e; }).finally(() => rendre(S));
   }
-  function oublierDocs(S) { S.doc = {}; S.docErr = {}; }
+  // Les points de la Validation dépendent du catalogue comme ses pages : ils se relisent avec eux (25/11/2026 : ils
+  // restaient ceux de la première visite après un changement de produits, de pages, de nombre de pages ou de format).
+  function oublierDocs(S) { S.doc = {}; S.docErr = {}; S.verif = {}; S.verifErr = {}; }
 
   /* --- les données dérivées ------------------------------------------------------------------------------------- */
   const produits = S => (S.prod && S.prod.products) || [];
@@ -251,24 +253,69 @@
     // Pleine page (17/11/2026) : le produit choisi pour elle lui est réservé — les pages d'avant ne le prennent pas.
     const reserve = new Map();
     (S.pages || []).forEach((p, i) => { if (p.layout === 'pleine' && p.product != null && prods.some(x => x.id === +p.product) && !reserve.has(+p.product)) { reserve.set(+p.product, i); } });
-    const out = (S.pages || []).map((p, i) => {
+    // Gamme par gamme (Marketing v1.23, `fillBlocks`) : les pages des catégories d'abord, puis la liste d'une présentation
+    // (les produits de sa gamme restés sans page), puis les pages libres (ni catégorie, ni gamme), en dernier, ce qui n'a
+    // de place nulle part — une page libre restée vide devient la page de photo ou d'illustration.
+    const tour = p => !enBlocs(S) ? 0 : estIntercalaire(p) ? 2 : estPres(p.layout) ? 1 : 0;
+    const ordre = (S.pages || []).map((p, i) => i).sort((a, b) => tour(S.pages[a]) - tour(S.pages[b]) || a - b);
+    const parIndex = {}, compte = {};
+    const garnir = (p, i) => {
       const cap = LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 6;
       const liste = estPres(p.layout) ? prods : parCat;
       let n = 0; const mes = [];
       const mien = p.layout === 'pleine' ? Array.from(reserve).find(e => e[1] === i) : null;
-      if (mien) { pris.add(mien[0]); parPage.push([mien[0]]); return 1; }
+      if (mien) { pris.add(mien[0]); parIndex[i] = [mien[0]]; return 1; }
       for (const x of liste) {
         if (reserve.has(x.id)) { continue; }
         if (n >= cap) { break; }
         if (pris.has(x.id) || (p.category != null && x.cat !== +p.category) || (p.gamme != null && !x.gammes.includes(+p.gamme))) { continue; }
         pris.add(x.id); n++; mes.push(x.id);
       }
-      parPage.push(mes);
+      parIndex[i] = mes;
       return n;
-    });
+    };
+    ordre.forEach(i => { compte[i] = garnir(S.pages[i], i); });
+    const out = (S.pages || []).map((p, i) => compte[i]);
+    (S.pages || []).forEach((p, i) => parPage.push(parIndex[i] || []));
     out.sansPlace = prods.filter(x => !pris.has(x.id)).length;
     out.ids = parPage;   // les produits de chaque page, dans l'ordre : l'aperçu de la page (apercuPage)
     return out;
+  }
+
+  /** Le catalogue est-il rangé gamme par gamme (Marketing v1.23 : `gammeBlocks`, une liste ; null : pages libres) ? */
+  const enBlocs = S => !!(S.cat && Array.isArray(S.cat.gammeBlocks));
+  /** Une page intercalaire (`isSpacer` du Marketing) : ni présentation, ni pleine page, ni catégorie, ni gamme. */
+  const estIntercalaire = p => !!p && !estPres(p.layout) && p.layout !== 'pleine' && p.category == null && p.gamme == null;
+  const TITRE_PRES_MARKETING = 'La présentation de la gamme (photos, disposition, titre, accroche, texte, fond) se règle dans le Marketing, pour tout le réseau : elle ne se modifie pas ici.';
+  /** L'ordre des gammes que disent les pages (gamme par gamme) : celui de leurs présentations, puis celui de leurs pages
+   * de catégories ; une gamme du catalogue sans page garde sa place relative, en fin. */
+  function ordreGammes(S) {
+    const vu = [];
+    (S.pages || []).filter(p => estPres(p.layout) && p.gamme != null).concat((S.pages || []).filter(p => !estPres(p.layout) && p.gamme != null))
+      .forEach(p => { if (!vu.includes(+p.gamme)) { vu.push(+p.gamme); } });
+    const blocs = (S.cat && S.cat.gammeBlocks) || [];
+    return vu.filter(g => blocs.includes(g)).concat(blocs.filter(g => !vu.includes(+g)).map(Number));
+  }
+  /** `gammeBlocks` à envoyer quand l'ordre des gammes a changé dans l'assistant (sinon rien : le Marketing garde le sien). */
+  function blocsCorps(S) {
+    if (!enBlocs(S)) { return null; }
+    const o = ordreGammes(S);
+    return JSON.stringify(o) !== JSON.stringify(S.cat.gammeBlocks.map(Number)) ? o : null;
+  }
+  /** Le groupe d'une gamme (gamme par gamme) qui commence à la page `de` (sa présentation) : la présentation, puis les
+   * pages qui suivent de la même gamme et les pages libres intercalées, jusqu'à la gamme suivante. */
+  function groupeGamme(S, de) {
+    const p = S.pages[de];
+    if (!enBlocs(S) || !p || !estPres(p.layout) || p.gamme == null) { return 1; }
+    let n = 1;
+    while (de + n < S.pages.length) {
+      const q = S.pages[de + n];
+      if (estPres(q.layout) || (q.gamme != null && +q.gamme !== +p.gamme) || (q.gamme == null && !estIntercalaire(q))) { break; }
+      n++;
+    }
+    // Une page libre en fin de groupe reste à sa place (elle tient la parité de la gamme suivante).
+    while (n > 1 && estIntercalaire(S.pages[de + n - 1])) { n--; }
+    return n;
   }
 
   /* --- les gestes ----------------------------------------------------------------------------------------------- */
@@ -309,6 +356,9 @@
     if (S.etape >= 4) { chargerVerif(S); }
     if (S.etape === 5) { S.lien = undefined; chargerLien(S); if (!S.imp.langue || (S.imp.langue !== 'fr+nl' && !S.langs.includes(S.imp.langue))) { S.imp.langue = S.langs.length > 1 ? 'fr+nl' : S.langs[0]; } }
     if (S.etape === 1 && !S.liste) { chargerListe(S); }
+    // Retour à « Mes catalogues » : ouvrir un catalogue a oublié l'aperçu de la carte de la marque (25/11/2026 : elle
+    // restait sur « Lecture… »).
+    if (S.etape === 1 && S.recus) { chargerApercuRecu(S); }
   }
   /** « Le prendre tel quel » : il devient le mien à regarder, vérifier, imprimer, diffuser (étapes 2 et 3 verrouillées). */
   function prendre(S, id) {
@@ -378,6 +428,8 @@
     const corps = { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) };
     if (S.cat && +S.cat.pageCount !== S.nbPages) { corps.pageCount = S.nbPages; }   // l'assistant ajoute ou retire 2 pages avec les pages
     if (S.choixModifie) { corps.products = lignesProduits(S); }   // les produits montrés ou cachés dans l'assistant (étape 3)
+    const blocs = blocsCorps(S);
+    if (blocs) { corps.gammeBlocks = blocs; }   // gamme par gamme : l'ordre des gammes déplacées à l'étape 3 (Marketing v1.23)
     const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { S.choixModifie = false; adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; entrer(S); });
     occupe(S, p, 'Enregistrement de la mise en page');
   }
@@ -392,8 +444,8 @@
     if (!S.cat) { S.nbPages = nb; rendre(S); return; }
     if (nb === S.nbPages) { return; }
     S.proposer = null;
-    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) }) : Promise.resolve();
-    const p = avant.then(() => appel('PUT', '/' + S.cat.id + qs(S), { pageCount: nb })).then(j => { adopter(S, j.data); oublierDocs(S); S.liste = null; })
+    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), Object.assign({ format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) }, blocsCorps(S) ? { gammeBlocks: blocsCorps(S) } : {})) : Promise.resolve();
+    const p = avant.then(() => appel('PUT', '/' + S.cat.id + qs(S), { pageCount: nb })).then(j => { adopter(S, j.data); oublierDocs(S); S.liste = null; entrer(S); })
       .catch(e => { if (e.code === 'CATALOGUE_PAGES_NOT_EMPTY') { S.proposer = nb; } throw e; });
     occupe(S, p, 'Passage à ' + nb + ' pages');
   }
@@ -542,6 +594,8 @@
     return noms.length === refs.length && noms.length ? noms : (src.label ? [src.label] : noms);
   }
   function clic(S, ev) {
+    const m = ev.target.closest('[data-cmac]');
+    if (m && S.el.contains(m)) { montrer(S, m.dataset.cmac); return; }
     const b = ev.target.closest('[data-cm]');
     if (!b || b.disabled || !S.el.contains(b)) { return; }
     const a = b.dataset.cm, v = b.dataset.v;
@@ -633,6 +687,20 @@
       }
     }
     else if (a === 'reessayer') { chargerDoc(S, true); chargerVerif(S, true); }
+    else if (a === 'quoi') {
+      S.quoi = v; S.msg = null; rendre(S);
+      if (v === 'affiche') { const el = S.el.querySelector('.cm-aff'); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+    }
+    else if (a === 'bonLang') { bonEtat(S).langue = v; rendre(S); }
+    else if (a === 'bonMode') { bonEtat(S).mode = v; rendre(S); }
+    else if (a === 'bonUnite') { bonEtat(S).f.lu = v; rendre(S); }
+    else if (a === 'bonPk') { const f = bonEtat(S).f; f.pk = !f.pk; rendre(S); }
+    else if (a === 'bonDv') { const f = bonEtat(S).f; f.dv = !f.dv; rendre(S); }
+    else if (a === 'bonNl') { bonEtat(S).nl = v === '1'; rendre(S); }
+    else if (a === 'bonDateAjout') { bonEtat(S).f.dl.push({ for: '', until: '' }); rendre(S); }
+    else if (a === 'bonDateSuppr') { bonEtat(S).f.dl.splice(+v, 1); rendre(S); }
+    else if (a === 'bonSauver') { enregistrerConditions(S); }
+    else if (a === 'bonPdf') { telechargerBon(S, v === 'pdf' ? 'Le PDF du bon de commande' : 'Le bon de commande'); }
   }
   function saisie(S, ev) {
     const t = ev.target;
@@ -640,8 +708,13 @@
     if (t.dataset.cm === 'rech') { S.rech = t.value; rendreGarde(S, t); }
     if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { S.pages[+t.dataset.i][t.dataset.cm === 'ptexte' ? 'text' : 'textNl'] = t.value.slice(0, 400); S.modifie = true; }
     if (t.dataset.cm === 'mediasQ') { S.mediasQ = t.value; }
-    if (t.dataset.cm === 'qte') { S.imp.qte = t.value.replace(/\D/g, '').slice(0, 7); }
-    if (t.dataset.cm === 'afficheTitre') { S.affiche.titre = t.value.slice(0, 80); }
+    // La quantité et le titre de l'affiche se lisent ailleurs (« Marquer imprimé · N ex. », l'aperçu de l'affiche, le
+    // récapitulatif du bon) : on redessine en gardant le curseur (25/11/2026).
+    if (t.dataset.cm === 'qte') { S.imp.qte = t.value.replace(/\D/g, '').slice(0, 7); rendreGarde(S, t); }
+    if (t.dataset.cm === 'afficheTitre') { S.affiche.titre = t.value.slice(0, 80); rendreGarde(S, t); }
+    if (t.dataset.cm === 'bonQte') { bonEtat(S).qte = t.value.replace(/\D/g, '').slice(0, 5); rendreGarde(S, t); }
+    if (t.dataset.cm === 'bonF') { bonEtat(S).f[t.dataset.k] = t.value; }
+    if (t.dataset.cm === 'bonDate') { bonEtat(S).f.dl[+t.dataset.i][t.dataset.k] = t.value; }
   }
   function changement(S, ev) {
     const t = ev.target;
@@ -700,9 +773,11 @@
   }
 
   function rendreAssistant(S) {
-    const titre = S.etape === 1 ? 'Mon catalogue' : S.cat ? 'Mon catalogue — « ' + esc(S.cat.title) + ' »' : 'Nouveau catalogue';
+    // Le titre de la page est celui de la barre commune (27/11/2026, DESIGN_SYSTEM.md §7.13 : « MAGASIN DÉMO » + « Mon
+    // catalogue ») : ici, seulement le catalogue ouvert, sur une ligne, et les actions.
+    const titre = S.etape === 1 ? '' : S.cat ? '« ' + esc(S.cat.title) + ' »' : 'Nouveau catalogue';
     const suivant = { 2: ['3', 'Présentation ›'], 3: ['4', 'Validation ›'], 4: null, 5: null }[S.etape];
-    let h = '<div class="cm-hd"><div><div class="k">Espace boutique · ' + esc(S.nom || '') + '</div><h2>' + titre + '</h2></div><span class="sp"></span>';
+    let h = '<div class="cm-hd">' + (titre ? '<h2>' + titre + '</h2>' : '') + '<span class="sp"></span>';
     if (S.etape === 1) {
       h += '<button class="cm-btn" data-cm="relire">↻ Relire</button><button class="cm-btn" data-cm="nouveau">＋ Nouveau catalogue</button></div>';
     } else {
@@ -857,16 +932,36 @@
     const doc = S.cat ? S.doc[S.cat.owner + S.cat.id + '|' + S.lang] : null, m = {};
     ((doc && doc.pages) || []).forEach(p => {
       if (p.kind === 'products') { m['c:' + p.title] = { d: p.drawingUrl, f: p.familyDrawingUrl, g: p.gammeImageUrl }; }
-      if (p.kind === 'presentation') { m['g:' + p.title] = { d: p.drawingUrl, i: p.imageUrl }; }
+      if (p.kind === 'presentation') {
+        m['g:' + p.title] = { d: p.drawingUrl, i: p.imageUrl };
+        // Gamme par gamme (Marketing v1.23) : le design de la présentation, par gamme (le texte est celui de la langue lue).
+        if (p.design && p.gamme != null) { m['G:' + p.gamme] = p.design; }
+      }
     });
+    // Les pages libres du document, par rang de page intérieure (l'illustration de la gamme voisine choisie par le Marketing).
+    ((doc && doc.pages) || []).filter(p => p.kind === 'products' || p.kind === 'presentation').forEach((p, j) => { if (p.kind === 'products' && p.free) { m['L:' + j] = p.filler || null; } });
     return [doc, m];
   }
-  function pageLocale(S, p, ids, m) {
+  function pageLocale(S, p, ids, m, i) {
     const fiche = id => { const x = produits(S).find(q => +q.id === +id); return x ? { name: x.name, priceCents: x.priceCents, oldPriceCents: x.oldPriceCents != null ? x.oldPriceCents : null, imageUrl: x.imageUrl || null, weightGrams: x.weightGrams != null ? x.weightGrams : null, allergens: x.allergens || [] } : null; };
     const prods = ids.map(fiche).filter(Boolean);
     if (estPres(p.layout)) {
       const t = nomGamme(S, p.gamme), d = m['g:' + t] || {};
-      return { kind: 'presentation', layout: p.layout, template: p.template || 'A', title: t, text: (S.lang === 'nl' ? p.textNl : p.text) || '', drawingUrl: d.d || null, imageUrl: d.i || null, products: p.layout === 'presentation_liste' ? prods.slice(0, 8) : [] };
+      return { kind: 'presentation', layout: p.layout, template: p.template || 'A', title: t, text: (S.lang === 'nl' ? p.textNl : p.text) || '', drawingUrl: d.d || null, imageUrl: d.i || null, products: p.layout === 'presentation_liste' ? prods.slice(0, 8) : [],
+        design: enBlocs(S) ? (m['G:' + p.gamme] || null) : null };
+    }
+    // Gamme par gamme : une page libre restée sans produit = toute la page à la photo choisie, sinon à l'illustration de
+    // la gamme voisine (celle que le document a choisie ; à défaut, la présentation qui suit, sinon celle d'avant).
+    if (enBlocs(S) && estIntercalaire(p) && !prods.length) {
+      let filler = p.filler === 'photo' ? { kind: 'photo', imageUrl: (S.mediaUrls || {})[p.fillerMediaId] || null } : null;
+      if (!filler && i != null && m['L:' + i] !== undefined) { filler = m['L:' + i]; }
+      if (!filler && i != null) {
+        const voisines = S.pages.slice(i + 1).concat(S.pages.slice(0, i).reverse());
+        const pres = voisines.find(q => estPres(q.layout) && q.gamme != null);
+        const v = pres ? m['g:' + nomGamme(S, pres.gamme)] || {} : {};
+        if (v.d || v.i) { filler = { kind: 'illustration', drawingUrl: v.d || null, imageUrl: v.d ? null : v.i || null }; }
+      }
+      return { kind: 'products', free: true, layout: p.layout, template: p.template || 'A', title: '', products: [], filler };
     }
     if (p.layout === 'pleine' && prods.length) { const o = offreDe(S, ids[0]); if (o) { prods.push(Object.assign({ kind: 'offer' }, o)); } }
     const titre = p.category == null ? (S.lang === 'nl' ? 'Onze selectie' : 'Notre sélection') : nomCat(S, p.category), d = m['c:' + titre] || {};
@@ -878,7 +973,7 @@
     const p = S.pages[i];
     try {
       const [doc, m] = dessinsDoc(S);
-      const pseudo = { catalogue: { format: S.format }, charter: (doc && doc.charter) || {}, version: { lang: S.lang || 'fr' }, pages: [pageLocale(S, p, ids, m)] };
+      const pseudo = { catalogue: { format: S.format }, charter: (doc && doc.charter) || {}, version: { lang: S.lang || 'fr' }, pages: [pageLocale(S, p, ids, m, i)] };
       return '<button type="button" class="cm-ap" data-cm="zoomPage" data-v="' + i + '" title="Voir la page ' + (i + 3) + ' en grand">' + feuille(pseudo, 0, largeur || 128, true) + '</button>';
     } catch (e) { return mini(p.layout, p.template); }
   }
@@ -947,7 +1042,13 @@
     if (S.glisseBloc) {
       const cb = cibleBloc(S, ev), g = S.glisseBloc;
       S.glisseBloc = null;
-      if (cb) { ev.preventDefault(); mepDeplacer(S, g.de, g.n, cb.apres ? cb.de + cb.n : cb.de); }
+      if (cb) {
+        ev.preventDefault();
+        // Gamme par gamme : une présentation glissée emmène les pages de sa gamme (le Marketing range ensuite par blocs).
+        const n = enBlocs(S) && S.pages[g.de] && estPres(S.pages[g.de].layout) ? groupeGamme(S, g.de) : g.n;
+        const vers = cb.apres ? cb.de + cb.n : cb.de;
+        if (!(vers > g.de && vers < g.de + n)) { mepDeplacer(S, g.de, n, vers); }
+      }
       rendre(S); return;
     }
     const c = cibleDepot(S, ev);
@@ -1104,6 +1205,14 @@
   }
   /** Les flèches d'un bloc (sans souris) : avant le bloc précédent, après le suivant. */
   function mepBouger(S, de, n, d) {
+    if (enBlocs(S) && S.pages[de] && estPres(S.pages[de].layout)) {
+      const debuts = S.pages.map((p, i) => i).filter(i => estPres(S.pages[i].layout) && S.pages[i].gamme != null);
+      const k = debuts.indexOf(de), voisin = debuts[k + d];
+      if (k < 0 || voisin == null) { return; }
+      const g = groupeGamme(S, de), gv = groupeGamme(S, voisin);
+      mepDeplacer(S, de, g, d < 0 ? voisin : voisin + gv);
+      rendre(S); return;
+    }
     const blocs = mepBlocs(S, remplir(S)), k = blocs.findIndex(x => x.de === de);
     const voisin = blocs[k + d];
     if (k < 0 || !voisin) { return; }
@@ -1167,15 +1276,16 @@
       + '<div class="mep-bloc lock"><div class="h">' + CADENAS + ' Marque</div><div class="pp">' + marque(0, 1) + marque(1, 2) + '</div></div>'
       + blocs.map((b, k) => {
         const col = b.cle.charAt(0) === 'c' ? mepCouleur(S, b.p.category) : null;
-        const pp = Array.from({ length: b.n }, (x, j) => b.de + j).map(i => '<div class="mep-th">' + (b.libre && !S.pages[i].filler ? '<div class="mep-vide">Photo ou illustration de la gamme · ou −2 pages</div>' : apercuPage(S, i, ids[i] || [], 92)) + '</div>').join('');
-        return '<div class="mep-bloc' + (S.glisseBloc && S.glisseBloc.de === b.de ? ' glisse' : '') + (b.libre ? ' libre' : '') + '" data-bloc="' + b.de + '" data-n="' + b.n + '"><div class="h">'
+        const pp = Array.from({ length: b.n }, (x, j) => b.de + j).map(i => '<div class="mep-th">' + (b.libre && !S.pages[i].filler && !enBlocs(S) ? '<div class="mep-vide">Photo ou illustration de la gamme · ou −2 pages</div>' : apercuPage(S, i, ids[i] || [], 92)) + '</div>').join('');
+        const surPres = enBlocs(S) && estPres(b.p.layout) ? ' title="' + esc(TITRE_PRES_MARKETING) + '"' : '';
+        return '<div class="mep-bloc' + (S.glisseBloc && S.glisseBloc.de === b.de ? ' glisse' : '') + (b.libre ? ' libre' : '') + '" data-bloc="' + b.de + '" data-n="' + b.n + '"' + surPres + '><div class="h">'
           + '<span class="mep-poi" draggable="true" data-blocdrag="' + b.de + '" data-n="' + b.n + '" title="Glisser pour déplacer" aria-label="Déplacer « ' + esc(nomBloc(b)) + ' »">⠿</span>' + (col ? mepPt(col) : '') + '<span class="nm">' + esc(nomBloc(b)) + '</span>'
           + '<span class="pg">p. ' + (b.de + 3) + (b.n > 1 ? '-' + (b.de + b.n + 2) : '') + '</span>'
           + '<button class="mep-mv" data-cm="mepBloc" data-v="' + b.de + '" data-n="' + b.n + '" data-d="-1"' + (k === 0 ? ' disabled' : '') + ' aria-label="Avant">‹</button><button class="mep-mv" data-cm="mepBloc" data-v="' + b.de + '" data-n="' + b.n + '" data-d="1"' + (k === blocs.length - 1 ? ' disabled' : '') + ' aria-label="Après">›</button>'
           + '</div><div class="pp">' + pp + '</div></div>';
       }).join('')
       + '<div class="mep-bloc lock"><div class="h">' + CADENAS + ' Marque</div><div class="pp">' + marque(np - 2, nb - 1) + marque(np - 1, nb) + '</div></div></div>'
-      + '<div class="mep-note">⠿ prendre une catégorie : ses pages suivent ensemble (‹ › sans souris) · un clic sur une page l’ouvre en grand · les pages de la marque ne bougent pas.</div>';
+      + '<div class="mep-note">⠿ prendre une catégorie : ses pages suivent ensemble (‹ › sans souris)' + (enBlocs(S) ? ' · une présentation emmène sa gamme : l’ordre des gammes change' : '') + ' · un clic sur une page l’ouvre en grand · les pages de la marque ne bougent pas.</div>';
     // Ce qui n'a pas de place, dit (la règle du Marketing).
     const sansPage = catsChoisies(S).filter(c => c != null && !(S.pages || []).some(p => !estPres(p.layout) && p.category != null && +p.category === +c));
     if (sansPage.length) { h += '<div class="cm-msg inf">' + sansPage.map(c => '« ' + esc(nomCat(S, c)) + ' »').join(', ') + (sansPage.length > 1 ? ' n’ont' : ' n’a') + ' pas de page : ' + (sansPage.length > 1 ? 'leurs' : 'ses') + ' produits vont en « Notre sélection » s’il y en a une.</div>'; }
@@ -1255,9 +1365,9 @@
       let corps = '';
       if (pres) {
         corps += '<select class="cm-sel" data-cm="pgamme" data-i="' + i + '" aria-label="Gamme de la page ' + (i + 3) + '">' + gs.map(g => '<option value="' + g + '"' + (+p.gamme === g ? ' selected' : '') + '>' + esc(nomGamme(S, g)) + '</option>').join('') + '</select>'
-          + '<div class="cm-cpt" style="margin-top:4px">' + (p.layout === 'presentation_liste' ? porte + ' produit' + (porte > 1 ? 's' : '') + ' de la gamme listé' + (porte > 1 ? 's' : '') + ' avec leurs prix (8 au plus)' : 'l’illustration, le nom et le texte de la gamme') + '</div>'
-          + '<textarea class="cm-txt" data-cm="ptexte" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte de la présentation (facultatif, 400 caractères)">' + esc(p.text) + '</textarea>'
-          + (S.langs.includes('nl') ? '<textarea class="cm-txt" data-cm="ptexteNl" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte néerlandais">' + esc(p.textNl) + '</textarea>' : '');
+          + '<div class="cm-cpt" style="margin-top:4px"' + (enBlocs(S) ? ' title="' + esc(TITRE_PRES_MARKETING) + '"' : '') + '>' + (p.layout === 'presentation_liste' ? porte + ' produit' + (porte > 1 ? 's' : '') + ' de la gamme listé' + (porte > 1 ? 's' : '') + ' avec leurs prix (8 au plus)' : 'l’illustration, le nom et le texte de la gamme') + (enBlocs(S) ? ' · se règle dans le Marketing' : '') + '</div>'
+          + (enBlocs(S) ? '' : '<textarea class="cm-txt" data-cm="ptexte" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte de la présentation (facultatif, 400 caractères)">' + esc(p.text) + '</textarea>'
+          + (S.langs.includes('nl') ? '<textarea class="cm-txt" data-cm="ptexteNl" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte néerlandais">' + esc(p.textNl) + '</textarea>' : ''));
       } else {
         const options = cats.filter(c => c !== null).concat(p.category != null && !cats.includes(p.category) ? [p.category] : []);
         corps += '<div class="cm-lig"><select class="cm-sel" data-cm="pcat" data-i="' + i + '" aria-label="Catégorie de la page ' + (i + 3) + '"><option value=""' + (p.category == null ? ' selected' : '') + '>Notre sélection (toutes catégories)</option>'
@@ -1334,10 +1444,11 @@
     if (S.listeErr) { h += bandeauErreur(S.listeErr, 'Mes catalogues n’ont pas pu être lus'); }
     if (S.recusErr) { h += bandeauErreur(S.recusErr, 'Les catalogues de la marque n’ont pas pu être lus'); }
     if (!S.liste && !S.listeErr) { return h + '<div class="db-card"><div class="cm-vide">Lecture de mes catalogues…</div></div>'; }
-    (S.recus || []).filter(c => c.reception && c.reception.status === 'nouveau').forEach(c => { h += carteRecu(S, c); });
     const lignes = [];
     (S.recus || []).filter(c => c.reception && c.reception.status !== 'adapte').forEach(c => lignes.push({ c, marque: true }));
     (S.liste || []).forEach(c => lignes.push({ c, marque: false }));
+    h += resumeListe(S, lignes);
+    (S.recus || []).filter(c => c.reception && c.reception.status === 'nouveau').forEach(c => { h += carteRecu(S, c); });
     if (!lignes.length) {
       return h + '<div class="db-card"><div class="cm-vide">Aucun catalogue pour l’instant.<br><br><button class="cm-btn pri" data-cm="nouveau">＋ Créer mon premier catalogue</button></div></div>';
     }
@@ -1359,12 +1470,46 @@
     });
     return h + '</tbody></table></div>';
   }
+  /* Le résumé de la liste (27/11/2026, DESIGN_SYSTEM.md §7.13 ; les règles de .ac, sous le préfixe du module) : le chiffre clé
+   * (les catalogues de ma boutique, 700 : le seul gras), d'où ils viennent ; puis « À corriger » — ce que la colonne État dit
+   * déjà : un catalogue de la marque à regarder, un brouillon à finir, un PDF prêt ou un catalogue pris tel quel pas encore
+   * imprimé. Chaque bouton fait le geste du tableau (« Le feuilleter », « Continuer », « Vérifier et imprimer »,
+   * « Imprimer ») ; le catalogue reçu mène à sa carte, mise en évidence. Rien : une phrase verte. */
+  function resumeListe(S, lignes) {
+    if (!lignes.length) { return ''; }
+    const pl = (n, a, b) => n + ' ' + (n > 1 ? b : a);
+    const imprime = ({ c, marque }) => marque ? !!(c.print && c.print.quantity) : c.status === 'imprime';
+    const nM = lignes.filter(l => l.marque).length, nI = lignes.filter(imprime).length;
+    const A = [];
+    lignes.forEach(({ c, marque }) => {
+      const t = '« ' + esc(c.title) + ' » · ';
+      if (marque && c.reception.status === 'nouveau') { A.push({ txt: t + 'nouveau de la marque : le prendre ou l’adapter', attr: 'data-cmac="cm-recu-' + esc(c.id) + '"' }); }
+      else if (marque && !imprime({ c, marque })) { A.push({ txt: t + 'pris tel quel, pas encore imprimé', attr: 'data-cm="ouvrirM" data-v="' + esc(c.id) + '" data-e="5"' }); }
+      else if (!marque && c.status === 'brouillon') { A.push({ txt: t + 'brouillon à finir', attr: 'data-cm="ouvrir" data-v="' + esc(c.id) + '" data-e="2"' }); }
+      else if (!marque && c.status === 'pret') { A.push({ txt: t + 'PDF prêt, pas encore imprimé', attr: 'data-cm="ouvrir" data-v="' + esc(c.id) + '" data-e="4"' }); }
+    });
+    const l2 = A.length ? '<span class="cm-res-t">À corriger</span><span class="cm-res-l">' + A.map(x => '<button type="button" class="btn btn--sm cm-res-b" ' + x.attr + '><i class="cm-res-ic" aria-hidden="true"></i>' + x.txt + '</button>').join('') + '</span>'
+      : '<p class="cm-res-ok">Rien à corriger : tous mes catalogues sont imprimés.</p>';
+    return '<section class="cm-res" aria-label="Résumé de mes catalogues"><div class="cm-res-l1"><span class="cm-res-v">' + lignes.length + '</span>'
+      + '<span class="cm-res-q">' + (lignes.length > 1 ? 'catalogues' : 'catalogue') + ' pour ma boutique<small>' + pl(nM, 'de la marque', 'de la marque') + ' · ' + pl(lignes.length - nM, 'de ma boutique', 'de ma boutique') + ' · ' + pl(nI, 'imprimé', 'imprimés') + '</small></span></div>'
+      + '<div class="cm-res-l2"' + (A.length ? ' role="region" aria-label="À corriger"' : '') + '>' + l2 + '</div></section>';
+  }
+  /** Le geste d'un point qui mène à un bloc : le bloc à l'écran, encadré un instant. */
+  function montrer(S, id) {
+    const el = S.el.querySelector('#' + id);
+    if (!el) { return; }
+    const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.style.scrollMarginTop = '16px';
+    el.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+    el.classList.remove('cm-vu'); void el.offsetWidth; el.classList.add('cm-vu');
+    clearTimeout(el._cmT); el._cmT = setTimeout(() => el.classList.remove('cm-vu'), 1800);
+  }
   /** « Nouveau · de la marque » : la proposition, ses deux pages, « Le prendre tel quel » ou « L'adapter ». */
   function carteRecu(S, c) {
     const doc = S.doc['r' + c.id];
     const vign = doc ? [0, Math.min(2, doc.pages.length - 1)].map(i => feuille(doc, i, 128, true)).join('') : '<div class="cm-vide" style="padding:20px">Lecture…</div>';
     const n = c.pageCount || 0;
-    return '<section class="cm-recu"><div class="cm-recu__pages">' + vign + '</div><div class="cm-recu__txt">'
+    return '<section class="cm-recu" id="cm-recu-' + esc(c.id) + '"><div class="cm-recu__pages">' + vign + '</div><div class="cm-recu__txt">'
       + '<div class="cm-lig"><span class="cm-tag vif">Nouveau · de la marque</span><span class="cm-cpt">reçu le ' + esc(date(c.reception.receivedAt)) + '</span></div>'
       + '<h3>La marque a préparé votre catalogue « ' + esc(c.title) + ' »</h3>'
       + '<p>Déjà à vos prix, avec votre adresse, vos horaires et votre QR. Vous le prenez tel quel ou vous l’adaptez.</p>'
@@ -1429,6 +1574,10 @@
 
   /* --- Étape 5 · Export PDF : imprimer (B2), puis diffuser (B3) --------------------------------------------------- */
   function rendreExport(S) {
+    if ((S.quoi || 'catalogue') === 'bon') { return rendreQuoi(S) + rendreBon(S); }
+    return rendreQuoi(S) + rendreExportCatalogue(S);
+  }
+  function rendreExportCatalogue(S) {
     const c = S.cat, k = c.owner + c.id + '|' + S.lang, doc = S.doc[k], v = verifDe(S);
     const ouverts = v ? v.items.filter(it => !it.seen && it.level !== 'ok') : [];
     const livret = S.imp.mode === 'livret';
@@ -1455,6 +1604,139 @@
       + (imp ? '<div class="cm-cpt">Déjà noté : imprimé · ' + imp.quantity + ' ex.' + (imp.printedAt ? ' le ' + esc(date(imp.printedAt)) : '') + '</div>' : '')
       + '</aside></div>';
     h += rendreDiffuser(S, doc);
+    return h;
+  }
+  /* --- Le bon de commande (25/11/2026, maquette F, client : « conditions par magasin – contenu exact de ce qu'il y a dans
+   * le catalogue », puis « cadre vide à remplir, délai boutique sous chaque catégorie ») : une feuille A4 composée par le
+   * Marketing (les produits, mes prix, les remises et offres avec leurs dates, la disponibilité par catégorie) ; « Mes
+   * conditions » se règlent une fois pour tous mes bons (le Marketing les lit). Sans conditions : un cadre vide, à remplir
+   * à la main. L'aperçu et le PDF : la page d'impression du Marketing (lien signé du catalogue, `&bon=`). ------------- */
+  /** « Ce que j'imprime » : le catalogue, l'affiche, le bon de commande. */
+  function rendreQuoi(S) {
+    const q = S.quoi || 'catalogue', c = S.cat;
+    const imp = c.print && c.print.quantity ? c.print : (c.status === 'imprime' && c.printQty ? { quantity: c.printQty } : null);
+    const carte = (v, il, titre, txt, tag) => '<button class="cm-quoi' + (q === v ? ' on' : '') + '" data-cm="quoi" data-v="' + v + '"><span class="il il-' + v + '" aria-hidden="true"><i></i></span>'
+      + '<span class="tx"><b>' + titre + '</b><span>' + txt + '</span>' + (tag ? '<span class="tg' + (v === 'bon' ? ' nv' : '') + '">' + tag + '</span>' : '') + '</span></button>';
+    return '<section class="cm-pan cm-quois"><div class="h"><span class="k">Ce que j’imprime</span></div><div class="cm-quoi3">'
+      + carte('catalogue', '', 'Le catalogue', 'chez un imprimeur ou livret A5 sur mon imprimante', imp ? 'Imprimé · ' + esc(imp.quantity) + ' ex.' : '')
+      + carte('affiche', '', 'L’affiche', 'A4 ou A3 avec le QR du catalogue en ligne', '')
+      + carte('bon', '', 'Le bon de commande', 'les mêmes produits et mes prix, à remplir par le client', 'Nouveau')
+      + '</div></section>';
+  }
+  function bonEtat(S) {
+    if (!S.bon || S.bon.cat !== S.cat.owner + S.cat.id) {
+      S.bon = { cat: S.cat.owner + S.cat.id, langue: S.langs.length > 1 ? 'fr+nl' : (S.langs[0] || 'fr'), qte: '50', mode: 'proof', cond: undefined, condErr: null,
+        f: null, nl: false, data: {}, dataErr: {}, lien: null, lienErr: null, v: 0, sauve: false, erreurs: [] };
+    }
+    return S.bon;
+  }
+  const bonLangs = B => B.langue === 'fr+nl' ? ['fr', 'nl'] : [B.langue];
+  /** Le brouillon du formulaire, tiré des conditions enregistrées. */
+  function bonForm(c) {
+    return {
+      lv: c && c.minDelay ? String(c.minDelay.value) : '', lu: c && c.minDelay ? c.minDelay.unit : 'hours',
+      dp: c && c.depositPct != null ? String(c.depositPct) : '',
+      dl: c ? c.holidayDeadlines.map(d => ({ for: d.for, until: d.until })) : [],
+      pk: c ? c.pickup : true, dv: c ? c.delivery.enabled : false,
+      rk: c && c.delivery.radiusKm != null ? String(c.delivery.radiusKm) : '', fee: c && c.delivery.feeCents != null ? (c.delivery.feeCents / 100).toFixed(2).replace('.', ',') : '',
+      nfr: c ? c.note.fr : '', nnl: c ? c.note.nl : '',
+    };
+  }
+  function chargerBon(S, force) {
+    const B = bonEtat(S);
+    if (B.cond === undefined || force) {
+      B.cond = null;
+      appel('GET', '/conditions' + qs(S)).then(j => { B.cond = j.data; if (!B.f || force) { B.f = bonForm(j.data.configured ? j.data : null); } rendre(S); })
+        .catch(e => { B.condErr = e; B.cond = false; if (!B.f) { B.f = bonForm(null); } rendre(S); });
+    }
+    const lang = bonLangs(B)[0];
+    if (B.data[lang] === undefined || force) {
+      B.data[lang] = null; B.dataErr[lang] = null;
+      appel('GET', chemin(S) + '/bon' + qs(S) + '&lang=' + lang).then(j => { B.data[lang] = j.data; B.dataErr[lang] = null; rendre(S); })
+        .catch(e => { B.dataErr[lang] = e; rendre(S); });
+    }
+    if (!B.lien && !B.lienErr) {
+      B.lien = 'attente';
+      appel('POST', chemin(S) + '/impression' + qs(S), { lang: 'fr' }).then(j => { B.lien = (j.data && j.data.url) || null; if (!B.lien) { B.lienErr = new ErreurApi(502, { error: { message: 'Le Marketing n’a pas rendu d’adresse d’impression.' } }); } rendre(S); })
+        .catch(e => { B.lien = null; B.lienErr = e; rendre(S); });
+    }
+  }
+  const delaiTexte = h => h + ' h';
+  /** Le corps du PUT …/conditions, ou une liste de problèmes à dire avant d'envoyer. */
+  function bonCorps(B) {
+    const f = B.f, err = [];
+    const n = v => v.trim() === '' ? null : (/^\d+$/.test(v.trim()) ? parseInt(v.trim(), 10) : NaN);
+    const lv = n(f.lv), dp = n(f.dp), rk = n(f.rk);
+    const fee = f.fee.trim() === '' ? null : Math.round(parseFloat(f.fee.replace(',', '.')) * 100);
+    if (Number.isNaN(lv)) { err.push('Délai minimum : un nombre entier.'); }
+    if (Number.isNaN(dp)) { err.push('Acompte : un nombre entier (0 = pas d’acompte).'); }
+    if (Number.isNaN(rk)) { err.push('Rayon de livraison : un nombre de km.'); }
+    if (fee !== null && (Number.isNaN(fee) || fee < 0)) { err.push('Frais de livraison : un montant en euros.'); }
+    const dl = f.dl.filter(d => d.for || d.until);
+    if (dl.some(d => !d.for || !d.until)) { err.push('Dates des fêtes : chaque ligne a sa date et son dernier jour de commande.'); }
+    return [err, { minDelay: lv === null ? null : { value: lv, unit: f.lu }, depositPct: dp, holidayDeadlines: dl, pickup: f.pk,
+      delivery: { enabled: f.dv, radiusKm: f.dv ? rk : null, feeCents: f.dv ? fee : null }, note: { fr: f.nfr.trim(), nl: f.nnl.trim() } }];
+  }
+  function enregistrerConditions(S) {
+    const B = bonEtat(S), [err, corps] = bonCorps(B);
+    B.erreurs = err; B.sauve = false;
+    if (err.length) { rendre(S); return; }
+    occupe(S, appel('PUT', '/conditions' + qs(S), corps).then(j => {
+      B.cond = j.data; B.f = bonForm(j.data); B.sauve = true; B.data = {}; B.v++; chargerBon(S);
+    }).catch(e => { B.erreurs = (e.details || []).map(d => (d.field ? d.field + ' : ' : '') + d.message); throw e; }), 'Enregistrement de mes conditions');
+  }
+  function telechargerBon(S, quoi) {
+    const B = bonEtat(S), w = window.open('', '_blank');
+    if (w) { try { w.document.write('<p style="font:15px system-ui;padding:24px;color:#5c5852">Préparation du bon de commande…</p>'); } catch (e) { /* rien */ } }
+    const p = appel('POST', chemin(S) + '/impression' + qs(S), { lang: bonLangs(B)[0] }).then(j => {
+      const url = j.data && j.data.url;
+      if (!url) { throw new ErreurApi(502, { error: { message: 'Le Marketing n’a pas rendu d’adresse d’impression.' } }); }
+      const cible = url + '&bon=' + bonLangs(B).join(',') + (B.mode === 'printer' ? '&mode=printer' : '');
+      if (w) { w.location.href = cible; } else { window.open(cible, '_blank'); }
+      S.msg = { type: 'ok', titre: quoi + ' s’ouvre dans un nouvel onglet' + (B.mode === 'printer' ? ' (traits de coupe, pour l’imprimeur)' : '') + ' : ' + (quoi === 'Le bon de commande' ? 'imprimez-le' : 'choisissez « Enregistrer au format PDF »') + '. Le lien vaut 48 heures.' };
+    }).catch(e => { if (w) { w.close(); } throw e; });
+    occupe(S, p, quoi);
+  }
+  function rendreBon(S) {
+    const B = bonEtat(S);
+    if (B.cond === undefined || B.data[bonLangs(B)[0]] === undefined || (!B.lien && !B.lienErr)) { window.setTimeout(() => chargerBon(S), 0); }
+    const lang = bonLangs(B)[0], d = B.data[lang], f = B.f || bonForm(null), c = B.cond;
+    const lead = d && d.counts ? d.counts.catalogueLeadHours : null;
+    let h = '<div class="cm-bon"><div class="cm-col"><section class="cm-pan">';
+    h += '<div class="h"><span class="k">Le bon de commande · feuille A4</span><span class="sp"></span><span class="cm-cpt">'
+      + (d ? 'Contenu = celui de mon catalogue : ' + d.counts.products + ' produit' + (d.counts.products > 1 ? 's' : '') + ', ' + d.counts.offers + ' offre' + (d.counts.offers > 1 ? 's' : '') + ', dans l’ordre des pages'
+        : B.dataErr[lang] ? '' : 'Composition du bon…') + '</span></div>';
+    if (B.dataErr[lang]) { h += bandeauErreur(B.dataErr[lang], 'Le bon n’a pas pu être composé'); }
+    h += '<div class="cm-imp3"><div><span class="lb">Langue</span><div class="cm-seg">' + [['fr', 'FR'], ['nl', 'NL'], ['fr+nl', 'FR + NL']].map(l => '<button data-cm="bonLang" data-v="' + l[0] + '" class="' + (B.langue === l[0] ? 'on' : '') + '">' + l[1] + '</button>').join('') + '</div></div>'
+      + '<div><span class="lb">Bons à imprimer</span><div class="cm-lig"><input type="text" inputmode="numeric" class="cm-qte" data-cm="bonQte" value="' + esc(B.qte) + '"><span>feuilles A4</span></div></div>'
+      + '<div><span class="lb">Où imprimer</span><div class="cm-seg">' + [['proof', 'Mon imprimante'], ['printer', 'Imprimeur']].map(m => '<button data-cm="bonMode" data-v="' + m[0] + '" class="' + (B.mode === m[0] ? 'on' : '') + '">' + m[1] + '</button>').join('') + '</div></div></div>';
+    // Mes conditions.
+    h += '<div class="cm-bcond"><div class="hd"><b>Mes conditions</b><span class="tg">imprimées sur le bon · lues par le Marketing</span><span class="sp"></span><span class="cm-cpt">'
+      + (c && c.configured ? 'Enregistré le ' + esc(date(c.updatedAt)) : c === null ? 'Lecture…' : 'Pas encore réglées : le cadre s’imprime vide') + '</span></div>';
+    if (B.condErr) { h += bandeauErreur(B.condErr, 'Mes conditions n’ont pas pu être lues'); }
+    h += '<div class="g2"><div><span class="lb">Délai minimum de commande</span><div class="cm-lig"><input type="text" inputmode="numeric" class="cm-qte" data-cm="bonF" data-k="lv" value="' + esc(f.lv) + '">'
+      + '<div class="cm-seg">' + [['hours', 'heures'], ['days', 'jours']].map(u => '<button data-cm="bonUnite" data-v="' + u[0] + '" class="' + (f.lu === u[0] ? 'on' : '') + '">' + u[1] + '</button>').join('') + '</div></div>'
+      + (lead ? '<p class="cm-cpt">Le catalogue dit « sur commande ' + esc(delaiTexte(lead)) + ' » : je ne peux pas descendre en dessous (un délai plus court n’est pas imprimé).</p>' : '<p class="cm-cpt">Imprimé sous chaque catégorie.</p>') + '</div>'
+      + '<div><span class="lb">Acompte à la commande</span><div class="cm-lig"><input type="text" inputmode="numeric" class="cm-qte" data-cm="bonF" data-k="dp" value="' + esc(f.dp) + '"><span>%</span><span class="cm-cpt">0 = pas d’acompte</span></div></div></div>';
+    h += '<span class="lb">Dernier jour de commande pour les fêtes</span><div class="cm-dates">' + f.dl.map((x, i) => '<div class="cm-lig"><span>Pour le</span><input type="date" class="cm-date" data-cm="bonDate" data-i="' + i + '" data-k="for" value="' + esc(x.for) + '">'
+      + '<span>commandes jusqu’au</span><input type="date" class="cm-date" data-cm="bonDate" data-i="' + i + '" data-k="until" value="' + esc(x.until) + '"><button class="cm-lien" data-cm="bonDateSuppr" data-v="' + i + '" aria-label="Retirer cette date">×</button></div>').join('')
+      + (f.dl.length < 10 ? '<button class="cm-btn" data-cm="bonDateAjout">＋ Une date</button>' : '') + '</div>';
+    h += '<div class="g2"><div><span class="lb">Retrait en boutique</span><button class="cm-sw abr' + (f.pk ? ' on' : '') + '" role="switch" aria-checked="' + f.pk + '" data-cm="bonPk"><span class="tr" aria-hidden="true"></span><span class="l">' + (f.pk ? 'Oui' : 'Non') + '</span></button></div>'
+      + '<div><span class="lb">Livraison</span><div class="cm-lig"><button class="cm-sw abr' + (f.dv ? ' on' : '') + '" role="switch" aria-checked="' + f.dv + '" data-cm="bonDv"><span class="tr" aria-hidden="true"></span><span class="l">' + (f.dv ? 'Oui · rayon' : 'Non') + '</span></button>'
+      + (f.dv ? '<input type="text" inputmode="numeric" class="cm-qte cm-court" data-cm="bonF" data-k="rk" value="' + esc(f.rk) + '"><span>km · frais</span><input type="text" inputmode="decimal" class="cm-qte cm-court" data-cm="bonF" data-k="fee" value="' + esc(f.fee) + '" placeholder="0,00"><span>€</span>' : '') + '</div></div></div>';
+    h += '<span class="lb">Mention libre (une ligne)</span><input type="text" class="cm-qte cm-mention" maxlength="160" data-cm="bonF" data-k="' + (B.nl ? 'nnl' : 'nfr') + '" value="' + esc(B.nl ? f.nnl : f.nfr) + '" placeholder="' + (B.nl ? esc(f.nfr || 'NL vide : le français est imprimé') : 'Ex. : bûches glacées à mettre au congélateur dans l’heure') + '">'
+      + '<div class="cm-lig"><div class="cm-seg">' + [['0', 'FR'], ['1', 'NL']].map(l => '<button data-cm="bonNl" data-v="' + l[0] + '" class="' + ((B.nl ? '1' : '0') === l[0] ? 'on' : '') + '">' + l[1] + '</button>').join('') + '</div>'
+      + '<span class="cm-cpt">' + (B.nl ? 'FR : « ' + esc(f.nfr || '—') + ' »' : 'NL : « ' + esc(f.nnl || (f.nfr ? 'le français' : '—')) + ' »') + '</span></div>';
+    if (B.erreurs.length) { h += '<div class="cm-msg err"><ul>' + B.erreurs.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul></div>'; }
+    h += '<div class="cm-lig cm-bsave"><button class="cm-btn" data-cm="bonSauver"' + (S.occupe ? ' disabled' : '') + '>Enregistrer mes conditions</button>' + (B.sauve ? '<span class="cm-cpt">✓ Enregistrées — elles valent pour tous mes bons</span>' : '') + '</div></div>';
+    h += '<div class="cm-pied"><button class="cm-btn pri" data-cm="bonPdf" data-v="imprimer"' + (S.occupe || !d ? ' disabled' : '') + '>Imprimer</button><button class="cm-btn" data-cm="bonPdf" data-v="pdf"' + (S.occupe || !d ? ' disabled' : '') + '>Télécharger le PDF</button>'
+      + '<span class="cm-cpt">' + esc((B.qte || '0') + ' feuilles A4 · ' + bonLangs(B).map(x => x.toUpperCase()).join(' + ') + ' · ' + (S.nom || '')) + '</span><span class="sp"></span><button class="cm-btn" data-cm="etape" data-v="4">‹ Validation</button></div>';
+    h += '</section></div>';
+    // L'aperçu : la page d'impression du Marketing, sans boîte d'impression.
+    const src = B.lien && B.lien !== 'attente' ? B.lien + '&bon=' + lang + (B.mode === 'printer' ? '&mode=printer' : '') + '&imprimer=0&v=' + B.v : '';
+    h += '<aside class="cm-cote cm-bapercu"><div class="k">Aperçu du bon · ' + esc(S.nom || '') + ' · ' + lang.toUpperCase() + '</div>'
+      + (src ? '<div class="cm-bframe"><iframe title="Aperçu du bon de commande" src="' + esc(src) + '" loading="lazy"></iframe></div>' : B.lienErr ? bandeauErreur(B.lienErr, 'L’aperçu n’a pas pu s’ouvrir') : '<div class="cm-vide">Composition du bon…</div>')
+      + '<p class="note">Le cadre « Conditions de la boutique » reprend ce que je règle à gauche, à chaque export. Un produit retiré à l’étape « Gammes » disparaît aussi du bon. Un prix changé dans mon webshop change au prochain export.</p></aside></div>';
     return h;
   }
   /* --- Feuilleter (17/11/2026, Sam : « un catalogue à feuilleter en simulation dans l'export en PDF, pour être sûr que
@@ -1561,7 +1843,8 @@
     const f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5;
     const z = largeurPx / (f.w * PX_MM);
     const leg = p.kind === 'cover' ? 'Couverture' : p.kind === 'back' ? 'Dernière page' : p.kind === 'brand' ? 'Page ' + (i + 1) + ' · marque (' + (p.slot === 'page2' ? 'page 2' : 'avant-dernière') + ')'
-      : p.kind === 'presentation' ? 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · gabarit ' + (p.template || 'A')
+      : p.kind === 'presentation' ? 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + (p.design ? ' · ' + (DISPOS_PRES[p.design.layout] || '').toLowerCase() : ' · gabarit ' + (p.template || 'A'))
+      : p.kind === 'products' && p.free ? 'Page ' + (i + 1) + ' · page libre' + (p.filler ? ' · ' + (p.filler.kind === 'photo' ? 'photo' : 'illustration') : '')
       : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · ' + (ENTETES[p.header] ? ENTETES[p.header][0] : ENTETES.titre[0]).toLowerCase() + ' · gabarit ' + (p.template || 'A') + ((p.products || []).length ? '' : ' · vide') + (p.filler ? ' · ' + (p.filler.kind === 'photo' ? 'photo' : 'illustration') + ' à la place libre' : '');
     return '<div><div class="cm-feuille" style="width:' + largeurPx + 'px;height:' + Math.round(f.h * PX_MM * z) + 'px">'
       + (p.locked && !nu ? '<span class="cad cm-lock">' + CADENAS + ' Marque</span>' : '')
@@ -1572,15 +1855,24 @@
     const p = doc.pages[i];
     const f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5;
     const c = (doc.charter && doc.charter.colors) || {};
-    const st = 'width:' + (f.w + BLEED * 2) + 'mm;height:' + (f.h + BLEED * 2) + 'mm;--u:' + (f.w / 148) + ';--b:' + BLEED + 'mm;--p:' + css(c.primary, '#8D1D2C') + ';--s:' + css(c.secondary, '#F6EFE5') + ';--a:' + css(c.accent, '#B0792A') + ';--i:' + css(c.ink, '#241C1A');
+    // Gamme par gamme (Marketing v1.23) : le fond choisi de la présentation, jusqu'au fond perdu ; sa gamme pour les filets.
+    const pd = p.kind === 'presentation' && p.design && typeof p.design === 'object' ? p.design : null;
+    const st = 'width:' + (f.w + BLEED * 2) + 'mm;height:' + (f.h + BLEED * 2) + 'mm;--u:' + (f.w / 148) + ';--b:' + BLEED + 'mm;--p:' + css(c.primary, '#8D1D2C') + ';--s:' + css(c.secondary, '#F6EFE5') + ';--a:' + css(c.accent, '#B0792A') + ';--i:' + css(c.ink, '#241C1A')
+      // Les filets et les tirets des listes (couleur « Filets » de la charte, abricot par défaut, Marketing 21/11/2026).
+      + ';--ab:' + css(c.rule, '#F2C9A0')
+      + (pd ? ';background:' + css((pd.background || {}).color, '#F6EFE5') + ';--g:' + css(pd.gammeColor, '#8D1D2C') : '');
     let corps = '';
     if (p.kind === 'cover') { corps = couverture(doc, p); }
     else if (p.kind === 'back') { corps = dos(doc, p); }
     else if (p.kind === 'brand') { corps = marquePage(doc, p); }
-    else if (p.kind === 'presentation') { corps = presentation(doc, p); }
+    else if (p.kind === 'presentation') { corps = pd ? presentationDesign(doc, p, pd) : presentation(doc, p); }
+    else if (p.free) { corps = pageLibre(p); }
     else { corps = interieur(doc, p); }
     const tpl = p.kind === 'products' || p.kind === 'presentation' ? ' cat-face--t' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : p.kind === 'cover' ? ' cat-face--cover' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : '';
-    return '<div class="cat-face cat-face--' + esc(p.kind) + tpl + '" style="' + st + '" lang="' + esc(doc.version.lang) + '"><div class="cat-trim">' + corps + '</div></div>';
+    // La couleur du logo (Marketing v1.16, `TintDefs`) : un filtre SVG posé une fois par page, appelé par son nom.
+    const teinte = p.look && p.look.logo && couleurLook(p.look.logo.color);
+    const filtre = teinte ? '<svg class="cat-tint" width="0" height="0" aria-hidden="true" focusable="false"><filter id="' + idTeinte(teinte) + '" color-interpolation-filters="sRGB"><feFlood flood-color="' + teinte + '"/><feComposite in2="SourceAlpha" operator="in"/></filter></svg>' : '';
+    return '<div class="cat-face cat-face--' + esc(p.kind) + tpl + '" style="' + st + '" lang="' + esc(doc.version.lang) + '">' + filtre + '<div class="cat-trim">' + corps + '</div></div>';
   }
   const css = (v, d) => /^#[0-9a-f]{3,8}$/i.test(String(v || '')) ? v : d;
   const logo = doc => doc.charter && doc.charter.logoUrl ? doc.charter.logoUrl : '../assets/img/logo.png';
@@ -1594,40 +1886,64 @@
     if (!f && !c) { return ''; }
     return ' style="' + (f ? 'font-family:' + f.replace(/"/g, '') + ';' : '') + (font === 'playwrite' ? 'text-transform:none;letter-spacing:0;line-height:1.5;--fs:.55;' : font === 'gotham' ? 'font-weight:500;letter-spacing:.02em;line-height:1.08;--fs:.6;' : '') + (c ? 'color:' + c + ';' : '') + '"';
   }
-  /** La couverture dans son gabarit (charte publiée, maquette A1) : A Pleine couleur · B Illustration · C Photo. */
+  /* Chaque élément d'une page de la marque (Marketing v1.12 à v1.16 ; `shown`, `textStyle`, `logoStyle`, `fieldStyle` de
+   * CataloguePages.tsx) : affiché sauf `show` faux ; sa police et sa couleur, sinon celles du gabarit. */
+  const couleurLook = v => /^#[0-9A-Fa-f]{6}$/.test(String(v || '')) ? v : null;
+  const idTeinte = hex => 'cat-tint-' + hex.replace('#', '').toLowerCase();
+  const montre = (look, el) => !(look && look[el] && look[el].show === false);
+  function declTexte(look, el) {
+    const o = look && look[el] ? look[el] : {}, f = POLICES_COUV[o.font], c = couleurLook(o.color);
+    if (!f && !c) { return ''; }
+    return (f ? 'font-family:' + f.replace(/"/g, '') + ';' : '') + (o.font === 'playwrite' ? 'text-transform:none;letter-spacing:0;' : o.font === 'vank' ? 'letter-spacing:.01em;' : '') + (c ? 'color:' + c + ';' : '');
+  }
+  const attr = d => d ? ' style="' + d + '"' : '';
+  const styleTexte = (look, el) => attr(declTexte(look, el));
+  /** Un champ des coordonnées : le sien par-dessus celui du bloc de la boutique. */
+  const styleChamp = (look, el) => attr(declTexte(look, 'shop') + declTexte(look, el));
+  const styleLogo = look => { const c = look && look.logo && couleurLook(look.logo.color); return c ? ' style="filter:url(#' + idTeinte(c) + ')"' : ''; };
+  /** La couverture dans son gabarit (charte publiée, maquette A1) : A Pleine couleur · B Illustration (finition Papier,
+   * refonte du 21/11/2026) · C Photo — rendu de `Cover`, CataloguePages.tsx. */
   function couverture(doc, p) {
+    const look = p.look;
     const st = styleCouv(p.titleFont, p.titleColor), ss = styleCouv(p.subtitleFont, p.subtitleColor);
     const dessin = p.imageUrl || p.noVisual ? null : (p.drawingUrl || null);
-    const boutique = p.eyebrow ? '<div class="cat-cover__' + (p.template === 'B' ? 'shopB' : 'shop') + '">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '';
-    const kicker = p.kicker ? '<div class="cat-cover__kicker">' + esc(p.kicker) + '</div>' : '';
+    const sousTitre = montre(look, 'subtitle') ? p.subtitle : '';
+    const titre = montre(look, 'title') ? '<div class="cat-cover__title" data-fit="Titre de couverture"' + st + '>' + esc(p.title) + '</div>' : '';
+    const boutique = p.eyebrow ? '<div class="cat-cover__' + (p.template === 'B' ? 'shopB' : 'shop') + '"' + styleTexte(look, 'shop') + '>L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '';
+    const kicker = p.kicker ? '<div class="cat-cover__kicker"' + styleTexte(look, 'kicker') + '>' + esc(p.kicker) + '</div>' : '';
+    const logoTag = cls => montre(look, 'logo') ? '<img class="' + cls + '" src="' + esc(cls.indexOf('cat-logo--dark') >= 0 ? logoSombre(doc) : logo(doc)) + '" alt=""' + styleLogo(look) + '>' : '';
     if (p.template === 'B') {
-      return '<div class="cat-cover cat-cover--B"><img class="cat-logo cat-logo--dark cat-cover__logoB" src="' + esc(logoSombre(doc)) + '" alt=""><div class="cat-cover__art">'
-        + (p.imageUrl ? '<img class="cat-cover__photoB" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawB" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
-        + kicker + '<div class="cat-cover__title">' + esc(p.title) + '</div><div class="cat-cover__rule"></div>'
-        + (p.subtitle ? '<div class="cat-cover__subB"' + ss + '>' + esc(p.subtitle) + '</div>' : '') + boutique + '</div>';
+      // Finition Papier : un filet encadre la page, « La gamme » en manuscrite, le titre et le sous-titre resserrés.
+      return '<div class="cat-cover cat-cover--B cat-cover--papier">' + logoTag('cat-logo cat-logo--dark cat-cover__logoB')
+        + '<div class="cat-cover__art">' + (p.imageUrl ? '<img class="cat-cover__photoB" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawB" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
+        + '<div class="cat-cover__panel">' + kicker + titre + '<div class="cat-cover__rule"></div>'
+        + (sousTitre ? '<div class="cat-cover__subB"' + ss + '>' + esc(sousTitre) + '</div>' : '') + '</div>' + boutique + '</div>';
     }
     if (p.template === 'C') {
       return '<div class="cat-cover cat-cover--C"><div class="cat-cover__top">'
         + (p.imageUrl ? '<img class="cat-cover__photoC" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawC" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
-        + '<div class="cat-cover__band"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">' + kicker + '<div class="cat-cover__title"' + st + '>' + esc(p.title) + '</div>'
-        + (p.subtitle ? '<div class="cat-cover__sub"' + ss + '>' + esc(p.subtitle) + '</div>' : '') + boutique + '</div></div>';
+        + '<div class="cat-cover__band">' + logoTag('cat-logo cat-logo--white') + kicker + titre
+        + (sousTitre ? '<div class="cat-cover__sub"' + ss + '>' + esc(sousTitre) + '</div>' : '') + boutique + '</div></div>';
     }
-    return '<div class="cat-cover"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">'
-      + '<div class="cat-cover__title"' + st + '>' + esc(p.title) + '</div>'
-      + (p.subtitle ? '<div class="cat-cover__sub"' + ss + '>' + esc(p.subtitle) + '</div>' : '')
-      + (p.eyebrow ? '<div class="cat-cover__shop">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '')
+    return '<div class="cat-cover">' + logoTag('cat-logo cat-logo--white') + titre
+      + (sousTitre ? '<div class="cat-cover__sub"' + ss + '>' + esc(sousTitre) + '</div>' : '') + boutique
       + (p.imageUrl ? '<div class="cat-cover__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : dessin ? '<img class="cat-cover__drawing" src="' + esc(dessin) + '" alt="">' : '') + '</div>';
   }
-  /** Page 2 et avant-dernière (charte) : image ou logo, titre, texte ; un paragraphe de plusieurs lignes = une liste. */
+  /** Page 2 et avant-dernière (charte) : image ou logo, titre, texte ; un paragraphe de plusieurs lignes = une liste —
+   * rendu de `Brand`. Gabarit A en finition Papier : le logo, un blanc élastique, le titre, le chapeau ouvert par une lettrine. */
   function marquePage(doc, p) {
     const blocs = String(p.text || '').split(/\n\s*\n/).map(b => b.split('\n').map(l => l.trim()).filter(Boolean)).filter(l => l.length);
     // Gabarits (maquette A2) : A texte seul · B image en haut · C image en bas ; sans gabarit : B avec une image.
-    const t = p.template || (p.imageUrl ? 'B' : 'A'), haut = t === 'B' && p.imageUrl, bas = t === 'C' && p.imageUrl;
-    return '<div class="cat-brand cat-brand--t' + t + (haut ? ' cat-brand--image' : '') + '">'
-      + (haut ? '<div class="cat-brand__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '<img class="cat-logo cat-brand__logo" src="' + esc(logo(doc)) + '" alt="">')
-      + '<div class="cat-brand__title">' + esc(p.title) + '</div><div class="cat-brand__rule"></div><div class="cat-brand__text">'
+    const t = p.template || (p.imageUrl ? 'B' : 'A'), haut = t === 'B' && p.imageUrl, bas = t === 'C' && p.imageUrl, papier = t === 'A';
+    const look = p.look;
+    const logoTag = montre(look, 'logo') ? '<img class="cat-logo cat-logo--dark cat-brand__logo" src="' + esc(logoSombre(doc)) + '" alt=""' + styleLogo(look) + '>' : '';
+    const titreTag = montre(look, 'title') ? '<div class="cat-brand__title"' + styleTexte(look, 'title') + '>' + esc(p.title) + '</div>' : '';
+    const tete = papier ? '<div class="cat-brand__head">' + logoTag + '<div class="cat-brand__space"></div>' + titreTag + '<div class="cat-brand__rule"></div></div>'
+      : (bas ? logoTag : haut ? '<div class="cat-brand__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : logoTag) + titreTag + '<div class="cat-brand__rule"></div>';
+    return '<div class="cat-brand cat-brand--' + esc(p.slot || '') + ' cat-brand--t' + esc(t) + (haut ? ' cat-brand--image' : '') + (papier ? ' cat-brand--papier' : '') + '">' + tete
+      + '<div class="cat-brand__text" data-fit="' + esc(p.title) + '"' + (montre(look, 'text') ? styleTexte(look, 'text') : ' style="display:none"') + '>'
       + blocs.map(l => l.length > 1 ? '<ul>' + l.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p>' + esc(l[0]) + '</p>').join('') + '</div>'
-      + (p.slot === 'penultimate' && (p.allergens || []).length ? legendeAllergenes(p.allergens, doc.version.lang) : '')
+      + (p.slot === 'penultimate' && montre(look, 'legend') && (p.allergens || []).length ? legendeAllergenes(p.allergens, doc.version.lang, declTexte(look, 'legend')) : '')
       + (bas ? '<div class="cat-brand__visual cat-brand__visual--bottom"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '') + '</div>';
   }
   /** La photo du webshop ; sans elle, le dessin de la famille de la page (sinon l'illustration de l'en-tête) — rendu de
@@ -1670,11 +1986,11 @@
     const w = poidsTexte(pr.weightGrams, lang), al = pr.allergens || [];
     return '<span class="cat-facts">' + (w ? '<span class="cat-weight">' + esc(w) + '</span>' : '') + (al.length ? '<span class="cat-als">' + al.map(c => pictoAllergene(c, lang)).join('') + '</span>' : '') + '</span>';
   }
-  function legendeAllergenes(codes, lang) {
-    const nl = lang === 'nl';
-    return '<div class="cat-allegend"><div class="cat-allegend__title">' + (nl ? 'Allergenen' : 'Allergènes') + '</div><div class="cat-allegend__grid">'
-      + codes.map(c => '<span class="cat-allegend__item">' + pictoAllergene(c, lang) + esc((ALLERGENES_NOMS[c] || [c])[nl ? 1 : 0]) + '</span>').join('') + '</div>'
-      + '<p class="cat-allegend__note">' + (nl ? 'De pictogrammen naast elk product tonen de allergenen van het recept (verordening EU 1169/2011). Sporen worden niet vermeld: vraag de volledige lijst in de winkel.'
+  function legendeAllergenes(codes, lang, decl) {
+    const nl = lang === 'nl', sl = attr(decl || '');
+    return '<div class="cat-allegend"><div class="cat-allegend__title"' + sl + '>' + (nl ? 'Allergenen' : 'Allergènes') + '</div><div class="cat-allegend__grid">'
+      + codes.map(c => '<span class="cat-allegend__item"' + sl + '>' + pictoAllergene(c, lang) + esc((ALLERGENES_NOMS[c] || [c])[nl ? 1 : 0]) + '</span>').join('') + '</div>'
+      + '<p class="cat-allegend__note"' + sl + '>' + (nl ? 'De pictogrammen naast elk product tonen de allergenen van het recept (verordening EU 1169/2011). Sporen worden niet vermeld: vraag de volledige lijst in de winkel.'
         : 'Les pictogrammes à côté de chaque produit indiquent les allergènes de sa recette (règlement UE 1169/2011). Les traces ne sont pas indiquées : demandez la liste complète en boutique.') + '</p></div>';
   }
   function carte(pr, lang, grand, repli) {
@@ -1742,6 +2058,79 @@
       + (p.text ? '<div class="cat-pres__text">' + esc(p.text) + '</div>' : '') + '</div>'
       + (avecListe && (p.products || []).length ? '<div class="cat-pres__list">' + liste(p.products, lang, repliDe(p)) + '</div>' : '') + (avecListe ? piedDispo(p.availabilityFooter) : '') + '</div>';
   }
+  /* --- gamme par gamme (Marketing v1.23, 27/11/2026 : rendu de `PresentationDesign` et de la page libre, CataloguePages.tsx) */
+  const DISPOS_PRES = { une: '1 grande image', deux: '2 images', mosaique: 'Mosaïque de 3', pleine: 'Photo pleine page' };
+  const PHOTOS_PRES = { une: 1, deux: 2, mosaique: 3, pleine: 1 };
+  const GRAISSES_PRES = { light: 300, regular: 400, medium: 500, bold: 700 };
+  const nombre = (v, d, min, max) => { const n = Number(v); return isFinite(n) ? Math.min(max, Math.max(min, n)) : d; };
+  /** Le style d'un texte de la présentation (`presTextStyle`) : police de la charte, taille en points, graisse, couleur, alignement. */
+  function stylePres(t) {
+    t = t || {};
+    const police = POLICES_COUV[t.font] || POLICES_COUV.gotham;
+    const align = ['left', 'center', 'right'].includes(t.align) ? t.align : 'left';
+    return 'font-family:' + police + ';font-size:calc(var(--u) * ' + nombre(t.size, 11, 4, 120) + 'pt);font-weight:' + (GRAISSES_PRES[t.weight] || 400)
+      + ';color:' + css(t.color, '#241C1A') + ';text-align:' + align + ';'
+      + (t.font === 'vank' ? 'letter-spacing:.01em;line-height:1.08;' : t.font === 'playwrite' ? 'line-height:1.6;' : 'line-height:1.45;');
+  }
+  /** Une photo dans sa case, cadrée (`CroppedPhoto`) : position x, y en %, agrandissement en % — les mêmes qu'à l'impression. */
+  function photoCadree(ph, classe) {
+    ph = ph || {};
+    const url = ph.url || null, x = nombre(ph.x, 50, 0, 100), y = nombre(ph.y, 50, 0, 100), z = nombre(ph.zoom, 100, 50, 400);
+    return '<div class="cat-pd__ph' + (url ? '' : ' is-empty') + (classe ? ' ' + classe : '') + '">'
+      + (url ? '<img src="' + esc(url) + '" alt="" style="object-position:' + x + '% ' + y + '%;' + (z !== 100 ? 'transform:scale(' + (z / 100) + ');' : '') + 'transform-origin:' + x + '% ' + y + '%">' : '') + '</div>';
+  }
+  /** L'illustration de la gamme dans une case (Marketing v1.24, `DrawnCase`) : le dessin de saison cadré comme une photo
+   * (x, y, zoom ; à 100 % le dessin entier), son trait teint par le filtre SVG `idTeinte(encre)` posé avec la page. */
+  function dessinCadre(src, encre, ph, classe) {
+    ph = ph || {};
+    const x = nombre(ph.x, 50, 0, 100), y = nombre(ph.y, 50, 0, 100), z = nombre(ph.zoom, 100, 50, 400);
+    return '<div class="cat-pd__ph cat-pd__ph--draw' + (src ? '' : ' is-empty') + (classe ? ' ' + classe : '') + '">'
+      + (src ? '<img class="cat-pd__draw" src="' + esc(src) + '" alt="" style="object-position:' + x + '% ' + y + '%;' + (z !== 100 ? 'transform:scale(' + (z / 100) + ');' : '') + 'transform-origin:' + x + '% ' + y + '%;filter:url(#' + idTeinte(encre) + ')">' : '') + '</div>';
+  }
+  const PLACES_PRES = ['haut', 'bas', 'gauche', 'droite', 'pleine'];
+  const PLACES_TEXTE = ['haut', 'centre', 'bas'];
+  /** La page de présentation d'une gamme, gamme par gamme : ses images dans la disposition choisie (1 grande · 2 · 3 en
+   * mosaïque), à leur place par rapport au texte (Marketing v1.24 : haut, bas, gauche, droite, ou la page entière, le
+   * texte par-dessus sous un voile) — chaque case une photo ou l'illustration de la gamme ; l'accroche, le titre et le
+   * texte dans leurs styles, sur un fond de couleur, une photo ou l'illustration sous un voile ; au choix, la liste de ses
+   * produits. `layout` « pleine » (d'avant) : une photo pleine page, le texte sur un bandeau. */
+  function presentationDesign(doc, p, d) {
+    const lang = doc.version.lang, avecListe = p.layout === 'presentation_liste';
+    const disp = PHOTOS_PRES[d.layout] ? d.layout : 'une', pleine = disp === 'pleine';
+    const place = pleine ? 'haut' : (PLACES_PRES.includes(d.position) ? d.position : 'haut'), dessus = place === 'pleine';
+    const texteLa = PLACES_TEXTE.includes(d.textPlace) ? d.textPlace : 'bas';
+    const photos = Array.from({ length: PHOTOS_PRES[disp] }, (x, i) => (Array.isArray(d.photos) && d.photos[i]) || {});
+    const titre = d.title || {}, acc = d.kicker || {}, txt = d.text || {}, fond = d.background || {};
+    const clair = ['#FFFFFF', '#F5EFE4'].includes(String(titre.color || '').toUpperCase());
+    const texteTitre = String(titre.text != null ? titre.text : p.title || '');
+    const encre = couleurLook(d.ink) || couleurLook(d.gammeColor) || '#8D1D2C', src = dessin(d.drawingUrl);
+    const voile = '<i style="background:' + (clair ? '#000' : css(fond.color, '#F6EFE5')) + ';opacity:' + (nombre(fond.veil, 0, 0, 100) / 100) + '"';
+    const fondGenre = fond.kind || (fond.imageUrl ? 'photo' : 'color');
+    const caseDe = (ph, classe) => ph.kind === 'illustration' ? dessinCadre(src, encre, ph, classe) : photoCadree(ph, classe);
+    let h = '<div class="cat-pd cat-pd--' + disp + (pleine ? '' : ' cat-pd--pos-' + place) + (dessus ? ' cat-pd--place-' + texteLa : '') + (avecListe ? ' cat-pd--liste' : '') + '">';
+    h += '<svg class="cat-tint" width="0" height="0" aria-hidden="true" focusable="false"><filter id="' + idTeinte(encre) + '" color-interpolation-filters="sRGB"><feFlood flood-color="' + encre + '"/><feComposite in2="SourceAlpha" operator="in"/></filter></svg>';
+    if (fondGenre === 'photo' && fond.imageUrl) {
+      h += '<div class="cat-pd__bg"><img src="' + esc(fond.imageUrl) + '" alt="">' + voile + '></i></div>';
+    } else if (fondGenre === 'illustration') {
+      h += '<div class="cat-pd__bg">' + dessinCadre(src, encre, {}, 'cat-pd__bgdraw') + voile + '></i></div>';
+    }
+    h += pleine ? '<div class="cat-pd__bg">' + caseDe(photos[0], '') + '</div>'
+      : '<div class="cat-pd__photos' + (dessus ? ' cat-pd__photos--over' : '') + '">' + photos.map((ph, i) => caseDe(ph, 'cat-pd__ph--' + i)).join('') + '</div>';
+    if (dessus) { h += voile.replace('<i ', '<i class="cat-pd__veil" ') + '></i>'; }
+    h += '<div class="cat-pd__head"' + (pleine ? ' style="background:' + css(fond.color, '#F6EFE5') + '"' : '') + '>'
+      + (acc.text ? '<div class="cat-pd__kicker" style="' + stylePres(acc) + '">' + esc(acc.text) + '</div>' : '')
+      // La Vank en capitales, écrites (pas par CSS : les accents tombaient).
+      + '<div class="cat-pd__title" style="' + stylePres(titre) + '">' + esc(titre.font === 'vank' ? texteTitre.toLocaleUpperCase(lang === 'nl' ? 'nl-BE' : 'fr-BE') : texteTitre) + '</div>'
+      + (txt.text ? '<div class="cat-pd__text" style="' + stylePres(txt) + '">' + esc(txt.text) + '</div>' : '')
+      + (avecListe && (p.products || []).length ? '<div class="cat-pres__list cat-pd__list">' + liste(p.products, lang, repliDe(p)) + '</div>' : '')
+      + '</div>';
+    return h + (avecListe ? piedDispo(p.availabilityFooter) : '') + '</div>';
+  }
+  /** Une page libre (gamme par gamme) : toute la page à la photo ou à l'illustration de la gamme voisine, sans titre. */
+  function pageLibre(p) {
+    const f = p.filler || null;
+    return '<div class="cat-free' + (f ? ' cat-free--' + esc(f.kind) : '') + '">' + (f ? placeLibre(f, '') : '') + '</div>';
+  }
   function qr(url, mm) {
     if (typeof window.qrcode !== 'function') { return ''; }
     try {
@@ -1751,33 +2140,73 @@
       return '<svg class="cat-qr" viewBox="0 0 ' + (n + 4) + ' ' + (n + 4) + '" width="' + mm + 'mm" height="' + mm + 'mm" shape-rendering="crispEdges" aria-label="' + esc(url) + '"><rect width="' + (n + 4) + '" height="' + (n + 4) + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
     } catch (e) { return ''; }
   }
-  /** Les coordonnées de la boutique à la dernière page : adresse, horaires, téléphone(s), e-mail (Marketing v1.9 ; rendu de `Back`). */
-  const coordonnees = (s, lang) => [s.address, s.hours ? (lang === 'nl' ? 'Open ' + s.hours : 'Ouvert ' + s.hours) : '', [s.phone, s.phone2 || ''].filter(Boolean).join(' · '), s.email || ''].filter(Boolean);
+  /** La dernière page dans son gabarit (charte) : A QR en avant · B boutique en avant · C « Le magasin », finition Rubis
+   * (refonte du 21/11/2026) — rendu de `Back`, CataloguePages.tsx, chaque élément affiché ou masqué, sa police, sa couleur. */
   function dos(doc, p) {
-    const lang = doc.version.lang, s = p.shop;
+    const lang = doc.version.lang, nl = lang === 'nl', s = p.shop, look = p.look;
+    const ligne = (el, v) => montre(look, el) ? (v || '') : '';
+    const tels = s ? [ligne('phone', s.phone), ligne('phone', s.phone2)].filter(Boolean).join(' · ') : '';
+    const heures = s ? ligne('hours', s.hours) : '';
+    const fetes = s ? ligne('holidays', s.holidayHours) : '';
+    const livraison = s ? ligne('delivery', s.deliveryHours) : '';
+    const pro = p.qrTarget === 'business';
+    const qrLabel = p.qrLabel || (nl ? (pro ? 'Bestellen voor bedrijven' : 'Bestel online') : pro ? 'Commande entreprise' : 'Commander en ligne');
+    const qrHint = p.qrLabel || pro ? qrLabel : s ? (nl ? 'De webshop van ' + s.name : 'Le webshop de ' + s.name) : nl ? 'Al onze winkels' : 'Toutes nos boutiques';
+    const ouvert = heures ? (nl ? 'Open ' : 'Ouvert ') + heures : '';
+    const lignes = s ? [['address', ligne('address', s.address)], ['hours', ouvert], ['holidays', fetes], ['delivery', livraison], ['phone', tels], ['email', ligne('email', s.email)]].filter(x => x[1]) : [];
+    const lg = logoSombre(doc);
+    const logoTag = montre(look, 'logo') ? '<img class="cat-logo cat-logo--dark" src="' + esc(lg) + '" alt=""' + styleLogo(look) + '>' : '';
+    const titreTag = montre(look, 'title') ? '<div class="cat-back__title"' + styleTexte(look, 'title') + '>' + esc(p.title) + '</div>' : '';
+    const texteTag = p.text && montre(look, 'text') ? '<div class="cat-back__text"' + styleTexte(look, 'text') + '>' + esc(p.text) + '</div>' : '';
+    const q = p.qrUrl && montre(look, 'qr') ? p.qrUrl : null;
+    const qrSt = styleTexte(look, 'qr');
+    const voirBoutique = montre(look, 'shop');
+    const quiTag = montre(look, 'name') ? '<div class="cat-back__who"' + styleChamp(look, 'name') + '>' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>' : '';
+    const classeLigne = el => el === 'holidays' ? ' class="cat-back__holidays"' : el === 'delivery' ? ' class="cat-back__delivery"' : '';
+    if (p.template === 'C') {
+      // Le magasin : la photo en haut, le logo, les horaires en grand, deux QR (commander, venir) sur leurs cartes
+      // blanches et les coordonnées sur un pied rubis.
+      const photoUrl = s && s.photoUrl && montre(look, 'photo') ? s.photoUrl : null;
+      const maps = s && s.mapsUrl && montre(look, 'maps') ? s.mapsUrl : null;
+      const contact = s ? [['address', ligne('address', s.address)], ['phone', ligne('phone', s.phone)], ['phone', ligne('phone', s.phone2)], ['email', ligne('email', s.email)]].filter(x => x[1]) : [];
+      const pied = voirBoutique && s && (quiTag || contact.length);
+      const carteQr = (url, label, sl) => '<div class="cat-back__qrC">' + qr(url, 22) + '<div class="cat-back__qrtext"><div class="cat-back__qrlabel"' + sl + '>' + esc(label) + '</div></div></div>';
+      let h = '<div class="cat-back cat-back--C cat-back--rubis' + (photoUrl ? ' cat-back--photo' : '') + '">'
+        + (photoUrl ? '<div class="cat-back__photo"><img src="' + esc(photoUrl) + '" alt=""></div>' : '')
+        + '<div class="cat-back__body">' + (montre(look, 'logo') ? '<img class="cat-logo cat-logo--dark cat-back__logo" src="' + esc(lg) + '" alt=""' + styleLogo(look) + '>' : '') + titreTag + texteTag;
+      if (voirBoutique && s && (heures || fetes || livraison)) {
+        h += '<div class="cat-back__hoursC"><div class="cat-back__label">' + (nl ? 'Openingsuren' : 'Horaires') + '</div>'
+          + (heures ? '<p class="cat-back__hoursBig"' + styleChamp(look, 'hours') + '>' + esc(heures) + '</p>' : '')
+          + (fetes ? '<p class="cat-back__holidays"' + styleChamp(look, 'holidays') + '>' + esc(fetes) + '</p>' : '')
+          + (livraison ? '<p class="cat-back__delivery"' + styleChamp(look, 'delivery') + '>' + esc(livraison) + '</p>' : '') + '</div>';
+      }
+      if (q || maps || pied) {
+        h += '<div class="cat-back__foot">'
+          + (q || maps ? '<div class="cat-back__qrs">' + (q ? carteQr(q, qrLabel, qrSt) : '') + (maps ? carteQr(maps, nl ? 'Kom langs in de winkel' : 'Venir au magasin', styleTexte(look, 'maps')) : '') + '</div>' : '')
+          + (pied ? '<div class="cat-back__shop">' + quiTag + (contact.length ? '<div class="cat-back__contact"' + styleTexte(look, 'shop') + '>' + contact.map(x => '<span' + styleTexte(look, x[0]) + '>' + esc(x[1]) + '</span>').join('') + '</div>' : '') + '</div>' : '')
+          + '</div>';
+      }
+      return h + '</div></div>';
+    }
     if (p.template === 'B') {
       // Boutique en avant (maquette A3, gabarit B) : l'adresse et les horaires en grand, le QR plus petit en bas.
-      const lignes = s ? coordonnees(s, lang) : [];
-      return '<div class="cat-back cat-back--B"><img class="cat-logo" src="' + esc(logo(doc)) + '" alt=""><div class="cat-back__title">' + esc(p.title) + '</div>'
-        + (p.text ? '<div class="cat-back__text">' + esc(p.text) + '</div>' : '')
-        + '<div class="cat-back__shopB"><div class="cat-back__who">' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>' + lignes.map(x => '<p>' + esc(x) + '</p>').join('') + '</div>'
-        + (p.qrUrl ? '<div class="cat-back__qr cat-back__qr--small">' + qr(p.qrUrl, 20) + '<div><div class="cat-back__host">' + esc(p.host || '') + '</div><div class="cat-back__hint">'
-          + esc(s ? (lang === 'nl' ? 'De webshop van ' + s.name : 'Le webshop de ' + s.name) : (lang === 'nl' ? 'Al onze winkels' : 'Toutes nos boutiques')) + '</div></div></div>' : '') + '</div>';
+      return '<div class="cat-back cat-back--B">' + logoTag + titreTag + texteTag
+        + (voirBoutique ? '<div class="cat-back__shopB">' + quiTag + lignes.map(x => '<p' + styleChamp(look, x[0]) + classeLigne(x[0]) + '>' + esc(x[1]) + '</p>').join('') + '</div>' : '')
+        + (q ? '<div class="cat-back__qr cat-back__qr--small">' + qr(q, 20) + '<div><div class="cat-back__host"' + qrSt + '>' + esc(p.host || '') + '</div><div class="cat-back__hint"' + qrSt + '>' + esc(qrHint) + '</div></div></div>' : '') + '</div>';
     }
-    let h = '<div class="cat-back"><img class="cat-logo" src="' + esc(logo(doc)) + '" alt=""><div class="cat-back__title">' + esc(p.title) + '</div>'
-      + (p.text ? '<div class="cat-back__text">' + esc(p.text) + '</div>' : '');
-    if (p.qrUrl) {
-      h += '<div class="cat-back__qr">' + qr(p.qrUrl, 30) + '<div><div class="cat-back__host">' + esc(p.host || '') + '</div><div class="cat-back__hint">'
-        + esc(s ? (lang === 'nl' ? 'De webshop van ' + s.name : 'Le webshop de ' + s.name) : (lang === 'nl' ? 'Al onze winkels' : 'Toutes nos boutiques')) + '</div></div></div>';
+    let h = '<div class="cat-back">' + logoTag + titreTag + texteTag;
+    if (q) {
+      h += '<div class="cat-back__qr">' + qr(q, 30) + '<div><div class="cat-back__host"' + qrSt + '>' + esc(p.host || '') + '</div><div class="cat-back__hint"' + qrSt + '>' + esc(qrHint) + '</div></div></div>';
     }
-    h += '<div class="cat-back__shop"><div class="cat-back__who">' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>';
-    if (s) {
-      const lignes = coordonnees(s, lang);
-      h += '<p>' + lignes.map(esc).join('<br>') + '</p>';
-    } else {
-      h += '<p>' + esc((lang === 'nl' ? 'Al onze winkels op ' : 'Toutes nos boutiques sur ') + (p.host || '')) + '</p>';
+    if (voirBoutique) {
+      h += '<div class="cat-back__shop">' + quiTag;
+      // Gabarit A : adresse, horaires, horaires des fêtes, livraison et téléphone, dans un seul paragraphe.
+      const courtes = s ? [['address', ligne('address', s.address)], ['hours', ouvert], ['holidays', fetes], ['delivery', livraison], ['phone', ligne('phone', s.phone)]].filter(x => x[1]) : [];
+      h += s ? '<p' + styleTexte(look, 'shop') + '>' + courtes.map((x, k) => '<span' + classeLigne(x[0]) + styleTexte(look, x[0]) + '>' + (k ? '<br>' : '') + esc(x[1]) + '</span>').join('') + '</p>'
+        : p.host ? '<p' + styleTexte(look, 'shop') + '>' + esc((nl ? 'Al onze winkels op ' : 'Toutes nos boutiques sur ') + p.host) + '</p>' : '';
+      h += '</div>';
     }
-    return h + '</div></div>';
+    return h + '</div>';
   }
 
   function rendre(S) {

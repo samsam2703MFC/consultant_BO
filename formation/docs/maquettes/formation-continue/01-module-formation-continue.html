@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>01 — Module Formation : la formation continue</title>
+<link rel="stylesheet" href="/formation/public/formation/ds.css"><link rel="stylesheet" href="fc.css">
+<style>
+.sw{display:flex;gap:10px;margin-bottom:14px}
+.sw .t{flex:1;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;gap:14px;align-items:center}
+.sw .t.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.sw .t .c{font-size:26px;font-weight:700;min-width:40px}
+.sw .t.on .c{color:var(--accent)}
+.sw .t b{font-weight:400;font-size:14.5px;display:block}
+.sw .t small{color:var(--muted);font-size:11.5px}
+.sw .t .ph{margin-left:auto;display:flex;gap:6px}
+.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.cat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.cat.on{background:#F6EDEE;border-color:#E8C9CD}
+.cat .n{font-size:20px;font-weight:700}
+.cat .tag{margin-top:2px}
+.cat small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.flux{display:flex;align-items:center;gap:0;margin:4px 0 14px}
+.flux span{flex:1;text-align:center;padding:7px 4px;font-size:11.5px;border:1px solid var(--line);color:var(--muted);background:#fff}
+.flux span:first-child{border-radius:8px 0 0 8px}
+.flux span:last-child{border-radius:0 8px 8px 0}
+.flux span.fait{background:#E3EEE6;color:var(--green);border-color:#CFE0D4}
+.flux .ann-n{flex:none;padding:0;border:0;background:#1F6FB2;color:#fff;border-radius:50%}
+.flux span.ici{background:var(--prize-soft);color:var(--prize-ink);border-color:#EBD3A8;font-weight:700}
+.it{display:flex;gap:10px;align-items:baseline;padding:5px 0;font-size:12.5px}
+.it .cd{width:110px;flex:0 0 auto;font-size:11px;color:var(--muted)}
+.it .tx{flex:1}
+.it .tx small{display:block;color:var(--muted);font-size:11px}
+</style></head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <div class="logo">L’Atelier By</div><div class="k">Module Formation</div>
+    <div class="g">Formation</div>
+    <a>Accueil</a>
+    <a class="on">Formations <span class="n">78</span></a>
+    <a>Postes <span class="n">12</span></a>
+    <a>Compétences <span class="n">56</span></a>
+    <a>Données du panel</a>
+    <div class="g">Opérationnel</div>
+    <a>Ouverture</a><a>Journée de travail</a><a>Fermeture</a><a>La tablette</a><a>Rédaction des SOP</a>
+    <div class="g">Documents</div>
+    <a>Catalogue des manuels ↗</a>
+    <div class="bas">← Cockpit</div>
+  </nav>
+  <main class="main">
+    <div class="top"><div><div class="kk">Formations</div><h1>Formation continue</h1></div><span class="sp"></span>
+      <span class="q">Rechercher une formation, un produit…</span><span class="seg"><span class="on">FR</span><span>NL</span></span>
+      <span class="b p">＋ Nouvelle formation continue</span></div>
+
+    <div class="sw ann">
+      <span class="ann-n" style="left:-10px;top:-10px">1</span>
+      <div class="t"><span class="c">38</span><div><b>Formation initiale</b><small>apprendre le métier avant et pendant le lancement</small></div>
+        <span class="ph"><span class="tag">Pré-ouverture 31</span><span class="tag">Ouverture 7</span></span></div>
+      <div class="t on"><span class="c">48</span><div><b>Formation continue</b><small>après le lancement : se perfectionner, suivre les nouveautés · 8 FO sont dans les deux</small></div>
+        <span class="ph"><span class="tag">Recyclages FO 24</span><span class="tag">Contenus 24</span></span></div>
+    </div>
+
+    <div class="cats ann">
+      <span class="ann-n" style="left:-10px;top:-10px">2</span>
+      <div class="cat"><div class="n">24</div><span class="tag">Toutes</span><small>9 validées · 6 à valider · 9 brouillons</small></div>
+      <div class="cat"><div class="n">7</div><span class="tag tech"><span class="pt"></span>Technique</span><small>gestes du métier</small></div>
+      <div class="cat"><div class="n">5</div><span class="tag conn"><span class="pt"></span>Connaissance</span><small>règles, gestion, produits</small></div>
+      <div class="cat on"><div class="n">8</div><span class="tag prod"><span class="pt"></span>Nouveau produit</span><small>lancements de la gamme</small></div>
+      <div class="cat"><div class="n">4</div><span class="tag ntech"><span class="pt"></span>Nouvelle technique</span><small>procédés, équipements</small></div>
+    </div>
+
+    <div class="grille g2">
+      <section class="carte">
+        <div class="pad" style="display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:10px 14px">
+          <span class="mut petit" style="margin-right:26px">Statut</span>
+          <span class="ann" style="display:inline-flex"><span class="ann-n" style="left:-30px;top:3px">3</span><span class="seg"><span class="on">Tous <i>8</i></span><span>Brouillon <i>3</i></span><span>À valider <i>2</i></span><span>Validée <i>3</i></span></span></span>
+          <span class="sp" style="flex:1"></span><span class="mut petit">Recyclages FO-xx : onglet « Toutes »</span>
+        </div>
+        <div class="tete"><span class="c-code">Code</span><span class="c-nom">Nouveau produit</span><span style="width:96px">Statut</span><span style="width:90px">Franchisés</span><span style="width:150px">Avancement réseau</span><span style="width:70px">Diffusion</span></div>
+        <div class="ligne sel"><span class="c-code">FC-024</span><span class="c-nom"><b>Bûche praliné-noisette — fêtes 2026</b><small>Pâtisserie · P1 P4 P5 · 6 étapes · quiz 4 questions</small></span><span style="width:96px"><span class="st aval">À valider</span></span><span class="c-w" style="width:90px">—</span><span class="av"><span class="bar"></span><span>—</span></span><span class="c-w mut" style="width:70px">01/12</span></div>
+        <div class="ligne"><span class="c-code">FC-023</span><span class="c-nom"><b>Pistolet poulet-curry du traiteur</b><small>Traiteur · P2 P6 · 5 étapes · quiz 3 questions</small></span><span style="width:96px"><span class="st val">Validée</span></span><span class="c-w" style="width:90px">4 / 4</span><span class="av"><span class="bar"><i style="width:62%"></i></span><span>62 %</span></span><span class="c-w mut" style="width:70px">05/11</span></div>
+        <div class="ligne"><span class="c-code">FC-021</span><span class="c-nom"><b>Cramique aux pépites de chocolat</b><small>Viennoiserie · P1 P3 · 4 étapes · quiz 3 questions</small></span><span style="width:96px"><span class="st val">Validée</span></span><span class="c-w" style="width:90px">4 / 4</span><span class="av"><span class="bar"><i style="width:91%"></i></span><span>91 %</span></span><span class="c-w mut" style="width:70px">28/10</span></div>
+        <div class="ligne"><span class="c-code">FC-019</span><span class="c-nom"><b>Tartelette tatin individuelle</b><small>Pâtisserie · P1 P5 · 5 étapes</small></span><span style="width:96px"><span class="st val">Validée</span></span><span class="c-w" style="width:90px">3 / 4</span><span class="av"><span class="bar"><i style="width:100%"></i></span><span>100 %</span></span><span class="c-w mut" style="width:70px">06/10</span></div>
+        <div class="ligne"><span class="c-code">FC-022</span><span class="c-nom"><b>Galette des rois 2027 — frangipane et pomme</b><small>Pâtisserie · P1 P4 P5 · 5 étapes</small></span><span style="width:96px"><span class="st aval">À valider</span></span><span class="c-w" style="width:90px">—</span><span class="av"><span class="bar"></span><span>—</span></span><span class="c-w mut" style="width:70px">05/01</span></div>
+        <div class="ligne"><span class="c-code">FC-025</span><span class="c-nom"><b>Coffret « petit-déjeuner bureau » B2B</b><small>Vente · P3 P4 · 2 étapes rédigées</small></span><span style="width:96px"><span class="st brou">Brouillon</span></span><span class="c-w" style="width:90px">—</span><span class="av"><span class="bar"></span><span>—</span></span><span class="c-w mut" style="width:70px">—</span></div>
+        <div class="ligne"><span class="c-code">FC-026</span><span class="c-nom"><b>Pain au levain de seigle 600 g</b><small>Boulangerie · P1 · 1 étape rédigée</small></span><span style="width:96px"><span class="st brou">Brouillon</span></span><span class="c-w" style="width:90px">—</span><span class="av"><span class="bar"></span><span>—</span></span><span class="c-w mut" style="width:70px">—</span></div>
+        <div class="ligne"><span class="c-code">FC-027</span><span class="c-nom"><b>Soupe du jour en pot verre consigné</b><small>Traiteur · P2 · titre seul</small></span><span style="width:96px"><span class="st brou">Brouillon</span></span><span class="c-w" style="width:90px">—</span><span class="av"><span class="bar"></span><span>—</span></span><span class="c-w mut" style="width:70px">—</span></div>
+      </section>
+
+      <aside class="carte pad">
+        <div class="h3">FC-024 · Formation continue</div>
+        <div style="font-size:20px;line-height:1.25;margin:0 0 8px">Bûche praliné-noisette — fêtes 2026</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"><span class="tag prod"><span class="pt"></span>Nouveau produit</span><span class="tag">v1.0</span><span class="tag">FR relu · NL à relire</span></div>
+        <div class="flux ann"><span class="ann-n" style="right:-8px;top:-14px">4</span><span class="fait">1 · Brouillon</span><span class="ici">2 · À valider</span><span>3 · Validée</span></div>
+        <div class="note or" style="margin-bottom:12px">Envoyée à la validation par <b>Claire D.</b> (siège, formation) le 20/11/2026 à 16:42. Une fois validée, elle part dans le dossier des 4 franchisés et dans les <b>Nouveautés</b>.</div>
+        <div class="h3">Le contenu <i>même format qu’une SOP</i></div>
+        <div class="it"><span class="cd">6 étapes</span><span class="tx">Réception du kit · Montage · Insert praliné · Glaçage · Décor · Vitrine et étiquette<small>photos 9 · vidéo 1 (montage, 3 min)</small></span></div>
+        <div class="it"><span class="cd">2 points critiques</span><span class="tx">Chaîne du froid (≤ 4 °C) · Allergènes : fruits à coque, lait, œuf, gluten</span></div>
+        <div class="it"><span class="cd">Quiz</span><span class="tx">4 questions, 3 bonnes réponses pour réussir</span></div>
+        <div class="h3" style="margin-top:12px">Relié à</div>
+        <div class="it"><span class="cd">Formation</span><span class="tx">FO-08 Pâtisserie technique</span></div>
+        <div class="it"><span class="cd">Compétence</span><span class="tx">C-PAT.Entremets</span></div>
+        <div class="it"><span class="cd">Pour qui</span><span class="tx">P1 Opérateur B&amp;P · P4 Chef section vente · P5 Chef section B&amp;P</span></div>
+        <div class="h3" style="margin-top:12px">Diffusion</div>
+        <div class="it"><span class="cd">Franchisés</span><span class="tx">Tout le réseau (4 magasins) — chaque consultant adapte ensuite pour ses franchisés</span></div>
+        <div class="it"><span class="cd">À faire avant</span><span class="tx">01/12/2026 · mise en vente le 06/12</span></div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><span class="b">Modifier (assistant)</span><span class="b">Aperçu tablette</span><span class="b v">✓ Valider et diffuser</span></div>
+        <div class="h3" style="margin-top:16px">Journal</div>
+        <div class="trace"><span class="d">20/11 16:42</span><span class="x">Envoyée à la validation<small>Claire D. · siège</small></span></div>
+        <div class="trace"><span class="d">18/11 10:05</span><span class="x">Créée (assistant, 6 étapes)<small>Claire D. · siège</small></span></div>
+      </aside>
+    </div>
+
+    <div class="legende"><b>Ce que montre l’écran (module Formation, siège)</b>
+      <ol><li><b>Deux types, côte à côte :</b> la formation initiale (les FO de pré-ouverture et d’ouverture, inchangées) et la formation continue (les 24 recyclages FO déjà classés « continue » + les nouveaux contenus).</li>
+      <li><b>Quatre catégories</b> : technique, connaissance, nouveau produit, nouvelle technique. Chaque contenu en a une seule.</li>
+      <li><b>Trois statuts</b> : brouillon → à valider → validée. Seule une formation validée part chez les franchisés.</li>
+      <li>Le contenu s’écrit avec l’assistant des SOP (étapes, photos, vidéo, quiz) : rien à réapprendre, la tablette et le PDF le lisent déjà.</li></ol></div>
+  </main>
+</div>
+</body></html>

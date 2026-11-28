@@ -25,8 +25,10 @@ class WorkshopUiController extends BaseController
 
     public function products()
     {
+        // [431] ?tablet=1 : la même fiche produit sur la tablette de la Kierownik produkcji (grandes cibles, sans menu,
+        // retour vers /tablet/quality). Mêmes droits que la page (session ERP du navigateur, connexion par QR possible).
         $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id'),
-            'can_toggle' => $this->access->canToggleProducts(user('id') ? (int) user('id') : null)]);
+            'can_toggle' => $this->access->canToggleProducts(user('id') ? (int) user('id') : null), 'tablet' => ($_GET['tablet'] ?? '') === '1']);
     }
 
     /** Magazyn › Stan magazynu (zakładki Magazyn) : widok « levels » aplikacji kart produktów. */
@@ -143,6 +145,15 @@ class WorkshopUiController extends BaseController
     public function packing()
     {
         $this->view('workshop/packing', ['api_base' => $this->apiBase()]);
+    }
+
+    /**
+     * [415] Tablet jakości Kierownika produkcji (obchód, kontrola partii, śledzenie partii) : sama powłoka, dane przez API z tokenem
+     * tabletu i PIN-em osoby ze stanowiska Kierownik produkcji albo Jakość.
+     */
+    public function quality()
+    {
+        $this->view('workshop/quality', ['api_base' => $this->apiBase()]);
     }
 
     /** Tablet biurowy (PWA) : dział → nazwisko → osobisty kod QR (osoba + dzień) zatwierdzany telefonem ; sama powłoka. */

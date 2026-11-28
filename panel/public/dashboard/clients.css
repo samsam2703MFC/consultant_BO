@@ -1,0 +1,325 @@
+/* Dashboard magasin › Vendre › Clients (25/11/2026 ; maquettes panel/docs/maquettes/clients-panel/). Les jetons et les
+ * composants communs viennent de ../assets/ds/global.css (.card, .btn, .seg, .page-tabs, .ds-table, .chip, .tag-warn,
+ * .confirm…) ; ici, ce qui est propre au module. Pas de gras (§4.3) sauf la valeur clé du résumé.
+ * 26/11/2026 (DESIGN_SYSTEM.md §7.13) : le résumé de chaque onglet (.pcl-res) et « À corriger » ; la tête des tableaux collée ;
+ * les couleurs d'état sur les jetons, avec leurs mots ; pas d'ombre (le tiroir). */
+.pcl { font-size: 13px; color: var(--ink); }
+.pcl-sp { flex: 1; }
+.pcl-attente { padding: 40px 0; text-align: center; color: var(--muted); }
+.pcl-vide { padding: 24px 16px; text-align: center; color: var(--muted); }
+.pcl-aide { font-size: 12px; line-height: 1.5; color: var(--muted); }
+.pcl-ok { margin: 8px 0 0; color: var(--green); font-size: 12.5px; }
+.pcl-pad { padding: 0 18px 12px; }
+.pcl-h { margin: 4px 0 8px; font-size: 14px; }
+.pcl-compte { font-size: 11.5px; color: var(--muted); }
+
+/* L'en-tête : le magasin, le titre, l'action ; les onglets */
+.pcl-tete { display: flex; align-items: flex-end; gap: 12px; margin: 0 0 10px; }
+.pcl-tete h1 { margin: 0; font-size: 24px; font-weight: 400; }
+.pcl-kicker { margin: 0 0 2px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.pcl-tete .btn svg { width: 15px; height: 15px; }
+.pcl-tabs { align-items: center; }
+
+/* La liste et la fiche côte à côte */
+.pcl-2 { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 16px; align-items: start; }
+.pcl-carte { padding: 0; overflow: hidden; position: relative; }
+.pcl-filtres { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.pcl-filtres input[type="search"] { flex: 1 1 220px; min-width: 0; height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; font: 13px 'Gotham', system-ui, sans-serif; color: var(--ink); background: #fff; }
+.pcl-grp { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.pcl-grp .seg button { padding: 5px 9px; font-size: 12px; letter-spacing: normal; text-transform: none; }
+.pcl-fil { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 50% 100%; animation: pcl-fil 1.1s linear infinite; }
+@keyframes pcl-fil { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+.pcl-table { min-width: 0 !important; }
+.pcl-table .sub { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+.pcl-ligne { cursor: pointer; }
+.pcl-ligne:hover td { background: var(--table-head); }
+.pcl-ligne.is-sel td { background: rgba(141, 29, 44, 0.05); }
+.pcl-pied { padding: 10px 14px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+
+/* Les avertissements */
+.pcl-alerte, .pcl-note { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 11px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.5; }
+.pcl-alerte { background: var(--prize-soft); color: var(--prize-ink); }
+.pcl-alerte > div, .pcl-note > div { flex: 1; }
+.pcl-alerte svg, .pcl-note svg { width: 18px; height: 18px; flex: none; }
+.pcl-note { border: 1px solid var(--line); background: #fff; color: var(--muted-2); }
+.pcl-note-doux { background: var(--paper); }
+.pcl-refus { display: flex; gap: 16px; align-items: flex-start; margin: 0 0 12px; }
+.pcl-refus svg { width: 26px; height: 26px; flex: none; color: var(--accent); }
+.pcl-refus h3 { margin: 0 0 6px; font-size: 16px; font-weight: 400; }
+.pcl-refus p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.55; }
+
+/* Le score, le crédit (le crédit utilisé : sous 80 % --green, 80–100 % --prize « proche de la limite », 100 % et plus --stop
+ * « dépassé », DESIGN_SYSTEM.md §7.13) */
+.pcl-score { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; font-size: 12px; vertical-align: middle; }
+.pcl-sA { background: rgba(63, 122, 82, 0.14); color: var(--green); }
+.pcl-sB { background: var(--chip); color: var(--ink); }   /* 26/11/2026 : le bleu (identification de l'objectif, §3) quitte le score */
+.pcl-sC { background: var(--prize-soft); color: var(--prize-ink); }
+.pcl-sD { background: var(--stop-soft); color: var(--stop); }
+.pcl-credit { display: grid; gap: 4px; min-width: 120px; }
+.pcl-credit .b { height: 5px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+.pcl-credit .b i { display: block; height: 100%; border-radius: 999px; }
+.pcl-credit .t { font-size: 11px; color: var(--muted); }
+.pcl-credit-m { color: var(--prize-ink); }
+.pcl-credit-m.pcl-credit-danger { color: var(--stop); }
+
+/* La fiche */
+.pcl-fiche { padding: 0; position: sticky; top: 12px; }
+.pcl-fiche-vide { padding: 28px 22px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.pcl-ft { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+.pcl-fnom { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 17px; }
+.pcl-fmeta { margin-top: 4px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.pcl-kpis { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
+.pcl-kpis > div { padding: 11px 14px; border-left: 1px solid var(--row-line); min-width: 0; }
+.pcl-kpis > div:nth-child(3n+1) { border-left: 0; }
+.pcl-kpis > div:nth-child(n+4) { border-top: 1px solid var(--row-line); }
+.pcl-kpis .v { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcl-kpis .k { margin-top: 3px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint, var(--muted)); }
+.pcl-bloc { padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.pcl-bloc:last-child { border-bottom: 0; }
+.pcl-bloc h4 { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 8px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.pcl-bloc h4 span { letter-spacing: normal; text-transform: none; }
+.pcl-doux { background: var(--paper); }
+.pcl-doux .pcl-aide { color: var(--muted-2); }   /* un petit texte sur fond teinté (§7.13) */
+.pcl-lf { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: 12.5px; }
+.pcl-lf > span:first-child { color: var(--muted); flex: none; }
+.pcl-lf > span:last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.pcl-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.pcl-acts .btn svg { width: 14px; height: 14px; }
+.pcl-mini { width: 100%; border-collapse: collapse; font-size: 12px; }
+.pcl-mini td { padding: 6px 4px 6px 0; border-top: 1px solid var(--row-line); }
+.pcl-mini tr:first-child td { border-top: 0; }
+.pcl-chaine { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; font-size: 12px; }
+.pcl-chaine span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 6px; background: var(--chip); }
+.pcl-chaine svg { width: 13px; height: 13px; }
+.pcl-chaine i { font-style: normal; color: var(--muted); }
+.pcl-tchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 11.5px; }
+.pcl-tchip svg { width: 14px; height: 14px; }
+.pcl-ong2 { display: flex; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.pcl-ong2 button { margin: 0 0 -1px; padding: 9px 6px; border: 0; border-bottom: 2px solid transparent; background: none; font: 12px 'Gotham', system-ui, sans-serif; color: var(--muted-2); white-space: nowrap; cursor: pointer; }
+.pcl-ong2 button.is-on { color: var(--accent); border-bottom-color: var(--accent); }
+.pcl-ligne-in { display: flex; align-items: flex-end; gap: 8px; }
+.pcl-ligne-in > .pcl-champ, .pcl-ligne-in > input { flex: 1; min-width: 0; }
+.pcl-ligne-in input { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; font: 13px 'Gotham', system-ui, sans-serif; }
+.pcl-lien { margin-top: 6px; padding: 6px 8px; border-radius: 6px; background: var(--chip); font-size: 11.5px; overflow-wrap: anywhere; }
+
+/* Les formulaires */
+.pcl-form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; padding: 14px 18px; }
+.pcl-fen .pcl-form2 { padding: 4px 0 8px; }
+.pcl-form2 .plein { grid-column: 1 / -1; }
+.pcl-champ { display: grid; gap: 5px; font-size: 11.5px; color: var(--muted); min-width: 0; }
+.pcl-champ em { font-style: normal; color: var(--accent); }
+.pcl-champ input, .pcl-champ select, .pcl-champ textarea { width: 100%; min-width: 0; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font: 13px 'Gotham', system-ui, sans-serif; }
+.pcl-champ input[readonly] { background: var(--table-head); }
+.pcl-case { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink); }
+.pcl-jours { display: flex; gap: 5px; }
+.pcl-jours button, .pcl-chips button { min-width: 32px; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--muted-2); font: 12px 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.pcl-jours button.is-on, .pcl-chips button.is-on { border: 2px solid var(--accent); color: var(--accent); background: rgba(141, 29, 44, 0.05); }
+.pcl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pcl-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; background: var(--chip); font-size: 12px; }
+.pcl-fen .confirm__box { width: min(560px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; }
+.pcl-fen .confirm__box.pcl-fen-l { width: min(760px, 100%); }
+.pcl-fen-tete { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pcl-fen-tete h3 { margin: 0; font-size: 16px; font-weight: 400; }
+.pcl-fen-tete svg { width: 15px; height: 15px; }
+
+/* L'assistant « Ajouter un bureau » */
+.pcl-ass { overflow: visible; }
+.pcl-stepper { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.pcl-stepper button { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; background: none; text-align: left; font: 11.5px 'Gotham', system-ui, sans-serif; color: var(--muted); cursor: pointer; }
+.pcl-stepper button:disabled { cursor: default; }
+.pcl-stepper i { height: 4px; border-radius: 999px; background: var(--chip); }
+.pcl-stepper .fait i { background: var(--green); }
+.pcl-stepper .on { color: var(--accent); }
+.pcl-stepper .on i { background: var(--accent); }
+.pcl-site { padding-top: 6px; border-top: 1px solid var(--row-line); }
+.pcl-site .pcl-h { padding: 8px 18px 0; margin: 0; }
+.pcl-pied-ass { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line); background: var(--table-head); border-radius: 0 0 12px 12px; }
+
+/* L'analyse B2B */
+.pcl-barre { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
+.pcl-barre svg { width: 15px; height: 15px; }
+.pcl-date { font-size: 17px; }
+.pcl-ici { font-size: 12.5px; color: var(--muted); }
+.pcl-up { color: var(--green); }
+.pcl-down { color: var(--prize-ink); }   /* l'écart au mois d'avant, à l'an dernier : vert au-dessus, or en dessous (§7.13) */
+.pcl-an2 { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; margin-top: 12px; }
+.pcl-h2 { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 12px; font-size: 0.95rem; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.pcl-h2 small { letter-spacing: normal; text-transform: none; }
+.pcl-barres { display: flex; align-items: flex-end; gap: 10px; height: 190px; padding: 0 4px; border-bottom: 1px solid var(--line); }
+.pcl-barres .m { flex: 1; display: flex; align-items: flex-end; gap: 3px; height: 100%; }
+.pcl-barres .m i { flex: 1; border-radius: 4px 4px 0 0; min-height: 1px; }
+.pcl-barres .m i.a { background: var(--accent); }
+.pcl-barres .m i.p { background: #EBD3D8; }
+.pcl-barres .m.is-mois { box-shadow: inset 0 -3px 0 var(--prize); }
+.pcl-mois12 { display: flex; gap: 10px; padding: 6px 4px 0; font-size: 10.5px; color: var(--muted); }
+.pcl-mois12 span { flex: 1; text-align: center; }
+.pcl-leg { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.pcl-leg span { display: inline-flex; align-items: center; gap: 6px; }
+.pcl-leg i { width: 10px; height: 10px; border-radius: 3px; }
+.pcl-donut { display: block; width: 170px; margin: 10px auto; }
+
+@media (max-width: 1100px) {
+  .pcl-2, .pcl-an2 { grid-template-columns: minmax(0, 1fr); }
+  .pcl-fiche { position: static; }
+}
+@media (max-width: 700px) {
+  .pcl-form2 { grid-template-columns: minmax(0, 1fr); }
+  .pcl-stepper { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pcl-tete { flex-wrap: wrap; }
+  .pcl-pied-ass .pcl-aide { display: none; }
+}
+.pcl-table td.num { white-space: nowrap; }
+.pcl-fiche a { color: inherit; text-decoration: underline; text-decoration-color: var(--line); }
+@media (max-width: 700px) {
+  .pcl-table th:last-child, .pcl-table td:last-child { display: none; }
+  .pcl-table td, .pcl-table th { padding-left: 10px !important; padding-right: 10px !important; }
+}
+/* Le compte TF Buddy du magasin (tfb-magasin.js) : l'état dans la barre des onglets, la fenêtre de connexion. */
+.pcl-tfb { font-size: 11.5px; color: var(--green); margin-right: 12px; }
+.tfbm-champ { display: grid; gap: 5px; margin-top: 12px; font-size: 11.5px; color: var(--muted); }
+.tfbm-champ input { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font: 14px 'Gotham', system-ui, sans-serif; color: var(--ink); }
+.pcl-tfb-ko { color: var(--danger); }
+
+/* Le tiroir d'un bureau (26/11/2026, maquette A « even larger ») : par-dessus la liste, toute la hauteur de l'écran. */
+.pcl-tir-voile { position: fixed; inset: 0; z-index: 30; background: rgba(28, 26, 23, 0.22); }
+.pcl-tir { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(1080px, 94vw); display: flex; flex-direction: column; background: #fff; border-left: 1px solid var(--line); }   /* pas d'ombre (§2) : le voile et le filet */
+/* L'entrée du tiroir, à l'ouverture seulement (pas à chaque rendu). */
+.pcl-tir.pcl-tir-entre { animation: pcl-tir-in 0.18s ease-out; }
+@keyframes pcl-tir-in { from { transform: translateX(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.pcl-tir-tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 26px 14px; border-bottom: 1px solid var(--line); }
+.pcl-tir-tete svg { width: 15px; height: 15px; }
+.pcl-tir-nom { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 21px; }
+.pcl-tir-nav { display: flex; align-items: center; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+.pcl-tir-nav > button:not(.btn) { margin: 0 0 -1px; padding: 11px 9px; border: 0; border-bottom: 2px solid transparent; background: none; font: 13px 'Gotham', system-ui, sans-serif; color: var(--muted-2); cursor: pointer; white-space: nowrap; }
+.pcl-tir-nav > button:not(.btn):hover { color: var(--accent); border-bottom-color: var(--accent); }
+.pcl-tir-nav svg { width: 15px; height: 15px; }
+.pcl-tir-pos { font-size: 12px; color: var(--muted); min-width: 44px; text-align: center; }
+.pcl-tir-corps { flex: 1; overflow-y: auto; padding: 18px 26px 26px; display: grid; gap: 22px; align-content: start; }
+.pcl-tir-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px 36px; }
+.pcl-tir-sec h4 { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--row-line); font-size: 10.5px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.pcl-tir-sec h4 .linklike { letter-spacing: normal; text-transform: none; color: var(--accent); text-decoration: underline; }
+.pcl-tir-pied { display: flex; align-items: center; gap: 8px; padding: 12px 26px; border-top: 1px solid var(--line); background: var(--table-head); }
+.pcl-tir-pied svg { width: 14px; height: 14px; }
+.pcl-manque { display: flex; gap: 10px; align-items: flex-start; padding: 11px 13px; border-radius: 9px; background: var(--prize-soft); color: var(--prize-ink); font-size: 12.5px; line-height: 1.5; }
+.pcl-manque b { font-weight: 400; }
+.pcl-manque > svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+.pcl-manque .btn svg { width: 14px; height: 14px; }
+.pcl-jours7 { display: inline-flex; gap: 3px; }
+.pcl-jours7 i { font-style: normal; width: 21px; height: 21px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px; background: var(--chip); color: var(--muted); }
+.pcl-jours7 i.on { background: rgba(141, 29, 44, 0.12); color: var(--accent); }
+.pcl-membres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; }
+.pcl-membres div { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--row-line); font-size: 12.5px; }
+.pcl-membres small { color: var(--muted); font-size: 11.5px; text-align: right; }
+@media (max-width: 900px) {
+  .pcl-tir { width: 100vw; }
+  .pcl-tir-2 { grid-template-columns: minmax(0, 1fr); }
+  .pcl-membres { grid-template-columns: minmax(0, 1fr); }
+  .pcl-tir-nav > button:not(.btn) { padding: 10px 5px; font-size: 12px; }
+}
+
+/* L'assistant « Ajouter un bureau » dans le tiroir large (26/11/2026) : le formulaire, et « Ce que l'on crée » à côté. */
+.pcl-tir-ass .pcl-stepper { padding: 14px 26px; }
+.pcl-ass-grille { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.pcl-ass-form .pcl-form2 { padding: 8px 0 12px; }
+.pcl-ass-form .pcl-pad { padding: 0 0 12px; }
+.pcl-ass-form .pcl-site .pcl-h { padding: 8px 0 0; }
+.pcl-ass-grille > .pcl-fiche { position: sticky; top: 0; }
+.pcl-geo { display: flex; flex-direction: column; gap: 2px; margin-top: -6px; }
+.pcl-geo:empty { display: none; }
+.pcl-geo button { text-align: left; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font: 12.5px 'Gotham', system-ui, sans-serif; color: var(--ink); cursor: pointer; }
+.pcl-geo button:hover { border-color: var(--accent); color: var(--accent); }
+.pcl-geo-etat { font-size: 11.5px; color: var(--muted); }
+.pcl-geo-etat.ok { color: var(--green); }
+.pcl-logo { display: flex; align-items: center; gap: 12px; }
+.pcl-logo img { max-height: 54px; max-width: 160px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: #fff; }
+.pcl-logo input[type="file"] { font: 12px 'Gotham', system-ui, sans-serif; }
+@media (max-width: 900px) { .pcl-ass-grille { grid-template-columns: minmax(0, 1fr); } }
+
+/* Les bureaux en développement (26/11/2026) : le bloc en tête de Bureaux, le tiroir d'une demande, le questionnaire. */
+.pcl-dev { margin: 0 0 14px; }
+.pcl-dev-tete { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.pcl-dev-tete > div:first-child { max-width: 720px; }
+.pcl-dev-tete .btn svg { width: 14px; height: 14px; }
+.pcl-dev-titre { font-size: 16px; margin-bottom: 3px; }
+.pcl-vert { font-weight: 400; color: var(--green); }
+.pcl-bon { display: inline-block; padding: 3px 8px; border: 1px dashed var(--accent); border-radius: 6px; color: var(--accent); font-size: 12px; letter-spacing: 0.06em; }
+.pcl-dv-statut { display: grid; gap: 6px; padding-top: 4px; }
+.pcl-dv-statut label { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink); }
+.pcl-dev-valider { padding: 14px 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
+.pcl-q-lien { display: flex; gap: 16px; align-items: flex-start; margin: 0 0 10px; }
+.pcl-q-qr { flex: none; width: 128px; height: 128px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.pcl-q-qr svg { width: 100%; height: 100%; display: block; }
+.pcl-dv-statut input[type="radio"] { width: auto; flex: none; margin: 0; padding: 0; }
+
+/* Le générateur de liens du formulaire des bureaux (26/11/2026) : le QR, le lien du magasin choisi, ses gestes. */
+.pcl-lien { display: flex; gap: 18px; align-items: flex-start; margin: 12px 0 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--table-head); }
+.pcl-lien-qr { flex: none; width: 132px; height: 132px; padding: 8px; box-sizing: border-box; border-radius: 12px; background: #fff; border: 1px solid var(--line); }
+.pcl-lien-qr svg, .pcl-lien-qr img { width: 100%; height: 100%; display: block; }
+.pcl-lien-corps { flex: 1; min-width: 0; }
+.pcl-lien-titre { font-size: 15px; margin: 0 0 2px; }
+.pcl-lien-ligne { display: flex; gap: 12px; margin: 10px 0 8px; align-items: flex-end; flex-wrap: wrap; }
+.pcl-lien-mag { flex: 0 0 220px; margin: 0; }
+.pcl-lien-url { flex: 1 1 280px; margin: 0; }
+.pcl-lien-url input { font-size: 13px; color: var(--accent); }
+.pcl-lien .pcl-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) { .pcl-lien { flex-direction: column; } .pcl-lien-qr { width: 120px; height: 120px; } }
+
+/* ── Le résumé d'un onglet (26/11/2026, DESIGN_SYSTEM.md §7.13 ; la forme de .chr et .pco-res, recopiée sous le préfixe) ──
+ * Ligne 1 : la valeur clé (24 px, 700 : le seul gras), son état en mots derrière un point de 8 px ; ce qu'elle mesure ; le
+ * contexte, séparé par un filet. Ligne 2, sous un filet : « À corriger », des boutons du système qui mènent au geste. */
+.pcl-res { margin: 0 0 12px; padding: 16px 20px 14px; }
+.pcl-res-l1 { display: grid; grid-template-columns: auto minmax(200px, 1.2fr) minmax(180px, 1fr) minmax(180px, 1fr); gap: 24px; align-items: center; }
+.pcl-res-l1--court { grid-template-columns: auto minmax(0, 1fr); }
+.pcl-res-v { display: flex; flex-direction: column; gap: 4px; }
+.pcl-res-kv { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pcl-res-et { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted-2); white-space: nowrap; }
+.pcl-res-q { font-size: 13px; line-height: 1.35; color: var(--ink); }
+.pcl-res-q > span { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.pcl-res-c { display: grid; gap: 8px; font-size: 13px; line-height: 1.35; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pcl-res-c p { margin: 0; }
+.pcl-res-c p > span { display: block; margin-top: 1px; font-size: 12px; color: var(--muted); }
+.pcl-res-sep { padding-left: 18px; border-left: 1px solid var(--line); }
+.pcl-pt { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.pcl-pt--stop { background: var(--stop); } .pcl-pt--prize { background: var(--prize); } .pcl-pt--green { background: var(--green); }
+.pcl-res-l2 { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.pcl-res-t { flex: none; font-size: 12.5px; line-height: 30px; color: var(--muted-2); }
+.pcl-res-l { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; flex: 1 1 0; }
+.pcl-res-b { gap: 8px; }
+.pcl-res-b:hover:not(:disabled) { border-color: var(--accent); }
+.pcl-res-reste { font-size: 12px; color: var(--muted); }
+.pcl-res-ok { flex: 1 1 auto; margin: 0; font-size: 12.5px; line-height: 30px; color: var(--green); }
+.pcl-res-l2 .linklike { line-height: 26px; }
+/* Le bloc où mène un point : un liseré bordeaux un instant (pas d'ombre). */
+.pcl-vu { outline: 2px solid var(--accent); outline-offset: 3px; animation: pcl-vu 1.8s ease-out forwards; }
+@keyframes pcl-vu { 0%, 55% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .pcl-vu { animation: none; } .pcl-res-b { transition: none; } }
+/* La part B2B du chiffre, ses écarts sous l'anneau. */
+.pcl-part-e { margin: -2px 0 8px; text-align: center; font-size: 11.5px; color: var(--muted); }
+@media (max-width: 1365px) {
+  .pcl-2 .pcl-res-l1:not(.pcl-res-l1--court) { grid-template-columns: auto minmax(0, 1fr); }
+  .pcl-2 .pcl-res-l1 > .pcl-res-c { grid-column: 1 / -1; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 1100px) {
+  .pcl-res-l1 { grid-template-columns: auto minmax(0, 1fr); }
+  .pcl-res-l1 > .pcl-res-c { grid-column: 1 / -1; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 700px) { .pcl-res-l2 { flex-direction: column; gap: 6px; } }
+
+/* La tête des tableaux collée en haut quand on descend (26/11/2026, §7.13). `sticky` ne tient pas sous une boîte qui défile
+ * ou qui coupe : au-dessus de 1366 px la carte et sa boîte ne coupent plus ; en dessous, la tête défile avec le tableau. Un
+ * filet, pas une bordure (elle ne suit pas une tête collée) ; le petit texte sur --table-head en --muted-2. */
+@media (min-width: 1366px) {
+  .pcl-carte, .pcl-carte .table-scroll { overflow: visible; }
+  .pcl-table thead th { position: sticky; top: 0; z-index: 2; background: var(--table-head); box-shadow: 0 1px 0 var(--line); color: var(--muted-2); }
+}
+
+/* Ce que voient vos clients et les demandes hors zone (27/11/2026) : sous le générateur de liens, dans Bureaux en développement. */
+.pcl-tz { margin: 0 16px 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; }
+.pcl-tz .pcl-aide { margin-bottom: 8px; }
+.pcl-tz .table-scroll { margin: 0 -16px -14px; border-top: 1px solid var(--line); }
+.pcl-tz .pcl-manque { margin-top: 4px; }
+/* Les actions d'une demande hors zone (27/11/2026) : Renvoyer, Créer le bureau, la poubelle ; une demande reprise, en retrait. */
+.pcl-hz-acts { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+.pcl-hz-reprise td { color: var(--muted); }
+/* L'étape 1 de l'assistant : « Ajouter la société », sous la liste des sociétés (27/11/2026). */
+.pcl-w-societe { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: -4px; }
