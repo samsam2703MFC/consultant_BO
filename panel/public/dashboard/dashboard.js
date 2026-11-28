@@ -8787,7 +8787,7 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie${enHt && parMarge && !['promo', 'portion'].includes(S.cVue) ? ' · hors TVA' : ''}</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie${enHt && parMarge && !['promo', 'portion'].includes(S.cVue) ? ' · hors TVA' : ''}</span><span class="db-ong db-cvue db-ong--seg"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
       ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsH : cats)}</div>` : accordeon(parMarge ? catsH : cats, parMarge, m && m.ca != null && m.margeBrute != null ? (enHt && m.caHt != null ? { ca: m.caHt, m: m.margeBrute, A: st && st.aCompleter ? Object.assign({}, st.aCompleter, { caLignes: (st.aCompleter.caLignes || 0) * (1 - (m.tvaPart || 0) / 100), caTickets: (st.aCompleter.caTickets || 0) * (1 - (m.tvaPart || 0) / 100) }) : null } : { ca: m.ca, m: m.coutMatiere != null ? m.ca - m.coutMatiere : m.margeBrute, A: st && st.aCompleter }) : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
@@ -10242,7 +10242,7 @@
     const cle = cleS12();
     const D = S.aux[cle];
     const mk = S.s12m, M = S12_MESURES[mk];
-    const bascule = `<span class="db-ong db-ong-p">${Object.entries(S12_MESURES).map(([k, x]) => `<button type="button" data-s12m="${k}" class="${k === mk ? 'on' : ''}" aria-pressed="${k === mk}">${x.nom}</button>`).join('')}</span>`;
+    const bascule = `<span class="db-ong db-ong-p db-ong--seg">${Object.entries(S12_MESURES).map(([k, x]) => `<button type="button" data-s12m="${k}" class="${k === mk ? 'on' : ''}" aria-pressed="${k === mk}">${x.nom}</button>`).join('')}</span>`;
     const carte = (corps, sous) => `<div class="db-card"><div class="ct" style="flex-wrap:wrap;gap:8px"><span class="db-lab">${PER.titre} — ${M.titre}, face au N-1</span>${bascule}${sous ? `<span class="db-mini" style="margin-left:auto">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
     if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : PER.lect}</div>`); }
     const pc = (a, b) => b ? 100 * a / b : 0;
@@ -10285,11 +10285,11 @@
     const P = W.map((w, i) => v(w) != null ? X(i) + ',' + Y(v(w)) : null).filter(Boolean);
     const P1 = W.map((w, i) => v1(w) != null ? X(i) + ',' + Y(v1(w)) : null).filter(Boolean);
     if (P1.length > 1) { svg += `<polyline points="${P1.join(' ')}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4"/>`; }
-    if (P.length > 1) { svg += `<polyline points="${P.join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>`; }
+    if (P.length > 1) { svg += `<polyline points="${P.join(' ')}" fill="none" stroke="#B03048" stroke-width="2.5"/>`; }
     W.forEach((w, i) => {
       const n = v(w), n1 = v1(w), up = n1 == null || n == null || n >= n1;
       if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Y(n1)}" r="3.5" fill="#fff" stroke="#B8B2A8" stroke-width="2"/><text x="${X(i)}" y="${(+Y(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#7a736a" style="${ft}">${M.f(n1)}</text>`; }
-      if (n != null) { svg += `<circle cx="${X(i)}" cy="${Y(n)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`; }
+      if (n != null) { svg += `<circle cx="${X(i)}" cy="${Y(n)}" r="4" fill="#B03048"/><text x="${X(i)}" y="${(+Y(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" text-anchor="middle" fill="#B03048" style="${ft}">${M.f(n)}</text>`; }
       svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" text-anchor="middle" fill="#5c5852" style="${ft}">${esc(axe(w, i))}</text>`;
     });
     svg += '</svg>';
@@ -10297,7 +10297,7 @@
       const n = v(w), n1 = v1(w), e = n != null && n1 ? pc(n - n1, n1) : null;
       const dates = pm ? w.du.slice(0, 4) : (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : fD(w.du)) + '→' + fD(w.au);
       const titre = (n != null ? M.f(n) + ' · ' + fN(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (n1 != null ? ' · N-1 : ' + M.f(n1) : ' · pas de N-1');
-      return `<div class="ch" title="${esc(titre)}"><span><b>${esc(pm ? w.lab.charAt(0).toUpperCase() + w.lab.slice(1) : 'S' + w.iso)}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#B8B2A8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`}</div>`;
+      return `<div class="ch" title="${esc(titre)}"><span><b>${esc(pm ? w.lab.charAt(0).toUpperCase() + w.lab.slice(1) : 'S' + w.iso)}</b><span>${dates}</span></span>${avecN1 ? `<em class="${e == null ? 'nul' : (e >= 3 ? 'haut' : (e <= -3 ? 'bas' : 'eq'))}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`}</div>`;
     }).join('');
     // Les douze périodes : la mesure cumulée (clients : la somme ; panier et articles : le rapport des sommes), face au
     // N-1 sur les seules périodes qui en ont un.
@@ -10327,7 +10327,7 @@
       tuile(mk === 'clients' ? PER.best : PER.haut, meilleure ? M.f(v(meilleure)) : '—', meilleure ? (pm ? nom(meilleure) : 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au)) : '')
     ].join('');
     const corps = `<div class="db-s6"><div>${svg}
-        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--accent);border-radius:50%"></i>${esc(unite)}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>${PER.n1}</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(n1Motif || '')}</span>`}</div>
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--chart-real);border-radius:50%"></i>${esc(unite)}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>${PER.n1}</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(n1Motif || '')}</span>`}</div>
         <div class="db-s6ch">${chips}</div></div>
       <div class="db-s6t">${tuiles}</div></div>`;
     return carte(corps, nom(W[0]) + ' → ' + nom(der) + ' · ' + (D.source || ''));

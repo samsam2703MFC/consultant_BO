@@ -221,7 +221,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-mo>div{text-align:center;min-width:0}
 .db-mo .bars{height:150px;display:flex;align-items:flex-end;justify-content:center;gap:8px;border-bottom:1px solid var(--color-border-tertiary)}
 .db-mo .bars i{display:block;width:44px;border-radius:5px 5px 0 0;min-height:2px}
-.db-mo .bars i.b{background:#e9e2d8}.db-mo .bars i.r{background:var(--color-primary)}.db-mo .bars i.r.ok{background:var(--green)}.db-mo .bars i.r.enc{background:var(--prize)}
+.db-mo .bars i.b{background:var(--chip)}.db-mo .bars i.r{background:var(--chart-real)}.db-mo .bars i.r.ok{background:var(--green)}.db-mo .bars i.r.enc{background:var(--prize)}
 .db-mo .n{font:400 12px var(--font-ui);margin-top:6px}.db-mo .d{font:400 10.5px var(--font-ui);color:var(--color-text-muted)}
 .db-nv{border-left:4px solid var(--line);background:var(--color-background-secondary);border-radius:0 9px 9px 0;padding:8px 12px;margin:0 0 8px}
 .db-nv .q{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);display:flex;justify-content:space-between;gap:8px}
@@ -1957,17 +1957,17 @@ html.db-fiche-ouverte{overflow:hidden}
 .cal-a .db-cal .d b{font:400 22px/1 var(--font-display);white-space:nowrap}.cal-a .db-cal .d b u{text-decoration:none;font:400 10.5px var(--font-ui);margin-left:4px;opacity:.85}
 .cal-a .db-cal .d small{font:400 10.5px var(--font-ui)}
 .cal-a .db-cal .d .n{display:flex;justify-content:space-between;gap:4px}
-.cal-a .db-cal .d .n em{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:#1d1d1b;color:#fff;border-radius:8px;padding:1px 6px}
+.cal-a .db-cal .d .n em{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:var(--chip);color:var(--ink);border-radius:4px;padding:1px 6px}
 .cal-jg{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.38);position:relative;margin:2px 0 1px}
 .cal-jg i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#fff}
-.cal-jg s{position:absolute;top:-3px;bottom:-3px;width:2px;left:calc(100% / 1.2);background:#1d1d1b;border-radius:1px}
-.cal-a .db-cal .d.clair .cal-jg{background:rgba(0,0,0,.1)}.cal-a .db-cal .d.clair .cal-jg i{background:#1d1d1b}
-.cal-a .db-cal .d.enc{background:repeating-linear-gradient(135deg,#fff,#fff 6px,#f3efe9 6px,#f3efe9 12px);color:var(--color-text);outline:2px solid #1d1d1b;outline-offset:1px}
-.cal-a .db-cal .d.enc .cal-jg{background:rgba(0,0,0,.08)}.cal-a .db-cal .d.enc .cal-jg i{background:repeating-linear-gradient(135deg,#1d1d1b,#1d1d1b 4px,#6b6b6b 4px,#6b6b6b 8px)}
+.cal-jg s{position:absolute;top:-3px;bottom:-3px;width:2px;left:calc(100% / 1.2);background:var(--ink);border-radius:1px}
+.cal-a .db-cal .d.clair .cal-jg{background:rgba(0,0,0,.1)}.cal-a .db-cal .d.clair .cal-jg i{background:var(--ink)}
+.cal-a .db-cal .d.enc{background:repeating-linear-gradient(135deg,#fff,#fff 6px,var(--total-line) 6px,var(--total-line) 12px);color:var(--color-text);outline:2px solid var(--ink);outline-offset:1px}
+.cal-a .db-cal .d.enc .cal-jg{background:rgba(0,0,0,.08)}.cal-a .db-cal .d.enc .cal-jg i{background:repeating-linear-gradient(135deg,var(--ink),var(--ink) 4px,var(--muted) 4px,var(--muted) 8px)}
 .cal-a .db-cal .d.nul{background:var(--color-background-secondary);color:var(--color-text)}
 .cal-a .db-cal .d.fut b{font-size:15px}
 .cal-q{font-weight:400;color:var(--color-primary)}
-.cal-tr{width:2px!important;height:12px!important;background:#1d1d1b;border-radius:1px!important}
+.cal-tr{width:2px!important;height:12px!important;background:var(--ink);border-radius:1px!important}
 @media (max-width:1150px){.cal-hd{flex-direction:column}.cal-seg{margin-left:0}}
 /* La frise des périodes (sélecteur 2 du 10/10/2026) : sous les onglets, chaque période est un bouton avec son chiffre. */
 .db-frise{margin:-4px 0 14px}
@@ -3775,7 +3775,7 @@ body.db-vue-social{overflow:hidden}
 .an-att{margin-left:auto;padding:2px 7px;border-radius:4px;font-size:11px;white-space:nowrap}
 /* Le calendrier : chaque jour sur le fond teinté de son état, la jauge à sa couleur, les petits textes en --muted-2. */
 .cal-a .db-cal .d.clair .cal-jg{background:rgba(28,26,23,.1)}
-.cal-a .db-cal .d.clair .cal-jg i{background:var(--jg,#1d1d1b)}
+.cal-a .db-cal .d.clair .cal-jg i{background:var(--jg,var(--ink))}
 .cal-a .db-cal .d.clair .n,.cal-a .db-cal .d.clair small{color:var(--muted-2);opacity:1}
 /* Le détail des mois (Année) : la tête collée au-dessus de 1366 px ; en dessous, le pli défile de côté sans tête collée. */
 @media (min-width:1366px){
@@ -4080,10 +4080,6 @@ body.db-vue-social{overflow:hidden}
 .op-ds .db-cqf button.on{background:var(--accent);border-color:var(--accent)}
 .op-ds .cqk-ch{font-size:12px}
 .op-ds .cqk-c{background:#fff}
-/* La vue d'une carte (Liste, Treemap, Promotions, Portions) : un sélecteur segmenté, plus un bouton bordeaux plein. */
-.op-ds .db-ong{gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
-.op-ds .db-ong button{border-radius:7px;color:var(--muted-2)}
-.op-ds .db-ong button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 /* Les photos : la photo obligatoire bordée d'un filet (plus du bordeaux, réservé à la sélection) ; « à contrôler »
  * attend, en --muted-2 (plus le bleu en dur). La facultative garde son pointillé pâle. */
 .op-ds .db-cqc.obl .db-cqph{box-shadow:none;outline:1px solid var(--line);outline-offset:0}
@@ -4098,3 +4094,15 @@ body.db-vue-social{overflow:hidden}
 .op-ds .vt-l .n b{color:var(--ink)}
 .op-ds .vt-l .mq b,.op-ds .vt-l .g{font-family:var(--font-ui)}
 .op-ds .vt-jl{background:var(--chip)}
+
+/* ── Le sélecteur segmenté du §7.6 pour les vues d'une même carte (28/11/2026) ──────────────────────────────────────────
+ * .db-ong--seg : 2 à 4 vues d'une même liste ou d'un même graphique (Liste / Treemap…, Clients / Panier / Articles…) :
+ * fond --chip, la vue choisie en blanc ; plus de bouton bordeaux plein pour choisir (§2 : un bouton fait, une pastille
+ * choisit). Le .db-ong plein reste aux filtres d'une barre (§7.6 : le filtre choisi en bordeaux plein). */
+.db-ong.db-ong--seg{gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
+.db-ong.db-ong--seg button{border-radius:7px;color:var(--muted-2)}
+.db-ong.db-ong--seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* L'écart d'une période au N-1 : une étiquette au fond teinté de son état (§7.13), plus un aplat plein en texte blanc. */
+.db-s6ch .ch em.haut{background:rgba(63,122,82,.14);color:var(--green)}
+.db-s6ch .ch em.bas{background:var(--prize-soft);color:var(--prize-ink)}
+.db-s6ch .ch em.eq,.db-s6ch .ch em.nul{background:var(--chip);color:var(--muted-2)}
