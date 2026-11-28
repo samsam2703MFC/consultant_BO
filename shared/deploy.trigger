@@ -364,3 +364,4 @@
 2026-11-28T07:12:04Z Bureaux › demandes hors zone : « Créer le bureau » ouvre l'assistant « Ajouter un bureau » pré-rempli (« Ajouter la société » à l'étape 1 ; la demande passe « reprise », POST /dashboard/bureaux-dev/reprendre) et la poubelle (POST …/effacer : la copie seule) ; bouton « Nouveau bureau en développement » retiré
 2026-11-28T08:07:26Z Vidéo Bureaux (26-03-bureaux) retournée : les demandes hors zone avec « Créer le bureau » et la poubelle, sans le bouton « Nouveau bureau en développement » (5 min 19, 8 chapitres)
 2026-11-28T08:22:59Z Mon catalogue (dashboard) : présentation de gamme — images en haut, en bas, à gauche, à droite ou en pleine page (texte par-dessus, voile), l'illustration de la gamme comme image (trait teint), comme le Marketing v1.24
+2026-11-28T09:32:55Z Commercial : l'ancienne adresse /consulant_bo/commercial/ renvoie au portail (/commercial/) ; une réponse HTML de l'API se dit clairement

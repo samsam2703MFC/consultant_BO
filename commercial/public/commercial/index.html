@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
+  <!-- Le portail vit à /commercial/ : ouvert sous une autre adresse (le site du cockpit, …/consulant_bo/commercial/),
+       il n'y trouve pas son API ; il y revient (28/11/2026). Avant la garde, qui lirait la mauvaise API. -->
+  <script>(function () { var i = location.pathname.indexOf('/commercial/'); if (i > 0) location.replace(location.pathname.slice(i) + location.search + location.hash); })();</script>
   <!-- La garde des pages du cockpit (src/acces.php) : une page du siège. Chargée à côté de la page, par l'alias
        /commercial/assets/ (shared/bin/deploy.sh) : ../assets/ visait la racine du serveur, où elle n'est pas (19/11/2026). -->
   <script src="assets/js/garde.js" data-api="api/cockpit" data-siege="1"></script>
