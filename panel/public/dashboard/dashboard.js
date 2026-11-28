@@ -7962,7 +7962,7 @@
    * alertes, le ton), le rappel s'ouvre dans la fenêtre, le reste ouvre sa page. Elle vit hors du rail (body), placée
    * au-dessus de la roue ; Échap ou un clic à côté la ferment. */
   const PAR = { ouvert: false, niveau: 'liste', q: '', etat: null, auto: null, errAuto: null, lecture: false, lu: 0, occupe: false, flash: null,
-    sms: null, smsErr: null, smsLecture: false, smsF: null };
+    sms: null, smsErr: null, smsLecture: false, smsF: null, smsShop: null, smsEdite: false };
   const PAR_ICO = {
     mail: '<path d="M3 5h18v14H3zM3 6l9 7 9-7"/>',
     auto: '<path d="M9 14l-5-5 5-5M4 9h10a6 6 0 0 1 6 6v4"/>',
@@ -8065,35 +8065,34 @@
       PAR.flash = { ok: true, texte: d.note || (champ === 'actif' ? (g.actif ? 'Rappel allumé : il part chaque jour à ' + g.heure + '.' : 'Rappel éteint.') : 'Enregistré.') };
     }).catch(er => { PAR.flash = { ok: false, texte: er.message }; }).finally(() => { PAR.occupe = false; parRendre(); });
   }
-  /* --- Les SMS des formulaires bureaux (28/11/2026, panel/src/sms_formulaires.php) : le GSM du franchisé, et, pour un compte
-   * du siège, le numéro du siège (un réglage pour tout le réseau) ; le franchisé lit seulement que le siège reçoit aussi. */
+  /* --- Les SMS des formulaires bureaux (28/11/2026, panel/src/sms_formulaires.php) : le GSM du franchisé. Le siège reçoit
+   * aussi, aux numéros de « SMS au bureau » du cockpit : le dashboard dit seulement qu'il reçoit (Sam : « A »), jamais ses
+   * numéros. Le réglage lu est celui d'un magasin (smsShop) ; une lecture qui arrive refait la saisie si rien n'a été modifié. */
   function parSmsLire() {
+    if (PAR.smsShop !== S.shop) { PAR.sms = null; PAR.smsF = null; PAR.smsEdite = false; }
     if (PAR.smsLecture) { return; }
-    PAR.smsLecture = true;
-    lire('/dashboard/sms-formulaires?shop=' + encodeURIComponent(S.shop)).then(d => { PAR.sms = d; PAR.smsErr = null; if (PAR.niveau === 'smsf' && !PAR.smsF) { parSmsForm(); } })
-      .catch(er => { PAR.smsErr = er.message; }).finally(() => { PAR.smsLecture = false; parRendre(); });
+    const shop = S.shop; PAR.smsLecture = true;
+    lire('/dashboard/sms-formulaires?shop=' + encodeURIComponent(shop)).then(d => {
+      if (shop !== S.shop) { return; }
+      PAR.sms = d; PAR.smsShop = shop; PAR.smsErr = null;
+      if (!PAR.smsEdite) { parSmsForm(); }
+    }).catch(er => { if (shop === S.shop) { PAR.smsErr = er.message; } }).finally(() => { PAR.smsLecture = false; parRendre(); });
   }
   /** La saisie part de ce qui est enregistré. */
   function parSmsForm() {
-    const d = PAR.sms; if (!d) { PAR.smsF = null; return; }
-    PAR.smsF = { actif: !!d.magasin.actif, numero: d.magasin.numero || '', sActif: !!d.siege.actif, sNumero: d.siege.numero || '' };
+    const d = PAR.sms; PAR.smsEdite = false;
+    PAR.smsF = d ? { actif: !!d.magasin.actif, numero: d.magasin.numero || '' } : null;
   }
   function parSms() {
-    const d = PAR.sms, F = PAR.smsF, ok = !!(d && F) && !PAR.occupe;
+    const d = PAR.sms, F = PAR.smsF, ok = !!(d && F) && !PAR.occupe && !PAR.smsLecture;
     const hd = '<div class="par-hd"><button type="button" class="par-ret" data-parret="1">‹ Paramètres</button><button type="button" class="par-x" data-parx="1" aria-label="Fermer">×</button></div>';
-    if (!d) { return hd + `<div class="par-det"><h4>SMS des formulaires bureaux</h4>${PAR.smsErr ? `<div class="db-err">${esc(PAR.smsErr)}</div>` : '<div class="par-attente">Lecture du réglage…</div>'}</div>`; }
-    const sw = (k, on, lib) => `<button type="button" class="par-sw${on ? ' on' : ''}" data-parsms="${k}" role="switch" aria-checked="${on ? 'true' : 'false'}" aria-label="${esc(lib)}"${ok ? '' : ' disabled'}></button>`;
-    const num = (k, v, lib) => `<input type="tel" class="par-num" data-parsmsnum="${k}" value="${esc(v)}" placeholder="0470 12 34 56" aria-label="${esc(lib)}" autocomplete="off"${ok ? '' : ' disabled'}>`;
-    const siege = d.siegeModifiable
-      ? `<div class="par-ch"><span>SMS au siège<small>un numéro pour tout le réseau, réglé par le siège</small></span>${sw('siege', F.sActif, 'SMS au siège')}</div>
-         <div class="par-ch"><span>Numéro du siège</span>${num('siege', F.sNumero, 'Numéro du siège')}</div>`
-      : (d.siege.actif ? '<p class="par-note">Le siège reçoit aussi ces SMS.</p>' : '');
+    if (!d || !F) { return hd + `<div class="par-det"><h4>SMS des formulaires bureaux</h4>${PAR.smsErr ? `<div class="db-err">${esc(PAR.smsErr)}</div>` : '<div class="par-attente">Lecture du réglage…</div>'}</div>`; }
     return hd + `<div class="par-det"><h4>SMS des formulaires bureaux</h4>
         <p>Un SMS à chaque inscription par le formulaire des bureaux et à chaque demande hors zone de ce magasin : la société, le lieu, l’effectif. Jamais l’e-mail ni le téléphone du prospect.</p>
-        ${d.fournisseur ? '' : `<div class="par-avis">${parSvg('sms')}<span>Aucun fournisseur SMS n’est réglé sur le serveur : rien ne part pour l’instant.</span></div>`}
-        <div class="par-ch"><span>SMS au franchisé<small>le GSM qui reçoit les SMS de ce magasin</small></span>${sw('actif', F.actif, 'SMS au franchisé')}</div>
-        <div class="par-ch"><span>GSM du franchisé</span>${num('magasin', F.numero, 'GSM du franchisé')}</div>
-        ${siege}
+        ${d.fournisseur ? '' : `<div class="par-avis">${parSvg('sms')}<span>Aucun fournisseur SMS n’est en place sur le serveur : rien ne part pour l’instant.</span></div>`}
+        <div class="par-ch"><span>SMS au franchisé<small>le GSM qui reçoit les SMS de ce magasin</small></span><button type="button" class="par-sw${F.actif ? ' on' : ''}" data-parsms="actif" role="switch" aria-checked="${F.actif ? 'true' : 'false'}" aria-label="SMS au franchisé"${ok ? '' : ' disabled'}></button></div>
+        <div class="par-ch"><span>GSM du franchisé</span><input type="tel" class="par-num" data-parsmsnum="magasin" value="${esc(F.numero)}" placeholder="0470 12 34 56" aria-label="GSM du franchisé" autocomplete="off"${ok ? '' : ' disabled'}></div>
+        ${d.siege.actif ? '<p class="par-note">Le siège reçoit aussi ces SMS (cockpit › Demandes des franchisés › SMS au bureau).</p>' : ''}
         <p class="par-note">Aujourd’hui : ${d.aujourdhui} / ${d.max} formulaires notifiés (au plus ${d.max} par jour).</p>
         ${PAR.flash ? `<div class="par-flash ${PAR.flash.ok ? 'ok' : 'ko'}">${esc(PAR.flash.texte)}</div>` : ''}
         <div class="par-bts"><button type="button" class="par-bt prim" data-parsmsok="1"${ok ? '' : ' disabled'}>Enregistrer</button><button type="button" class="par-bt" data-parsmsessai="1"${ok && d.fournisseur ? '' : ' disabled'}>Envoyer un SMS d’essai</button></div></div>`;
@@ -8101,10 +8100,9 @@
   function parSmsEnregistrer() {
     const d = PAR.sms, F = PAR.smsF; if (!d || !F || PAR.occupe) { return; }
     const corps = { shop: S.shop, actif: F.actif, numero: F.numero };
-    if (d.siegeModifiable) { corps.siege = { actif: F.sActif, numero: F.sNumero }; }
     PAR.occupe = true; PAR.flash = null; parRendre();
     ecrire('/dashboard/sms-formulaires', corps).then(r => {
-      PAR.sms = r; parSmsForm();
+      PAR.sms = r; PAR.smsShop = corps.shop; parSmsForm();
       PAR.flash = { ok: true, texte: r.magasin.actif ? 'Enregistré : les SMS partent au ' + r.magasin.numero + '.' : 'Enregistré : pas de SMS au franchisé.' };
     }).catch(er => { PAR.flash = { ok: false, texte: er.message }; }).finally(() => { PAR.occupe = false; parRendre(); });
   }
@@ -8130,11 +8128,14 @@
   function parRendre() {
     let el = document.getElementById('db-par');
     if (!PAR.ouvert) { if (el) { el.remove(); } return; }
-    const f = document.activeElement, garde = f && el && el.contains(f) && f.dataset && f.dataset.parq != null ? f.selectionStart : null;
+    // Le champ où l'on tape garde le focus et le curseur d'un rendu à l'autre : la recherche, un numéro de GSM (28/11/2026).
+    const f = document.activeElement, dedans = f && el && el.contains(f) && f.dataset;
+    const sel = dedans ? (f.dataset.parq != null ? '[data-parq]' : f.dataset.parsmsnum ? '[data-parsmsnum="' + f.dataset.parsmsnum + '"]' : null) : null;
+    const garde = sel ? f.selectionStart : null;
     if (!el) { el = document.createElement('div'); el.id = 'db-par'; el.className = 'par'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Paramètres'); document.body.appendChild(el); }
     el.innerHTML = PAR.niveau === 'rappel' ? parRappel() : PAR.niveau === 'smsf' ? parSms() : parListe();
     parPlacer(); parBrancher(el);
-    if (garde != null) { const i = el.querySelector('[data-parq]'); if (i) { i.focus(); try { i.setSelectionRange(garde, garde); } catch (x) { /* champ */ } } }
+    if (sel) { const i = el.querySelector(sel); if (i && !i.disabled) { i.focus(); try { i.setSelectionRange(garde, garde); } catch (x) { /* champ */ } } }
   }
   function parBrancher(el) {
     const q = el.querySelector('[data-parq]');
@@ -8155,8 +8156,8 @@
     }));
     el.querySelectorAll('[data-paraller]').forEach(b => b.addEventListener('click', () => { const v = b.dataset.paraller; parFermer(); allerVers(v); }));
     // Les SMS des formulaires : les interrupteurs redessinent, les numéros se gardent à la saisie (sans redessiner).
-    el.querySelectorAll('[data-parsms]').forEach(b => b.addEventListener('click', () => { const F = PAR.smsF; if (!F || PAR.occupe) { return; } const k = b.dataset.parsms === 'siege' ? 'sActif' : 'actif'; F[k] = !F[k]; PAR.flash = null; parRendre(); }));
-    el.querySelectorAll('[data-parsmsnum]').forEach(i => i.addEventListener('input', () => { const F = PAR.smsF; if (F) { F[i.dataset.parsmsnum === 'siege' ? 'sNumero' : 'numero'] = i.value; } }));
+    el.querySelectorAll('[data-parsms]').forEach(b => b.addEventListener('click', () => { const F = PAR.smsF; if (!F || PAR.occupe) { return; } F.actif = !F.actif; PAR.smsEdite = true; PAR.flash = null; parRendre(); }));
+    el.querySelectorAll('[data-parsmsnum]').forEach(i => i.addEventListener('input', () => { const F = PAR.smsF; if (F) { F.numero = i.value; PAR.smsEdite = true; } }));
     el.querySelectorAll('[data-parsmsok]').forEach(b => b.addEventListener('click', parSmsEnregistrer));
     el.querySelectorAll('[data-parsmsessai]').forEach(b => b.addEventListener('click', parSmsEssai));
     el.querySelectorAll('[data-parset]').forEach(b => {

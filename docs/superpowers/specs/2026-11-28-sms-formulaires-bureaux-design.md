@@ -24,3 +24,13 @@ consultant BO, rail dashboard », puis « A » (les deux formulaires bureaux) et
 - Retenue : un module `panel/src/sms_formulaires.php` (tables `panel_sms_formulaire`, `panel_sms_formulaire_envoi`),
   appelé par `bureaux_dev.php` ; l'envoi par `shared/src/sms.php` (Twilio, déjà utilisé par les primes).
 - Écartées : le numéro écrit dans le code (règle du dépôt) ; un e-mail (pas demandé).
+
+## Révision après relecture (28/11/2026, Sam : « A »)
+- Le cockpit tourne en accès ouvert (deploy.sh) : personne n'est « le siège » au dashboard. Les numéros du siège ne sont donc
+  ni lus ni réglés depuis le dashboard ; le siège reçoit aux destinataires de « SMS au bureau » du cockpit (helpdesk,
+  `hdkSmsReglage`), quand ce réglage est allumé. Le dashboard dit seulement « Le siège reçoit aussi ces SMS ».
+- L'envoi passe par le fournisseur en place (`smsPartir` : SMSAPI, sinon Twilio) ; sans fournisseur, rien ne part ni ne se note.
+- Le texte retire des champs publics les e-mails, liens, domaines et numéros ; il tient dans l'alphabet des SMS (lettres
+  polonaises translittérées, caractères doubles retirés). Les erreurs gardées n'ont pas de numéro.
+- L'écran : le réglage est rattaché à son magasin ; une lecture qui arrive refait la saisie si rien n'a été modifié ; les
+  champs sont grisés pendant la lecture ; le curseur du GSM reste en place d'un rendu à l'autre.
