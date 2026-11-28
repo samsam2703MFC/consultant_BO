@@ -28,6 +28,8 @@ const puce = x => async p => {
 // defile : la page défile dans un panneau intérieur (le cockpit) — la cible est amenée en haut de l'écran, et l'écran capturé.
 const PLANS = [
   { nom: 'dash-entete', vue: 'ops', cibles: ['.db-nav'], top: true },
+  // Le résumé et « À corriger » (26/11/2026, DESIGN_SYSTEM.md §7.13) : en haut de l'Opérationnel, ce qui demande un geste aujourd'hui.
+  { nom: 'dash-acorriger', vue: 'ops', cibles: ['.ac'], top: true },
   // Les vignettes ne sont plus que sur l'Opérationnel (22/11/2026, commit 1ab9119a) : la Valeur du magasin s'ouvre là.
   { nom: 'dash-valeur', vue: 'ops', cibles: ['.db-vpop'], avant: async p => { await p.locator('[data-vdrop]').first().click().catch(e => console.log('clic', e.message)); await p.waitForTimeout(2500); }, top: true },
   { nom: 'dash-frise', vue: 'ops', cibles: ['.db-frise'], top: true },
@@ -38,7 +40,7 @@ const PLANS = [
   { nom: 'dash-pl', vue: 'ops', cibles: ['.db-card:has(.db-cascade)'] },
   // L'onglet Frais (16/11/2026) : les frais du mois, « TVA comprise ? » et le taux de chaque poste (ART-PIL-01 partie 28, SOP 5.7).
   // Les Frais deviennent un onglet de la Trésorerie (22/11/2026, commit 73e483b0) : vue=frais ouvre cet onglet.
-  { nom: 'dash-frais', vue: 'frais', cibles: ['.fx-tuiles', '.db-card:has(.fx-t)'], top: true },
+  { nom: 'dash-frais', vue: 'frais', cibles: ['.fx .ac', '.db-card:has(.fx-t)'], top: true },
   { nom: 'dash-categories', vue: 'ops', cibles: ['.db-card:has(.db-acc)'] },
   { nom: 'dash-journee', vue: 'ops', cibles: ['.db-card.op-bloc:has(.op-jr)'] },
   { nom: 'dash-vitrine', vue: 'ops', cibles: ['.db-card.vt'] },
@@ -46,7 +48,7 @@ const PLANS = [
   { nom: 'dash-stock', vue: 'ops', cibles: ['.op-stock'], bas: true },
   // Semaine et Mois en quatre blocs (21/11/2026) : la jauge et les tuiles, les jours, le résultat et les heures, les douze
   // semaines (ou mois) ; le reste derrière une puce repliée (« Tâches et contrôles », « Canaux… », « Invendus »…) qu'on ouvre.
-  { nom: 'dash-resultat', vue: 'semaine', cibles: ['.qb-heros'] },
+  { nom: 'dash-resultat', vue: 'semaine', cibles: ['section.chr'] },
   { nom: 'dash-cal-semaine', vue: 'semaine', cibles: ['.qb-jours-c'] },
   { nom: 'dash-heures-semaine', vue: 'semaine', cibles: ['.qb-pile'] },
   { nom: 'dash-douze', vue: 'semaine', cibles: ['.qb-douze'] },
@@ -59,25 +61,25 @@ const PLANS = [
   // L'onglet Trimestre rejoint l'Année (21/11/2026) : les quatre trimestres, un toucher ouvre le détail ; la bande des douze mois.
   { nom: 'dash-trimestre', vue: 'annee', cibles: ['.db-an-q'] },
   { nom: 'dash-annotations', vue: 'annee', cibles: ['.db-an-q', '.db-an-det'] },
-  { nom: 'dash-annee', vue: 'annee', cibles: ['.db-an-obj'], top: true },
+  { nom: 'dash-annee', vue: 'annee', cibles: ['section.chr'], top: true },
   { nom: 'dash-heatmap', vue: 'annee', cibles: ['.db-card:has(.db-an-12)'] },
-  { nom: 'dash-promos', vue: 'promos', cibles: ['.db-card >> nth=0'], top: true },
+  { nom: 'dash-promos', vue: 'promos', cibles: ['.ac'], top: true },
   // La ligne du franchisé (07/11/2026) : dans le tableau, en gris, « franchisé · hors primes ».
   // Primes (24/11/2026) : un onglet de Mon équipe ; la rangée d'onglets entourée, et la ligne du franchisé quand elle y est.
   { nom: 'dash-primes', vue: 'primes', cibles: ['nav.db-eqp-tabs', 'tr:has(.pr-fr)'], top: true },
   // Le cockpit, Budget › Paramètres › Répartition des charges (07/11/2026) : % réseau du CRM, % validé, écart.
   { nom: 'dash-charges', cockpit: '#/budget/parametres', cibles: ['[data-screen="budgetparam"] > div:has(:text-is("Répartition des charges"))'], defile: true },
   // L'onglet Tâches (08/11/2026) : la semaine et les quatre tuiles, la structure des codes, les checklists du jour, les retours.
-  { nom: 'dash-onglet-taches', vue: 'taches', cibles: ['.tj-sem', '.db-tuiles.tj-kpis'] },
+  { nom: 'dash-onglet-taches', vue: 'taches', cibles: ['.tj-sem', '.ac'] },
   { nom: 'dash-organisation', vue: 'taches', cibles: ['.db-card.tj-guide'] },
   { nom: 'dash-checklists-jour', vue: 'taches', cibles: ['.db-card:has(.tj-f)'] },
   { nom: 'dash-retours', vue: 'taches', cibles: ['.db-card.tj-ret'] },
   // La revue du soir (08/11/2026) : le bouton de l'en-tête ouvre l'assistant, son premier écran (rien n'est écrit avant « Commencer »).
   { nom: 'dash-revue', vue: 'ops', cibles: ['#rv .rv-tel'], defile: true, avant: async p => { await p.locator('button:has-text("Revue du soir")').first().click(); await p.waitForTimeout(5000); } },
   // Concurrence (07/11/2026) : le Top 10 réseau face aux concurrents du magasin ; la lecture prend du temps.
-  { nom: 'dash-concurrence', vue: 'concurrence', cibles: ['.db-card:has(.bm-tab)'], top: true, avant: async p => { await p.locator('.bm-tab').first().waitFor({ timeout: 90000 }).catch(() => {}); await p.waitForTimeout(1500); } },
+  { nom: 'dash-concurrence', vue: 'concurrence', cibles: ['.ac', '.db-card:has(.bm-tab)'], top: true, avant: async p => { await p.locator('.bm-tab').first().waitFor({ timeout: 90000 }).catch(() => {}); await p.waitForTimeout(1500); } },
   // Temps morts (07/11/2026) : la journée minute par minute.
-  { nom: 'dash-temps-morts', vue: 'morts', cibles: ['.db-card:has(.tm-frise)'], top: true },
+  { nom: 'dash-temps-morts', vue: 'morts', cibles: ['.tm-res', '.db-card:has(.tm-frise)'], top: true },
 ];
 
 const W = 1200, H = 900;
