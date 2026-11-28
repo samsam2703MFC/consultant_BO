@@ -10,6 +10,7 @@
 | `ecran-envoi.png` (`?v=envoi`) | l'onglet SMS de Clients : qui reçoit, le message FR / NL, le bon, l'essai et l'envoi, l'aperçu sur le téléphone |
 | `ecran-parcours.png` (`?v=parcours`) | le client : le SMS, sa page à son nom, le code SMS du webshop, « Mes bons » au webshop |
 | `ecran-suivi.png` (`?v=suivi`) | après l'envoi : remis, ouverts, comptes activés, bons utilisés ; la relance (chiffres fictifs) |
+| `ecran-particuliers.png` (`?v=particuliers`) | Clients › Particuliers avec la colonne « Compte en ligne » et son filtre ; la fiche le redit (demande du 28/11 : « rajoute dans la liste si le client a un compte online ») |
 
 Régénérer : `node panel/docs/maquettes/sms-webshop/capturer.js` (aucun serveur).
 
@@ -20,7 +21,7 @@ Régénérer : `node panel/docs/maquettes/sms-webshop/capturer.js` (aucun serveu
 - 680 particuliers, 0 entreprise ;
 - 612 GSM belges lisibles, environ 590 numéros différents ;
 - 84 clients ont un e-mail ;
-- environ 80 se sont déjà connectés au webshop (`last_login_at`) ;
+- 84 ont un compte en ligne. Le repère est `last_login_at`, la dernière connexion au webshop : il est rempli pour exactement les clients qui ont un mot de passe, et il n'est pas secret. Dans les listes (destinataires, suivi, Particuliers), un client est « En ligne » avec la date de sa dernière connexion, sinon « Pas de compte » ;
 - langue : 45 FR, 33 NL, 602 inconnue ;
 - **598 clients n'ont pas `phone_e164`** : leur numéro n'existe que tel qu'il a été tapé, dans `phone`. Ce sont les clients créés en caisse, sans e-mail ni mot de passe.
 

@@ -1,7 +1,7 @@
 /* Maquettes « Clients › SMS » (28/11/2026) : annoncer le webshop aux clients particuliers d'un magasin par SMS, avec
  * leur bon de bienvenue (50 % sur une tarte). Magasin 4, Halle. Les comptes de la vue « envoi » sont ceux lus dans
  * TF Buddy le 28/11/2026 (/shops/4/clients), arrondis ; tout le reste (noms, codes, suivi) est fictif.
- *   ?v=envoi · ?v=parcours · ?v=suivi */
+ *   ?v=envoi · ?v=parcours · ?v=suivi · ?v=particuliers */
 (() => {
   const V = (new URLSearchParams(location.search).get('v') || 'envoi').toLowerCase();
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -18,6 +18,9 @@
   const ic = (k, cls = 'ic') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${P[k]}"/></svg>`;
   const pin = (n, abs) => `<span class="pin${abs ? ' abs' : ''}">${n}</span>`;
   const legende = (titre, L) => `<div class="legende"><h3>${titre}</h3><ol>${L.map((x, i) => `<li>${pin(i + 1)}<span>${x}</span></li>`).join('')}</ol></div>`;
+  /** Le compte en ligne (TF Buddy : last_login_at, la date de la dernière connexion au webshop ; vide = pas de compte). */
+  const compte = (d, mail) => d ? `<span class="cpt oui">${ic('ok')}En ligne</span><span class="sub">connecté le ${d}</span>`
+    : `<span class="cpt non">Pas de compte</span><span class="sub">${mail ? 'e-mail connu' : 'créé en caisse'}</span>`;
   const alerte = (txt, cls = '', i = 'alerte') => `<div class="alerte ${cls}">${ic(i)}<div>${txt}</div></div>`;
 
   function rail() {
@@ -30,8 +33,8 @@
       <div class="sidebar__group"><div class="sidebar__group-label">Vendre</div>${it('loupe', 'Analyse')}${it('bundles', 'Produits')}${it('offres', 'Promotions')}${it('clients', 'Clients', 'on')}${it('offre', 'Offres')}${it('analyse', 'Concurrence')}</div>
       <div class="sidebar__group"><div class="sidebar__group-label">Marketing</div>${it('pub', 'Mon marketing')}${it('etoile', 'Fidélité')}</div></div></nav>`;
   }
-  function tete(action) {
-    const o = (k, l, n) => `<span class="${k === 'sms' ? 'is-on' : ''}">${l}${n != null ? ` <em>${n}</em>` : ''}</span>`;
+  function tete(action, on = 'sms') {
+    const o = (k, l, n) => `<span class="${k === on ? 'is-on' : ''}">${l}${n != null ? ` <em>${n}</em>` : ''}</span>`;
     return `<div class="tete" style="margin-bottom:10px"><div><p class="tete__kicker">Atelier by - Halle</p><h1>Clients</h1></div>${action || ''}</div>
       <div class="onglets rel">${pin(1, true)}${o('b2c', 'Particuliers', 680)}${o('b2b', 'Entreprises B2B', 0)}${o('bur', 'Bureaux')}${o('an', 'Analyse B2B')}${o('sms', 'SMS')}<span class="droite">Le bon : Vendre › Promotions</span></div>`;
   }
@@ -46,9 +49,12 @@
   function vueEnvoi() {
     const qui = `<section class="card bloc rel">${pin(2, true)}<div class="bloc__t"><h2>1 · Qui reçoit le SMS</h2><span class="k">lu dans TF Buddy · 28/11 09:40</span></div><div class="bloc__c">
       <div class="chiffres"><div><div class="v">680</div><div class="k">particuliers<br>du magasin</div></div><div><div class="v">612</div><div class="k">avec un GSM<br>belge lisible</div></div>
-        <div class="on"><div class="v">≈ 590</div><div class="k">numéros différents<br>(doublons retirés)</div></div><div><div class="v">≈ 80</div><div class="k">déjà connectés<br>au webshop</div></div></div>
+        <div class="on"><div class="v">≈ 590</div><div class="k">numéros différents<br>(doublons retirés)</div></div><div><div class="v">84</div><div class="k">ont un compte<br>en ligne</div></div></div>
       <div class="choix"><div class="opt on"><i></i><div><b>Tous les GSM du magasin · ≈ 590</b><span class="reco">conseillé</span><br>Un seul texte : la page du lien s’adapte (déjà un compte : « Se connecter » ; pas encore : « Créer mon mot de passe »).</div></div>
-        <div class="opt"><i></i><div><b>Seulement ceux qui ne se sont jamais connectés · ≈ 510</b><br>Pour un deuxième envoi, ou si l’on veut un autre texte pour les ≈ 80 qui commandent déjà en ligne.</div></div></div>
+        <div class="opt"><i></i><div><b>Seulement ceux qui n’ont pas de compte en ligne · ≈ 510</b><br>Pour un deuxième envoi, ou si l’on veut un autre texte pour les 84 qui ont déjà un compte.</div></div></div>
+      <div class="dest"><div class="filtres"><input placeholder="Nom, téléphone"><span class="grp">Compte en ligne <span class="seg"><span class="is-on">Tous <em>≈ 590</em></span><span>En ligne <em>84</em></span><span>Pas de compte <em>≈ 510</em></span></span></span></div>
+        <table><thead><tr><th>Client</th><th>GSM</th><th>Langue</th><th>Compte en ligne</th><th class="num">SMS</th></tr></thead><tbody>${[['Gabrielle D.','0476 •• •• 12','FR',null,false],['Jan V.','0478 •• •• 40','NL','26/11',true],['Sofie M.','0499 •• •• 07','—',null,false],['Mehdi B.','0485 •• •• 63','FR',null,true],['Pieter C.','0496 •• •• 28','NL','12/11',true],['Annick L.','0472 •• •• 91','—',null,false]].map(x => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td>${compte(x[3], x[4])}</td><td class="num"><span class="coche on"></span></td></tr>`).join('')}</tbody></table>
+        <div class="dest__pied">6 sur ≈ 590 · <u>voir toute la liste</u> · décocher un client le retire de l’envoi</div></div>
       <div class="exclus"><span>≈ 70 sans GSM lisible (fixe, « 999 »…)</span><span>≈ 20 doublons</span><span>0 désinscrit (STOP)</span><span>déjà reçu cette campagne : jamais deux fois</span></div>
       ${alerte('<b>L’accord du client.</b> TF Buddy n’a pas de case « accepte les SMS ». La loi belge admet un SMS publicitaire à un client qui a déjà acheté, pour des produits semblables, à condition que <b>chaque SMS</b> donne un moyen gratuit de ne plus en recevoir : le lien STOP est donc dans le texte, et un STOP ne reçoit plus rien, de ce magasin ni des autres.')}
     </div></section>`;
@@ -85,7 +91,7 @@
       <div class="sw2"><div>${qui}${msg}${bon}${envoi}
       ${legende('Ce que propose la maquette', [
         '<b>Un cinquième onglet, SMS</b>, dans Vendre › Clients : la campagne se prépare là où sont les clients ; le bon vient de Promotions.',
-        '<b>Les vrais chiffres de Halle</b> (TF Buddy, 28/11) : 680 particuliers, ≈ 590 GSM différents ; ≈ 80 seulement se sont déjà connectés au webshop.',
+        '<b>Les vrais chiffres de Halle</b> (TF Buddy, 28/11) : 680 particuliers, ≈ 590 GSM différents ; 84 seulement ont un compte en ligne. La liste dit, client par client, « En ligne » (avec la dernière connexion) ou « Pas de compte ».',
         '<b>Un SMS de 160 caractères</b>, dans la langue du client (Halle : NL par défaut, à décider), avec le lien STOP obligatoire.',
         '<b>Un code personnel par client</b>, créé dans TF Buddy à l’envoi, qui l’attend dans « Mes bons » du webshop ; un code commun reste possible.',
         '<b>L’essai à son propre GSM d’abord</b>, puis un envoi programmé (9:00 – 20:00), à la cadence de SMSAPI.',
@@ -125,18 +131,18 @@
   /* ── 3. Le suivi ────────────────────────────────────────────────────────────────────────────────────────────── */
   function vueSuivi() {
     const f = (v, k, p, w) => `<div><div class="v">${v}</div><div class="k">${k}</div>${p ? `<div class="p">${p}</div>` : ''}<div class="barre"><i style="width:${w}%"></i></div></div>`;
-    const L = [['Gabrielle', 'FR', '0476 •• •• 12', 'bon', 'Bon utilisé · tarte aux pommes Ø 28 · 29/11 11:42'], ['Jan', 'NL', '0478 •• •• 40', 'compte', 'Compte activé 29/11 10:31'],
-      ['Sofie', 'NL', '0499 •• •• 07', 'clic', 'A ouvert le lien 29/11 10:12'], ['Mehdi', 'FR', '0485 •• •• 63', 'remis', 'Remis 29/11 10:01'], ['Annick', 'FR', '0472 •• •• 91', 'echec', 'Numéro injoignable (SMSAPI)'],
-      ['Pieter', 'NL', '0496 •• •• 28', 'stop', 'STOP 29/11 10:20 · ne reçoit plus rien'], ['Laura', 'FR', '0471 •• •• 55', 'compte', 'Compte activé 29/11 12:05'], ['Koen', 'NL', '0477 •• •• 19', 'remis', 'Remis 29/11 10:02']];
+    const L = [['Gabrielle', 'FR', '0476 •• •• 12', 'bon', 'Bon utilisé · tarte aux pommes Ø 28 · 29/11 11:42', null], ['Jan', 'NL', '0478 •• •• 40', 'bon', 'Bon utilisé · tarte fruits frais Ø 28 · 29/11 15:10', '26/11'],
+      ['Sofie', 'NL', '0499 •• •• 07', 'clic', 'A ouvert le lien 29/11 10:12', null], ['Mehdi', 'FR', '0485 •• •• 63', 'remis', 'Remis 29/11 10:01', null], ['Annick', 'FR', '0472 •• •• 91', 'echec', 'Numéro injoignable (SMSAPI)', null],
+      ['Pieter', 'NL', '0496 •• •• 28', 'stop', 'STOP 29/11 10:20 · ne reçoit plus rien', '12/11'], ['Laura', 'FR', '0471 •• •• 55', 'compte', 'Compte activé 29/11 12:05', null], ['Koen', 'NL', '0477 •• •• 19', 'remis', 'Remis 29/11 10:02', null]];
     const lib = { bon: 'Bon utilisé', compte: 'Compte activé', clic: 'Lien ouvert', remis: 'Remis', echec: 'Échec', stop: 'STOP' };
-    const lignes = L.map(x => `<tr><td>${x[0]}<span class="sub">${x[1]} · ${x[2]}</span></td><td><span class="etat e-${x[3]}">${lib[x[3]]}</span></td><td class="muted" style="font-size:12px">${x[4]}</td></tr>`).join('');
+    const lignes = L.map(x => `<tr><td>${x[0]}<span class="sub">${x[1]} · ${x[2]}</span></td><td>${x[5] ? `<span class="cpt oui">${ic('ok')}Déjà en ligne</span><span class="sub">depuis avant l’envoi</span>` : x[3] === 'compte' || x[3] === 'bon' ? `<span class="cpt oui">${ic('ok')}En ligne</span><span class="sub">grâce au SMS</span>` : `<span class="cpt non">Pas de compte</span>`}</td><td><span class="etat e-${x[3]}">${lib[x[3]]}</span></td><td class="muted" style="font-size:12px">${x[4]}</td></tr>`).join('');
     return tete() + `<div class="etapes"><span class="ok"><b>✓</b>Qui</span><span class="ok"><b>✓</b>Le message</span><span class="ok"><b>✓</b>Le bon</span><span class="ok"><b>✓</b>Essai et envoi</span><span class="on"><b>5</b>Suivi</span></div>
       <section class="card bloc rel">${pin(2, true)}<div class="bloc__t"><h2>Le webshop est en ligne · samedi 29/11 à 10:00</h2><span class="k">exemple fictif · 3 jours après l’envoi</span></div><div class="bloc__c">
         <div class="entonnoir">${f('592', 'SMS envoyés', '', 100)}${f('581', 'remis', '98 %', 98)}${f('214', 'ont ouvert le lien', '37 % des remis', 37)}${f('97', 'comptes activés', '45 % des clics', 16)}${f('41', 'bons utilisés', '≈ 41 tartes à -50 %', 7)}</div>
         <div class="exclus" style="margin-top:12px"><span>11 échecs (numéro injoignable)</span><span>6 STOP</span><span>crédits SMSAPI utilisés : 592</span></div>
       </div></section>
-      <div class="sw2" style="grid-template-columns:minmax(0,1fr) 360px"><div class="rel">${pin(3, true)}<div class="card tab-card"><div class="filtres"><input placeholder="Nom, téléphone"><span class="grp">Voir <span class="seg"><span class="is-on">Tous</span><span>Pas encore cliqué</span><span>Compte activé</span><span>Échecs</span></span></span></div>
-        <table><thead><tr><th>Client</th><th>Où il en est</th><th>Dernier geste</th></tr></thead><tbody>${lignes}</tbody></table></div></div>
+      <div class="sw2" style="grid-template-columns:minmax(0,1fr) 360px"><div class="rel">${pin(3, true)}<div class="card tab-card"><div class="filtres"><input placeholder="Nom, téléphone"><span class="grp">Voir <span class="seg"><span class="is-on">Tous</span><span>Déjà en ligne</span><span>Pas encore cliqué</span><span>Compte activé</span><span>Échecs</span></span></span></div>
+        <table><thead><tr><th>Client</th><th>Compte en ligne</th><th>Où il en est</th><th>Dernier geste</th></tr></thead><tbody>${lignes}</tbody></table></div></div>
         <div class="card rel" style="padding:16px 18px">${pin(4, true)}<div style="font-size:15px;margin-bottom:8px">Relancer</div>
           <p class="muted" style="font-size:12.5px;line-height:1.5;margin:0 0 12px">Une relance va seulement à ceux qui n’ont pas ouvert le lien, au plus tôt 7 jours après, une seule fois.</p>
           <div class="recap" style="grid-template-columns:1fr"><div><div class="v">367 clients</div><div class="k">remis, pas encore cliqué</div></div></div>
@@ -149,6 +155,27 @@
       ])}`;
   }
 
-  const corps = V === 'parcours' ? vueParcours() : V === 'suivi' ? vueSuivi() : vueEnvoi();
+  /* ── 4. Clients › Particuliers, la colonne « Compte en ligne » ─────────────────────────────────────────────── */
+  function vueParticuliers() {
+    const L = [['Gabrielle D.', '0476 •• •• 12', null, false, '—'], ['Jan V.', '0478 •• •• 40', '26/11', true, '—'], ['Sofie M.', '0499 •• •• 07', null, false, '—'], ['Mehdi B.', '0485 •• •• 63', null, true, '5 %'],
+      ['Pieter C.', '0496 •• •• 28', '12/11', true, '—'], ['Annick L.', '0472 •• •• 91', null, false, '—'], ['Laura S.', '0471 •• •• 55', '03/10', true, '—'], ['Koen D.', '0477 •• •• 19', null, false, '—']];
+    const lignes = L.map((x, i) => `<tr class="${i === 1 ? 'sel' : ''}"><td>${x[0]}</td><td>${x[1]}</td><td>${compte(x[2], x[3])}</td><td class="num">${x[4]}</td><td class="num"><span class="btn btn--sm">Offre</span></td></tr>`).join('');
+    const fiche = `<div class="card fiche rel">${pin(3, true)}<div class="fiche__tete"><div class="fiche__nom">Jan V.</div><div class="fiche__meta">client depuis avril 2026 · NL</div></div>
+      <div class="fiche__bloc"><h4>Coordonnées</h4><div class="ligne-f"><span>Téléphone</span><span>0478 12 34 40</span></div><div class="ligne-f"><span>E-mail</span><span>renseigné</span></div></div>
+      <div class="fiche__bloc"><h4>Compte en ligne</h4><div class="ligne-f"><span>Webshop</span><span class="cpt oui">${ic('ok')}En ligne</span></div><div class="ligne-f"><span>Dernière connexion</span><span>26/11/2026</span></div>
+        <div class="ligne-f"><span>SMS « webshop en ligne »</span><span>pas encore envoyé</span></div></div>
+      <div class="fiche__bloc acts"><span class="btn btn--primary btn--sm">Préparer une offre</span><span class="btn btn--sm">Modifier</span><span class="btn btn--sm">Passer en entreprise</span></div></div>`;
+    return tete(`<span class="btn btn--primary">${ic('plus')}Ajouter un client</span>`, 'b2c') + `<div class="cl2"><div>
+      <div class="rel">${pin(2, true)}<div class="card tab-card"><div class="filtres"><input placeholder="Nom, téléphone, e-mail"><span class="grp">Compte en ligne <span class="seg"><span class="is-on">Tous <em>680</em></span><span>En ligne <em>84</em></span><span>Pas de compte <em>596</em></span></span></span></div>
+        <table><thead><tr><th>Client</th><th>Téléphone</th><th>Compte en ligne</th><th class="num">Remise</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div></div>
+      ${legende('Le compte en ligne dans la liste', [
+        '<b>Un cinquième onglet, SMS</b>, à côté des quatre de Clients.',
+        '<b>La colonne « Compte en ligne »</b> : « En ligne » et la date de la dernière connexion au webshop, sinon « Pas de compte » (créé en caisse, ou e-mail connu). Le filtre au-dessus : Tous · En ligne · Pas de compte. À Halle : 84 en ligne sur 680.',
+        '<b>La fiche</b> le redit, avec la date, et si le SMS « webshop en ligne » lui a déjà été envoyé.',
+        '<b>D’où vient le repère</b> : TF Buddy note la dernière connexion de chaque client (last_login_at) ; elle n’existe que pour les clients qui ont un mot de passe. Le mot de passe, lui, ne sort jamais.',
+      ])}</div>${fiche}</div>`;
+  }
+
+  const corps = V === 'particuliers' ? vueParticuliers() : V === 'parcours' ? vueParcours() : V === 'suivi' ? vueSuivi() : vueEnvoi();
   document.getElementById('app').innerHTML = V === 'parcours' ? `<div style="width:1440px;padding:28px 24px 30px;background:var(--paper)">${corps}</div>` : `<div class="workspace">${rail()}<main class="main">${corps}</main></div>`;
 })();

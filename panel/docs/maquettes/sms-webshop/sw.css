@@ -71,3 +71,10 @@
 .etat { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; } .etat::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
 .etat.e-remis::before { background: #1B6FA8; } .etat.e-clic::before { background: var(--prize); } .etat.e-compte::before { background: var(--green); } .etat.e-bon::before { background: var(--accent); } .etat.e-echec::before { background: #A32014; } .etat.e-stop::before { background: #333; }
 .note-mq { margin-top: 10px; font-size: 11.5px; color: var(--muted); }
+/* Le compte en ligne */
+.cpt { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.cpt.oui { background: rgba(63, 122, 82, 0.12); color: var(--green); } .cpt.non { background: var(--chip); color: var(--muted-2); }
+.cpt svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+.dest { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.dest td { padding: 8px 12px; border-top: 1px solid var(--row-line); vertical-align: middle; } .dest td .sub { display: block; }
+.dest__pied { padding: 9px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); background: var(--table-head); }
