@@ -3115,8 +3115,8 @@
       if (aDed && bDed && b.p - wb < a.p) { return pill({ p: b.p, txt: a.txt + ' → ' + b.txt, cls: b.cls, titre: b.titre }, true); }
       return pill(a, aDed) + pill(b, bDed);
     };
-    const piste = (lb, sous, segs, L) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${depasse ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="objectif ${fE(obj)}"></i>` : ''}${part != null && !fin ? `<i class="temps" style="left:${(obj ? pct(obj * part / 100) : part).toFixed(1)}%" title="${fP0(part)} de la journée écoulée"></i>` : ''}${etiquettes(L)}</div></div>`;
-    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif ${cpt ? 'comptoir ' : ''}du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${atteint ? '<span class="chip" style="background:#f7edc8;color:#7d6310">objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
+    const piste = (lb, sous, segs, L) => `<div class="op-piste${segs.includes('seg j7') ? ' p7' : ''}"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${depasse ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="objectif ${fE(obj)}"></i>` : ''}${part != null && !fin ? `<i class="temps" style="left:${(obj ? pct(obj * part / 100) : part).toFixed(1)}%" title="${fP0(part)} de la journée écoulée"></i>` : ''}${etiquettes(L)}</div></div>`;
+    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif ${cpt ? 'comptoir ' : ''}du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${atteint ? '<span class="chip ok">objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
     const pA = pct(ca), pP = B.proj != null ? pct(B.proj) : null;
     const LA = [];
     if (ca != null) { LA.push({ p: pA, txt: fE(ca) + (obj ? ' · ' + fP0(100 * ca / obj) : ''), cls: '' }); }
@@ -3168,7 +3168,7 @@
     const echelle = Math.max(objB || 0, ca, p7j || 0, 1) * 1.08, pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle)), pO = objB ? pct(objB) : null;
     const marque = pO != null ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="part B2B habituelle ${fE(objB)}"></i>` : '';
     const val = (p, t, cls) => `<span class="val${cls ? ' ' + cls : ''}${p > 72 ? ' dedans' : ''}" style="left:${p.toFixed(1)}%">${t}</span>`;
-    const piste = (lb, sous, segs, j) => `<div class="op-piste"${j ? ` data-b2bj="${esc(j)}"` : ''}><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${marque}</div></div>`;
+    const piste = (lb, sous, segs, j) => `<div class="op-piste${segs.includes('seg j7') ? ' p7' : ''}"${j ? ` data-b2bj="${esc(j)}"` : ''}><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${marque}</div></div>`;
     const tks = k => fN(k) + ' ticket' + (k > 1 ? 's' : '') + ' pro', jn = B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1);
     // Un appui ouvre la feuille « Ventes B2B » (06/11/2026) : sur une piste, son jour ; ailleurs, aujourd'hui s'il a des
     // tickets pro, sinon le même jour la semaine d'avant.
@@ -3586,7 +3586,8 @@
     const lblA = fin ? 'cette journée' : 'aujourd’hui · ' + opHM(now);
     const lblJ = B.jourNom + ' dernier · journée';
     const eq = '<span class="eq">—</span>';
-    const ecart = (d, inv, suf, fmt) => d == null ? eq : `<span class="${sensDe(d, inv)}">${(fmt || fSP)(d)}${suf || ''}</span>`;
+    const MOT = { ok: 'devant', ko: 'derrière', eq: 'à égalité' };
+    const ecart = (d, inv, suf, fmt) => { if (d == null) { return eq; } const k = sensDe(d, inv); return `<span class="${k}">${(fmt || fSP)(d)}${suf || ''}</span>${MOT[k] ? `<em class="mot">${MOT[k]}</em>` : ''}`; };
     const cell = (cls, lab, v, sous) => `<div class="${cls}"><span class="lab">${lab}</span>${v}${sous ? `<small>${sous}</small>` : ''}</div>`;
     const ligne = (k, note, a, b, d, j, r) => `<div class="op-dl"><div class="k">${k}${note ? `<small>${note}</small>` : ''}</div>${cell('a', lblA, a[0], a[1])}${cell('b', esc(B.lblB), b[0], b[1])}<div class="d">${d}</div>${cell('j', lblJ, j[0], j[1])}${cell('r', 'référence', r[0], r[1])}</div>`;
     const ref = JD && JD.reference ? JD.reference : {};
@@ -3612,11 +3613,11 @@
       const W = 520, Ht = 110, bw = W / HS.length, mx = Math.max(1, ...HS.map(hh => Math.max(moy[hh] || 0, vend[hh] || 0))) * 1.15, y = v => Ht - Ht * v / mx;
       heures = `<div class="op-h4">Ventes au comptoir, heure par heure</div><svg width="100%" viewBox="0 0 ${W} ${Ht + 18}" class="op-svg">${HS.map((hh, i) => {
         const mo = moy[hh] || 0, v = vend[hh], X = i * bw, enCours = now != null && hh * 60 <= now && now < hh * 60 + 60;
-        const c = enCours ? '#8D1D2C' : (v != null && v >= mo ? '#3f7a52' : '#B0792A');
-        return `<rect x="${(X + bw * .12).toFixed(1)}" y="${y(mo).toFixed(1)}" width="${(bw * .36).toFixed(1)}" height="${(Ht - y(mo)).toFixed(1)}" rx="2" fill="#e3dbcf"/><text x="${(X + bw * .3).toFixed(1)}" y="${(y(mo) - 3).toFixed(1)}" font-size="9" text-anchor="middle" fill="#7a736a">${fN(mo)}</text>`
-          + (v != null && (now == null || hh * 60 <= now) ? `<rect x="${(X + bw * .52).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw * .36).toFixed(1)}" height="${(Ht - y(v)).toFixed(1)}" rx="2" fill="${c}"/><text x="${(X + bw * .7).toFixed(1)}" y="${(y(v) - 3).toFixed(1)}" font-size="9.5" font-weight="700" text-anchor="middle" fill="${c}">${fN(v)}</text>` : '')
-          + `<text x="${(X + bw / 2).toFixed(1)}" y="${Ht + 13}" font-size="10" text-anchor="middle" fill="#7a736a">${hh} h</text>`;
-      }).join('')}</svg><div class="op-leg"><span><i style="background:#e3dbcf"></i>moyenne</span><span><i style="background:var(--prize)"></i>vendu, sous la moyenne</span><span><i style="background:var(--green)"></i>au-dessus</span>${now != null ? '<span><i style="background:var(--accent)"></i>heure en cours</span>' : ''}</div>`;
+        const c = enCours ? 'var(--chart-real)' : (v != null && v >= mo ? 'var(--green)' : 'var(--prize)');
+        return `<rect x="${(X + bw * .12).toFixed(1)}" y="${y(mo).toFixed(1)}" width="${(bw * .36).toFixed(1)}" height="${(Ht - y(mo)).toFixed(1)}" rx="2" style="fill:var(--chip)"/><text x="${(X + bw * .3).toFixed(1)}" y="${(y(mo) - 3).toFixed(1)}" font-size="9" text-anchor="middle" style="fill:var(--muted-2)">${fN(mo)}</text>`
+          + (v != null && (now == null || hh * 60 <= now) ? `<rect x="${(X + bw * .52).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw * .36).toFixed(1)}" height="${(Ht - y(v)).toFixed(1)}" rx="2" style="fill:${c}"/><text x="${(X + bw * .7).toFixed(1)}" y="${(y(v) - 3).toFixed(1)}" font-size="9.5" text-anchor="middle" style="fill:var(--ink)">${fN(v)}</text>` : '')
+          + `<text x="${(X + bw / 2).toFixed(1)}" y="${Ht + 13}" font-size="10" text-anchor="middle" style="fill:var(--muted-2)">${hh} h</text>`;
+      }).join('')}</svg><div class="op-leg"><span><i style="background:var(--chip)"></i>moyenne</span><span><i style="background:var(--prize)"></i>vendu, sous la moyenne</span><span><i style="background:var(--green)"></i>au-dessus</span>${now != null ? '<span><i style="background:var(--chart-real)"></i>heure en cours</span>' : ''}</div>`;
     } else { heures = U ? '' : `<div style="padding:8px 0">${opSk()}</div>`; }
     return heures;
   }
@@ -3883,8 +3884,25 @@
     if (fcAFaire()) { L.push({ sig: 'prize', txt: `Dossier de formation : ${fN(fcAFaire())} à faire`, attr: 'data-fcouvrir="1" title="Mon dossier de formation : les formations continues du magasin, la photo du jour, le Professeur"' }); }
     const m = D.m, obj = m && m.objectifJour ? m.objectifJour : null, ca = D.ca;
     const proj = auj && m && !D.fin && m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? m.projection : null;
-    const cle = ca != null ? { v: fE(ca), q: 'de chiffre d’affaires' + (auj ? ' aujourd’hui, en direct' : ''), s: obj ? `${fP(100 * ca / obj)} de l’objectif de ${fE(obj)}${proj != null && ca < obj ? ' · projection ' + fE(proj) : ''}` : 'pas d’objectif du jour' } : null;
-    return acBloc(L, !!(D.U && S.aux['stock|' + S.shop] && (!auj || C)), cle);
+    const pret = !!(D.U && S.aux['stock|' + S.shop] && (!auj || C));
+    if (ca == null) { return acBloc(L, pret, null); }
+    // Le résumé du jour (28/11/2026, docs/DESIGN_SYSTEM.md §7.13, maquette panel/docs/maquettes/design-system-dashboard) :
+    // le même que la Semaine et le Mois (chrResume) — la valeur et son état en mots face à l'attendu à cette heure (l'objectif
+    // × la part de journée écoulée, celle de la projection), la jauge et sa projection hachurée, ce qui reste ; puis « À corriger ».
+    const enCours = proj != null, attendu = obj && enCours ? obj * m.projectionPart / 100 : null;
+    const repere = obj ? (attendu != null ? attendu : obj) : null, A = repere ? atteinte(100 * ca / repere) : null;
+    const lev = !obj ? '' : (ca < obj
+      ? `<span class="chr-lh">Reste ${fE(obj - ca)} pour l’objectif</span><span>${proj != null ? 'au rythme actuel : ' + fE(proj) + ' à la fermeture, ' + fP0(100 * proj / obj) + ' de l’objectif' : ''}</span>`
+      : `<span class="chr-lh">Objectif atteint</span><span>dépassé de ${fE(ca - obj)}${proj != null ? ' · au rythme actuel : ' + fE(proj) + ' à la fermeture' : ''}</span>`);
+    return chrResume({
+      aria: 'Résumé du jour', v: fE(ca),
+      et: A ? { sig: A.sig, mot: CHR_MOTS[enCours ? 'cours' : 'clos'][A.sig] } : null,
+      q: 'de chiffre d’affaires' + (auj ? (enCours ? ' aujourd’hui, en direct' : ' aujourd’hui') : ' le ' + fD(S.date)),
+      q2: obj ? `${fP(100 * ca / obj)} de l’objectif de ${fE(obj)}` : 'pas d’objectif du jour',
+      jauge: obj ? chrJauge(ca, obj, repere, A, enCours ? 'attendu à cette heure' : 'objectif', proj) : '',
+      meta: obj ? `${enCours ? 'attendu à ' + opHM(D.now) + ' : ' + fE(attendu) : 'objectif ' + fE(obj)} · <span class="${ca >= repere ? 'ok' : 'ko'}">${fS(ca - repere)}</span>` : '',
+      lev, L, titre: 'À corriger', ok: pret ? 'Rien à corriger pour l’instant.' : ''
+    });
   }
 
   function rendOps() {
@@ -3941,7 +3959,9 @@
     // Le stock du magasin : la barre de la vue Semaine, sa liste en liste déroulante.
     // Ce qui est sous le minimum se dit dans « À corriger » (26/11/2026) : ici la barre garde la liste, sous un titre neutre.
     h += `<div class="op-stock" id="op-stock">${S.aux['stock|' + S.shop] ? rendStock({ neutre: true }) : `<div class="db-stbar mu"><span class="t">Stock<small>lecture de l’inventaire…</small></span></div>`}</div>`;
-    return h;
+    // Le cadre .op-ds (28/11/2026, docs/DESIGN_SYSTEM.md, maquette panel/docs/maquettes/design-system-dashboard) : les
+    // règles du design system propres à l'Opérationnel s'y bornent (dashboard.css, « L'Opérationnel au design system »).
+    return `<div class="op-ds">${h}</div>`;
   }
 
   /* --- Promotions du magasin (17/10/2026) -----------------------------------------------------------------
@@ -8618,15 +8638,15 @@
     const ca = m.ca != null ? m.ca : m.realise;
     const ht = m.caHt != null;
     const base = ht ? m.caHt : ca;
-    const feu = (v, s) => v == null || s == null ? 'var(--color-text-muted)' : (v <= s ? '#3f7a52' : (v <= s * 1.3 ? '#B0792A' : '#A32014'));
+    const feu = (v, s) => v == null || s == null ? 'var(--color-text-muted)' : (v <= s ? 'var(--green)' : (v <= s * 1.3 ? 'var(--prize)' : 'var(--stop)'));
     // Le résultat en % des ventes : la marge nette, l'échelle PALIERS (26/11/2026 ; avant : 15 % et 5 %, une perte et 0–5 % en rouge).
     const feuRes = p => p == null ? 'var(--color-text-muted)' : palier(p).c;
     const mbPct = m.margeBrutePct != null ? m.margeBrutePct : (base ? 100 * m.margeBrute / base : null);
     const barre = p => Math.min(Math.abs(p || 0), 100).toFixed(1);
-    const ligne = (lib, sous, v, pct, coul, w, fort, note, attr) => `<div class="db-cl${fort ? ' fort' : ''}${attr ? ' clic' : ''}"${attr || ''}><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
+    const ligne = (lib, sous, v, pct, coul, w, fort, note, attr) => `<div class="db-cl${fort ? ' fort' : ''}${attr ? ' clic' : ''}"${attr || ''}><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul === 'var(--color-text)' ? 'var(--muted-2)' : coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
     const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
     const clients = m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : '';
-    const gris = '#c9c4bc', barreCa = v => base ? Math.min(100, 100 * v / base).toFixed(1) : '0';
+    const gris = 'var(--faint)', barreCa = v => base ? Math.min(100, 100 * v / base).toFixed(1) : '0';
     const tete = ht
       ? `${ligne('Chiffre d’affaires encaissé', [clients, 'TVA comprise'].filter(Boolean).join(' · '), fE(ca), '', gris, barreCa(ca), false, 'ce que la caisse a encaissé')}
       ${ligne('− TVA des tickets', fP(m.tvaPart) + ' du TTC · ' + esc(m.tvaSource || ''), fE(-m.tva), '', gris, barreCa(m.tva), false, 'reversée à l’État')}
@@ -8638,7 +8658,7 @@
       ${tete}
       ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : '', m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
-      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? (m.invendusPieces ? fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#A32014' : '#B0792A') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
+      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? (m.invendusPieces ? fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? 'var(--stop)' : 'var(--prize)') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
       ${ligne('− Main-d’œuvre', se.labour != null ? 'seuil ' + fP(se.labour) : '', m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
       ${ligne(ht ? '− Frais généraux hors TVA' : '− Frais généraux', se.overhead != null ? 'seuil ' + fP(se.overhead) : '', m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false, noteFrais)}
       ${ligne(ht ? '= Résultat hors TVA' : '= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
@@ -10413,7 +10433,7 @@
         if (d > AUJ) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${j.objectif ? '<i class="eu">obj. </i>' + nf(j.objectif / 1000, 1) + ' k€' : 'à venir'}</small></div>`; }
         if (j.ferme) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>fermé</small></div>`; }
         const p = j.objectif && j.ca != null ? 100 * j.ca / j.objectif : null, auj = d === AUJ;
-        return `<button type="button" class="fr-c${on ? ' on' : ''}" ${ops ? 'data-fdate' : 'data-fops'}="${d}" title="${esc(fDL(d))}${ops ? '' : ' · ouvrir en Opérationnel'}"><span class="n">${lib}<i class="dot" style="background:${auj ? '#1d1d1b' : col(p)}"></i></span><b>${j.ca != null ? fN(j.ca) + '<i class="eu"> €</i>' : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' %<i class="eu"> obj.</i>' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" ${ops ? 'data-fdate' : 'data-fops'}="${d}" title="${esc(fDL(d))}${ops ? '' : ' · ouvrir en Opérationnel'}"><span class="n">${lib}<i class="dot" style="background:${auj ? 'var(--ink)' : col(p)}"></i></span><b>${j.ca != null ? fN(j.ca) + '<i class="eu"> €</i>' : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' %<i class="eu"> obj.</i>' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
       }).join('');
     } else {
       const Y = annee(), P = S.aux[clePerf()], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
@@ -10427,7 +10447,7 @@
       }).join('');
     }
     const annuel = S.vue === 'mois';
-    return `<div class="db-frise${S.vue === 'ops' || S.vue === 'semaine' ? ' sept' : ''}${S.vue === 'ops' ? '' : ' fr-chiffres'}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
+    return `<div class="db-frise${S.vue === 'ops' || S.vue === 'semaine' ? ' sept' : ''}${S.vue === 'ops' ? ' fr-ops' : ' fr-chiffres'}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
   }
 
   function rendBench(m, d) {
@@ -10459,7 +10479,7 @@
         <div class="v">${f(v)}<small>médiane ${f(med)}</small></div>
         <div class="s">${extra && extra(m) ? extra(m) + ' · ' : ''}${fd(v - med)} vs médiane · ${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
     }).join('');
-    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts${premiers ? ' · <b>' + premiers + ' × </b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:var(--faint)"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
+    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts${premiers ? ' · <b>' + premiers + ' × </b>' : ''}</div><div class="leg"><span><i class="toi"></i>toi</span><span><i style="background:var(--faint)"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
   }
 
   /* --- Les non-conformités de la veille -----------------------------------
@@ -10770,7 +10790,7 @@
    */
   const CQ_PERIME = 15 * 60 * 1000;
   const CQ_RANG = { nc: 0, ctl: 1, ok: 2, ko: 3, mu: 4 };
-  const CQ_FILTRES = [['nc', 'Écarts', '#B0792A'], ['ctl', 'À contrôler', '#2F5D8A'], ['ok', 'Conformes', '#3f7a52'], ['ko', 'Non rendues', '#A32014'], ['mu', 'Sans photo', '#a59d93']];
+  const CQ_FILTRES = [['nc', 'Écarts', 'var(--prize)'], ['ctl', 'À contrôler', 'var(--muted-2)'], ['ok', 'Conformes', 'var(--green)'], ['ko', 'Non rendues', 'var(--stop)'], ['mu', 'Sans photo', 'var(--faint)']];
   function cleCQ() { return 'cqph|' + S.shop + '|' + S.date; }
   function cheminCQ() { return '/pwa/tasks/photos?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date; }
   /** Relit les photos (URL neuves) ; jamais deux fois dans la même minute. */
@@ -10921,7 +10941,7 @@
     });
     return `<div class="cqk"><div class="cqk-nav">${fiches.map(f => `<button type="button" class="cqk-ch" data-cqkgo="${f.i}" style="--z:${f.z}" title="${esc(f.c.code + ' · ' + f.c.titre)}"><i class="e-${f.e}"></i>${esc(f.g.h || '—')} · <b>${esc(f.c.code || '—')}</b><span class="e-${f.e}">${f.r}/${f.g.tous.length}</span></button>`).join('')}</div>
       <div class="cqk-rail"><button type="button" class="cqk-fl g" data-cqkpas="-1" aria-label="checklists précédentes">‹</button>
-        <div class="cqk-piste" id="cqk-piste">${fiches.map(f => `<div class="cqk-c" data-cqk="${f.i}"><div class="cqf-b" style="background:${f.z}"><span class="cqf-code">${esc(f.c.code || '—')}</span><b>${esc(f.c.titre)}</b>${f.g.h ? `<span class="cqf-hh">${esc(f.g.h)}</span>` : ''}<span class="cqf-sp"></span><span class="cqf-s e-${f.e}">${f.e === 'ko' ? '✗' : '✓'} ${f.r} / ${f.g.tous.length}</span></div>
+        <div class="cqk-piste" id="cqk-piste">${fiches.map(f => `<div class="cqk-c" data-cqk="${f.i}"><div class="cqf-b" style="--z:${f.z}"><span class="cqf-code">${esc(f.c.code || '—')}</span><b>${esc(f.c.titre)}</b>${f.g.h ? `<span class="cqf-hh">${esc(f.g.h)}</span>` : ''}<span class="cqf-sp"></span><span class="cqf-s e-${f.e}">${f.e === 'ko' ? '✗' : '✓'} ${f.r} / ${f.g.tous.length}</span></div>
           <div class="cqk-p">${f.g.vus.map(x => cqCarte(x, false)).join('')}</div></div>`).join('')}</div>
         <button type="button" class="cqk-fl d" data-cqkpas="1" aria-label="checklists suivantes">›</button></div></div>`;
   }

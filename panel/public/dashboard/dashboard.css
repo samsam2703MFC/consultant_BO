@@ -190,6 +190,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-bt.tit .s{white-space:normal;margin-top:0}
 .db-bt .leg{font-size:10px;color:var(--color-text-muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
 .db-bt .leg i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;margin-right:3px}
+.db-bt .leg i.toi{background:var(--color-primary)}
 .db-bt .leg b{display:inline-block;width:2px;height:10px;background:var(--color-text);vertical-align:-1px;margin-right:3px}
 /* La tuile des messages du panel, et son tiroir. */
 .db-bt.msg{background:var(--color-surface);border:1.5px solid var(--color-primary);cursor:pointer;position:relative}
@@ -1625,6 +1626,7 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-duel .dh .lab b{font:400 15px var(--font-display);letter-spacing:0;text-transform:none;color:var(--color-text);margin-left:6px}
 .op-duel .dh .chip{display:inline-flex;align-items:center;font:400 10.5px var(--font-ui);padding:3px 9px;border-radius:8px;background:var(--color-background-secondary);color:var(--muted-2);white-space:nowrap}
 .op-duel .dh .dr{margin-left:auto;font-size:11px;color:var(--color-text-muted);white-space:nowrap}
+.op-duel .dh .chip.ok{background:rgba(63,122,82,.12);color:var(--green)}
 .op-piste{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:14px;margin-top:12px}
 .op-piste .pl b{display:block;font:400 16px var(--font-display)}
 .op-piste .pl small{font-size:11px;color:var(--color-text-muted)}
@@ -1708,6 +1710,7 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-dl .d{font:400 21px var(--font-display);text-align:center}
 .op-dl .d small{display:inline;font-size:10px;color:var(--color-text-muted)}
 .op-dl .d .ok{color:var(--green)}.op-dl .d .ko{color:var(--stop)}.op-dl .d .eq{color:var(--faint)}
+.op-dl .d .mot{display:block;margin-top:2px;font:400 11px var(--font-ui);font-style:normal;color:var(--muted-2)}
 .op-dt.sans-j .op-dl{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr)}
 .op-dt.sans-j .op-dl .j{display:none}
 @media (max-width:700px){
@@ -2510,7 +2513,7 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 /* ── Les feuilles « Ventes B2B » et « Commandes du jour » (06/11/2026, maquette b2b-commandes-mobile) ──
    Sam : pas de vignette à bord coloré. Cartes blanches, filet fin ; la couleur reste aux pastilles d'état. */
 .op-duel.b2b[data-b2b]{cursor:pointer}
-.op-duel.b2b[data-b2b]:focus-visible,.op-cmdl:focus-visible{outline:2px solid #2a78d6;outline-offset:2px}
+.op-duel.b2b[data-b2b]:focus-visible,.op-cmdl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .op-duel.b2b .op-piste[data-b2bj] .pb{transition:box-shadow .15s}
 .op-duel.b2b .op-piste[data-b2bj]:hover .pb{box-shadow:0 0 0 2px rgba(122,92,46,.25)}
 .op-tap{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:9px;border-top:1px solid var(--line);font-size:11px;color:var(--color-text-muted)}
@@ -2525,24 +2528,24 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 /* Le ruban des canaux sous la jauge du comptoir (18/11/2026, maquette C de comptoir-webshop) : la part de chaque canal,
    puis trois colonnes — comptoir, commandes prises au comptoir, webshop — face à J−7. Couleurs de la jauge « Comment le
    client achète » de la fiche client (FD_CANAUX) : comptoir or, commande comptoir bordeaux, webshop bleu. */
-.op-rb{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.op-rb{--canal-c:#B0792A;--canal-k:#8D1D2C;--canal-w:#1B6FA8;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .op-rb .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;color:var(--color-text-muted)}
-.op-rb .mix{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;background:#efe9e0;margin:8px 0 10px}
+.op-rb .mix{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;background:var(--chip);margin:8px 0 10px}
 .op-rb .mix i{display:block;height:100%;min-width:3px}
-.op-rb .mix i.c,.op-rb .pt.c{background:#B0792A}.op-rb .mix i.k,.op-rb .pt.k{background:#8D1D2C}.op-rb .mix i.w,.op-rb .pt.w{background:#1B6FA8}
+.op-rb .mix i.c,.op-rb .pt.c{background:var(--canal-c)}.op-rb .mix i.k,.op-rb .pt.k{background:var(--canal-k)}.op-rb .mix i.w,.op-rb .pt.w{background:var(--canal-w)}
 .op-rb .col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .op-rb .col>div{padding:9px 10px 10px;min-width:0}
 .op-rb .col>div+div{border-left:1px solid var(--line)}
 .op-rb .col>div[data-cmdm]{cursor:pointer}
 .op-rb .col>div[data-cmdm]:hover{background:var(--color-background-secondary)}
-.op-rb .col>div[data-cmdm]:focus-visible,.op-rb .bas:focus-visible{outline:2px solid #2a78d6;outline-offset:-2px}
+.op-rb .col>div[data-cmdm]:focus-visible,.op-rb .bas:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .op-rb .col .k{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted-2);white-space:nowrap}
 .op-rb .col .k .ch{margin-left:auto;color:var(--faint);font-size:14px;line-height:1}
 .op-rb .pt{display:inline-block;width:8px;height:8px;border-radius:50%;flex:0 0 auto}
 .op-rb .col .v{font:400 17px/1.2 var(--font-display);margin-top:4px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .op-rb .col .s{font-size:10px;color:var(--color-text-muted);margin-top:1px;line-height:1.3}
-.op-rb .col .j{font-size:10px;color:#2F5D8A;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);line-height:1.35}
-.op-rb .col .j em{font-style:normal;white-space:nowrap}.op-rb .col .j em.ko{color:#8c1020}.op-rb .col .j em.ok{color:var(--green)}
+.op-rb .col .j{font-size:10px;color:var(--muted-2);margin-top:6px;padding-top:6px;border-top:1px solid var(--line);line-height:1.35}
+.op-rb .col .j em{font-style:normal;white-space:nowrap}.op-rb .col .j em.ko{color:var(--stop)}.op-rb .col .j em.ok{color:var(--green)}
 .op-rb .bas{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer}
 .op-rb .bas em{font-style:normal;color:var(--prize-ink)}
 .op-rb .bas .ch{color:var(--color-primary);font-size:14px;line-height:1}
@@ -2904,7 +2907,7 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 .cqf-d{position:absolute;left:4px;top:11px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px #ddd3c6}
 .cqf-d.e-ok{background:var(--green)}.cqf-d.e-wa{background:var(--prize)}.cqf-d.e-ko{background:var(--stop)}
 .cqf-c{border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;margin-bottom:12px;background:#faf7f2}
-.cqf-b{display:flex;align-items:center;gap:10px;color:#fff;padding:6px 12px}
+.cqf-b{display:flex;align-items:center;gap:10px;color:#fff;padding:6px 12px;background:var(--z)}
 .cqf-code{font:400 18px var(--font-display);font-variant-numeric:tabular-nums}.cqf-b b{font-weight:400;font-size:14px}.cqf-hh{font-size:12px;opacity:.85}.cqf-sp{flex:1}
 .cqf-s{background:#fff;border-radius:6px;padding:2px 10px;font-size:12px;white-space:nowrap}.cqf-s.e-ok{color:var(--green)}.cqf-s.e-wa{color:var(--prize-ink)}.cqf-s.e-ko{color:var(--stop)}
 .cqf-sl{position:relative}
@@ -3916,3 +3919,190 @@ body.db-vue-social{overflow:hidden}
 .fdp-nm span.co::before{background:var(--fd-bingo);border-color:var(--fd-bingo)}
 .fdp-nm span.pr::before{background:var(--prize);border-color:var(--prize)}
 @media (max-width:900px){.fdp-tl,.fdp-ti-2{grid-template-columns:1fr}.fdp-cartes{grid-template-columns:1fr}}
+
+/* ── L'Opérationnel au design system (28/11/2026) ──────────────────────────────────────────────────────────────────────
+ * Sam : « applique-le au vrai dashboard, commence par Opérationnel ; n'oublie pas la jauge des commandes par canal ».
+ * Maquette : panel/docs/maquettes/design-system-dashboard. Les règles se bornent au cadre de l'Opérationnel (.op-ds,
+ * rendOps) et à sa frise des jours (.fr-ops) : les vues qui partagent ces blocs (Jour, Tâches, le téléphone) gardent les
+ * leurs jusqu'à leur tour. Les jetons du design system seulement (docs/DESIGN_SYSTEM.md §3) :
+ *   - les couleurs de graphique : réalisé --chart-real, période précédente --chart-prev (son trait et ses textes en
+ *     --muted : trop pâle pour un trait), objectif --chart-goal ; le pro suit le comptoir, plus le brun ;
+ *   - un état se dit avec un mot (« devant », « objectif atteint »), le gras reste aux valeurs clés ;
+ *   - la jauge des canaux reste, avec les couleurs d'identification des canaux (page Commandes, Fidélité). */
+
+/* Les titres des cartes : le h2 du §7.2 (capitales espacées, --muted), tous pareils. */
+.op-ds .op-h2,.op-ds .db-card>.ct>.db-lab,.op-ds .op-duel .dh .lab{font:400 .95rem var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.op-ds .op-duel .dh .lab b{font:400 15px var(--font-ui);margin-left:8px}
+.op-ds .op-duel .dh .dr{font-size:11.5px;color:var(--muted)}
+
+/* La frise des jours : un choix (§7.6) — blanc bordé, le jour choisi en liseré bordeaux sur fond teinté. */
+.fr-ops .fr-c{background:#fff;border:1px solid rgba(34,34,34,.14)}
+.fr-ops .fr-c:hover{border-color:var(--muted-2)}
+.db-frise.sept.fr-ops .fr-c{padding:9px 13px}
+.db-frise.sept.fr-ops .fr-c.on{padding:8px 12px;border:2px solid var(--accent);background:rgba(141,29,44,.05)}
+.fr-ops .fr-c.fut,.fr-ops .fr-c.fut:hover{background:#fff;border:1px solid var(--line)}
+.fr-ops .fr-c .n,.fr-ops .fr-c small{color:var(--muted-2)}
+.db-frise.sept.fr-ops .fr-c b{font-family:var(--font-ui);font-size:21px}
+.fr-ops .fr-c .n em{background:var(--chip);color:var(--ink);border-radius:4px;letter-spacing:0;text-transform:none}
+
+/* Ta place dans le réseau : des cartes blanches, le rang en étiquette neutre (vert : le 1er, l'arrêt : le dernier),
+ * le point « toi » à la couleur du réalisé, plus de dégradé sous la jauge, les textes en deux lignes plutôt que coupés. */
+.op-ds .db-bench{padding:12px;margin-bottom:12px}
+.op-ds .db-bt{background:#fff;border:1px solid var(--line);border-radius:10px}
+.op-ds .db-bt.tit{border:0}
+.op-ds .db-bt .k{font-size:10.5px;letter-spacing:.06em;color:var(--muted);white-space:normal}
+.op-ds .db-bt.tit .k{font-size:.95rem;color:var(--muted)}
+.op-ds .db-bt .rg{background:var(--chip);color:var(--ink)}
+.op-ds .db-bt .rg small{opacity:1;color:var(--muted-2)}
+.op-ds .db-bt .rg.top{background:rgba(63,122,82,.12);color:var(--green)}
+.op-ds .db-bt .rg.bas{background:var(--stop-soft);color:var(--stop)}
+.op-ds .db-bt .rg.mu{background:var(--chip);color:var(--muted-2)}
+.op-ds .db-bt .jg .l{background:var(--chip)}
+.op-ds .db-bt .jg .md{background:var(--ink)}
+.op-ds .db-bt .jg .mo{top:3px;width:13px;height:13px;background:var(--chart-real)}
+.op-ds .db-bt .jg .mo.top{background:var(--green)}
+.op-ds .db-bt .leg i.toi{background:var(--chart-real)}
+.op-ds .db-bt .v{font-family:var(--font-ui);font-size:15px}
+.op-ds .db-bt .v small{font-size:10.5px;color:var(--muted-2)}
+.op-ds .db-bt .s{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;font-size:10.5px;color:var(--muted-2)}
+
+/* Les jauges de l'objectif (comptoir, pro) : réalisé, projection hachurée, J−7 et sa journée, l'objectif en bleu. */
+.op-ds .op-duel{padding:16px 20px 14px}
+.op-ds .op-piste .pl b{font:400 15px var(--font-ui)}
+.op-ds .op-piste .pl small{font-size:11.5px;color:var(--muted)}
+.op-ds .op-piste .pb{height:28px;border-radius:6px;background:var(--table-head);outline:1px solid var(--line);outline-offset:-1px}
+.op-ds .op-piste .seg{border-radius:6px}
+.op-ds .op-piste .seg.fait,.op-ds .op-duel.b2b .seg.fait{background:var(--chart-real)}
+.op-ds .op-piste .seg.or{background:var(--green)}
+.op-ds .op-piste .seg.proj{background:repeating-linear-gradient(135deg,var(--chart-prev) 0 5px,#fff 5px 10px);border-radius:0 6px 6px 0}
+.op-ds .op-piste .seg.j7,.op-ds .op-duel.b2b .seg.j7{background:var(--chart-prev)}
+.op-ds .op-piste .seg.j7j,.op-ds .op-duel.b2b .seg.j7j{background:repeating-linear-gradient(135deg,var(--chip) 0 5px,#fff 5px 10px);border-radius:0 6px 6px 0}
+.op-ds .op-piste .objm{border-left:2px solid var(--chart-goal);opacity:1}
+.op-ds .op-piste .val{border-radius:4px;font-size:11.5px;color:var(--ink);background:rgba(255,255,255,.92)}
+.op-ds .op-piste .val.dedans{color:#fff;background:none}
+.op-ds .op-piste.p7 .val.dedans{color:var(--ink)}
+.op-ds .op-piste .val.fin,.op-ds .op-duel.b2b .val.fin{color:var(--muted-2)}
+.op-ds .op-piste .val.proj{color:var(--chart-real)}
+.op-ds .op-piste .val.fin.dedans,.op-ds .op-piste .val.proj.dedans{color:var(--ink);background:rgba(255,255,255,.92)}
+.op-ds .op-dax{font-size:11px;color:var(--muted-2)}
+.op-ds .op-dax.ab .o{color:var(--chart-goal)}
+.op-ds .op-duel.b2b .op-piste[data-b2bj]:hover .pb{box-shadow:none;outline-color:var(--muted-2)}
+.op-ds .op-tap{font-size:12px;color:var(--muted-2)}
+
+/* La jauge des commandes par canal (le ruban) : gardée, plus haute, son titre en libellé de section ; chaque canal en
+ * chiffre lisible, son point d'identification devant, J−7 dessous en --muted-2 et l'écart en mot de couleur. */
+.op-ds .op-rb .t{font-size:11.5px;color:var(--muted-2)}
+.op-ds .op-rb .t span:first-child{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.op-ds .op-rb .mix{height:12px;margin:10px 0 12px}
+.op-ds .op-rb .col{border-radius:12px}
+.op-ds .op-rb .col>div{padding:12px 14px}
+.op-ds .op-rb .col .k{gap:6px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.op-ds .op-rb .col .k .ch{color:var(--muted-2)}
+.op-ds .op-rb .col .v{font:400 19px/1.2 var(--font-ui)}
+.op-ds .op-rb .col .s{font-size:12px;color:var(--muted)}
+.op-ds .op-rb .col .j{font-size:12px}
+.op-ds .op-rb .bas{font-size:12px;color:var(--muted-2)}
+.op-ds .op-rb .bas .ch{color:var(--muted-2)}
+
+/* Heure par heure : les vues en sélecteur segmenté (§7.6 : on choisit, on ne fait pas) ; les traits aux couleurs de graphique. */
+.op-ds .op-crbtog{gap:2px;padding:3px;border:0;border-radius:9px;background:var(--chip);overflow:visible}
+.op-ds .op-crbtog button{padding:5px 11px;border-radius:7px;font:400 12px var(--font-ui);line-height:1.3;color:var(--muted-2)}
+.op-ds .op-crbtog button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.op-ds .op-crb .ax{font-size:10.5px;fill:var(--muted-2)}
+.op-ds .op-crb .la,.op-ds .op-crb .pmj{stroke:var(--chart-real)}
+.op-ds .op-crb .pa,.op-ds .op-crb .ta,.op-ds .op-crb .tpa{fill:var(--chart-real)}
+.op-ds .op-crb .pal{stroke:var(--chart-real)}
+.op-ds .op-crb .l7{stroke:var(--muted)}
+.op-ds .op-crb .p7{fill:var(--muted)}
+.op-ds .op-crb .t7{fill:var(--muted-2)}
+.op-ds .op-crb .p7l{stroke:var(--muted)}
+.op-ds .op-crb .tpa.lg{fill:var(--muted)}
+.op-ds .op-crb .lap{stroke:var(--chart-real);stroke-width:2.2;opacity:.5}
+.op-ds .op-crb .pap{fill:var(--chart-real);opacity:.5}
+.op-ds .op-crb .l7p{stroke:var(--faint)}
+.op-ds .op-crb .p7p{fill:var(--faint)}
+.op-ds .op-crb .cib{stroke:var(--chart-goal);stroke-width:1.2;stroke-dasharray:6 4}
+.op-ds .op-crb .cibp{stroke:var(--chart-goal);opacity:.5}
+.op-ds .op-crb .obj,.op-ds .op-crb .objp,.op-ds .op-crb .objr{fill:var(--chart-goal)}
+.op-ds .op-crb .cl{fill:var(--chip)}
+.op-ds .op-crb .cln{fill:var(--muted)}
+.op-ds .op-dleg{font-size:11.5px;color:var(--muted-2)}
+.op-ds .op-dleg i.la{background:var(--chart-real)}
+.op-ds .op-dleg i.l7{background:none;height:0;border-top:2px dashed var(--muted)}
+.op-ds .op-dleg i.lap{background:var(--chart-real);opacity:.5}
+.op-ds .op-dleg i.l7p{background:none;height:0;border-top:2px dashed var(--faint)}
+.op-ds .op-dleg i.pmj{border-top-color:var(--chart-real)}
+.op-ds .op-dleg i.pal{border-color:var(--chart-real)}
+.op-ds .op-dleg i.cl{background:var(--chip)}
+
+/* Le duel chiffre par chiffre : les valeurs à l'encre (le bordeaux et le bleu n'y décorent plus), l'écart avec son mot. */
+.op-ds .op-dl{border-top-color:var(--row-line)}
+.op-ds .op-dl .lab{font-size:10.5px;color:var(--muted)}
+.op-ds .op-dl .a,.op-ds .op-dl .b{font:400 21px/1.1 var(--font-ui)}
+.op-ds .op-dl .a{color:var(--ink)}
+.op-ds .op-dl .b{color:var(--muted-2)}
+.op-ds .op-dl .j,.op-ds .op-dl .r{font-family:var(--font-ui)}
+.op-ds .op-dl small{font-size:11px}
+.op-ds .op-dl .d{font-family:var(--font-ui)}
+
+/* Le P&L court : des filets pleins entre les lignes (§7.8), la piste de chaque barre bordée. */
+.op-ds .db-cl{border-bottom:1px solid var(--row-line);font-size:12.5px}
+.op-ds .db-cl .mu,.op-ds .db-cl .n{font-size:11px}
+.op-ds .db-cl .b{background:var(--table-head);outline:1px solid var(--line);outline-offset:-1px}
+
+/* La journée : l'équipe en gris chaud, le trait de l'heure à l'encre (ce n'est pas une alerte). */
+.op-ds .op-fl .lb,.op-ds .op-ax .ax{color:var(--muted-2)}
+.op-ds .op-fl .pis{background:var(--table-head);outline:1px solid var(--line);outline-offset:-1px}
+.op-ds .op-fl .pis b.eq{background:var(--muted-2)}
+.op-ds .op-fl .pis b.eq.hors{background:var(--faint)}
+.op-ds .op-now{background:var(--ink)}
+.op-ds .op-h4{font-size:10.5px;color:var(--muted)}
+.op-ds .op-leg{font-size:11.5px;color:var(--muted-2)}
+
+/* La vitrine : S, M, L en case neutre (une durée de vie n'est pas un état) ; l'état en étiquette (§7.9). */
+.op-ds .op-vie,.op-ds .op-vie.S,.op-ds .op-vie.M,.op-ds .op-vie.L{border-radius:6px;background:var(--chip);color:var(--ink);font-size:11px}
+.op-ds .op-v3 .jg{background:var(--chip)}
+.op-ds .op-v3.S .jg i,.op-ds .op-v3.M .jg i,.op-ds .op-v3.L .jg i{background:var(--muted-2)}
+.op-ds .op-v3.on.S,.op-ds .op-v3.on.M,.op-ds .op-v3.on.L{border-bottom-color:var(--accent);background:rgba(141,29,44,.05)}
+.op-ds .op-v3 .niv b{font-family:var(--font-ui)}
+.op-ds .op-vd{border-radius:4px;font-size:11px}
+.op-ds .op-vd.rupture{background:var(--stop-soft);color:var(--stop)}
+.op-ds .op-vd.manque{background:var(--prize-soft);color:var(--prize-ink)}
+.op-ds .op-vd.trop{background:var(--chip);color:var(--muted-2)}
+
+/* Les contrôles en photo : le filtre choisi en bordeaux plein (§7.6), des cartes blanches dont la zone n'est plus qu'un
+ * point (une couleur d'identification ne fait pas un fond de bloc, §3), l'état en étiquette teintée. */
+.op-ds .db-cqf button{padding:5px 11px;font-size:12px}
+.op-ds .db-cqf button.on{background:var(--accent);border-color:var(--accent)}
+.op-ds .cqk-ch{border-color:var(--line);font-size:12px}
+.op-ds .cqk-ch b{color:var(--ink)}
+.op-ds .cqk-ch.vu{background:rgba(141,29,44,.05);border-color:var(--accent);color:var(--accent)}
+.op-ds .cqk-ch.vu b{color:var(--accent)}
+.op-ds .cqk-ch.vu i{box-shadow:none}
+.op-ds .cqk-ch.vu span.e-ok{color:var(--green)}.op-ds .cqk-ch.vu span.e-wa{color:var(--prize-ink)}.op-ds .cqk-ch.vu span.e-ko{color:var(--stop)}
+.op-ds .cqk-c{background:#fff}
+.op-ds .cqf-b{padding:9px 12px;background:#fff;color:var(--ink);border-bottom:1px solid var(--line)}
+.op-ds .cqf-b::before{content:'';flex:none;width:8px;height:8px;border-radius:50%;background:var(--z)}
+.op-ds .cqf-code{font:400 13px var(--font-ui);color:var(--muted-2)}
+.op-ds .cqf-b b{font-size:13px}
+.op-ds .cqf-hh{opacity:1;font-size:11.5px;color:var(--muted)}
+.op-ds .cqf-s{padding:2px 8px;font-size:11.5px}
+.op-ds .cqf-s.e-ok{background:rgba(63,122,82,.12)}.op-ds .cqf-s.e-wa{background:var(--prize-soft)}.op-ds .cqf-s.e-ko{background:var(--stop-soft)}
+/* La vue d'une carte (Liste, Treemap, Promotions, Portions) : un sélecteur segmenté, plus un bouton bordeaux plein. */
+.op-ds .db-ong{gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
+.op-ds .db-ong button{border-radius:7px;color:var(--muted-2)}
+.op-ds .db-ong button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* Les photos : la photo obligatoire bordée d'un filet (plus du bordeaux, réservé à la sélection) ; « à contrôler »
+ * attend, en --muted-2 (plus le bleu en dur). La facultative garde son pointillé pâle. */
+.op-ds .db-cqc.obl .db-cqph{box-shadow:none;outline:1px solid var(--line);outline-offset:0}
+.op-ds .cqbd{border-radius:4px;font-size:10.5px}
+.op-ds .cqbd.ctl{background:var(--muted-2)}.op-ds .cqbd.mu{background:var(--muted)}
+.op-ds .db-cqc .c.ctl{color:var(--muted-2)}
+/* La vitrine : le nom de la durée de vie à la taille d'un titre de bloc (15 px), la flèche et les chiffres en gris chaud. */
+.op-ds .vt-h b{font:400 15px var(--font-ui)}
+.op-ds .vt-h .fl{color:var(--muted-2)}
+.op-ds .vt-res b{font-family:var(--font-ui);color:var(--stop)}
+.op-ds .vt-l{box-shadow:none;outline:1px solid var(--line);outline-offset:-1px}
+.op-ds .vt-l .n b{color:var(--ink)}
+.op-ds .vt-l .mq b,.op-ds .vt-l .g{font-family:var(--font-ui)}
+.op-ds .vt-jl{background:var(--chip)}
