@@ -7,7 +7,7 @@ declare(strict_types=1);
  * magasin) qui crée directement aussi un voucher ».
  *
  * Une DEMANDE de bureau naît de deux façons : le questionnaire public du magasin (une page sans session, son adresse
- * porte le jeton du magasin), ou « Nouveau bureau en développement » dans le dashboard. Elle crée tout de suite dans
+ * porte le jeton du magasin), ou « Nouveau bureau en développement » dans le dashboard (bouton retiré le 27/11/2026). Elle crée tout de suite dans
  * TF Buddy, avec les comptes du cockpit (pclTf : les routes /shops/{s}/clients et les bons leur répondent) :
  *   - la personne : un client particulier du magasin (POST /shops/{s}/clients ; nom et téléphone obligatoires) ;
  *   - la société, si un numéro de TVA est donné : un client B2B (POST /shops/{s}/clients {vat_number}, VIES complète) ;
@@ -36,7 +36,7 @@ const BDV_MAX_HEURE = 5;
 /** Au plus tant de réponses par jour et par magasin au questionnaire (le lien court se devine : il faut un plafond). */
 const BDV_MAX_JOUR = 40;
 const BDV_GARDE_JOURS = 90;
-const BDV_STATUTS = ['a_valider', 'cree', 'rejoint', 'refuse', 'hors_zone'];
+const BDV_STATUTS = ['a_valider', 'cree', 'rejoint', 'refuse', 'hors_zone', 'reprise'];
 
 function ensureBureauxDevTables(): void
 {
@@ -454,6 +454,9 @@ function bdvPublicMagasin(string $method, string $id, string $sous = ''): array
  *       navigator.sendBeacon (text/plain, réponse jamais lue : aucune origine à autoriser), avec `tfbuddy` = ok | refus.
  *     Le même request_key reçu deux fois (un nouvel essai) met à jour la même copie.
  *   POST /dashboard/bureaux-dev/renvoyer {shop, id}     une copie que TF Buddy n'a pas reçue, renvoyée (même request_key)
+ *   POST /dashboard/bureaux-dev/effacer {shop, id}      la copie effacée du cockpit (l'original reste dans TF Buddy)
+ *   POST /dashboard/bureaux-dev/reprendre {shop, id, office_id}   « Créer le bureau » : le bureau créé par l'assistant
+ *                                                       « Ajouter un bureau » ; la demande hors zone passe « reprise »
  *   GET  /dashboard/bureaux-dev/tournees?shop=          les tournées que le webshop publie pour ce magasin (« ce que
  *                                                       voient vos clients » sur les deux pages)
  * Une copie est traitée dès son arrivée (traite_le) : comme toute demande traitée, elle s'efface après 90 jours.
@@ -518,7 +521,9 @@ function bdvHorsZoneEnregistrer(string $shop, array $d, string $ipHash): array
         $d['_tfbuddy'] = 'refus';
         $motif = 'la page du webshop n’a pas pu la remettre à TF Buddy';
     }
-    $deja = Db::row('SELECT id FROM panel_bureau_dev WHERE source = "hors_zone" AND donnees LIKE ? AND cree_le > DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY id DESC LIMIT 1',
+    // Seule une copie encore ouverte se met à jour : une copie reprise garde sa trace et son magasin, un nouvel envoi
+    // arrive alors comme une nouvelle demande ouverte.
+    $deja = Db::row('SELECT id FROM panel_bureau_dev WHERE source = "hors_zone" AND statut = "hors_zone" AND donnees LIKE ? AND cree_le > DATE_SUB(NOW(), INTERVAL 1 DAY) ORDER BY id DESC LIMIT 1',
         ['%"request_key":"' . $d['request_key'] . '"%']);
     $json = json_encode($d, JSON_UNESCAPED_UNICODE);
     if ($deja !== null) {
@@ -620,6 +625,47 @@ function wr_bureaux_dev_renvoyer(): array
     Db::exec('UPDATE panel_bureau_dev SET donnees = ?, erreurs = ?, traite_le = NOW() WHERE id = ?', [json_encode($d, JSON_UNESCAPED_UNICODE), $motif, (int) $r['id']]);
     if ($etat !== 'ok') { http_response_code(502); return ['error' => ucfirst((string) $motif) . '.']; }
     return ['ok' => true, 'tfbuddy' => 'ok'];
+}
+
+/**
+ * « Créer le bureau » depuis une demande hors zone (27/11/2026, Sam : « deux actions, Créer le bureau et la poubelle »,
+ * puis « la création du bureau doit être cet assistant : Ajouter un bureau ») : une fois le bureau créé dans TF Buddy par
+ * l'assistant, la demande hors zone encore ouverte passe « reprise », avec le n° du bureau. Rend faux si elle n'est pas
+ * (ou plus) une demande hors zone ouverte de ce magasin : rien ne bouge (l'UPDATE re-teste le statut).
+ */
+function bdvHorsZoneReprendre(string $shop, int $hzId, int $officeId): bool
+{
+    $r = bdvDemande($shop, $hzId);
+    if ($r === null || $r['source'] !== 'hors_zone' || $r['statut'] !== 'hors_zone') { return false; }
+    return Db::exec('UPDATE panel_bureau_dev SET statut = "reprise", office_id = ?, traite_le = NOW() WHERE id = ? AND shop_id = ? AND statut = "hors_zone"',
+        [$officeId, (int) $r['id'], $shop]) > 0;
+}
+
+/** POST /dashboard/bureaux-dev/reprendre {shop, id, office_id} : le bureau créé par l'assistant, la demande hors zone reprise. */
+function wr_bureaux_dev_reprendre(): array
+{
+    $b = body();
+    $shop = bdvShop($b);
+    $office = (int) ($b['office_id'] ?? 0);
+    if ($office <= 0) { http_response_code(422); return ['error' => 'le numéro du bureau créé manque']; }
+    if (!bdvHorsZoneReprendre($shop, (int) ($b['id'] ?? 0), $office)) { http_response_code(404); return ['error' => 'demande hors zone introuvable ou déjà reprise']; }
+    if (function_exists('journalAdd')) { journalAdd('dashboard', 'bureaux', null, 'Magasin ' . $shop . ' : demande hors zone n° ' . (int) $b['id'] . ' reprise en bureau n° ' . $office); }
+    return ['ok' => true, 'officeId' => $office];
+}
+
+/** La poubelle : la copie d'une demande hors zone effacée du cockpit ; l'original reste dans TF Buddy (aucune route pour l'y effacer). */
+function wr_bureaux_dev_effacer(): array
+{
+    $b = body();
+    $shop = bdvShop($b);
+    $r = bdvDemande($shop, (int) ($b['id'] ?? 0));
+    if ($r === null || $r['source'] !== 'hors_zone') { http_response_code(404); return ['error' => 'demande hors zone introuvable']; }
+    Db::exec('DELETE FROM panel_bureau_dev WHERE id = ? AND shop_id = ? AND source = "hors_zone"', [(int) $r['id'], $shop]);
+    if (function_exists('journalAdd')) {
+        $d = json_decode((string) $r['donnees'], true) ?: [];
+        journalAdd('dashboard', 'bureaux', null, 'Magasin ' . $shop . ' : demande hors zone effacée du cockpit (' . trim(($d['cp'] ?? '') . ' ' . ($d['ville'] ?? '')) . ')');
+    }
+    return ['ok' => true];
 }
 
 /* ── Les routes du dashboard ────────────────────────────────────────────────────────────────────────────────── */
@@ -791,6 +837,8 @@ function bdvRoute(string $method, string $path): ?array
             case '/dashboard/bureaux-dev/valider': return wr_bureaux_dev_valider();
             case '/dashboard/bureaux-dev/refuser': return wr_bureaux_dev_refuser();
             case '/dashboard/bureaux-dev/renvoyer': return wr_bureaux_dev_renvoyer();
+            case '/dashboard/bureaux-dev/effacer': return wr_bureaux_dev_effacer();
+            case '/dashboard/bureaux-dev/reprendre': return wr_bureaux_dev_reprendre();
         }
     }
     http_response_code(404);

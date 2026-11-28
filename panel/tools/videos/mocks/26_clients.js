@@ -3,7 +3,7 @@
  * wr_bureaux_dev_*) et panel/src/tfb_magasin.php (la connexion du compte TF Buddy du magasin).
  *   GET  /dashboard/clients/particuliers | entreprises | fiche | analyse | bureaux?chemin=…
  *   POST /dashboard/clients/client {action} | tva | bureaux {methode, chemin, corps} | bureaux/pdf
- *   GET|POST /dashboard/bureaux-dev[/questionnaire|/valider|/refuser|/renvoyer|/tournees]
+ *   GET|POST /dashboard/bureaux-dev[/questionnaire|/valider|/refuser|/renvoyer|/effacer|/reprendre|/tournees]
  *   POST /dashboard/tfb/connexion | confirmer | sms | renouveler | deconnexion ; GET /dashboard/tfb/etat
  * Le compte TF Buddy du magasin : la fausse API ne voit pas l'en-tête X-TFB-Jeton ; « connecté » est son état à elle,
  * posé par /dashboard/tfb/confirmer et retiré par /deconnexion. Connecté : les routes du panel répondent (entreprises
@@ -361,6 +361,16 @@ function devEcrire(p, b) {
   const x = DEV.find(y => y.id === +b.id);
   if (!x) { return err(404, 'demande introuvable'); }
   if (p === '/dashboard/bureaux-dev/renvoyer') { if (x.d) { x.d._tfbuddy = 'ok'; x.erreurs = []; } return { ok: true, tfbuddy: 'ok' }; }
+  if (p === '/dashboard/bureaux-dev/reprendre') {
+    // « Créer le bureau » : le bureau créé par l'assistant ; la demande hors zone passe « reprise » (bdvHorsZoneReprendre).
+    if (!(+b.office_id > 0)) { return err(422, 'le numéro du bureau créé manque'); }
+    if (x.source !== 'hors_zone' || x.statut !== 'hors_zone') { return err(404, 'demande hors zone introuvable ou déjà reprise'); }
+    x.statut = 'reprise'; x.officeId = +b.office_id; x.traite = '2026-11-19 15:41'; return { ok: true, officeId: x.officeId };
+  }
+  if (p === '/dashboard/bureaux-dev/effacer') {
+    if (x.source !== 'hors_zone') { return err(404, 'demande hors zone introuvable'); }
+    DEV.splice(DEV.indexOf(x), 1); return { ok: true };
+  }
   if (p === '/dashboard/bureaux-dev/refuser') { x.statut = 'refuse'; x.traite = '2026-11-19 15:42'; return { ok: true }; }
   if (p === '/dashboard/bureaux-dev/valider') {
     if (x.statut !== 'a_valider') { return err(409, 'cette demande est déjà traitée'); }

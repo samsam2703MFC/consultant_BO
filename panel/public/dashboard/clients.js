@@ -27,6 +27,7 @@
     plus: 'M12 5v14M5 12h14', x: 'M18 6L6 18M6 6l12 12', alerte: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
     camion: 'M1 5h13v11H1zM14 9h4l4 4v3h-8M5.5 18.5a1.8 1.8 0 1 0 0-.01M17.5 18.5a1.8 1.8 0 1 0 0-.01', g: 'M15 18l-6-6 6-6', d: 'M9 18l6-6-6-6',
     cadenas: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4', doc: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
+    corbeille: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14',
   };
   const TYPES = [['standard', 'Standard'], ['vip', 'VIP'], ['restaurant', 'Restaurant'], ['hotel', 'Hôtel'], ['wholesale', 'Gros'], ['other', 'Autre']];
   const MODES = [['delivery', 'Livraison'], ['pickup', 'Magasin'], ['both', 'Les deux']];
@@ -185,10 +186,12 @@
       ${st.mo && st.mo.err ? `<p class="error">${esc(st.mo.err)}</p>` : ''}${st.mo && st.mo.ok ? `<p class="pcl-ok">${esc(st.mo.ok)}</p>` : ''}
       ${pied ? `<div class="confirm__actions">${pied}</div>` : ''}</div></div>`;
   }
-  /** Un champ d'un formulaire : sa valeur vit dans st.mo.f[k] (ou l'objet `o`), écrite à la saisie sans rendre. */
+  /** Un champ d'un formulaire : sa valeur vit dans st.mo.f[k] (ou l'objet `o`), écrite à la saisie sans rendre. Un champ
+   *  de l'assistant (`src`) garde le préfixe « f » même sous une fenêtre ouverte : deux champs au même id, et le focus rendu
+   *  après un rendu partait dans le champ caché de l'assistant (relecture du 27/11/2026). */
   function champ(k, l, o) {
     o = o || {}; const src = o.src || (st.mo && st.mo.f) || {}, v = src[k] == null ? '' : src[k];
-    const attr = `id="pcl-c-${esc(o.ou || (st.mo ? 'm' : 'f'))}-${esc(k)}" data-f="${esc(k)}"${o.ou ? ` data-ou="${esc(o.ou)}"` : ''}${o.liste ? ` list="${esc(o.liste)}"` : ''}`;
+    const attr = `id="pcl-c-${esc(o.ou || (o.src || !st.mo ? 'f' : 'm'))}-${esc(k)}" data-f="${esc(k)}"${o.ou ? ` data-ou="${esc(o.ou)}"` : ''}${o.liste ? ` list="${esc(o.liste)}"` : ''}`;
     let w;
     if (o.choix) { w = `<select ${attr}>${o.choix.map(([cv, cl]) => `<option value="${esc(cv)}"${String(v) === String(cv) ? ' selected' : ''}>${esc(cl)}</option>`).join('')}</select>`; }
     else if (o.type === 'case') { return `<label class="pcl-case${o.plein ? ' plein' : ''}"><input type="checkbox" ${attr}${v ? ' checked' : ''}> ${esc(l)}</label>`; }
@@ -348,7 +351,8 @@
   function resumeBureaux() {
     const B = st.b, d = B.d, D = B.dev, ok = d && d.ok;
     const A = D ? D.demandes.filter(x => x.statut === 'a_valider') : [], Bx = ok ? d.data.bureaux : [];
-    const Hko = D ? D.demandes.filter(x => x.source === 'hors_zone' && (x.d || {})._tfbuddy !== 'ok') : [];
+    // Une demande hors zone reprise en bureau quitte « À corriger », comme elle quitte la liste.
+    const Hko = D ? D.demandes.filter(x => x.source === 'hors_zone' && x.statut === 'hors_zone' && (x.d || {})._tfbuddy !== 'ok') : [];
     if (!D && !ok) { return ''; }
     const L = A.map(x => x.erreurs.length ? { sig: 'stop', txt: `${esc(x.bureau)} : à reprendre dans TF Buddy`, titre: x.erreurs.join(' · '), attr: `data-act="dev-sel" data-id="${x.id}"` }
       : { sig: 'prize', txt: `${esc(x.bureau)} : à valider`, titre: 'Ouvrir la demande : créer le bureau dans TF Buddy', attr: `data-act="dev-sel" data-id="${x.id}"` })
@@ -488,8 +492,7 @@
       <td>${x.bon ? `<span class="pcl-bon">${esc(x.bon.code)}</span>` : '<span class="muted">—</span>'}</td>
       <td>${etiquetteDev(x.statut)}</td><td class="num">${x.statut === 'a_valider' ? '<span class="btn btn--sm">Valider</span>' : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return `<section class="card pcl-carte pcl-dev" id="pcl-dev"><div class="pcl-dev-tete"><div><div class="pcl-dev-titre">Bureaux en développement</div>
-        <div class="pcl-aide">Chaque inscription crée le compte webshop de la personne${promo ? ', son bon' : ''} et la société dans TF Buddy ; si le bureau de sa société existe déjà, elle le rejoint aussitôt. Sinon, le bureau attend ici votre validation.</div></div>
-        <span class="pcl-sp"></span><button type="button" class="btn btn--sm btn--primary" data-act="dev-nouveau">${SVG(ICO.plus)}Nouveau bureau en développement</button></div>
+        <div class="pcl-aide">Chaque inscription crée le compte webshop de la personne${promo ? ', son bon' : ''} et la société dans TF Buddy ; si le bureau de sa société existe déjà, elle le rejoint aussitôt. Sinon, le bureau attend ici votre validation.</div></div></div>
       ${blocLien()}${blocTournees()}${A.length ? tab(A) : ''}${T.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="dev-traitees">${B.devTraitees ? 'masquer' : 'voir'} les ${T.length} demande${T.length > 1 ? 's' : ''} traitée${T.length > 1 ? 's' : ''}</button></div>${B.devTraitees ? tab(T) : ''}` : ''}${blocHorsZone(H)}</section>`;
   }
   /** Ce que voient vos clients (27/11/2026, Sam : « la base sont les tournées webshop ») : les tournées que le webshop
@@ -508,26 +511,41 @@
           <td>${esc(t.limite || '—')}${t.preavis ? `<span class="sub">préavis minimum ${nf(t.preavis)} h</span>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return `<div class="pcl-tz">${titre}<div class="pcl-aide">Les tournées que le webshop publie pour ce magasin. La page Livraison au bureau d’atelierby.be et celle du webshop n’affichent que celles-ci.</div>${corps}</div>`;
   }
+  const ORI_HZ = { landing: 'page atelierby.be', webshop: 'page du webshop' };
   /** Les demandes hors zone (27/11/2026, Sam : « une copie de toutes les demandes sur le cockpit ») : chaque « Ma zone
    *  n'est pas dans la liste » des deux pages, rangée à la boutique la plus proche choisie par le visiteur. TF Buddy reçoit
-   *  l'original ; une copie qu'il n'a pas prise se renvoie d'ici. */
-  function blocHorsZone(H) {
-    const B = st.b, ORI = { landing: 'page atelierby.be', webshop: 'page du webshop' };
+   *  l'original ; une copie qu'il n'a pas prise se renvoie d'ici. Deux actions par demande (Sam : « deux actions, Créer
+   *  le bureau et la poubelle », puis « la création du bureau doit être cet assistant : Ajouter un bureau ») : « Créer le
+   *  bureau » (l'assistant en sept étapes, pré-rempli ; le bureau créé, la demande passe « reprise » et quitte la liste) et
+   *  la poubelle (la copie effacée du cockpit). */
+  function blocHorsZone(Htout) {
+    const B = st.b, R = Htout.filter(x => x.statut === 'reprise'), H = Htout.filter(x => x.statut !== 'reprise');
     const msg = B.hzMsg ? `<p class="${B.hzMsg.err ? 'error' : 'pcl-ok'}" style="margin:6px 0">${esc(B.hzMsg.err || B.hzMsg.texte)}</p>` : '';
     const tete = `<div class="pcl-lien-titre">Demandes hors zone${H.length ? ` <span class="page-tabs__count">${nf(H.length)}</span>` : ''}</div>
       <div class="pcl-aide">Les bureaux qui ne trouvent pas leur zone sur une page Livraison au bureau et choisissent ce magasin comme le plus proche. L’original part dans TF Buddy ; la copie reste ici 90 jours.</div>`;
-    if (!H.length) { return `<div class="pcl-tz">${tete}${msg}</div>`; }
+    const voirR = R.length ? `<div class="pcl-pied"><button type="button" class="linklike" data-act="hz-reprises">${B.hzReprises ? 'masquer' : 'voir'} ${R.length > 1 ? 'les ' + nf(R.length) + ' demandes reprises' : 'la demande reprise'}</button></div>` : '';
+    if (!H.length && !(B.hzReprises && R.length)) { return `<div class="pcl-tz">${tete}${msg}${voirR}</div>`; }
     const km = v => v != null ? String(v).replace('.', ',') + ' km du magasin' : '';
+    const occupe = x => B.hzBusy === x.id ? ' disabled' : '';
+    // L'assistant crée le bureau avec le compte TF Buddy du magasin : comme « Ajouter un bureau », grisé sans lui.
+    const peut = !!(B.d && B.d.ok), creer = x => peut ? occupe(x) : ' disabled title="Le bureau se crée avec le compte TF Buddy du magasin : connectez-le (en haut à droite)."';
+    const poubelle = x => `<button type="button" class="btn btn--sm btn--icon btn--ghost" data-act="hz-effacer" data-id="${x.id}" aria-label="Effacer la demande" title="Effacer la demande"${occupe(x)}>${SVG(ICO.corbeille)}</button>`;
+    const actions = x => {
+      const d = x.d || {};
+      if (x.statut === 'reprise') { return `<span class="pcl-hz-acts"><span class="chip chip--ok">reprise</span>${x.officeId ? `<button type="button" class="btn btn--sm" data-act="dev-bureau" data-id="${x.officeId}">Ouvrir le bureau</button>` : ''}${poubelle(x)}</span>`; }
+      return `<span class="pcl-hz-acts">${d._tfbuddy === 'ok' ? '' : `<button type="button" class="btn btn--sm" data-act="hz-renvoyer" data-id="${x.id}"${occupe(x)}>Renvoyer</button>`}<button type="button" class="btn btn--sm" data-act="hz-creer" data-id="${x.id}"${creer(x)}>Créer le bureau</button>${poubelle(x)}</span>`;
+    };
     const ligne = x => {
       const d = x.d || {}, ok = d._tfbuddy === 'ok';
-      return `<tr><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(ORI[d.origine] || '')}</span></td>
+      return `<tr${x.statut === 'reprise' ? ' class="pcl-hz-reprise"' : ''}><td>${fD(x.le.slice(0, 10))} ${esc(x.le.slice(11, 16))}<span class="sub">${esc(ORI_HZ[d.origine] || '')}</span></td>
         <td>${esc([x.cp, x.ville].filter(Boolean).join(' '))}${d.distance != null ? `<span class="sub">${esc(km(d.distance))}</span>` : ''}</td>
         <td>${esc(x.societe || '—')}${x.personnes ? `<span class="sub">${nf(x.personnes)} personnes</span>` : ''}</td>
         <td>${x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ''}</td>
         <td>${ok ? '<span class="chip chip--ok">reçue</span>' : `<span class="tag-warn" title="${esc(x.erreurs.join(' · '))}">pas reçue</span>`}</td>
-        <td class="num">${ok ? '' : `<button type="button" class="btn btn--sm" data-act="hz-renvoyer" data-id="${x.id}"${B.hzBusy === x.id ? ' disabled' : ''}>Renvoyer</button>`}</td></tr>`;
+        <td class="num">${actions(x)}</td></tr>`;
     };
-    return `<div class="pcl-tz">${tete}${msg}<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Reçue</th><th>Code postal · commune</th><th>Société</th><th>E-mail</th><th>TF Buddy</th><th></th></tr></thead><tbody>${H.map(ligne).join('')}</tbody></table></div></div>`;
+    const L = H.concat(B.hzReprises ? R : []);
+    return `<div class="pcl-tz">${tete}${msg}<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Reçue</th><th>Code postal · commune</th><th>Société</th><th>E-mail</th><th>TF Buddy</th><th></th></tr></thead><tbody>${L.map(ligne).join('')}</tbody></table></div>${voirR}</div>`;
   }
   /** Le tiroir d'une demande : ce qu'elle a créé dans TF Buddy, et la validation (le bureau créé, la personne reliée). */
   function tiroirDemande() {
@@ -650,6 +668,19 @@
   }
 
   /* L'assistant « Ajouter un bureau » : les sept étapes du panel (offices-onboarding.js), envoyées d'un coup (POST /onboard). */
+  /** La société de l'assistant choisie : par son id (une société qu'on vient d'ajouter), sinon par le nom pré-rempli d'une
+   *  demande hors zone (accents, casse et ponctuation ignorés) ; sa TVA suit. Rien ne change si l'on a déjà choisi. Une
+   *  société qu'on vient d'ajouter et que TF Buddy ne liste pas encore y est ajoutée (`neuve` : {name, tax_number}). */
+  function choisirSociete(w, id, neuve) {
+    const norme = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    w.opt = w.opt || {}; w.opt.companies = w.opt.companies || [];
+    const L = w.opt.companies, nom = norme(w.societe);
+    let c = id ? L.find(x => String(x.id) === String(id)) : (!w.f.id_company_client && nom ? L.find(x => norme(x.name || x.company_name) === nom) : null);
+    if (!c && id && neuve) { c = { id: Number(id), name: neuve.name, tax_number: neuve.tax_number }; L.push(c); }
+    if (!c) { return; }
+    w.f.id_company_client = String(c.id);
+    if (c.tax_number) { w.f.tax_number = c.tax_number; }
+  }
   function nouvelAssistant(opt) {
     const cle = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'pcl-' + Date.now() + '-' + Math.random().toString(16).slice(2);
     return { etape: 0, cle, opt: opt || {}, err: null, busy: false, ok: null,
@@ -665,11 +696,12 @@
     let corps = '';
     if (E === 0) {
       corps = `<div class="pcl-form2">${champ('id_company_client', 'Société (client B2B du magasin)', { src: f, requis: true, plein: true, choix: [['', 'Choisir…'], ...(o.companies || []).map(c => [c.id, [c.name || c.company_name, c.tax_number].filter(Boolean).join(' · ')])] })}
+        <div class="plein pcl-w-societe"><span class="pcl-aide">La société est une entreprise B2B du magasin. Pas encore dans la liste ?</span><button type="button" class="btn btn--sm" data-act="w-societe">${SVG(ICO.plus)}Ajouter la société</button></div>
         ${champ('name', 'Nom du bureau', { src: f, requis: true })}${champ('tax_number', 'TVA', { src: f, requis: true, aide: 'BE0123456789' })}
         ${champ('segment', 'Segment', { src: f, choix: [['', '—'], ['horeca', 'Horeca'], ['retail', 'Commerce'], ['corporate', 'Entreprise'], ['event', 'Événement']] })}${champ('payment_terms', 'Paiement', { src: f, choix: [['Comptant', 'Comptant'], ['Différé', 'Différé']] })}
         ${champ('credit_limit', 'Limite de crédit (€)', { src: f, type: 'number' })}
         <div class="pcl-champ plein"><span>Logo de la société (facultatif, PNG, JPEG ou WebP)</span><div class="pcl-logo">${w.logo ? `<img src="${esc(w.logo)}" alt="Logo"><button type="button" class="linklike" data-act="w-logo-retirer">retirer</button>` : ''}<input type="file" accept="image/png,image/jpeg,image/webp" data-logo="1"></div>${w.logoErr ? `<span class="error">${esc(w.logoErr)}</span>` : ''}</div></div>
-        <div class="pcl-aide pcl-pad">La société est une entreprise B2B du magasin : ajoutez-la d’abord dans Entreprises B2B si elle n’y est pas.</div>`;
+`;
     } else if (E === 1) {
       corps = `<div class="pcl-form2">${champ('contact_name', 'Responsable', { src: f, requis: true })}${champ('contact_function', 'Fonction', { src: f, aide: 'Office manager' })}${champ('contact_email', 'E-mail', { src: f, requis: true, type: 'email' })}${champ('contact_phone', 'Téléphone', { src: f, type: 'tel' })}</div>`;
     } else if (E === 2) {
@@ -743,10 +775,14 @@
     const corps = { office, contact: { name: f.contact_name.trim(), email: f.contact_email.trim(), phone: f.contact_phone.trim(), function: f.contact_function.trim(), role: 'contact' },
       sites, departments: w.deps, staff: w.staff, voucher_ids: w.vouchers, request_key: w.cle, send_summary: !!f.send_summary, send_membership: !!f.send_membership, locale: 'fr' };
     w.busy = true; w.err = null; rendre();
+    const hz = w.horsZone;
     envoyer('/dashboard/clients/bureaux', { methode: 'POST', chemin: '/onboard', corps }).then(d => {
       const id = Number((d.data && (d.data.office && d.data.office.id || d.data.id)) || 0);
       st.b.w = null; st.b.d = null; st.b.sel = id || null; st.b.ong = 'livraison'; st.b.det = {};
-      return lireBureaux();
+      // Créé depuis une demande hors zone : elle passe « reprise », avec le bureau (bureaux_dev.php, …/reprendre).
+      const reprise = hz && id ? envoyer('/dashboard/bureaux-dev/reprendre', { id: hz, office_id: id }).then(() => { st.b.hzMsg = { texte: 'Bureau créé : la demande hors zone est reprise.' }; return lireDev(); })
+        .catch(e => { st.b.hzMsg = { err: 'Le bureau est créé, mais la demande hors zone reste ouverte : ' + e.message }; }) : null;
+      return Promise.all([lireBureaux(), reprise]);
     }).catch(e => { w.busy = false; w.err = e.message; rendre(); });
   }
 
@@ -826,14 +862,6 @@
         <div class="pcl-form2">${champ('actif', 'Questionnaire ouvert', { type: 'case', plein: true })}${champ('titre', 'Titre', { plein: true })}${champ('message', 'Message d’accueil', { type: 'zone', plein: true, lignes: 3 })}
           ${champ('promo', 'Bon de bienvenue (une promotion du magasin avec un bon)', { plein: true, choix: P })}${champ('regenerer', D.lienCourt ? 'Changer le lien privé (l’ancien ne marchera plus ; le lien court reste, il se ferme avec le questionnaire)' : 'Changer le lien (l’ancien ne marchera plus)', { type: 'case', plein: true })}</div>
         <p class="pcl-aide">${D.promos.length ? 'Un bon avec un code commun : chacun reçoit ce code. Un bon à codes personnels : chaque réponse reçoit son code, d’une utilisation, à son nom.' : 'Aucune promotion du magasin n’a de bon : créez-en une dans Vendre › Promotions (avec un bon), elle apparaîtra ici.'}</p>`, pied('Enregistrer', 'dev-questionnaire-ok'), true);
-    }
-    if (m.type === 'dev-nouveau') {
-      const q = st.b.dev && st.b.dev.questionnaire, promo = q && q.promo ? (st.b.dev.promos.find(p => p.id === q.promo) || null) : null;
-      return fenetre('Nouveau bureau en développement', `<p class="pcl-aide" style="margin:0 0 6px">La personne et la société se créent dans TF Buddy tout de suite ; le bureau s’ouvre ensuite à la validation.</p>
-        <div class="pcl-form2">${champ('prenom', 'Prénom', { requis: true })}${champ('nom', 'Nom', { requis: true })}${champ('email', 'E-mail', { requis: true, type: 'email' })}${champ('tel', 'Téléphone', { requis: true, type: 'tel' })}
-          ${champ('fonction', 'Fonction', { plein: true })}${champ('societe', 'Société', { requis: true })}${champ('tva', 'TVA', { aide: 'BE0123456789' })}
-          ${champ('address', 'Adresse du bureau', { requis: true, plein: true, ou: 'm', aide: 'Commencez à taper : TF Buddy propose les adresses' })}${geoBloc('m', m.f)}${champ('postal_code', 'Code postal', { ou: 'm' })}${champ('city', 'Ville', { requis: true, ou: 'm', liste: 'pcl-villes-m' })}${villes('m')}
-          ${champ('personnes', 'Personnes au bureau', { type: 'number' })}${promo ? champ('bon', 'Donner le bon de bienvenue : ' + promo.nom, { type: 'case', plein: true }) : '<span></span>'}${champ('remarque', 'Remarque', { type: 'zone', plein: true, lignes: 2 })}</div>`, pied('Créer et valider', 'dev-nouveau-ok'), true);
     }
     if (m.type === 'b-site') {
       const o = st.b.options || {}, R = [['', 'Aucune tournée pour l’instant'], ...(o.routes || []).map(r => [r.id, r.name + (r.start_time ? ' (' + String(r.start_time).slice(0, 5) + ')' : '')])];
@@ -928,7 +956,10 @@
       case 'ac-e': lireFiche(E, id); montrer('.pcl-fiche'); break;   // « À corriger » : la fiche, encadrée un instant
       case 'e-offre': { const c = E.d.entreprises.find(x => x.id === id) || {}; offre({ id, nom: c.nom || (E.fiche && E.fiche.client.nom), b2b: true, ville: c.ville }); break; }
       case 'e-ajouter': ouvrir('e-ajouter', { tax_number: '', company_name: '', street: '', street_number: '', zip: '', city: '', phone: '', email: '' }); break;
-      case 'e-ajouter-ok': ecrire({ action: 'creer', entreprise: true, champs: m.f }, d => lireEntreprises(true).then(() => d.id ? lireFiche(E, d.id) : null)); break;
+      case 'e-ajouter-ok': { const w = m.assistant;
+        // Depuis l'étape 1 de l'assistant : la société créée y est choisie (la liste des sociétés se relit), l'assistant reste ouvert.
+        if (w) { ecrire({ action: 'creer', entreprise: true, champs: m.f }, d => { lireEntreprises(true); B.options = null; return lireOptions().then(o => { if (B.w === w) { w.opt = o; choisirSociete(w, d.id, { name: m.f.company_name, tax_number: String(m.f.tax_number || '').replace(/[\s.\-]+/g, '').toUpperCase() }); } rendre(); }); }); break; }
+        ecrire({ action: 'creer', entreprise: true, champs: m.f }, d => lireEntreprises(true).then(() => d.id ? lireFiche(E, d.id) : null)); break; }
       case 'e-base': { const c = E.fiche.client; ouvrir('e-base', vide({ company_name: c.company_name, tax_number: c.tax_number, peppol_identifier: c.peppol_identifier, street: c.street, street_number: c.street_number, zip: c.zip, city: c.city, phone: c.phone, email: c.email, comment: c.comment }), { id: E.sel }); break; }
       case 'e-base-ok': ecrire({ action: 'modifier', id: m.id, champs: m.f }, () => lireEntreprises(true).then(() => lireFiche(E, m.id))); break;
       case 'e-profil': { const p = E.fiche.profil || {}; ouvrir('e-profil', { score: p.score || '', type: p.type || '', mode: p.mode || '', creditActif: !!p.creditActif, creditLimite: p.creditLimite == null ? '' : p.creditLimite }, { id: E.sel }); break; }
@@ -966,6 +997,21 @@
       case 'w-logo-retirer': B.w.logo = null; B.w.logoErr = null; rendre(); break;
       case 'geo-place': geoChoisir(a.dataset.cle, a.dataset.id); break;
       case 'dev-traitees': B.devTraitees = !B.devTraitees; rendre(); break;
+      case 'hz-reprises': B.hzReprises = !B.hzReprises; rendre(); break;
+      case 'hz-creer': { const x = B.dev && B.dev.demandes.find(y => y.id === id); if (!x) { break; }
+        // L'assistant « Ajouter un bureau », pré-rempli de la demande ; la société se choisit seule si elle est déjà cliente.
+        const w = nouvelAssistant({});
+        Object.assign(w.f, { name: x.societe || '', segment: 'corporate', contact_email: x.email || '' });
+        Object.assign(w.sites[0], { postal_code: x.cp || '', city: x.ville || '' });
+        w.horsZone = x.id; w.societe = x.societe || '';
+        B.w = w; B.devSel = null; B.sel = null; B.entre = true; rendre();
+        lireOptions().then(o => { if (B.w === w) { w.opt = o; choisirSociete(w); rendre(); } }); break; }
+      case 'w-societe': { const w = B.w, f = w.f, s0 = w.sites[0] || {};
+        ouvrir('e-ajouter', { tax_number: f.tax_number || '', company_name: w.societe || f.name || '', street: '', street_number: '', zip: s0.postal_code || '', city: s0.city || '', phone: f.contact_phone || '', email: f.contact_email || '' }, { assistant: w }); break; }
+      case 'hz-effacer': if (window.confirm('Effacer cette demande hors zone ? La copie du cockpit disparaît ; l’original reste dans TF Buddy.')) {
+        B.hzBusy = id; B.hzMsg = null; rendre();
+        envoyer('/dashboard/bureaux-dev/effacer', { id }).then(() => { B.hzMsg = { texte: 'Demande effacée du cockpit.' }; return lireDev(); })
+          .catch(e => { B.hzMsg = { err: e.message }; }).finally(() => { B.hzBusy = null; rendre(); }); } break;
       case 'hz-renvoyer': B.hzBusy = id; B.hzMsg = null; rendre();
         envoyer('/dashboard/bureaux-dev/renvoyer', { id }).then(() => { B.hzMsg = { texte: 'Demande remise à TF Buddy.' }; return lireDev(); })
           .catch(e => { B.hzMsg = { err: e.message }; }).finally(() => { B.hzBusy = null; rendre(); }); break;
@@ -985,11 +1031,6 @@
       case 'dev-questionnaire-ok': { m.busy = true; m.err = null; rendre();
         envoyer('/dashboard/bureaux-dev/questionnaire', { actif: !!m.f.actif, titre: m.f.titre, message: m.f.message, promo: m.f.promo ? Number(m.f.promo) : null, regenerer: !!m.f.regenerer })
           .then(d => { B.dev = d; st.mo = null; rendre(); }).catch(e => { if (st.mo) { m.busy = false; m.err = e.message; } rendre(); }); break; }
-      case 'dev-nouveau': ouvrir('dev-nouveau', { prenom: '', nom: '', email: '', tel: '', fonction: '', societe: '', tva: '', address: '', postal_code: '', city: '', personnes: '', remarque: '', bon: true }); break;
-      case 'dev-nouveau-ok': { const f = m.f; m.busy = true; m.err = null; rendre();
-        envoyer('/dashboard/bureaux-dev', { bon: !!f.bon, donnees: { prenom: f.prenom, nom: f.nom, email: f.email, tel: f.tel, fonction: f.fonction, societe: f.societe, tva: f.tva, adresse: f.address, cp: f.postal_code, ville: f.city, personnes: f.personnes, remarque: f.remarque } })
-          .then(d => { st.mo = null; return lireDev().then(() => { B.devSel = d.demande.id; B.entre = true; B.devMsg = d.demande.erreurs.length ? { err: 'Créé au cockpit, avec des soucis dans TF Buddy : voir en tête.' } : { texte: 'La personne' + (d.demande.societeId ? ', la société' : '') + (d.demande.bon ? ' et son bon' : '') + ' sont dans TF Buddy. Validez pour créer le bureau.' }; if (B.d && B.d.ok) { lireOptions().then(rendre); } rendre(); }); })
-          .catch(e => { if (st.mo) { m.busy = false; m.err = e.message; } rendre(); }); break; }
       case 'w-creer': creerBureau(); break;
       case 'w-jour': { const n = +v, J = B.w.jours; B.w.jours = J.includes(n) ? J.filter(x => x !== n) : J.concat(n).sort(); rendre(); break; }
       case 'w-site-plus': B.w.sites.push({ name: '', address: '', postal_code: '', city: '', building: '', floor: '', country: 'BE', route_id: '', access_minutes: '', notes: '', delivery_site_id: null }); rendre(); break;
@@ -1024,7 +1065,12 @@
     const ou = t.dataset.ou;
     if (ou && ev.type === 'input') { if (t.dataset.f === 'address') { geoChercher(ou, val); } else if (t.dataset.f === 'postal_code') { geoCodePostal(ou, val); } }
     if (ou && ou[0] === 's' && st.b.w) { const s = st.b.w.sites[+ou.slice(1)]; if (s) { s[t.dataset.f] = val; } majResume(); return; }
-    if (st.onglet === 'bur' && st.b.w && !st.mo) { st.b.w.f[t.dataset.f] = val; majResume(); return; }
+    if (st.onglet === 'bur' && st.b.w && !st.mo) {
+      st.b.w.f[t.dataset.f] = val;
+      // Une société choisie à la main : sa TVA suit (la TVA d'une société choisie d'office ne doit pas rester).
+      if (t.dataset.f === 'id_company_client' && val) { choisirSociete(st.b.w, val); rendre(); return; }
+      majResume(); return;
+    }
     if (st.mo) { st.mo.f[t.dataset.f] = val; }
   }
   document.addEventListener('keydown', ev => {

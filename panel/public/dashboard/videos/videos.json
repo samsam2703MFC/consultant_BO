@@ -8015,32 +8015,6 @@
       "tourne_le": "2026-11-26"
     },
     {
-      "id": "clients-bureau-dev",
-      "genre": "tuto",
-      "depuis": "2026-11-26",
-      "niveau": "fonction",
-      "parent": "clients-bureaux",
-      "titre": "Saisir un bureau en développement",
-      "resume": "Une personne et son futur bureau, saisis au magasin : la personne, la société et le bon se créent tout de suite dans TF Buddy ; le bureau, à la validation.",
-      "vues": [
-        "clients"
-      ],
-      "fichier": "26-03-bureaux.mp4",
-      "debut": 103.27,
-      "fin": 148.82,
-      "affiche": "clients-bureau-dev.jpg",
-      "duree": "46 s",
-      "sources": [
-        "panel/public/dashboard/clients.js",
-        "panel/public/dashboard/tfb-magasin.js",
-        "panel/src/clients_panel.php",
-        "panel/src/bureaux_dev.php",
-        "panel/src/tfb_magasin.php"
-      ],
-      "tourne_sur": "f1b5fd41a1db6c7daf1b38e13657513a20105e78",
-      "tourne_le": "2026-11-26"
-    },
-    {
       "id": "clients-valider-demande",
       "genre": "tuto",
       "depuis": "2026-11-26",
