@@ -358,3 +358,4 @@
 2026-11-27T18:50:13Z Résultat › Mois : l'axe des douze mois glissants garde la décimale de son pas (22,5 k€, plus « 23 k€ ») — les petites catégories comme Quiches
 2026-11-27T20:29:05Z Dashboard › Mon catalogue : le catalogue « gamme par gamme » du Marketing (v1.23) — présentation avec design (photos cadrées, disposition, textes stylés, fond) et pages libres dans les aperçus et les miniatures ; le relais laisse passer gammeBlocks, gammesOk, presentations ; police Gotham Book du Marketing, ordre des gammes depuis l’assistant (gammeBlocks)
 2026-11-28T03:59:36Z Manuels du 28/11 : absences dans l'app employés et la visite, tarif d'un fournisseur intégré, demandes en polonais, Résultat › Mois sur douze mois glissants (documentation seulement)
+2026-11-28T04:31:05Z SOP du dashboard magasin : article v1.12, SOP v1.9 (résumé et « À corriger » en tête des vues, échelles de couleur unifiées, absences de Mon équipe ; 18 captures)
