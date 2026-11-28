@@ -2065,7 +2065,7 @@ html.db-fiche-ouverte{overflow:hidden}
 
 /* Promotions du panel (10/10/2026, maquette B3 · 3) : l'onglet Promotions des ventes par catégorie et la liste dans Bundles vendus. */
 .pr-bd{display:flex;align-items:center;flex-wrap:wrap;gap:10px 22px;padding:12px 22px;border-bottom:1px solid var(--color-border-tertiary);background:var(--paper)}
-.pr-bd .k{display:flex;align-items:center;gap:8px}.pr-bd .k b{font:400 26px var(--font-display);color:#1f4e8c;white-space:nowrap}.pr-bd .k span{font:400 10.5px/1.3 var(--font-ui);color:var(--color-text-muted)}
+.pr-bd .k{display:flex;align-items:center;gap:8px}.pr-bd .k b{font:400 26px var(--font-display);color:var(--ink);white-space:nowrap}.pr-bd .k span{font:400 10.5px/1.3 var(--font-ui);color:var(--color-text-muted)}
 .pr-chips{margin-left:auto;display:flex;flex-wrap:wrap;gap:4px}
 .pr-tg{display:inline-block;font:400 11.5px var(--font-ui);line-height:20px;color:var(--c);border:1px solid var(--c);border-radius:4px;padding:1px 9px;background:#fff;white-space:nowrap}
 .pr-sans{padding:6px 22px 0}
@@ -2449,7 +2449,8 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .pr-vide .pr-h{font-weight:400}
 .pr-hors{color:var(--color-border-secondary)}
 .pr-barre{height:4px;border-radius:2px;background:var(--color-border-tertiary);margin:6px 0 4px;max-width:110px;overflow:hidden}
-.pr-barre i{display:block;height:100%;border-radius:2px;background:var(--color-primary)}
+/* La progression vers une prime : la couleur du réalisé (--chart-real), plus le bordeaux de la marque (28/11/2026). */
+.pr-barre i{display:block;height:100%;border-radius:2px;background:var(--chart-real)}
 .pr-barre i.vert{background:var(--green)}
 .pr-barre i.gris{background:var(--color-border-secondary)}
 .pr-tab .pr-tot{text-align:right;padding-right:16px;font:400 14px/1.3 var(--font-ui);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -2508,7 +2509,7 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .pr-eqb-ch{display:flex;flex-wrap:wrap;gap:5px;align-items:center;border-top:1px solid var(--color-border-tertiary);padding-top:10px}
 .pr-eqb-ch .lab{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin:0 4px 0 0}
 .pr-eqb-ch .ch+.lab{margin-left:10px}
-.pr-eqb-ch .ch{font-size:11.5px;padding:3px 9px;border-radius:6px;background:#eaf3ec;color:#245f31}
+.pr-eqb-ch .ch{font-size:11.5px;padding:3px 9px;border-radius:6px;background:rgba(63, 122, 82, 0.12);color:var(--green)}
 .pr-eqb-ch .ch.gris{background:var(--color-background-secondary);color:var(--color-text-muted)}
 
 /* ── Les feuilles « Ventes B2B » et « Commandes du jour » (06/11/2026, maquette b2b-commandes-mobile) ──
