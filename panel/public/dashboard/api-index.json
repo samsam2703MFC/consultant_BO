@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-28T10:00:33Z",
+ "genere": "2026-11-28T10:01:01Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -41,7 +41,7 @@
    ],
    "fichiers": [
     "analyse.js:173",
-    "dashboard.js:9126"
+    "dashboard.js:9191"
    ],
    "magasin": true,
    "routes": [
@@ -62,7 +62,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9115"
+    "dashboard.js:9180"
    ],
    "magasin": true,
    "routes": [
@@ -104,7 +104,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9097"
+    "dashboard.js:9162"
    ],
    "magasin": true,
    "routes": [
@@ -147,7 +147,7 @@
    ],
    "fichiers": [
     "analyse.js:165",
-    "dashboard.js:9094"
+    "dashboard.js:9159"
    ],
    "magasin": true,
    "routes": [
@@ -168,7 +168,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:9370"
+    "dashboard.js:9435"
    ],
    "magasin": true,
    "routes": [
@@ -189,7 +189,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:9103"
+    "dashboard.js:9168"
    ],
    "magasin": true,
    "routes": [
@@ -658,7 +658,7 @@
     "automatisations.js:38",
     "boite.js:1058",
     "boite.js:106",
-    "dashboard.js:8145"
+    "dashboard.js:8147"
    ],
    "magasin": true,
    "routes": [
@@ -707,8 +707,8 @@
    "fichiers": [
     "automatisations.js:44",
     "automatisations.js:53",
-    "dashboard.js:8148",
-    "dashboard.js:8218"
+    "dashboard.js:8150",
+    "dashboard.js:8224"
    ],
    "magasin": true,
    "routes": [
@@ -1049,7 +1049,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:827",
+     "source": "panel/src/bureaux_dev.php:838",
      "resume": ""
     }
    ]
@@ -1070,7 +1070,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:827",
+     "source": "panel/src/bureaux_dev.php:838",
      "resume": ""
     }
    ]
@@ -1091,7 +1091,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:827",
+     "source": "panel/src/bureaux_dev.php:838",
      "resume": ""
     }
    ]
@@ -1112,7 +1112,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:827",
+     "source": "panel/src/bureaux_dev.php:838",
      "resume": ""
     }
    ]
@@ -1133,7 +1133,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:827",
+     "source": "panel/src/bureaux_dev.php:838",
      "resume": ""
     }
    ]
@@ -1154,7 +1154,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:827",
+     "source": "panel/src/bureaux_dev.php:838",
      "resume": ""
     }
    ]
@@ -1175,7 +1175,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:827",
+     "source": "panel/src/bureaux_dev.php:838",
      "resume": ""
     }
    ]
@@ -1196,7 +1196,7 @@
      ],
      "chemin": "/dashboard/bureaux-dev…",
      "handler": "bdvRoute",
-     "source": "panel/src/bureaux_dev.php:827",
+     "source": "panel/src/bureaux_dev.php:838",
      "resume": ""
     }
    ]
@@ -2057,6 +2057,52 @@
      "handler": "dmRoute",
      "source": "panel/src/dashboard_marketing.php:201",
      "resume": "Les routes du marketing du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/sms-formulaires",
+   "methodes": [
+    "GET",
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:8238",
+    "dashboard.js:8267",
+    "dashboard.js:8279"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET",
+      "POST"
+     ],
+     "chemin": "/dashboard/sms-formulaires…",
+     "handler": "smsfRoute",
+     "source": "panel/src/sms_formulaires.php:241",
+     "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/sms-formulaires/essai",
+   "methodes": [
+    "POST"
+   ],
+   "fichiers": [
+    "dashboard.js:8276"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "POST"
+     ],
+     "chemin": "/dashboard/sms-formulaires…",
+     "handler": "smsfRoute",
+     "source": "panel/src/sms_formulaires.php:241",
+     "resume": ""
     }
    ]
   },
@@ -3019,7 +3065,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:11502"
+    "dashboard.js:11567"
    ],
    "magasin": true,
    "routes": [
@@ -3040,7 +3086,7 @@
     "POST"
    ],
    "fichiers": [
-    "dashboard.js:11532",
+    "dashboard.js:11597",
     "dashboard.js:2326"
    ],
    "magasin": true,
@@ -3062,7 +3108,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10949"
+    "dashboard.js:11014"
    ],
    "magasin": true,
    "routes": [
@@ -3083,7 +3129,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10947"
+    "dashboard.js:11012"
    ],
    "magasin": true,
    "routes": [
@@ -3107,7 +3153,7 @@
    "fichiers": [
     "dashboard.js:6363",
     "dashboard.js:6441",
-    "dashboard.js:9361"
+    "dashboard.js:9426"
    ],
    "magasin": true,
    "routes": [
@@ -3137,7 +3183,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:8525"
+    "dashboard.js:8590"
    ],
    "magasin": true,
    "routes": [
@@ -3543,7 +3589,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10700",
+    "dashboard.js:10765",
     "dashboard.js:2611",
     "dashboard.js:262",
     "dashboard.js:263",
@@ -3568,7 +3614,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10491"
+    "dashboard.js:10556"
    ],
    "magasin": true,
    "routes": [
@@ -3610,8 +3656,8 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10408",
-    "dashboard.js:10422",
+    "dashboard.js:10473",
+    "dashboard.js:10487",
     "dashboard.js:7176"
    ],
    "magasin": true,
@@ -3633,8 +3679,8 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10701",
-    "dashboard.js:10710",
+    "dashboard.js:10766",
+    "dashboard.js:10775",
     "dashboard.js:7366"
    ],
    "magasin": true,
@@ -3681,7 +3727,7 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:12148"
+    "dashboard.js:12213"
    ],
    "magasin": true,
    "routes": [
@@ -3919,8 +3965,8 @@
     "GET"
    ],
    "fichiers": [
-    "dashboard.js:10128",
-    "dashboard.js:10250"
+    "dashboard.js:10193",
+    "dashboard.js:10315"
    ],
    "magasin": true,
    "routes": [

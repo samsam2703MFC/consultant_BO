@@ -189,6 +189,7 @@ require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Comman
 require __DIR__ . '/../../../panel/src/tfb_magasin.php';               // Le compte TF Buddy du magasin : téléphone, PIN, SMS ; le jeton reste dans le navigateur (25/11/2026)
 require __DIR__ . '/../../../panel/src/clients_panel.php';
 require __DIR__ . '/../../../panel/src/clients_nettoyage.php';        // Vendre › Clients › « Nettoyer la base » : la mise en forme des noms dans TF Buddy, annulable (28/11/2026)
+require __DIR__ . '/../../../panel/src/sms_formulaires.php';            // Les SMS des formulaires bureaux au franchisé et au siège (28/11/2026)
 require __DIR__ . '/../../../panel/src/bureaux_dev.php';                // Bureaux en développement : le questionnaire public du magasin, les demandes à valider (26/11/2026)             // Vendre › Clients : le module Klienci de TF Buddy, par les comptes du cockpit (25/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)
@@ -455,6 +456,8 @@ function route(string $method, string $path): mixed
     if (($c = tfbmRoute($method, $path)) !== null) { return $c; }
     // Les bureaux en développement (26/11/2026) : demandes, questionnaire du magasin, validation (panel/src/bureaux_dev.php, tables panel_bureau_*).
     if (($c = bdvRoute($method, $path)) !== null) { return $c; }
+    // Les SMS des formulaires bureaux (28/11/2026) : le réglage du magasin et du siège, l'essai (panel/src/sms_formulaires.php).
+    if (($c = smsfRoute($method, $path)) !== null) { return $c; }
     // L'assistant › les modèles de graphiques d'un magasin (17/11/2026, src/franchise/assistant_ia.php, tables aia_).
     if (($c = aiaRoute($method, $path)) !== null) { return $c; }
     // Les bundles du Coach Vente (17/11/2026) : /assistant/magasin/bundles*, onglet Promotions, src/franchise/bundles.php.

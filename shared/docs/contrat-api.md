@@ -3524,6 +3524,22 @@ et quitte la liste (« Ouvrir le bureau »). La poubelle efface la copie.
                                              les tournées que le webshop publie (GET /webshop/shops/{n}/delivery-zones et /{id}) : « Ce que voient
                                              vos clients » dans Clients › Bureaux
 
+**Les SMS des formulaires bureaux** (28/11/2026, Sam : « un SMS envoyé lors d'un formulaire envoyé, au GSM du franchisé et
+au mien » ; « paramètre dans consultant BO, rail dashboard ») : chaque nouvelle inscription par le formulaire en six étapes
+et chaque nouvelle demande hors zone (pas un nouvel essai) envoie un SMS au GSM du franchisé (réglage du magasin, au
+dashboard) et au siège : les destinataires de « SMS au bureau » du cockpit (Demandes des franchisés), quand ce réglage est
+allumé (Sam : « A ») — le cockpit est en accès ouvert, aucun numéro du siège n'est lu ni réglé depuis le dashboard. Un SMS
+(alphabet des SMS, 160 caractères) : `{magasin} : nouvelle inscription bureau | demande hors zone - {société}, {cp commune},
+{n} pers. Dashboard > Clients > Bureaux`, sans e-mail, lien ni numéro (même tapés dans ces champs). Au plus 10 formulaires
+notifiés par jour et par magasin ; l'envoi part après la réponse, par le fournisseur en place (`smsPartir` : SMSAPI, sinon
+Twilio ; sans fournisseur, rien ne part ni ne se note) — `panel/src/sms_formulaires.php`. Le réglage : dashboard › Paramètres
+› Alertes SMS.
+
+    GET  /dashboard/sms-formulaires?shop=    → {fournisseur, magasin: {actif, numero}, siege: {actif}, aujourdhui, max: 10}
+    POST /dashboard/sms-formulaires          {shop, actif, numero} → l'état | 422 (numéro invalide) | 403 (un champ `siege` :
+                                             les numéros du siège se règlent au cockpit) ; le numéro gardé au format +32…
+    POST /dashboard/sms-formulaires/essai    {shop} → {ok, envoyes, echecs, plafond} | 422 (sans fournisseur en place, sans numéro) | 429
+
 **Le formulaire en six étapes** (26/11/2026, Sam : « faire le formulaire et le générateur de lien par shop dans l'onglet
 bureau » ; maquette `panel/docs/maquettes/bureau-formulaire/`). Le corps public : `prenom, nom, fonction, tel, langue (fr|nl|en),
 email, tva, pays, societe, secteur (corporate|retail|horeca|event), bureau, emailFact, factRue, factNum, factBoite, factCp,
