@@ -5893,7 +5893,7 @@
     const y = v => mt + (h - mt - mb) * (1 - Math.min(1, Math.max(0, v) / max));
     const fv = v => unite === '€' ? (v >= 1000 ? nf(v / 1000, 1) + ' k€' : fE(v)) : fN(v);
     const dC = s => s.slice(8, 10) + '/' + s.slice(5, 7);
-    let g = '<defs><pattern id="pd-hach" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#F4E4E7"/><line x1="0" y1="0" x2="0" y2="6" stroke="#B03048" stroke-width="2.4"/></pattern></defs>';
+    let g = '<defs><pattern id="pd-hach" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#EBD3D8"/><line x1="0" y1="0" x2="0" y2="6" stroke="#B03048" stroke-width="2.4"/></pattern></defs>';
     vals.forEach((v, i) => {
       const cx = slot * (i + 0.5), x = cx - bw / 2, top = y(v), hh = y(0) - top, r = Math.min(4, hh);
       const fill = i === enC ? 'url(#pd-hach)' : (i >= D.regle.apres[0] ? 'var(--pd-apres)' : 'var(--pd-avant)');
@@ -5908,7 +5908,7 @@
   function pdMini(D, vals, w, h) {
     const n = vals.length, enC = n - 1, max = Math.max(1, ...vals.slice(0, enC)), bw = (w - 2 * (n - 1)) / n;
     return `<svg class="pd-mini" viewBox="0 0 ${w} ${h}" aria-hidden="true">${vals.map((v, i) => { const hh = Math.max(v > 0 ? 1.5 : 0, (h - 1) * Math.min(1, v / max));
-      return `<rect x="${(i * (bw + 2)).toFixed(1)}" y="${(h - hh).toFixed(1)}" width="${bw.toFixed(1)}" height="${hh.toFixed(1)}" rx="1.5" fill="${i === enC ? '#F4E4E7' : (i >= D.regle.apres[0] ? 'var(--pd-apres)' : 'var(--pd-avant)')}"/>`; }).join('')}</svg>`;
+      return `<rect x="${(i * (bw + 2)).toFixed(1)}" y="${(h - hh).toFixed(1)}" width="${bw.toFixed(1)}" height="${hh.toFixed(1)}" rx="1.5" fill="${i === enC ? '#EBD3D8' : (i >= D.regle.apres[0] ? 'var(--pd-apres)' : 'var(--pd-avant)')}"/>`; }).join('')}</svg>`;
   }
   const pdLegende = D => `<div class="pd-leg"><span><i class="av"></i>les 6 semaines d’avant</span><span><i class="ap"></i>les 6 dernières semaines</span><span><i class="ec"></i>${esc(D.semaines.tranches[D.semaines.tranches.length - 1])}, en cours</span></div>`;
   function rendProduits() {
