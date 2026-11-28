@@ -7221,9 +7221,9 @@
       ],
       "fichier": "24-01-fenetre.mp4",
       "debut": 0,
-      "fin": 75.5,
+      "fin": 82.46,
       "affiche": "param-fenetre.jpg",
-      "duree": "1 min 16",
+      "duree": "1 min 22",
       "sources": [
         "panel/public/dashboard/dashboard.js",
         "panel/public/dashboard/parametres.css",
@@ -7231,8 +7231,8 @@
         "panel/public/dashboard/automatisations.css",
         "panel/src/automatisations.php"
       ],
-      "tourne_sur": "c2deeb1a03f0b84931f04ae3a4416d702b193db9",
-      "tourne_le": "2026-11-26"
+      "tourne_sur": "78a019a87fccbd92dd3048405025a59ff82d30b2",
+      "tourne_le": "2026-11-28"
     },
     {
       "id": "param-rappel",
