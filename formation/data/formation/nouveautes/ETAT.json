@@ -221,8 +221,13 @@
         "40be275a Absences : le consultant (2026-11-27T17:42:04Z)",
         "7b4d2ed1 Vidéos de Mon équipe retournées, nouvelle 02-19 (2026-11-27T15:00:18Z)"
       ],
-      "etat": "redige",
-      "redigeLe": "2026-11-28"
+      "etat": "publie",
+      "redigeLe": "2026-11-28",
+      "encodeLe": "2026-11-28",
+      "publieLe": "2026-11-28",
+      "code": "0.0.71",
+      "version": "1.0",
+      "statut": "publiee"
     }
   ],
   "ecartes": [
