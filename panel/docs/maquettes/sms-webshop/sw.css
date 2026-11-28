@@ -1,0 +1,73 @@
+/* Maquettes « Clients › SMS » : ce qui s'ajoute à mq.css, ux.css et cl.css. */
+.sw2 { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+.etapes { display: flex; gap: 6px; margin: 0 0 14px; }
+.etapes span { flex: 1; padding: 9px 12px; border-radius: 9px; background: #fff; border: 1px solid var(--line); font-size: 12.5px; color: var(--muted-2); display: flex; gap: 8px; align-items: center; }
+.etapes span b { width: 20px; height: 20px; border-radius: 50%; background: var(--chip); color: var(--muted-2); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+.etapes span.ok b { background: var(--green); color: #fff; } .etapes span.on { border-color: var(--accent); color: var(--accent); } .etapes span.on b { background: var(--accent); color: #fff; }
+.bloc { padding: 0; margin-bottom: 14px; }
+.bloc__t { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 14px 18px 10px; border-bottom: 1px solid var(--line); }
+.bloc__t h2 { margin: 0; font-size: 15px; } .bloc__t .k { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.bloc__c { padding: 14px 18px; }
+.chiffres { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.chiffres > div { padding: 11px 13px; border-left: 1px solid var(--row-line); } .chiffres > div:first-child { border-left: 0; }
+.chiffres .v { font-size: 20px; } .chiffres .k { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.chiffres .on { background: rgba(141, 29, 44, 0.05); box-shadow: inset 0 -2px 0 var(--accent); }
+.choix { display: grid; gap: 8px; margin-top: 12px; }
+.opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 12.5px; line-height: 1.45; color: var(--muted-2); }
+.opt i { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--faint); margin-top: 1px; }
+.opt.on { border-color: var(--accent); background: rgba(141, 29, 44, 0.035); } .opt.on i { border: 5px solid var(--accent); }
+.opt b { color: var(--ink); } .opt .reco { margin-left: 6px; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: rgba(63, 122, 82, 0.12); color: var(--green); }
+.exclus { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+.exclus span { padding: 4px 9px; border-radius: 999px; background: var(--chip); }
+.texte { border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; font-size: 13.5px; line-height: 1.5; background: #fff; }
+.texte .var { background: var(--prize-soft); color: var(--prize-ink); border-radius: 4px; padding: 0 3px; }
+.compteur { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin: 6px 2px 12px; }
+.compteur .ok { color: var(--green); }
+.lang { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lang h4 { margin: 0 0 6px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+.bon { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; font-size: 12.5px; }
+.bon .l { color: var(--muted); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; } .bon .v { margin-top: 3px; }
+.select { display: flex; justify-content: space-between; align-items: center; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; margin-top: 4px; }
+.alerte { display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #FFF6E8; border: 1px solid #F0D7A8; color: var(--prize-ink); font-size: 12.5px; line-height: 1.45; margin-top: 12px; }
+.alerte.rouge { background: #FBEDEA; border-color: #EDC2BA; color: #8A2A1C; }
+.alerte.vert { background: #EEF5F0; border-color: #C8DECF; color: #2F5E3F; }
+.alerte svg { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; margin-top: 1px; }
+.recap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+.recap > div { padding: 10px 12px; border-radius: 10px; background: var(--table-head); border: 1px solid var(--line); } .recap .v { font-size: 17px; } .recap .k { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.pied { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); background: var(--table-head); border-radius: 0 0 12px 12px; }
+/* Le téléphone */
+.smtel { width: 300px; margin: 0 auto; border-radius: 38px; background: #1c1a17; padding: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); }
+.smtel__ecran { border-radius: 28px; background: #fff; overflow: hidden; min-height: 600px; display: flex; flex-direction: column; }
+.smtel__barre { display: flex; justify-content: space-between; padding: 10px 20px 6px; font-size: 11px; color: #333; }
+.smtel__qui { text-align: center; padding: 6px 0 10px; border-bottom: 1px solid #eee; font-size: 12px; color: #555; }
+.smtel__qui .av { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 4px; font-size: 13px; }
+.bulle { margin: 14px 12px 4px 12px; max-width: 86%; padding: 10px 12px; border-radius: 16px 16px 16px 4px; background: #ECECEE; font-size: 13px; line-height: 1.42; color: #111; }
+.bulle a { color: #0A64D8; text-decoration: underline; }
+.heure { font-size: 10.5px; color: #999; margin-left: 16px; }
+.web { padding: 18px 18px 20px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.web__url { margin: 0 12px; padding: 7px 10px; border-radius: 9px; background: #F1F1F3; font-size: 11px; color: #555; text-align: center; }
+.web__logo { height: 22px; }
+.web h3 { margin: 0; font-size: 19px; line-height: 1.25; }
+.web p { margin: 0; font-size: 13px; color: var(--muted-2); line-height: 1.45; }
+.web .code { border: 1.5px dashed var(--prize); border-radius: 12px; padding: 12px; text-align: center; background: #FFFBF4; }
+.web .code .c { font-size: 22px; letter-spacing: 0.12em; color: var(--prize-ink); } .web .code .s { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.web .cta { display: block; text-align: center; padding: 13px; border-radius: 12px; background: var(--accent); color: #fff; font-size: 14px; }
+.web .cta2 { display: block; text-align: center; padding: 11px; border-radius: 12px; border: 1px solid var(--line); font-size: 13px; color: var(--ink); }
+.web .champ { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13px; color: var(--muted); }
+.web .champ b { display: block; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.web .petit { font-size: 11px; color: var(--muted); text-align: center; }
+.parcours { display: grid; grid-template-columns: repeat(4, 300px); gap: 26px; justify-content: center; padding: 10px 0 0; }
+.parcours .num-e { text-align: center; margin: 0 0 12px; font-size: 13px; color: var(--muted-2); }
+.parcours .num-e b { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; align-items: center; justify-content: center; font-size: 11.5px; margin-right: 6px; }
+.produit { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.produit .img { width: 54px; height: 54px; border-radius: 9px; background: linear-gradient(135deg, #E8C99A, #B0792A); flex: none; }
+.produit .p { font-size: 12.5px; } .produit .p s { color: var(--faint); margin-left: 4px; } .produit .p em { font-style: normal; color: var(--green); }
+.bandeau { padding: 9px 12px; border-radius: 10px; background: #EEF5F0; color: #2F5E3F; font-size: 12px; }
+/* Suivi */
+.entonnoir { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.entonnoir > div { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.entonnoir .v { font-size: 22px; } .entonnoir .k { font-size: 11px; color: var(--muted); margin-top: 3px; } .entonnoir .p { font-size: 11.5px; color: var(--green); margin-top: 6px; }
+.entonnoir .barre { height: 5px; border-radius: 999px; background: var(--chip); margin-top: 8px; overflow: hidden; } .entonnoir .barre i { display: block; height: 100%; background: var(--accent); }
+.etat { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; } .etat::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.etat.e-remis::before { background: #1B6FA8; } .etat.e-clic::before { background: var(--prize); } .etat.e-compte::before { background: var(--green); } .etat.e-bon::before { background: var(--accent); } .etat.e-echec::before { background: #A32014; } .etat.e-stop::before { background: #333; }
+.note-mq { margin-top: 10px; font-size: 11.5px; color: var(--muted); }
