@@ -46,7 +46,7 @@ final class ErpApi
     public static function ecrire(string $m, string $p, ?array $b = null): array { self::$vus[] = $m . ' ' . $p; self::$corps[$m . ' ' . $p] = $b; $r = self::$rep[$m . ' ' . $p] ?? [404, ['description' => 'ORDER_NOT_FOUND']]; return ['code' => $r[0], 'corps' => $r[1], 'erreur' => null]; }
 }
 $GLOBALS['corpsTest'] = [];
-function setting(string $k, mixed $d = null): mixed { return $d; }
+function setting(string $k, mixed $d = null): mixed { return $GLOBALS['reglagesTest'][$k] ?? $d; }
 function body(): array { return $GLOBALS['corpsTest']; }
 function journalAdd(string $a, string $k, ?string $p, string $m): void {}
 
@@ -90,6 +90,49 @@ verifie('sans recherche : les derniers créés d’abord', array_column(pclCherc
 verifie('le filtre « une remise »', array_column(pclChercher($L, '', 'remise'), 'id') === [1]);
 $l1 = pclLigneParticulier($L[0]);
 verifie('la ligne de la liste : le téléphone en partie, l’e-mail dit seulement présent', $l1['tel'] === '+32 4•• •• •• 18' && $l1['email'] === true && !isset($l1['prenom']));
+
+echo "Le compte en ligne (28/11/2026)\n";
+$C = array_map('pclCourt', [
+    ['id' => 11, 'is_b2b' => 0, 'name' => 'Jan', 'surname' => 'Vermeulen', 'phone' => '0478 12 34 40', 'last_login_at' => '2026-11-26 18:02:11', 'create_timestamp' => '2026-04-01 10:00:00'],
+    ['id' => 12, 'is_b2b' => 0, 'name' => 'Gabrielle', 'surname' => 'Dumont', 'phone' => '0476 00 00 12', 'last_login_at' => null, 'create_timestamp' => '2026-05-01 10:00:00'],
+    ['id' => 13, 'is_b2b' => 0, 'name' => 'Mehdi', 'surname' => 'Benali', 'phone' => '0485 00 00 63', 'email' => 'm@exemple.be', 'create_timestamp' => '2026-06-01 10:00:00'],
+]);
+verifie('la date de la dernière connexion au webshop, sans l’heure ; rien sans connexion', $C[0]['connexion'] === '2026-11-26' && $C[1]['connexion'] === '' && $C[2]['connexion'] === '');
+$lc = pclLigneParticulier($C[0]); $lc2 = pclLigneParticulier($C[2]);
+verifie('la ligne : en ligne, et la date ; sinon pas de compte (et l’e-mail connu le dit)', $lc['enLigne'] === true && $lc['connexion'] === '2026-11-26' && $lc2['enLigne'] === false && $lc2['connexion'] === null && $lc2['email'] === true);
+verifie('le filtre du compte : en ligne · pas de compte', array_column(pclChercher($C, '', '', 'en_ligne'), 'id') === [11] && array_column(pclChercher($C, '', '', 'sans_compte'), 'id') === [13, 12]);
+verifie('le filtre du compte se combine avec la recherche', array_column(pclChercher($C, 'mehdi', '', 'sans_compte'), 'id') === [13] && pclChercher($C, 'mehdi', '', 'en_ligne') === []);
+verifie('une ligne sans « connexion » (gardée avant la colonne) : pas de compte, sans erreur', pclLigneParticulier(['id' => 1, 'nom' => 'X', 'tel' => '', 'email' => '', 'ville' => '', 'cp' => '', 'remise' => null, 'cree' => ''])['enLigne'] === false);
+
+remettre();
+PanelApi::$rep['GET /shops/4/clients?type=b2c'] = [200, [
+    ['id' => 11, 'is_b2b' => 0, 'name' => 'Jan', 'surname' => 'Vermeulen', 'phone' => '0478 12 34 40', 'last_login_at' => '2026-11-26 18:02:11', 'password_hash' => 'x'],
+    ['id' => 12, 'is_b2b' => 0, 'name' => 'Gabrielle', 'surname' => 'Dumont', 'phone' => '0476 00 00 12', 'last_login_at' => null],
+    ['id' => 13, 'is_b2b' => 0, 'name' => 'Mehdi', 'surname' => 'Benali', 'phone' => '0485 00 00 63'],
+]];
+$_GET = ['shop' => '4', 'compte' => 'en_ligne'];
+$rp = ep_clients_particuliers();
+verifie('GET /dashboard/clients/particuliers : combien ont un compte en ligne, et le filtre « compte »', ($rp['enLigne'] ?? null) === 1 && ($rp['compte'] ?? null) === 'en_ligne' && array_column($rp['clients'], 'id') === [11] && $rp['total'] === 3, json_encode($rp));
+verifie('le mot de passe ne sort jamais, même haché', strpos(json_encode($rp), 'password') === false && strpos(json_encode($rp), '"x"') === false);
+$_GET = ['shop' => '4', 'compte' => 'nimporte'];
+verifie('un filtre « compte » inconnu : tous', ep_clients_particuliers()['compte'] === '' );
+
+remettre();
+// La forme d'une ligne gardée avant le 28/11/2026 : celle de pclCourt, sans « connexion », et sans numéro de version.
+$GLOBALS['reglagesTest'] = ['pclClients:4:b2c' => ['lu' => time(), 'l' => [array_diff_key(pclCourt(['id' => 12, 'is_b2b' => 0, 'name' => 'Gabrielle', 'surname' => 'Dumont']), ['connexion' => 1])]]];
+PanelApi::$rep['GET /shops/4/clients?type=b2c'] = [200, [['id' => 11, 'is_b2b' => 0, 'name' => 'Jan', 'surname' => 'Vermeulen', 'last_login_at' => '2026-11-26 18:02:11']]];
+$_GET = ['shop' => '4'];
+$rg = ep_clients_particuliers();
+verifie('une liste gardée sans le compte en ligne se relit dans TF Buddy', array_column($rg['clients'], 'id') === [11] && $rg['enLigne'] === 1, json_encode($rg));
+$GLOBALS['reglagesTest'] = []; $_GET = [];
+
+remettre();
+PanelApi::$rep['GET /shops/4/clients/11'] = [200, ['client' => ['id' => 11, 'id_main_shop' => 4, 'is_b2b' => 0, 'name' => 'Jan', 'surname' => 'Vermeulen', 'last_login_at' => '2026-11-26 18:02:11', 'password_hash' => 'x'], 'profile' => null]];
+PanelApi::$rep['GET /shops/4/clients/12'] = [200, ['client' => ['id' => 12, 'id_main_shop' => 4, 'is_b2b' => 0, 'name' => 'Gabrielle', 'last_login_at' => null], 'profile' => null]];
+$_GET = ['shop' => '4', 'id' => '11']; $fc = ep_clients_fiche();
+$_GET = ['shop' => '4', 'id' => '12']; $fc2 = ep_clients_fiche();
+verifie('la fiche : la dernière connexion au webshop (le jour), sinon rien ; jamais le mot de passe', ($fc['client']['connexion'] ?? 'absent') === '2026-11-26' && array_key_exists('connexion', $fc2['client'] ?? []) && $fc2['client']['connexion'] === null && !isset($fc['client']['password_hash']), json_encode($fc['client'] ?? $fc));
+$_GET = [];
 
 echo "Le crédit\n";
 verifie('les seuils du panel', pclAlerteCredit(100.0) === 'danger' && pclAlerteCredit(80.0) === 'attention' && pclAlerteCredit(50.0) === 'moyen' && pclAlerteCredit(10.0) === 'ok' && pclAlerteCredit(null) === null);

@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-27T20:40:22Z",
+ "genere": "2026-11-28T09:31:40Z",
  "source": "panel/tools/dashboard-api-index.py — lu dans panel/public/dashboard/*.js, shared/public/api/index.php, */src/*.php, shared/src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -558,7 +558,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:910",
+     "source": "panel/src/clients_panel.php:924",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -1039,7 +1039,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:104"
+    "clients.js:105"
    ],
    "magasin": true,
    "routes": [
@@ -1060,7 +1060,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1013"
+    "clients.js:1023"
    ],
    "magasin": true,
    "routes": [
@@ -1081,7 +1081,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1032"
+    "clients.js:1042"
    ],
    "magasin": true,
    "routes": [
@@ -1102,7 +1102,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1027"
+    "clients.js:1037"
    ],
    "magasin": true,
    "routes": [
@@ -1123,7 +1123,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1016"
+    "clients.js:1026"
    ],
    "magasin": true,
    "routes": [
@@ -1144,7 +1144,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:783"
+    "clients.js:792"
    ],
    "magasin": true,
    "routes": [
@@ -1165,7 +1165,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:101"
+    "clients.js:102"
    ],
    "magasin": true,
    "routes": [
@@ -1186,7 +1186,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:1023"
+    "clients.js:1033"
    ],
    "magasin": true,
    "routes": [
@@ -1218,7 +1218,7 @@
      ],
      "chemin": "/dashboard/catalogues…",
      "handler": "cmRoute",
-     "source": "panel/src/catalogues_magasin.php:172",
+     "source": "panel/src/catalogues_magasin.php:174",
      "resume": "Les routes /dashboard/catalogues* : la réponse (tableau), ou null si la route n'est pas la sienne."
     }
    ]
@@ -1239,7 +1239,7 @@
      ],
      "chemin": "/dashboard/catalogues…",
      "handler": "cmRoute",
-     "source": "panel/src/catalogues_magasin.php:172",
+     "source": "panel/src/catalogues_magasin.php:174",
      "resume": "Les routes /dashboard/catalogues* : la réponse (tableau), ou null si la route n'est pas la sienne."
     }
    ]
@@ -1250,7 +1250,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:112"
+    "clients.js:113"
    ],
    "magasin": true,
    "routes": [
@@ -1260,7 +1260,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:954",
+     "source": "panel/src/clients_panel.php:968",
      "resume": ""
     }
    ]
@@ -1271,14 +1271,14 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:108",
-    "clients.js:127",
-    "clients.js:406",
-    "clients.js:417",
-    "clients.js:428",
-    "clients.js:779",
-    "clients.js:919",
-    "clients.js:92"
+    "clients.js:109",
+    "clients.js:128",
+    "clients.js:415",
+    "clients.js:426",
+    "clients.js:437",
+    "clients.js:788",
+    "clients.js:928",
+    "clients.js:93"
    ],
    "magasin": true,
    "routes": [
@@ -1288,7 +1288,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:910",
+     "source": "panel/src/clients_panel.php:924",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -1299,7 +1299,7 @@
     "POST"
    ],
    "fichiers": [
-    "clients.js:913"
+    "clients.js:922"
    ],
    "magasin": true,
    "routes": [
@@ -1309,7 +1309,7 @@
      ],
      "chemin": "/dashboard/clients/bureaux/pdf",
      "handler": "ep_clients_bureaux_pdf",
-     "source": "panel/src/clients_panel.php:910",
+     "source": "panel/src/clients_panel.php:924",
      "resume": "shop, bureau, type: poster|cards|brochure, corps} — le PDF que TF Buddy rend (OfficeDocumentService : affiche {offer_id} ; cartes {mode, product_id, valid_to, cards, request_key} ; brochure {catalog, offer_ids}), tel quel."
     }
    ]
@@ -1320,7 +1320,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:897"
+    "clients.js:906"
    ],
    "magasin": true,
    "routes": [
@@ -1330,7 +1330,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:954",
+     "source": "panel/src/clients_panel.php:968",
      "resume": ""
     }
    ]
@@ -1341,7 +1341,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:87"
+    "clients.js:88"
    ],
    "magasin": true,
    "routes": [
@@ -1351,7 +1351,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:954",
+     "source": "panel/src/clients_panel.php:968",
      "resume": ""
     }
    ]
@@ -1362,7 +1362,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:119"
+    "clients.js:120"
    ],
    "magasin": true,
    "routes": [
@@ -1372,7 +1372,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:954",
+     "source": "panel/src/clients_panel.php:968",
      "resume": ""
     }
    ]
@@ -1383,7 +1383,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:81"
+    "clients.js:82"
    ],
    "magasin": true,
    "routes": [
@@ -1393,7 +1393,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:954",
+     "source": "panel/src/clients_panel.php:968",
      "resume": ""
     }
    ]
@@ -1404,7 +1404,7 @@
     "GET"
    ],
    "fichiers": [
-    "clients.js:903"
+    "clients.js:912"
    ],
    "magasin": true,
    "routes": [
@@ -1414,7 +1414,7 @@
      ],
      "chemin": "/dashboard/clients…",
      "handler": "pclRoute",
-     "source": "panel/src/clients_panel.php:954",
+     "source": "panel/src/clients_panel.php:968",
      "resume": ""
     }
    ]
