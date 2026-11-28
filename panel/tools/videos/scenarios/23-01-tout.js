@@ -1,9 +1,9 @@
 /* Mon coffre-fort › « Tout », l'accueil du coffre (?vue=coffre, le lien tout en bas du rail) (26/11/2026) :
- *   onglet    coffre-tout   l'état du coffre (14 pièces sur 16), « À traiter », la prochaine grande date, la frise des
+ *   onglet    coffre-tout   le résumé du coffre (14 pièces sur 16), « À corriger », la prochaine grande date, la frise des
  *                           12 mois, puis tous les documents (« Ce mois-ci », « Avant »), les filtres, la recherche
- * Traiter un point « À traiter », chercher, filtrer, « tout afficher » : des gestes de lecture, sans chapitre à eux.
+ * Corriger un point « À corriger », chercher, filtrer, « tout afficher » : des gestes de lecture, sans chapitre à eux.
  * Données fictives : mocks/23_coffre.js. Chaque phrase vient de panel/public/dashboard/coffre.js (etat, aFaire, frise,
- * nav, vueTout, filtrer). */
+ * nav, vueTout, filtrer). Le résumé (.cf2-rs) remplace l'ancien état (27/11/2026). */
 const { Film } = require('../film');
 const C = require('./coffre');
 
@@ -12,28 +12,28 @@ module.exports = async function () {
 
   await f.onglet({
     id: 'coffre-tout', titre: 'Tout : l’accueil du coffre',
-    resume: 'L’état du coffre (les pièces attendues, À traiter, la prochaine grande date), la frise des 12 mois, puis tous les documents, avec leurs filtres et la recherche.',
+    resume: 'Le résumé du coffre (les pièces attendues, À corriger, la prochaine grande date), la frise des 12 mois, puis tous les documents, avec leurs filtres et la recherche.',
     accroche: 'Ce qui manque, ce qui arrive',
   });
   await C.cadreFixe(f, '#db-rail .db-rail-coffre .sidebar__item', 'Mon coffre-fort');
   await f.dire('<b>Mon coffre-fort</b>, tout en bas du rail. Le chiffre : les nouveaux documents.', 4400);
-  await f.montrer('.cf2-etat > div:nth-child(1)', 'Votre coffre');
-  await f.dire('Les <b>pièces attendues</b> : 14 sur 16 sont là. Il en manque 2, à déposer par vous.', 4600);
-  await f.montrer('.cf2-etat > div:nth-child(2)', 'À traiter');
-  await f.dire('<b>À traiter</b> : trois points au plus, chacun avec son geste à droite.', 3600);
-  await f.montrer('.cf2-af:nth-of-type(1)', 'À renouveler');
-  await f.dire('L’assurance RC arrive à échéance : « <b>Déposer la nouvelle</b> » ouvre le dépôt.', 4200);
-  await f.montrer('.cf2-af[data-cf-faire="dos:legal"]', 'Pièces à déposer');
-  await f.dire('« <b>Compléter</b> » ouvre le dossier Légal, où elles attendent.', 3600);
+  await f.montrer('.cf2-rs-v', 'Votre coffre');
+  await f.dire('Les <b>pièces attendues</b> : 14 sur 16 sont là, le coffre est incomplet. Il en manque 2, à déposer par vous.', 5000);
+  await f.montrer('.cf2-rs-l2', 'À corriger');
+  await f.dire('<b>À corriger</b> : trois points au plus ; chaque bouton fait son geste.', 3600);
+  await f.montrer('.cf2-rs-b[data-cf-faire^="depot:"]', 'À renouveler');
+  await f.dire('L’assurance RC arrive à échéance : son bouton ouvre le <b>dépôt de la nouvelle</b>.', 4200);
+  await f.montrer('.cf2-rs-b[data-cf-faire="dos:legal"]', 'Pièces à déposer');
+  await f.dire('« <b>2 pièces légales à déposer</b> » ouvre le dossier Légal, où elles attendent.', 4000);
   await f.cacher(150); await f.taire(150);
-  await f.cliquer('.cf2-af[data-cf-faire="nouveaux"]', { apres: 1000 });
+  await f.cliquer('.cf2-rs-b[data-cf-faire="nouveaux"]', { apres: 1000 });
   await f.montrer('.cf2-carte', 'Nouveaux');
-  await f.dire('« <b>Voir</b> » ne garde que les nouveaux : le dernier rapport de visite, le dossier d’analyse.', 4600);
+  await f.dire('« <b>2 nouveaux documents à lire</b> » ne garde que les nouveaux : le dernier rapport de visite, le dossier d’analyse.', 5000);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('[data-cf-filtre="tous"]', { apres: 800 });
   await C.enHaut(f);
-  await f.montrer('.cf2-proch', 'Prochaine grande date');
-  await f.dire('La <b>prochaine grande date</b> : l’échéance de l’assurance RC, dans 42 jours.', 4200);
+  await f.montrer('.cf2-rs-pr', 'Prochaine grande date');
+  await f.dire('À droite du résumé, la <b>prochaine grande date</b> : l’échéance de l’assurance RC, dans 42 jours.', 4400);
   await f.montrer('.cf2-frise', 'Les 12 prochains mois');
   await f.dire('La <b>frise</b> des 12 prochains mois ; en or, ce qui tombe bientôt. Un clic ouvre les grandes dates.', 5000);
   await f.montrer('.cf2-dos', 'Les dossiers');

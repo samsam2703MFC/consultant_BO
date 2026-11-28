@@ -23,5 +23,7 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   `consultant/bin/helpdesk_cron.sh` (relances SMS du helpdesk) ; `consultant/bin/push_stock.php`.
 - **Lit en direct** des tables d'autres applications (ERP TF Buddy, PWA consultant `mac_*`) : écart connu, à passer par
   leurs API (REORG_PLAN.md §8).
+- **Absences de Mon équipe** (27/11/2026, `panel/src/equipe_absences.php`) : l'équipe de la visite (`viEquipeJour`) montre une
+  absence payée à part, pas à noter ; les ventes par heure (`ventes.php`) écartent ses heures (`eqaSansAbsencesSql`).
 - **Tests** : `php consultant/bin/tests_*.php` (suivi, visites, vérification, audits, benchmark…) ; les primes et le
   pointage sont dans `panel/`.

@@ -48,8 +48,8 @@ module.exports = async function () {
 
   await f.chapitre({ n: 2, total: 4, titre: 'Les envois du magasin', texte: 'Ce que le magasin envoie tout seul, à l’heure dite.' });
   await f.etape('2 · Les envois');
-  await f.montrer('.au-tuiles', 'En un coup d’œil');
-  await f.dire('En tête : le rappel <b>allumé</b>, les commandes de demain, le canal, et l’horloge qui passe <b>toutes les 10 minutes</b>.', 4800);
+  await f.montrer('.au-res', 'En un coup d’œil');
+  await f.dire('En tête, le <b>résumé</b> : les rappels prévus demain, le rappel <b>allumé</b>, l’horloge qui passe <b>toutes les 10 minutes</b> ; dessous, ce qui est <b>à corriger</b>.', 5600);
   await f.montrer('.au-liste', 'Les automatisations');
   await f.dire('Le <b>rappel la veille du retrait</b>, pour les clients ; la <b>fiche d’une promotion</b>, pour l’équipe.', 5000);
   await f.montrerTout('.au-liste tr.gris', 'À venir');

@@ -19,9 +19,9 @@ module.exports = async function () {
     programme: ['Les vignettes de la barre', 'Relire les chiffres', 'Le calcul, pas à pas', 'Les six derniers trimestres'],
   });
   await f.montrer('#dash .db-avs', 'La barre du haut');
-  await f.dire('Sur la page <b>Opérationnel</b>, la barre du haut : six vignettes, les raccourcis de la journée.', 4600);
-  await f.montrer('#dash .db-avs [data-fcouvrir]', 'Dossier de formation');
-  await f.dire('« <b>Dossier de formation</b> » dit ce qui reste à faire ; un clic ouvre la page Formations et suivi.', 4800);
+  await f.dire('Sur la page <b>Opérationnel</b>, la barre du haut : cinq vignettes, les raccourcis de la journée.', 4600);
+  await f.montrer('#dash .ac [data-fcouvrir]', 'Dossier de formation');
+  await f.dire('Ce qui reste à faire du « <b>Dossier de formation</b> » est dans « À corriger » ; un clic ouvre la page Formations et suivi.', 5200);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('#dash .db-avs [data-recharger]', { apres: 250 });
   await f.montrer('#dash .db-avs [data-recharger]', 'Relire');

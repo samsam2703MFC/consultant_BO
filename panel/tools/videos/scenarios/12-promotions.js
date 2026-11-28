@@ -12,7 +12,7 @@ module.exports = async function () {
 
   await f.chapitre({ n: 1, total: 4, titre: 'Où les promotions sont utilisées', texte: 'Les promotions reconnues dans les tickets : au comptoir, en click & collect, en livraison.' });
   await f.etape('1 · Les promotions');
-  await f.montrer('.pm-lecture', 'Le principe');
+  await f.montrer('.pm-sous', 'Le principe');
   await f.dire('Le Coach Vente prépare vos bundles avec vos prix et vos coûts : vous validez, la promotion passe en caisse <b>le lundi qui suit</b>.', 6000);
   await f.montrer('.cn-card', 'Où les promotions sont utilisées');
   await f.dire('Chaque promotion reconnue dans les tickets, par canal : comptoir, click & collect, livraison. Et jour par jour, à droite.', 5800);
@@ -21,13 +21,13 @@ module.exports = async function () {
   await f.cliquer('[data-pmcanm="r"]', { apres: 1300 });
   await f.dire('<b>En remise €</b> : ce que chaque promotion a rendu aux clients, sur 7 ou 30 jours.', 4400);
   await f.montrerTout('.cn-card .cn-r:not(.cn-th) .cn-rc', 'Coef. du lot');
-  await f.dire('Le <b>coefficient du lot</b> : prix payé hors TVA ÷ coût matière, au plus serré. ×2 est un repère : en dessous, il passe en rouge.', 6400);
+  await f.dire('Le <b>coefficient du lot</b> : prix payé hors TVA ÷ coût matière, au plus serré. ×2 est un repère : en dessous, il passe en rouge, et « À corriger » le signale en haut.', 7000);
   await f.cacher();
   await f.cliquer('[data-pmcanm="n"]', { apres: 800 });
 
   await f.chapitre({ n: 2, total: 4, titre: 'Le constat : votre marge de base', texte: 'Le prix hors TVA moins le coût de recette, pondéré par ce que vous avez vendu en 30 jours.' });
   await f.etape('2 · Le constat');
-  await f.montrer('.bd-k4', 'Le constat');
+  await f.montrer('.bd-rs', 'Le constat');
   await f.dire('Le <b>Coach Vente</b> part de votre <b>marge de base</b> : prix hors TVA moins coût de recette, sur les ventes des 30 derniers jours.', 5800);
   await f.montrer('.bd-c1 > div:first-child', 'Chaque produit');
   await f.dire('Chaque produit : sa marge en hauteur, ses ventes en largeur. Le pointillé : votre marge de base.', 5000);

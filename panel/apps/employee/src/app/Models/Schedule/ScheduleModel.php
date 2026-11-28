@@ -18,6 +18,10 @@ class ScheduleModel implements \JsonSerializable{
     private $display_name;
     private $phone;
     private $lang_code;
+    /** L'absence de ce service (27/11/2026) : maladie, cp, circ, nonpaye ; null s'il est travaillé. */
+    private $absence;
+    /** Vrai si ce service remplace un collègue absent (sans dire qui ni pourquoi). */
+    private $remplacement;
 
     public function __construct($data) {
         $this->id_schedule = $data['id_schedule'] ?? null;
@@ -33,6 +37,16 @@ class ScheduleModel implements \JsonSerializable{
         $this->display_name = $data['display_name'] ?? null;
         $this->phone = $data['phone'] ?? null;
         $this->lang_code = $data['lang_code'] ?? null;
+        $this->absence = isset($data['absence']) && is_string($data['absence']) && $data['absence'] !== '' ? $data['absence'] : null;
+        $this->remplacement = !empty($data['remplacement']);
+    }
+
+    public function getAbsence() {
+        return $this->absence;
+    }
+
+    public function isRemplacement(): bool {
+        return (bool) $this->remplacement;
     }
 
     public function jsonSerialize(): array {
@@ -49,7 +63,9 @@ class ScheduleModel implements \JsonSerializable{
             'surname' => $this->surname,
             'display_name' => $this->display_name,
             'phone' => $this->phone,
-            'lang_code' => $this->lang_code
+            'lang_code' => $this->lang_code,
+            'absence' => $this->absence,
+            'remplacement' => $this->remplacement
         ];
     }
 

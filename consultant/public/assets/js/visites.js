@@ -3314,13 +3314,16 @@
     equipeListe(shop) {
       const E = this.EQ[shop]; const L = (E && E.d && E.d.personnes) || [];
       const n = new Date(); const hm = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+      // Une absence de Mon équipe (27/11/2026) : au planning, mais pas là ; montrée avec son motif, pas à noter.
+      const ABS = { maladie: 'malade', cp: 'en congé payé', circ: 'en congé de circonstance', nonpaye: 'absente' };
       return L.map(p => {
+        if (p.absence) { return Object.assign({}, p, { k: p.emp > 0 ? 'e' + p.emp : 'n' + p.nom, statut: ABS[p.absence] || 'absente', absente: true, heures: (p.absHeures || []).map(c => c[0] + ' – ' + c[1]).join(' · ') }); }
         const cr = p.creneaux || []; const dans = cr.some(c => c[0] <= hm && hm < c[1]); const apres = cr.filter(c => c[0] > hm);
         const statut = dans ? 'en poste' : apres.length ? 'arrive à ' + apres[0][0] : 'partie à ' + (cr.length ? cr[cr.length - 1][1] : '');
         return Object.assign({}, p, { k: p.emp > 0 ? 'e' + p.emp : 'n' + p.nom, statut, heures: cr.map(c => c[0] + ' – ' + c[1]).join(' · ') });
       }).sort((a, b) => (a.statut === 'en poste' ? 0 : 1) - (b.statut === 'en poste' ? 0 : 1));
     }
-    equipeFaite(f, p) { const x = (f.pe || {})[p.k]; return !!x && (x.vu === false || x.note >= 1); }
+    equipeFaite(f, p) { if (p.absente) { return true; } const x = (f.pe || {})[p.k]; return !!x && (x.vu === false || x.note >= 1); }
     /** La note de l'équipe telle qu'elle part avec la visite : les personnes notées ou « pas vues ». */
     equipeCorps(v, f) {
       const P = f.pe || {}; const L = this.equipeListe(v.shop); const out = [];
@@ -3350,7 +3353,7 @@
       const tx = c => { const r = notes.filter(x => x[c] === 1 || x[c] === 0); return r.length ? `<span>${esc(EQ_CHECKS.find(q => q[0] === c)[3])} <b>${r.filter(x => x[c] === 1).length} / ${r.length}</b></span>` : ''; };
       const som = `<div class="card eq-som"><div><div class="xs mu">Planning du jour · ${esc(E.d.source === 'panel' ? 'lu au panel' : E.d.source || '—')}</div><div class="sm" style="margin-top:3px"><b>${A.length} en poste</b>${H.length ? ' · ' + H.length + ' autre' + (H.length > 1 ? 's' : '') + ' au planning aujourd’hui' : ''}</div></div>
         <span class="sp"></span>${moy != null ? `<div style="text-align:right"><span class="k">${moy.toFixed(1).replace('.', ',')}</span> <span class="xs mu">/ 5 · moyenne</span></div>` : ''}<div class="t">${EQ_CHECKS.map(q => tx(q[0])).join('')}</div></div>`;
-      const aussi = H.length ? `<div class="cap">Aussi au planning aujourd’hui</div><div class="eq-aussi">${H.map(p => this.ouvert['eq:' + p.k] || P[p.k] ? this.equipePersonneHtml(p, P[p.k]) : `<div class="card eq-p"><div class="h"><span class="eq-av">${esc(String(p.nom).split(/\s+/).map(m => m.charAt(0)).join('').slice(0, 2).toUpperCase())}</span><div><b>${esc(p.nom)}</b><small>${esc(p.heures)}${p.postes && p.postes.length ? ' · ' + esc(p.postes.join(', ')) : ''}</small></div><span class="eq-st off">${esc(p.statut)}</span><span class="sp"></span><button type="button" class="chip" data-a="eq-ouv" data-v="${esc(p.k)}">Noter quand même</button></div></div>`).join('')}</div>` : '';
+      const aussi = H.length ? `<div class="cap">Aussi au planning aujourd’hui</div><div class="eq-aussi">${H.map(p => p.absente ? `<div class="card eq-p"><div class="h"><span class="eq-av">${esc(String(p.nom).split(/\s+/).map(m => m.charAt(0)).join('').slice(0, 2).toUpperCase())}</span><div><b>${esc(p.nom)}</b><small>${esc(p.heures)} · absente ce jour (Mon équipe)</small></div><span class="eq-st off">${esc(p.statut)}</span><span class="sp"></span></div></div>` : this.ouvert['eq:' + p.k] || P[p.k] ? this.equipePersonneHtml(p, P[p.k]) : `<div class="card eq-p"><div class="h"><span class="eq-av">${esc(String(p.nom).split(/\s+/).map(m => m.charAt(0)).join('').slice(0, 2).toUpperCase())}</span><div><b>${esc(p.nom)}</b><small>${esc(p.heures)}${p.postes && p.postes.length ? ' · ' + esc(p.postes.join(', ')) : ''}</small></div><span class="eq-st off">${esc(p.statut)}</span><span class="sp"></span><button type="button" class="chip" data-a="eq-ouv" data-v="${esc(p.k)}">Noter quand même</button></div></div>`).join('')}</div>` : '';
       return som + (A.length ? A.map(p => this.equipePersonneHtml(p, P[p.k])).join('') : '<div class="card sm mu">Personne n’est en poste à cette heure d’après le planning.</div>')
         + aussi + '<div class="xs mu" style="margin:4px 2px">Notée pendant la visite, sans le dire à voix haute. Interne : reste au bureau, ne part pas dans le rapport du franchisé.</div>';
     }

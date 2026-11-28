@@ -12,22 +12,24 @@ module.exports = async function () {
 
   await f.chapitre({ n: 1, total: 4, titre: 'Le magasin, semaine par semaine', texte: 'Une seule comparaison, en chiffre d’affaires : les 6 dernières semaines closes face aux 6 d’avant.' });
   await f.etape('1 · Le magasin');
-  await f.montrer('.pd-quand', 'La comparaison');
+  await f.montrer('#dash .ac-cle .q small', 'La comparaison');
   await f.dire('Une seule comparaison : les <b>6 dernières semaines closes</b>, face aux 6 d’avant.', 4200);
-  await f.montrer('.pd-rep', 'Le verdict');
-  await f.dire('Le verdict en grand : le magasin se développe, recule, ou, comme ici, <b>est stable</b>.', 4200);
+  await f.montrer('#dash .ac-cle', 'Le verdict');
+  await f.dire('Le verdict en tête : le magasin se développe, recule, ou, comme ici, <b>est stable</b>.', 4200);
+  await f.montrer('#dash .ac .ac-l', 'À corriger');
+  await f.dire('Dessous, « <b>À corriger</b> » : les catégories qui reculent ; un clic ouvre la catégorie.', 4200);
   await f.montrer('.pd-c .pd-gr', 'Chaque semaine');
   await f.dire('Le chiffre de chaque semaine : les 6 d’avant en clair, les 6 dernières en foncé, la semaine en cours hachurée.', 5400);
   await f.cacher();
 
-  await f.chapitre({ n: 2, total: 4, titre: 'Vos catégories en tuiles', texte: 'Une tuile par catégorie : verte si elle monte, ocre si elle baisse.' });
+  await f.chapitre({ n: 2, total: 4, titre: 'Vos catégories en tuiles', texte: 'Une tuile par catégorie : verte si elle monte, or si elle baisse.' });
   await f.etape('2 · Les catégories');
   await f.montrer('.pd-tuiles', 'Vos catégories');
   await f.dire('Une tuile par catégorie : sa flèche, son chiffre par semaine, ses 13 semaines en petit.', 4400);
   await f.montrer('.pd-ti.up', 'Elle monte');
-  await f.dire('<b>Verte</b> : plus de 8 % de chiffre sur les 6 dernières semaines, face aux 6 d’avant.', 4600);
+  await f.dire('<b>Verte</b>, « se développe » : plus de 8 % de chiffre sur les 6 dernières semaines, face aux 6 d’avant.', 5000);
   await f.montrer('.pd-ti.dn', 'Elle baisse');
-  await f.dire('<b>Ocre</b> : 8 % de moins. Entre les deux, le signe = : stable.', 4000);
+  await f.dire('<b>Or</b>, « recule » : 8 % de moins. Entre les deux, le signe = : stable.', 4200);
   await f.cacher();
 
   await f.chapitre({ n: 3, total: 4, titre: 'Les produits d’une catégorie', texte: 'Un clic ouvre la catégorie : ses semaines, ses produits, et pour chacun son prix, sa quantité, sa marge.' });
@@ -83,7 +85,7 @@ module.exports = async function () {
 
   return f.fin({
     titre: 'À vous de suivre<br>vos produits', accroche: 'Ce qui monte, ce qui baisse',
-    retenir: ['6 semaines face aux 6 d’avant', 'Une tuile par catégorie : verte, ocre ou stable', 'Un produit déplié : prix, quantité, marge', 'Recette & marge : tester un prix, puis l’adapter'],
+    retenir: ['6 semaines face aux 6 d’avant', 'Une tuile par catégorie : verte, or ou stable', 'Un produit déplié : prix, quantité, marge', 'Recette & marge : tester un prix, puis l’adapter'],
   });
 };
 

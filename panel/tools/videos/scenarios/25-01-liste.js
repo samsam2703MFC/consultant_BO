@@ -23,10 +23,12 @@ module.exports = async function () {
   });
   await f.montrer('.pco-bascule', 'Liste · Tournées');
   await f.dire('L’interrupteur sur <b>Liste</b> : toutes les commandes de la journée, quel que soit leur canal.', 4200);
-  await f.montrer('.pco-kpis', 'Les canaux');
-  await f.dire('Le bandeau : les commandes du jour, puis le <b>webshop</b>, le <b>comptoir</b> et les <b>bureaux</b>, avec leur montant.', 5000);
-  await f.montrer('.pco-kpis .kpi:last-child', 'À préparer');
-  await f.dire('À droite : <b>5 à préparer</b>, 10 à livrer, 9 à retirer. Dessous, la part de chaque canal dans le montant.', 5000);
+  await f.montrer('.pco-res-l1', 'Les canaux');
+  await f.dire('Le résumé : les commandes du jour et leur montant, puis le <b>webshop</b>, le <b>comptoir</b> et les <b>bureaux</b>, avec leur part.', 5200);
+  await f.montrer('.pco-res-prep', 'À préparer');
+  await f.dire('À droite : <b>5 à préparer</b>, 10 à livrer, 9 à retirer.', 3600);
+  await f.montrer('.pco-res-l2', 'À corriger');
+  await f.dire('Dessous, « <b>À corriger</b> » : ce qui demande un geste, un bouton par commande, par tournée, et demain.', 5000);
   await f.cacher(150);
   await f.montrer('.pco-now', 'Maintenant · 15:40');
   await f.dire('La liste, à l’heure : le filet <b>Maintenant</b> sépare ce qui est passé de ce qui vient.', 4400);

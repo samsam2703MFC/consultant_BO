@@ -28,9 +28,9 @@ module.exports = async function () {
   await f.montrer('.bm-choix', 'Ce qu’on compare');
   await f.dire('On compare le <b>top 10 du réseau</b>, deux familles de saison — cougnou et galette des rois — ou n’importe quel produit.', 5600);
   await f.cacher(150);
-  await f.montrer('.db-tuiles', 'En un coup d’œil');
+  await f.montrer('#dash .ac-cle', 'En un coup d’œil');
   await f.dire('En tête : combien de produits sont <b>au prix du marché</b>, au-dessus, en dessous, et ceux qui n’ont pas encore de relevé.', 5600);
-  await f.montrer('.db-tuiles .db-tui:nth-child(2)', 'Au prix du marché');
+  await f.montrer('#dash .ac-cle .v', 'Au prix du marché');
   await f.dire('Au prix du marché : à <b>± 5 %</b> de la médiane des boulangeries.', 3600);
   await f.cacher(450);
   await f.montrer('.bm-tab', 'Le tableau');
@@ -48,7 +48,7 @@ module.exports = async function () {
   await f.chapitre({ n: 2, total: 4, titre: 'Un produit en détail', texte: 'Un clic sur une ligne ouvre le produit : chaque concurrent, chaque prix.' });
   await f.etape('2 · Un produit');
   await f.cliquer('[data-bmtop="122"]', { apres: 1200 });
-  await f.montrer('.db-tuiles', 'Sandwich jambon-beurre');
+  await f.montrer('#dash .ac-cle', 'Sandwich jambon-beurre');
   await f.dire('Notre prix face à la médiane des supermarchés, des artisans et des chaînes ; et combien de relevés sont moins chers que nous.', 6000);
   await f.cacher(150);
   await f.montrer(f.p.locator('.db-card', { hasText: 'Où nous situons-nous' }).first(), 'L’échelle');

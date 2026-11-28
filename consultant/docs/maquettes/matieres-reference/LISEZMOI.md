@@ -80,3 +80,12 @@ ensuite sur tous les autres produits ». Serveur : `src/verification_references.
 - **« Tout faire, toute la carte »** : en un clic, les matières cochées (prix, pertes, alignement si coché), puis les
   pertes sur les lignes ; l'avancement s'affiche (« 1/2 · Prix, pertes et alignement : lot 3 sur 5 »…). Chaque écriture
   s'annule depuis le registre.
+- **Le tarif d'un fournisseur intégré** (27/11/2026) : le panel refuse d'écrire le prix d'un magasin tenu par le tarif
+  d'un fournisseur intégré, la centrale (403 `SUPPLIER_MANAGED_PRICE`). Ce refus n'est plus une erreur : le cockpit
+  l'apprend (réglage `vrfVerrous`, par magasin et matière) et le rend en information (« ℹ … — tarif du fournisseur,
+  inchangé »). Ensuite, ce prix porte « tarif fournisseur » dans la colonne du magasin et n'est jamais « à aligner » ;
+  la référence proposée le reprend (origine « tarif fournisseur », source « tarif du fournisseur intégré (n
+  magasin(s)), que seul le fournisseur change : les autres magasins s'y alignent »), et un septième repère, **Tarif
+  fournisseur**, les compte quand il y en a. Si le refus arrive pendant l'alignement, la référence est réécrite au
+  tarif du fournisseur et les autres magasins s'alignent sur lui. « Tout faire » le dit à la fin de l'étape 1 (« n
+  prix laissé(s) au tarif du fournisseur (les autres magasins s'y alignent) »).

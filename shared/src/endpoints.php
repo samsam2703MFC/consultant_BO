@@ -2234,13 +2234,13 @@ function exJourCalcul(): array
     // dans la boucle, une fois les heures du magasin connues.
     // Chaque créneau, d'où qu'il vienne, devient une ligne du planning.
     $planParShop = []; $planSrc = [];
-    $poseCreneau = function (string $shopJ, string $nom, string $debut, string $fin, int $idEmp = 0) use (&$planParShop): void {
+    $poseCreneau = function (string $shopJ, string $nom, string $debut, string $fin, int $idEmp = 0, int $idSch = 0) use (&$planParShop): void {
         $dj = substr($debut, 0, 5); $fj = substr($fin, 0, 5);
         $hD = (int) substr($dj, 0, 2) + ((int) substr($dj, 3, 2)) / 60;
         $hF = (int) substr($fj, 0, 2) + ((int) substr($fj, 3, 2)) / 60;
         if ($hF <= $hD) { return; }   // un service qui passe minuit sort du cadre du jour
         $planParShop[$shopJ][] = ['nom' => $nom, 'debut' => $dj, 'fin' => $fj,
-            'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2), 'idEmp' => $idEmp];
+            'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2), 'idEmp' => $idEmp, 'idSch' => $idSch];
     };
     // Le taux horaire et le statut de chaque personne, par magasin — rien
     // d'autre de la route employés n'est conservé.
@@ -2276,7 +2276,7 @@ function exJourCalcul(): array
             $nom = trim((string) ($r['display_name'] ?? ''));
             if ($nom === '') { $nom = trim(((string) ($r['name'] ?? '')) . ' ' . ((string) ($r['surname'] ?? ''))); }
             if ($nom === '') { $nom = 'Employé ' . (int) ($r['id_employee'] ?? 0); }
-            $poseCreneau($shopJ, $nom, (string) ($r['start_hour'] ?? ''), (string) ($r['end_hour'] ?? ''), (int) ($r['id_employee'] ?? 0));
+            $poseCreneau($shopJ, $nom, (string) ($r['start_hour'] ?? ''), (string) ($r['end_hour'] ?? ''), (int) ($r['id_employee'] ?? 0), (int) ($r['id_schedule'] ?? $r['id'] ?? 0));
         }
     }
     // 2) LE REPLI, pour les seuls magasins que le panel n'a pas servis : la
@@ -2297,6 +2297,19 @@ function exJourCalcul(): array
                     (string) $pj['start_hour'], (string) $pj['end_hour'], (int) $pj['id_employee']);
             }
         } catch (PDOException $e) { /* planning illisible : les lignes s'en passent */ }
+    }
+
+    // Les absences de Mon équipe (27/11/2026, panel/src/equipe_absences.php) : le service d'une absence payée reste au
+    // panel (son coût reste au P&L, et ici) ; il ne compte plus comme présence — ni « en poste », ni dans le partage des
+    // ventes, ni dans les heures planifiées. L'écran le montre à part, avec son motif.
+    if (function_exists('eqaAbsencesDuJour') && $planParShop !== []) {
+        $absJ = eqaAbsencesDuJour(array_keys($planParShop), $date);
+        foreach ($planParShop as $sidA => $LA) {
+            foreach ($LA as $iA => $qA) {
+                $mA = $absJ['id'][(int) ($qA['idSch'] ?? 0)] ?? ($absJ['cle'][(string) $sidA][(int) $qA['idEmp'] . '|' . $qA['debut']] ?? null);
+                if ($mA !== null) { $planParShop[$sidA][$iA]['absence'] = $mA; }
+            }
+        }
     }
 
     $GLOBALS['_profilHRefaits'] = 0;
@@ -2697,7 +2710,7 @@ function exJourCalcul(): array
         $nbParH = [];
         foreach ($heuresCa as $h9 => $ca9) {
             $nb9 = 0;
-            foreach ($planM as $q9) { if ($q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
+            foreach ($planM as $q9) { if (empty($q9['absence']) && $q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
             $nbParH[$h9] = $nb9;
         }
         // Le COÛT de chaque service au taux du panel, et ce qu'il laisse dans
@@ -2713,7 +2726,7 @@ function exJourCalcul(): array
         foreach ($planM as $i9 => $p9) {
             $att = 0.0;
             foreach ($heuresCa as $h9 => $ca9) {
-                if ($ca9 <= 0 || $p9['hD'] >= $h9 + 1 || $p9['hF'] <= $h9) { continue; }
+                if ($ca9 <= 0 || !empty($p9['absence']) || $p9['hD'] >= $h9 + 1 || $p9['hF'] <= $h9) { continue; }
                 $att += $ca9 / max(1, $nbParH[$h9]);
             }
             $planM[$i9]['ca'] = $att > 0 ? round($att, 2) : null;
@@ -2726,7 +2739,7 @@ function exJourCalcul(): array
             $planM[$i9]['cout'] = $cout;
             $planM[$i9]['horsPnl'] = $fr;
             $planM[$i9]['postes'] = $tx['postes'] ?? [];
-            $hPlan += $p9['h'];
+            if (empty($p9['absence'])) { $hPlan += $p9['h']; }   // une absence payée : son coût reste, pas ses heures de présence
             if ($fr) {
                 $hFr += $p9['h']; $coutFr += $cout ?? 0.0;
                 if (!in_array($p9['nom'], $frNoms, true)) { $frNoms[] = $p9['nom']; }
@@ -2738,7 +2751,7 @@ function exJourCalcul(): array
                 }
             }
         }
-        foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF'], $planM[$i9]['idEmp']); }
+        foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF'], $planM[$i9]['idEmp'], $planM[$i9]['idSch']); }
         usort($planM, static fn ($a9, $b9) => [$a9['debut'], $a9['nom']] <=> [$b9['debut'], $b9['nom']]);
 
         $pph = exPartProHabituelle($id, $date);

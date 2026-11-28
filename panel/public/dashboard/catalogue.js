@@ -253,24 +253,69 @@
     // Pleine page (17/11/2026) : le produit choisi pour elle lui est réservé — les pages d'avant ne le prennent pas.
     const reserve = new Map();
     (S.pages || []).forEach((p, i) => { if (p.layout === 'pleine' && p.product != null && prods.some(x => x.id === +p.product) && !reserve.has(+p.product)) { reserve.set(+p.product, i); } });
-    const out = (S.pages || []).map((p, i) => {
+    // Gamme par gamme (Marketing v1.23, `fillBlocks`) : les pages des catégories d'abord, puis la liste d'une présentation
+    // (les produits de sa gamme restés sans page), puis les pages libres (ni catégorie, ni gamme), en dernier, ce qui n'a
+    // de place nulle part — une page libre restée vide devient la page de photo ou d'illustration.
+    const tour = p => !enBlocs(S) ? 0 : estIntercalaire(p) ? 2 : estPres(p.layout) ? 1 : 0;
+    const ordre = (S.pages || []).map((p, i) => i).sort((a, b) => tour(S.pages[a]) - tour(S.pages[b]) || a - b);
+    const parIndex = {}, compte = {};
+    const garnir = (p, i) => {
       const cap = LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 6;
       const liste = estPres(p.layout) ? prods : parCat;
       let n = 0; const mes = [];
       const mien = p.layout === 'pleine' ? Array.from(reserve).find(e => e[1] === i) : null;
-      if (mien) { pris.add(mien[0]); parPage.push([mien[0]]); return 1; }
+      if (mien) { pris.add(mien[0]); parIndex[i] = [mien[0]]; return 1; }
       for (const x of liste) {
         if (reserve.has(x.id)) { continue; }
         if (n >= cap) { break; }
         if (pris.has(x.id) || (p.category != null && x.cat !== +p.category) || (p.gamme != null && !x.gammes.includes(+p.gamme))) { continue; }
         pris.add(x.id); n++; mes.push(x.id);
       }
-      parPage.push(mes);
+      parIndex[i] = mes;
       return n;
-    });
+    };
+    ordre.forEach(i => { compte[i] = garnir(S.pages[i], i); });
+    const out = (S.pages || []).map((p, i) => compte[i]);
+    (S.pages || []).forEach((p, i) => parPage.push(parIndex[i] || []));
     out.sansPlace = prods.filter(x => !pris.has(x.id)).length;
     out.ids = parPage;   // les produits de chaque page, dans l'ordre : l'aperçu de la page (apercuPage)
     return out;
+  }
+
+  /** Le catalogue est-il rangé gamme par gamme (Marketing v1.23 : `gammeBlocks`, une liste ; null : pages libres) ? */
+  const enBlocs = S => !!(S.cat && Array.isArray(S.cat.gammeBlocks));
+  /** Une page intercalaire (`isSpacer` du Marketing) : ni présentation, ni pleine page, ni catégorie, ni gamme. */
+  const estIntercalaire = p => !!p && !estPres(p.layout) && p.layout !== 'pleine' && p.category == null && p.gamme == null;
+  const TITRE_PRES_MARKETING = 'La présentation de la gamme (photos, disposition, titre, accroche, texte, fond) se règle dans le Marketing, pour tout le réseau : elle ne se modifie pas ici.';
+  /** L'ordre des gammes que disent les pages (gamme par gamme) : celui de leurs présentations, puis celui de leurs pages
+   * de catégories ; une gamme du catalogue sans page garde sa place relative, en fin. */
+  function ordreGammes(S) {
+    const vu = [];
+    (S.pages || []).filter(p => estPres(p.layout) && p.gamme != null).concat((S.pages || []).filter(p => !estPres(p.layout) && p.gamme != null))
+      .forEach(p => { if (!vu.includes(+p.gamme)) { vu.push(+p.gamme); } });
+    const blocs = (S.cat && S.cat.gammeBlocks) || [];
+    return vu.filter(g => blocs.includes(g)).concat(blocs.filter(g => !vu.includes(+g)).map(Number));
+  }
+  /** `gammeBlocks` à envoyer quand l'ordre des gammes a changé dans l'assistant (sinon rien : le Marketing garde le sien). */
+  function blocsCorps(S) {
+    if (!enBlocs(S)) { return null; }
+    const o = ordreGammes(S);
+    return JSON.stringify(o) !== JSON.stringify(S.cat.gammeBlocks.map(Number)) ? o : null;
+  }
+  /** Le groupe d'une gamme (gamme par gamme) qui commence à la page `de` (sa présentation) : la présentation, puis les
+   * pages qui suivent de la même gamme et les pages libres intercalées, jusqu'à la gamme suivante. */
+  function groupeGamme(S, de) {
+    const p = S.pages[de];
+    if (!enBlocs(S) || !p || !estPres(p.layout) || p.gamme == null) { return 1; }
+    let n = 1;
+    while (de + n < S.pages.length) {
+      const q = S.pages[de + n];
+      if (estPres(q.layout) || (q.gamme != null && +q.gamme !== +p.gamme) || (q.gamme == null && !estIntercalaire(q))) { break; }
+      n++;
+    }
+    // Une page libre en fin de groupe reste à sa place (elle tient la parité de la gamme suivante).
+    while (n > 1 && estIntercalaire(S.pages[de + n - 1])) { n--; }
+    return n;
   }
 
   /* --- les gestes ----------------------------------------------------------------------------------------------- */
@@ -383,6 +428,8 @@
     const corps = { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) };
     if (S.cat && +S.cat.pageCount !== S.nbPages) { corps.pageCount = S.nbPages; }   // l'assistant ajoute ou retire 2 pages avec les pages
     if (S.choixModifie) { corps.products = lignesProduits(S); }   // les produits montrés ou cachés dans l'assistant (étape 3)
+    const blocs = blocsCorps(S);
+    if (blocs) { corps.gammeBlocks = blocs; }   // gamme par gamme : l'ordre des gammes déplacées à l'étape 3 (Marketing v1.23)
     const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { S.choixModifie = false; adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; entrer(S); });
     occupe(S, p, 'Enregistrement de la mise en page');
   }
@@ -397,7 +444,7 @@
     if (!S.cat) { S.nbPages = nb; rendre(S); return; }
     if (nb === S.nbPages) { return; }
     S.proposer = null;
-    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) }) : Promise.resolve();
+    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), Object.assign({ format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) }, blocsCorps(S) ? { gammeBlocks: blocsCorps(S) } : {})) : Promise.resolve();
     const p = avant.then(() => appel('PUT', '/' + S.cat.id + qs(S), { pageCount: nb })).then(j => { adopter(S, j.data); oublierDocs(S); S.liste = null; entrer(S); })
       .catch(e => { if (e.code === 'CATALOGUE_PAGES_NOT_EMPTY') { S.proposer = nb; } throw e; });
     occupe(S, p, 'Passage à ' + nb + ' pages');
@@ -547,6 +594,8 @@
     return noms.length === refs.length && noms.length ? noms : (src.label ? [src.label] : noms);
   }
   function clic(S, ev) {
+    const m = ev.target.closest('[data-cmac]');
+    if (m && S.el.contains(m)) { montrer(S, m.dataset.cmac); return; }
     const b = ev.target.closest('[data-cm]');
     if (!b || b.disabled || !S.el.contains(b)) { return; }
     const a = b.dataset.cm, v = b.dataset.v;
@@ -724,9 +773,11 @@
   }
 
   function rendreAssistant(S) {
-    const titre = S.etape === 1 ? 'Mon catalogue' : S.cat ? 'Mon catalogue — « ' + esc(S.cat.title) + ' »' : 'Nouveau catalogue';
+    // Le titre de la page est celui de la barre commune (27/11/2026, DESIGN_SYSTEM.md §7.13 : « MAGASIN DÉMO » + « Mon
+    // catalogue ») : ici, seulement le catalogue ouvert, sur une ligne, et les actions.
+    const titre = S.etape === 1 ? '' : S.cat ? '« ' + esc(S.cat.title) + ' »' : 'Nouveau catalogue';
     const suivant = { 2: ['3', 'Présentation ›'], 3: ['4', 'Validation ›'], 4: null, 5: null }[S.etape];
-    let h = '<div class="cm-hd"><div><div class="k">Espace boutique · ' + esc(S.nom || '') + '</div><h2>' + titre + '</h2></div><span class="sp"></span>';
+    let h = '<div class="cm-hd">' + (titre ? '<h2>' + titre + '</h2>' : '') + '<span class="sp"></span>';
     if (S.etape === 1) {
       h += '<button class="cm-btn" data-cm="relire">↻ Relire</button><button class="cm-btn" data-cm="nouveau">＋ Nouveau catalogue</button></div>';
     } else {
@@ -881,16 +932,36 @@
     const doc = S.cat ? S.doc[S.cat.owner + S.cat.id + '|' + S.lang] : null, m = {};
     ((doc && doc.pages) || []).forEach(p => {
       if (p.kind === 'products') { m['c:' + p.title] = { d: p.drawingUrl, f: p.familyDrawingUrl, g: p.gammeImageUrl }; }
-      if (p.kind === 'presentation') { m['g:' + p.title] = { d: p.drawingUrl, i: p.imageUrl }; }
+      if (p.kind === 'presentation') {
+        m['g:' + p.title] = { d: p.drawingUrl, i: p.imageUrl };
+        // Gamme par gamme (Marketing v1.23) : le design de la présentation, par gamme (le texte est celui de la langue lue).
+        if (p.design && p.gamme != null) { m['G:' + p.gamme] = p.design; }
+      }
     });
+    // Les pages libres du document, par rang de page intérieure (l'illustration de la gamme voisine choisie par le Marketing).
+    ((doc && doc.pages) || []).filter(p => p.kind === 'products' || p.kind === 'presentation').forEach((p, j) => { if (p.kind === 'products' && p.free) { m['L:' + j] = p.filler || null; } });
     return [doc, m];
   }
-  function pageLocale(S, p, ids, m) {
+  function pageLocale(S, p, ids, m, i) {
     const fiche = id => { const x = produits(S).find(q => +q.id === +id); return x ? { name: x.name, priceCents: x.priceCents, oldPriceCents: x.oldPriceCents != null ? x.oldPriceCents : null, imageUrl: x.imageUrl || null, weightGrams: x.weightGrams != null ? x.weightGrams : null, allergens: x.allergens || [] } : null; };
     const prods = ids.map(fiche).filter(Boolean);
     if (estPres(p.layout)) {
       const t = nomGamme(S, p.gamme), d = m['g:' + t] || {};
-      return { kind: 'presentation', layout: p.layout, template: p.template || 'A', title: t, text: (S.lang === 'nl' ? p.textNl : p.text) || '', drawingUrl: d.d || null, imageUrl: d.i || null, products: p.layout === 'presentation_liste' ? prods.slice(0, 8) : [] };
+      return { kind: 'presentation', layout: p.layout, template: p.template || 'A', title: t, text: (S.lang === 'nl' ? p.textNl : p.text) || '', drawingUrl: d.d || null, imageUrl: d.i || null, products: p.layout === 'presentation_liste' ? prods.slice(0, 8) : [],
+        design: enBlocs(S) ? (m['G:' + p.gamme] || null) : null };
+    }
+    // Gamme par gamme : une page libre restée sans produit = toute la page à la photo choisie, sinon à l'illustration de
+    // la gamme voisine (celle que le document a choisie ; à défaut, la présentation qui suit, sinon celle d'avant).
+    if (enBlocs(S) && estIntercalaire(p) && !prods.length) {
+      let filler = p.filler === 'photo' ? { kind: 'photo', imageUrl: (S.mediaUrls || {})[p.fillerMediaId] || null } : null;
+      if (!filler && i != null && m['L:' + i] !== undefined) { filler = m['L:' + i]; }
+      if (!filler && i != null) {
+        const voisines = S.pages.slice(i + 1).concat(S.pages.slice(0, i).reverse());
+        const pres = voisines.find(q => estPres(q.layout) && q.gamme != null);
+        const v = pres ? m['g:' + nomGamme(S, pres.gamme)] || {} : {};
+        if (v.d || v.i) { filler = { kind: 'illustration', drawingUrl: v.d || null, imageUrl: v.d ? null : v.i || null }; }
+      }
+      return { kind: 'products', free: true, layout: p.layout, template: p.template || 'A', title: '', products: [], filler };
     }
     if (p.layout === 'pleine' && prods.length) { const o = offreDe(S, ids[0]); if (o) { prods.push(Object.assign({ kind: 'offer' }, o)); } }
     const titre = p.category == null ? (S.lang === 'nl' ? 'Onze selectie' : 'Notre sélection') : nomCat(S, p.category), d = m['c:' + titre] || {};
@@ -902,7 +973,7 @@
     const p = S.pages[i];
     try {
       const [doc, m] = dessinsDoc(S);
-      const pseudo = { catalogue: { format: S.format }, charter: (doc && doc.charter) || {}, version: { lang: S.lang || 'fr' }, pages: [pageLocale(S, p, ids, m)] };
+      const pseudo = { catalogue: { format: S.format }, charter: (doc && doc.charter) || {}, version: { lang: S.lang || 'fr' }, pages: [pageLocale(S, p, ids, m, i)] };
       return '<button type="button" class="cm-ap" data-cm="zoomPage" data-v="' + i + '" title="Voir la page ' + (i + 3) + ' en grand">' + feuille(pseudo, 0, largeur || 128, true) + '</button>';
     } catch (e) { return mini(p.layout, p.template); }
   }
@@ -971,7 +1042,13 @@
     if (S.glisseBloc) {
       const cb = cibleBloc(S, ev), g = S.glisseBloc;
       S.glisseBloc = null;
-      if (cb) { ev.preventDefault(); mepDeplacer(S, g.de, g.n, cb.apres ? cb.de + cb.n : cb.de); }
+      if (cb) {
+        ev.preventDefault();
+        // Gamme par gamme : une présentation glissée emmène les pages de sa gamme (le Marketing range ensuite par blocs).
+        const n = enBlocs(S) && S.pages[g.de] && estPres(S.pages[g.de].layout) ? groupeGamme(S, g.de) : g.n;
+        const vers = cb.apres ? cb.de + cb.n : cb.de;
+        if (!(vers > g.de && vers < g.de + n)) { mepDeplacer(S, g.de, n, vers); }
+      }
       rendre(S); return;
     }
     const c = cibleDepot(S, ev);
@@ -1128,6 +1205,14 @@
   }
   /** Les flèches d'un bloc (sans souris) : avant le bloc précédent, après le suivant. */
   function mepBouger(S, de, n, d) {
+    if (enBlocs(S) && S.pages[de] && estPres(S.pages[de].layout)) {
+      const debuts = S.pages.map((p, i) => i).filter(i => estPres(S.pages[i].layout) && S.pages[i].gamme != null);
+      const k = debuts.indexOf(de), voisin = debuts[k + d];
+      if (k < 0 || voisin == null) { return; }
+      const g = groupeGamme(S, de), gv = groupeGamme(S, voisin);
+      mepDeplacer(S, de, g, d < 0 ? voisin : voisin + gv);
+      rendre(S); return;
+    }
     const blocs = mepBlocs(S, remplir(S)), k = blocs.findIndex(x => x.de === de);
     const voisin = blocs[k + d];
     if (k < 0 || !voisin) { return; }
@@ -1191,15 +1276,16 @@
       + '<div class="mep-bloc lock"><div class="h">' + CADENAS + ' Marque</div><div class="pp">' + marque(0, 1) + marque(1, 2) + '</div></div>'
       + blocs.map((b, k) => {
         const col = b.cle.charAt(0) === 'c' ? mepCouleur(S, b.p.category) : null;
-        const pp = Array.from({ length: b.n }, (x, j) => b.de + j).map(i => '<div class="mep-th">' + (b.libre && !S.pages[i].filler ? '<div class="mep-vide">Photo ou illustration de la gamme · ou −2 pages</div>' : apercuPage(S, i, ids[i] || [], 92)) + '</div>').join('');
-        return '<div class="mep-bloc' + (S.glisseBloc && S.glisseBloc.de === b.de ? ' glisse' : '') + (b.libre ? ' libre' : '') + '" data-bloc="' + b.de + '" data-n="' + b.n + '"><div class="h">'
+        const pp = Array.from({ length: b.n }, (x, j) => b.de + j).map(i => '<div class="mep-th">' + (b.libre && !S.pages[i].filler && !enBlocs(S) ? '<div class="mep-vide">Photo ou illustration de la gamme · ou −2 pages</div>' : apercuPage(S, i, ids[i] || [], 92)) + '</div>').join('');
+        const surPres = enBlocs(S) && estPres(b.p.layout) ? ' title="' + esc(TITRE_PRES_MARKETING) + '"' : '';
+        return '<div class="mep-bloc' + (S.glisseBloc && S.glisseBloc.de === b.de ? ' glisse' : '') + (b.libre ? ' libre' : '') + '" data-bloc="' + b.de + '" data-n="' + b.n + '"' + surPres + '><div class="h">'
           + '<span class="mep-poi" draggable="true" data-blocdrag="' + b.de + '" data-n="' + b.n + '" title="Glisser pour déplacer" aria-label="Déplacer « ' + esc(nomBloc(b)) + ' »">⠿</span>' + (col ? mepPt(col) : '') + '<span class="nm">' + esc(nomBloc(b)) + '</span>'
           + '<span class="pg">p. ' + (b.de + 3) + (b.n > 1 ? '-' + (b.de + b.n + 2) : '') + '</span>'
           + '<button class="mep-mv" data-cm="mepBloc" data-v="' + b.de + '" data-n="' + b.n + '" data-d="-1"' + (k === 0 ? ' disabled' : '') + ' aria-label="Avant">‹</button><button class="mep-mv" data-cm="mepBloc" data-v="' + b.de + '" data-n="' + b.n + '" data-d="1"' + (k === blocs.length - 1 ? ' disabled' : '') + ' aria-label="Après">›</button>'
           + '</div><div class="pp">' + pp + '</div></div>';
       }).join('')
       + '<div class="mep-bloc lock"><div class="h">' + CADENAS + ' Marque</div><div class="pp">' + marque(np - 2, nb - 1) + marque(np - 1, nb) + '</div></div></div>'
-      + '<div class="mep-note">⠿ prendre une catégorie : ses pages suivent ensemble (‹ › sans souris) · un clic sur une page l’ouvre en grand · les pages de la marque ne bougent pas.</div>';
+      + '<div class="mep-note">⠿ prendre une catégorie : ses pages suivent ensemble (‹ › sans souris)' + (enBlocs(S) ? ' · une présentation emmène sa gamme : l’ordre des gammes change' : '') + ' · un clic sur une page l’ouvre en grand · les pages de la marque ne bougent pas.</div>';
     // Ce qui n'a pas de place, dit (la règle du Marketing).
     const sansPage = catsChoisies(S).filter(c => c != null && !(S.pages || []).some(p => !estPres(p.layout) && p.category != null && +p.category === +c));
     if (sansPage.length) { h += '<div class="cm-msg inf">' + sansPage.map(c => '« ' + esc(nomCat(S, c)) + ' »').join(', ') + (sansPage.length > 1 ? ' n’ont' : ' n’a') + ' pas de page : ' + (sansPage.length > 1 ? 'leurs' : 'ses') + ' produits vont en « Notre sélection » s’il y en a une.</div>'; }
@@ -1279,9 +1365,9 @@
       let corps = '';
       if (pres) {
         corps += '<select class="cm-sel" data-cm="pgamme" data-i="' + i + '" aria-label="Gamme de la page ' + (i + 3) + '">' + gs.map(g => '<option value="' + g + '"' + (+p.gamme === g ? ' selected' : '') + '>' + esc(nomGamme(S, g)) + '</option>').join('') + '</select>'
-          + '<div class="cm-cpt" style="margin-top:4px">' + (p.layout === 'presentation_liste' ? porte + ' produit' + (porte > 1 ? 's' : '') + ' de la gamme listé' + (porte > 1 ? 's' : '') + ' avec leurs prix (8 au plus)' : 'l’illustration, le nom et le texte de la gamme') + '</div>'
-          + '<textarea class="cm-txt" data-cm="ptexte" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte de la présentation (facultatif, 400 caractères)">' + esc(p.text) + '</textarea>'
-          + (S.langs.includes('nl') ? '<textarea class="cm-txt" data-cm="ptexteNl" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte néerlandais">' + esc(p.textNl) + '</textarea>' : '');
+          + '<div class="cm-cpt" style="margin-top:4px"' + (enBlocs(S) ? ' title="' + esc(TITRE_PRES_MARKETING) + '"' : '') + '>' + (p.layout === 'presentation_liste' ? porte + ' produit' + (porte > 1 ? 's' : '') + ' de la gamme listé' + (porte > 1 ? 's' : '') + ' avec leurs prix (8 au plus)' : 'l’illustration, le nom et le texte de la gamme') + (enBlocs(S) ? ' · se règle dans le Marketing' : '') + '</div>'
+          + (enBlocs(S) ? '' : '<textarea class="cm-txt" data-cm="ptexte" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte de la présentation (facultatif, 400 caractères)">' + esc(p.text) + '</textarea>'
+          + (S.langs.includes('nl') ? '<textarea class="cm-txt" data-cm="ptexteNl" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte néerlandais">' + esc(p.textNl) + '</textarea>' : ''));
       } else {
         const options = cats.filter(c => c !== null).concat(p.category != null && !cats.includes(p.category) ? [p.category] : []);
         corps += '<div class="cm-lig"><select class="cm-sel" data-cm="pcat" data-i="' + i + '" aria-label="Catégorie de la page ' + (i + 3) + '"><option value=""' + (p.category == null ? ' selected' : '') + '>Notre sélection (toutes catégories)</option>'
@@ -1358,10 +1444,11 @@
     if (S.listeErr) { h += bandeauErreur(S.listeErr, 'Mes catalogues n’ont pas pu être lus'); }
     if (S.recusErr) { h += bandeauErreur(S.recusErr, 'Les catalogues de la marque n’ont pas pu être lus'); }
     if (!S.liste && !S.listeErr) { return h + '<div class="db-card"><div class="cm-vide">Lecture de mes catalogues…</div></div>'; }
-    (S.recus || []).filter(c => c.reception && c.reception.status === 'nouveau').forEach(c => { h += carteRecu(S, c); });
     const lignes = [];
     (S.recus || []).filter(c => c.reception && c.reception.status !== 'adapte').forEach(c => lignes.push({ c, marque: true }));
     (S.liste || []).forEach(c => lignes.push({ c, marque: false }));
+    h += resumeListe(S, lignes);
+    (S.recus || []).filter(c => c.reception && c.reception.status === 'nouveau').forEach(c => { h += carteRecu(S, c); });
     if (!lignes.length) {
       return h + '<div class="db-card"><div class="cm-vide">Aucun catalogue pour l’instant.<br><br><button class="cm-btn pri" data-cm="nouveau">＋ Créer mon premier catalogue</button></div></div>';
     }
@@ -1383,12 +1470,46 @@
     });
     return h + '</tbody></table></div>';
   }
+  /* Le résumé de la liste (27/11/2026, DESIGN_SYSTEM.md §7.13 ; les règles de .ac, sous le préfixe du module) : le chiffre clé
+   * (les catalogues de ma boutique, 700 : le seul gras), d'où ils viennent ; puis « À corriger » — ce que la colonne État dit
+   * déjà : un catalogue de la marque à regarder, un brouillon à finir, un PDF prêt ou un catalogue pris tel quel pas encore
+   * imprimé. Chaque bouton fait le geste du tableau (« Le feuilleter », « Continuer », « Vérifier et imprimer »,
+   * « Imprimer ») ; le catalogue reçu mène à sa carte, mise en évidence. Rien : une phrase verte. */
+  function resumeListe(S, lignes) {
+    if (!lignes.length) { return ''; }
+    const pl = (n, a, b) => n + ' ' + (n > 1 ? b : a);
+    const imprime = ({ c, marque }) => marque ? !!(c.print && c.print.quantity) : c.status === 'imprime';
+    const nM = lignes.filter(l => l.marque).length, nI = lignes.filter(imprime).length;
+    const A = [];
+    lignes.forEach(({ c, marque }) => {
+      const t = '« ' + esc(c.title) + ' » · ';
+      if (marque && c.reception.status === 'nouveau') { A.push({ txt: t + 'nouveau de la marque : le prendre ou l’adapter', attr: 'data-cmac="cm-recu-' + esc(c.id) + '"' }); }
+      else if (marque && !imprime({ c, marque })) { A.push({ txt: t + 'pris tel quel, pas encore imprimé', attr: 'data-cm="ouvrirM" data-v="' + esc(c.id) + '" data-e="5"' }); }
+      else if (!marque && c.status === 'brouillon') { A.push({ txt: t + 'brouillon à finir', attr: 'data-cm="ouvrir" data-v="' + esc(c.id) + '" data-e="2"' }); }
+      else if (!marque && c.status === 'pret') { A.push({ txt: t + 'PDF prêt, pas encore imprimé', attr: 'data-cm="ouvrir" data-v="' + esc(c.id) + '" data-e="4"' }); }
+    });
+    const l2 = A.length ? '<span class="cm-res-t">À corriger</span><span class="cm-res-l">' + A.map(x => '<button type="button" class="btn btn--sm cm-res-b" ' + x.attr + '><i class="cm-res-ic" aria-hidden="true"></i>' + x.txt + '</button>').join('') + '</span>'
+      : '<p class="cm-res-ok">Rien à corriger : tous mes catalogues sont imprimés.</p>';
+    return '<section class="cm-res" aria-label="Résumé de mes catalogues"><div class="cm-res-l1"><span class="cm-res-v">' + lignes.length + '</span>'
+      + '<span class="cm-res-q">' + (lignes.length > 1 ? 'catalogues' : 'catalogue') + ' pour ma boutique<small>' + pl(nM, 'de la marque', 'de la marque') + ' · ' + pl(lignes.length - nM, 'de ma boutique', 'de ma boutique') + ' · ' + pl(nI, 'imprimé', 'imprimés') + '</small></span></div>'
+      + '<div class="cm-res-l2"' + (A.length ? ' role="region" aria-label="À corriger"' : '') + '>' + l2 + '</div></section>';
+  }
+  /** Le geste d'un point qui mène à un bloc : le bloc à l'écran, encadré un instant. */
+  function montrer(S, id) {
+    const el = S.el.querySelector('#' + id);
+    if (!el) { return; }
+    const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.style.scrollMarginTop = '16px';
+    el.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+    el.classList.remove('cm-vu'); void el.offsetWidth; el.classList.add('cm-vu');
+    clearTimeout(el._cmT); el._cmT = setTimeout(() => el.classList.remove('cm-vu'), 1800);
+  }
   /** « Nouveau · de la marque » : la proposition, ses deux pages, « Le prendre tel quel » ou « L'adapter ». */
   function carteRecu(S, c) {
     const doc = S.doc['r' + c.id];
     const vign = doc ? [0, Math.min(2, doc.pages.length - 1)].map(i => feuille(doc, i, 128, true)).join('') : '<div class="cm-vide" style="padding:20px">Lecture…</div>';
     const n = c.pageCount || 0;
-    return '<section class="cm-recu"><div class="cm-recu__pages">' + vign + '</div><div class="cm-recu__txt">'
+    return '<section class="cm-recu" id="cm-recu-' + esc(c.id) + '"><div class="cm-recu__pages">' + vign + '</div><div class="cm-recu__txt">'
       + '<div class="cm-lig"><span class="cm-tag vif">Nouveau · de la marque</span><span class="cm-cpt">reçu le ' + esc(date(c.reception.receivedAt)) + '</span></div>'
       + '<h3>La marque a préparé votre catalogue « ' + esc(c.title) + ' »</h3>'
       + '<p>Déjà à vos prix, avec votre adresse, vos horaires et votre QR. Vous le prenez tel quel ou vous l’adaptez.</p>'
@@ -1722,7 +1843,8 @@
     const f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5;
     const z = largeurPx / (f.w * PX_MM);
     const leg = p.kind === 'cover' ? 'Couverture' : p.kind === 'back' ? 'Dernière page' : p.kind === 'brand' ? 'Page ' + (i + 1) + ' · marque (' + (p.slot === 'page2' ? 'page 2' : 'avant-dernière') + ')'
-      : p.kind === 'presentation' ? 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · gabarit ' + (p.template || 'A')
+      : p.kind === 'presentation' ? 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + (p.design ? ' · ' + (DISPOS_PRES[p.design.layout] || '').toLowerCase() : ' · gabarit ' + (p.template || 'A'))
+      : p.kind === 'products' && p.free ? 'Page ' + (i + 1) + ' · page libre' + (p.filler ? ' · ' + (p.filler.kind === 'photo' ? 'photo' : 'illustration') : '')
       : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · ' + (ENTETES[p.header] ? ENTETES[p.header][0] : ENTETES.titre[0]).toLowerCase() + ' · gabarit ' + (p.template || 'A') + ((p.products || []).length ? '' : ' · vide') + (p.filler ? ' · ' + (p.filler.kind === 'photo' ? 'photo' : 'illustration') + ' à la place libre' : '');
     return '<div><div class="cm-feuille" style="width:' + largeurPx + 'px;height:' + Math.round(f.h * PX_MM * z) + 'px">'
       + (p.locked && !nu ? '<span class="cad cm-lock">' + CADENAS + ' Marque</span>' : '')
@@ -1733,12 +1855,16 @@
     const p = doc.pages[i];
     const f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5;
     const c = (doc.charter && doc.charter.colors) || {};
-    const st = 'width:' + (f.w + BLEED * 2) + 'mm;height:' + (f.h + BLEED * 2) + 'mm;--u:' + (f.w / 148) + ';--b:' + BLEED + 'mm;--p:' + css(c.primary, '#8D1D2C') + ';--s:' + css(c.secondary, '#F6EFE5') + ';--a:' + css(c.accent, '#B0792A') + ';--i:' + css(c.ink, '#241C1A');
+    // Gamme par gamme (Marketing v1.23) : le fond choisi de la présentation, jusqu'au fond perdu ; sa gamme pour les filets.
+    const pd = p.kind === 'presentation' && p.design && typeof p.design === 'object' ? p.design : null;
+    const st = 'width:' + (f.w + BLEED * 2) + 'mm;height:' + (f.h + BLEED * 2) + 'mm;--u:' + (f.w / 148) + ';--b:' + BLEED + 'mm;--p:' + css(c.primary, '#8D1D2C') + ';--s:' + css(c.secondary, '#F6EFE5') + ';--a:' + css(c.accent, '#B0792A') + ';--i:' + css(c.ink, '#241C1A')
+      + (pd ? ';background:' + css((pd.background || {}).color, '#F6EFE5') + ';--g:' + css(pd.gammeColor, '#8D1D2C') : '');
     let corps = '';
     if (p.kind === 'cover') { corps = couverture(doc, p); }
     else if (p.kind === 'back') { corps = dos(doc, p); }
     else if (p.kind === 'brand') { corps = marquePage(doc, p); }
-    else if (p.kind === 'presentation') { corps = presentation(doc, p); }
+    else if (p.kind === 'presentation') { corps = pd ? presentationDesign(doc, p, pd) : presentation(doc, p); }
+    else if (p.free) { corps = pageLibre(p); }
     else { corps = interieur(doc, p); }
     const tpl = p.kind === 'products' || p.kind === 'presentation' ? ' cat-face--t' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : p.kind === 'cover' ? ' cat-face--cover' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : '';
     return '<div class="cat-face cat-face--' + esc(p.kind) + tpl + '" style="' + st + '" lang="' + esc(doc.version.lang) + '"><div class="cat-trim">' + corps + '</div></div>';
@@ -1902,6 +2028,57 @@
       + '<div class="cat-pres__head"><div class="cat-pres__eyebrow">' + (lang === 'nl' ? 'Het gamma' : 'La gamme') + '</div><div class="cat-pres__title">' + esc(p.title) + '</div><div class="cat-pres__rule"></div>'
       + (p.text ? '<div class="cat-pres__text">' + esc(p.text) + '</div>' : '') + '</div>'
       + (avecListe && (p.products || []).length ? '<div class="cat-pres__list">' + liste(p.products, lang, repliDe(p)) + '</div>' : '') + (avecListe ? piedDispo(p.availabilityFooter) : '') + '</div>';
+  }
+  /* --- gamme par gamme (Marketing v1.23, 27/11/2026 : rendu de `PresentationDesign` et de la page libre, CataloguePages.tsx) */
+  const DISPOS_PRES = { une: '1 grande photo', deux: '2 photos', mosaique: 'Mosaïque de 3', pleine: 'Photo pleine page' };
+  const PHOTOS_PRES = { une: 1, deux: 2, mosaique: 3, pleine: 1 };
+  const GRAISSES_PRES = { light: 300, regular: 400, medium: 500, bold: 700 };
+  const nombre = (v, d, min, max) => { const n = Number(v); return isFinite(n) ? Math.min(max, Math.max(min, n)) : d; };
+  /** Le style d'un texte de la présentation (`presTextStyle`) : police de la charte, taille en points, graisse, couleur, alignement. */
+  function stylePres(t) {
+    t = t || {};
+    const police = POLICES_COUV[t.font] || POLICES_COUV.gotham;
+    const align = ['left', 'center', 'right'].includes(t.align) ? t.align : 'left';
+    return 'font-family:' + police + ';font-size:calc(var(--u) * ' + nombre(t.size, 11, 4, 120) + 'pt);font-weight:' + (GRAISSES_PRES[t.weight] || 400)
+      + ';color:' + css(t.color, '#241C1A') + ';text-align:' + align + ';'
+      + (t.font === 'vank' ? 'letter-spacing:.01em;line-height:1.08;' : t.font === 'playwrite' ? 'line-height:1.6;' : 'line-height:1.45;');
+  }
+  /** Une photo dans sa case, cadrée (`CroppedPhoto`) : position x, y en %, agrandissement en % — les mêmes qu'à l'impression. */
+  function photoCadree(ph, classe) {
+    ph = ph || {};
+    const url = ph.url || null, x = nombre(ph.x, 50, 0, 100), y = nombre(ph.y, 50, 0, 100), z = nombre(ph.zoom, 100, 50, 400);
+    return '<div class="cat-pd__ph' + (url ? '' : ' is-empty') + (classe ? ' ' + classe : '') + '">'
+      + (url ? '<img src="' + esc(url) + '" alt="" style="object-position:' + x + '% ' + y + '%;' + (z !== 100 ? 'transform:scale(' + (z / 100) + ');' : '') + 'transform-origin:' + x + '% ' + y + '%">' : '') + '</div>';
+  }
+  /** La page de présentation d'une gamme, gamme par gamme : ses photos dans la disposition choisie (1 grande · 2 · 3 en
+   * mosaïque · pleine page), l'accroche, le titre et le texte dans leurs styles, sur un fond de couleur ou une photo sous
+   * un voile ; au choix, la liste de ses produits. */
+  function presentationDesign(doc, p, d) {
+    const lang = doc.version.lang, avecListe = p.layout === 'presentation_liste';
+    const disp = PHOTOS_PRES[d.layout] ? d.layout : 'une', pleine = disp === 'pleine';
+    const photos = Array.from({ length: PHOTOS_PRES[disp] }, (x, i) => (Array.isArray(d.photos) && d.photos[i]) || {});
+    const titre = d.title || {}, acc = d.kicker || {}, txt = d.text || {}, fond = d.background || {};
+    const clair = ['#FFFFFF', '#F5EFE4'].includes(String(titre.color || '').toUpperCase());
+    const texteTitre = String(titre.text != null ? titre.text : p.title || '');
+    let h = '<div class="cat-pd cat-pd--' + disp + (avecListe ? ' cat-pd--liste' : '') + '">';
+    if (fond.imageUrl) {
+      h += '<div class="cat-pd__bg"><img src="' + esc(fond.imageUrl) + '" alt=""><i style="background:' + (clair ? '#000' : css(fond.color, '#F6EFE5')) + ';opacity:' + (nombre(fond.veil, 0, 0, 100) / 100) + '"></i></div>';
+    }
+    h += pleine ? '<div class="cat-pd__bg">' + photoCadree(photos[0]) + '</div>'
+      : '<div class="cat-pd__photos">' + photos.map((ph, i) => photoCadree(ph, 'cat-pd__ph--' + i)).join('') + '</div>';
+    h += '<div class="cat-pd__head"' + (pleine ? ' style="background:' + css(fond.color, '#F6EFE5') + '"' : '') + '>'
+      + (acc.text ? '<div class="cat-pd__kicker" style="' + stylePres(acc) + '">' + esc(acc.text) + '</div>' : '')
+      // La Vank en capitales, écrites (pas par CSS : les accents tombaient).
+      + '<div class="cat-pd__title" style="' + stylePres(titre) + '">' + esc(titre.font === 'vank' ? texteTitre.toLocaleUpperCase(lang === 'nl' ? 'nl-BE' : 'fr-BE') : texteTitre) + '</div>'
+      + (txt.text ? '<div class="cat-pd__text" style="' + stylePres(txt) + '">' + esc(txt.text) + '</div>' : '')
+      + (avecListe && (p.products || []).length ? '<div class="cat-pres__list cat-pd__list">' + liste(p.products, lang, repliDe(p)) + '</div>' : '')
+      + '</div>';
+    return h + (avecListe ? piedDispo(p.availabilityFooter) : '') + '</div>';
+  }
+  /** Une page libre (gamme par gamme) : toute la page à la photo ou à l'illustration de la gamme voisine, sans titre. */
+  function pageLibre(p) {
+    const f = p.filler || null;
+    return '<div class="cat-free' + (f ? ' cat-free--' + esc(f.kind) : '') + '">' + (f ? placeLibre(f, '') : '') + '</div>';
   }
   function qr(url, mm) {
     if (typeof window.qrcode !== 'function') { return ''; }

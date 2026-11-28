@@ -21,13 +21,13 @@ module.exports = async function () {
     programme: ['À notre diamètre', 'L’échelle et les relevés', 'Relever le prix d’une galette'],
   });
   await f.cliquer('[data-bmf="galette"]', { apres: 1300 });
-  await f.montrer('.db-tuiles .db-tui:nth-child(1)', 'Notre galette');
+  await f.montrer('#dash .ac-cle', 'Notre galette');
   await f.dire('Notre galette : <b>Ø 22 cm</b>, 19,90 €. Celles des concurrents sont ramenées à notre diamètre.', 5200);
   await f.montrer(f.p.locator('.db-card', { hasText: 'Où nous situons-nous' }).first(), 'À surface égale');
   await f.dire('À surface égale : le prix × (Ø 22 ÷ son Ø)². Une galette de 24 cm à 21 € vaut 17,65 € à Ø 22.', 6200);
   await f.dire('L’échelle : chaque relevé est un point, rangé par type de concurrent ; le trait Ruby, c’est nous.', 4800);
   await f.cacher(300); await f.taire(150);
-  await f.montrerTout('.db-tuiles .db-tui:nth-child(n+2):nth-child(-n+5)', 'Les médianes');
+  await f.montrer('#dash .ac-cle .q small', 'Les médianes');
   await f.dire('Les médianes des supermarchés, des artisans, des chaînes, et combien sont <b>moins chères</b> que nous.', 5200);
   await f.montrer(f.p.locator('.db-card', { hasText: '— les concurrents' }).first(), 'Les relevés');
   await f.dire('Chaque relevé : son Ø, son prix, ramené à notre Ø, et l’écart avec nous.', 4200);

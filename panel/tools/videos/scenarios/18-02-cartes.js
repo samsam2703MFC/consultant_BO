@@ -1,5 +1,5 @@
 /* Fidélité, l'onglet « Cartes de fidélité » (?vue=fidelite), 26/11/2026 :
- *   onglet    fidelite-cartes   du client reconnu à la récompense : l'entonnoir, la période (ce mois, 30 j, l'année),
+ *   onglet    fidelite-cartes   du client reconnu à la récompense : le résumé et « À corriger », la période (ce mois, 30 j, l'année),
  *                               chaque carte et ses timbres, son détail lu dans l'ERP (un clic l'ouvre, un second la
  *                               referme), « Par client » (filtres, recherche), le réseau sur la même période
  * Aucune fonction en chapitre : l'onglet se lit (lectures GET /fidelite/cartes, /fidelite/carte). Données fictives :
@@ -15,19 +15,21 @@ module.exports = async function () {
 
   await f.onglet({
     id: 'fidelite-cartes', titre: 'Les cartes de fidélité',
-    resume: 'Du client reconnu à la récompense : l’entonnoir, chaque carte et ses timbres, son détail lu dans l’ERP, les clients inscrits, et le réseau sur la même période.',
+    resume: 'Du client reconnu à la récompense : le résumé et « À corriger », chaque carte et ses timbres, son détail lu dans l’ERP, les clients inscrits, et le réseau sur la même période.',
     accroche: 'Du client reconnu à la récompense',
-    programme: ['L’entonnoir, la période', 'Chaque carte, son détail', 'Par client', 'Le réseau'],
+    programme: ['Le résumé, la période', 'Chaque carte, son détail', 'Par client', 'Le réseau'],
   });
   await f.cliquer('[data-fdong="c"]', { apres: 1500 });
-  await f.montrer('.fdc-fun', 'Du client reconnu à la récompense');
-  await f.dire('Les cartes, lues en direct dans l’ERP : des clients reconnus en caisse aux inscrits, à ceux qui gagnent, aux <b>récompenses prêtes</b>.', 6600);
+  await f.montrer('.fdc-fun', 'Le résumé');
+  await f.dire('Les cartes, lues en direct dans l’ERP : les <b>inscrits</b>, sur les clients reconnus en caisse, et ceux qui gagnent sur leur carte.', 6000);
+  await f.montrer('.fdc-fun .chr-l2', 'À corriger');
+  await f.dire('<b>À corriger</b> : les récompenses prêtes à offrir en caisse, et carte par carte, les clients à 1 ou 2 timbres à relancer.', 5600);
   await f.montrer('.db-sec .fd-tg', 'La période');
   await f.dire('La période : <b>ce mois, 30 jours ou l’année</b>.', 3000);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('[data-fdper="annee"]', { apres: 1400 });
   await f.montrer('.fdc-fun', 'L’année');
-  await f.dire('L’entonnoir, les timbres gagnés ici et le réseau se relisent sur l’année.', 4000);
+  await f.dire('Le résumé, les timbres gagnés ici et le réseau se relisent sur l’année.', 4000);
   await f.cacher(150); await f.taire(150);
   await f.cliquer('[data-fdper="mois"]', { apres: 1300 });
 

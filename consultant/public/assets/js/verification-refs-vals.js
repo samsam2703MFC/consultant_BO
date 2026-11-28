@@ -83,10 +83,10 @@ export function valsRefs(app){
       magasins: (l.magasins || []).map(m => !m.lu ? { txt: '?', ton: '' }
         : (m.prix == null || m.src === 'MISSING' ? { txt: 'sans prix', ton: 'ko' }
           : { txt: fE(m.prix * l.facteur, 2), ton: al.indexOf(m.sid) >= 0 ? 'att' : (m.src === 'REFERENCE' ? 'att' : 'ok'),
-            sous: al.indexOf(m.sid) >= 0 ? 'à aligner' : (m.src === 'REFERENCE' ? 'référence' : '') })),
+            sous: m.verrou ? 'tarif fournisseur' : (al.indexOf(m.sid) >= 0 ? 'à aligner' : (m.src === 'REFERENCE' ? 'référence' : '')) })),
       reference: ref == null ? '—' : fE(ref, 2), perteAvant: l.perte == null ? '—' : nf(l.perte, 0) + ' %',
-      origine: P.origine === 'reseau' ? 'réseau' : (P.origine === 'marche' ? 'marché, estimé' : 'à saisir'),
-      origineTon: P.origine === 'reseau' ? 'ok' : (P.origine === 'marche' ? 'att' : 'ko'), sourcePrix: P.source || '',
+      origine: P.origine === 'fournisseur' ? 'tarif fournisseur' : (P.origine === 'reseau' ? 'réseau' : (P.origine === 'marche' ? 'marché, estimé' : 'à saisir')),
+      origineTon: P.origine === 'reseau' || P.origine === 'fournisseur' ? 'ok' : (P.origine === 'marche' ? 'att' : 'ko'), sourcePrix: P.source || '',
       prix: prixTxt, perte: perteTxt, raison: P.raison ? P.raison + (P.perteOrigine === 'courante' ? ' · perte courante' : '') : '',
       poserPrix: ev => maj(l.mid, { prix: ev.target.value, coche: true }), poserPerte: ev => maj(l.mid, { perte: ev.target.value, coche: true }),
       coche, cocher: () => maj(l.mid, { coche: !coche }), idPrix: 'vr-ref-px-' + l.mid, idPerte: 'vr-ref-pt-' + l.mid,
@@ -100,7 +100,8 @@ export function valsRefs(app){
     ['Prix de marché', C.marche, 'aucun magasin ne la chiffre : prix estimé', C.marche ? 'att' : 'ok'],
     ['Sans prix', C.sansPrix, 'ni magasin, ni prix de marché : à saisir', C.sansPrix ? 'ko' : 'ok'],
     ['Pertes à poser', C.pertes, 'perte proposée différente de celle du panel', C.pertes ? 'att' : 'ok'],
-    ['Prix à aligner', C.aAligner, 'un magasin paie autrement que la référence', C.aAligner ? 'att' : 'ok']];
+    ['Prix à aligner', C.aAligner, 'un magasin paie autrement que la référence', C.aAligner ? 'att' : 'ok']]
+    .concat(C.fournisseur ? [['Tarif fournisseur', C.fournisseur, 'tenu par la centrale : la référence le reprend', '']] : []);
   v.aligner = { on: aligner, basculer: () => app.setState({ vfRefAligner: !aligner, vfRefEd: {}, vfRefPrev: null }) };
   const choisies = v.lignes.filter(l => l.coche && !l.invalide && (l.envoi.prix != null || l.envoi.perte != null));
   const prev = S.vfRefPrev, res = S.vfRefRes;
@@ -131,8 +132,9 @@ export function valsRefs(app){
       app.setState({ vfTout: { enCours: true, etat: '1/2 · Prix de référence, pertes et alignement : ' + choisies.length + ' matière(s)…' }, vfRefProg: null });
       envoyerParLots(app, { rid: 0 }, choisies.map(l => l.envoi), 20, (i, n) => app.setState({ vfTout: { enCours: true, etat: '1/2 · Prix, pertes et alignement : lot ' + i + ' sur ' + n } }))
         .then(r => {
-          const okE = (r.ecritures || []).filter(e => e.resultat === 'ok').length, koE = (r.ecritures || []).length - okE;
-          const etape1 = '1/2 ✓ ' + okE + ' écriture(s) relue(s) au panel' + (koE ? ', ' + koE + ' refusée(s) ou sans effet' : '') + '.';
+          const okE = (r.ecritures || []).filter(e => e.resultat === 'ok').length, fE_ = (r.ecritures || []).filter(e => e.resultat === 'fournisseur').length;
+          const koE = (r.ecritures || []).length - okE - fE_;
+          const etape1 = '1/2 ✓ ' + okE + ' écriture(s) relue(s) au panel' + (fE_ ? ', ' + fE_ + ' prix laissé(s) au tarif du fournisseur (les autres magasins s’y alignent)' : '') + (koE ? ', ' + koE + ' refusée(s) ou sans effet' : '') + '.';
           app.setState({ vfRefRes: { d: r }, vfTout: { enCours: true, etat: etape1 + ' 2/2 · Pertes sur les lignes…' }, vrRecentes: (r.ecritures || []).concat(app.state.vrRecentes || []).slice(0, 20), vmData: null });
           return lancerPertesLignes(app).then(b => app.setState({ vfTout: { fini: true, etat: etape1 + ' 2/2 ' + b.etat } }));
         })
@@ -145,7 +147,7 @@ export function valsRefs(app){
     const P = rd.pertes;
     v.resultat = {
       ok: !!rd.ok, erreur: rd.error || null,
-      lignes: (rd.ecritures || []).map(e => (e.resultat === 'ok' ? '✓ ' : '✕ ') + e.resume + ' — ' + e.resultatNom + (e.message ? ' : ' + e.message : '')).concat(rd.erreurs || []),
+      lignes: (rd.ecritures || []).map(e => (e.resultat === 'ok' ? '✓ ' : (e.resultat === 'fournisseur' ? 'ℹ ' : '✕ ')) + e.resume + ' — ' + e.resultatNom + (e.message ? ' : ' + e.message : '')).concat(rd.erreurs || []),
       effet: (rd.effet || []).map(m => ({ magasin: String(m.magasin).replace(/^.* - /, ''), resume: m.resume,
         lignes: (m.lignes || []).slice(0, 8).map(x => ({ nom: x.nom || ('recette ' + x.rid), bouge: x.ecart != null && Math.abs(x.ecart) > 1e-6,
           txt: fE(x.avant, 3) + ' → ' + fE(x.apres, 3) + (x.pct != null ? ' (' + (x.pct > 0 ? '+' : '') + nf(x.pct, 1) + ' %)' : '') + (x.complet ? '' : ' · coût partiel') })) })),

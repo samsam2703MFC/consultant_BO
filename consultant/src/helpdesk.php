@@ -39,7 +39,9 @@ declare(strict_types=1);
  */
 
 const HDK_DOMAINES = ['strategy' => 'Stratégie', 'product' => 'Produit', 'operational_activities' => 'Activités opérationnelles',
-    'sales' => 'Ventes', 'app_development' => 'Application', 'social_media' => 'Réseaux sociaux'];
+    'sales' => 'Ventes', 'app_development' => 'Application', 'social_media' => 'Réseaux sociaux',
+    // Les demandes que le panel crée tout seul (27/11/2026) : sans magasin, rédigées en polonais par le panel.
+    'webshop_billing_vat_conflict' => 'Webshop : n° de TVA en double'];
 const HDK_STATUTS = ['NEW' => 'Nouvelle', 'IN_PROGRESS' => 'En cours', 'RESOLVED' => 'Résolue', 'CLOSED' => 'Fermée', 'CANCELLED' => 'Annulée'];
 const HDK_ETATS = ['conforme', 'a_suivre', 'non_conforme'];
 /** Les délais que le consultant donne à une demande à sa réception, en jours (Sam, 20/11/2026 : « 2 5 10 30 j +90 »). */
@@ -100,9 +102,31 @@ function hdkAdmin(): bool
     return true;
 }
 
+/**
+ * Les demandes que le panel écrit lui-même, en polonais, remises en français (Sam, 27/11/2026 : « ne pas avoir de
+ * polonais, soit du français soit du néerlandais »). Le panel garde son texte ; le cockpit lit le modèle connu et le
+ * réécrit, avec les mêmes valeurs. Un texte qui ne suit aucun modèle connu reste tel quel. Fonction pure.
+ * Modèle « Konflikt NIP Webshop » (area_key webshop_billing_vat_conflict) : plusieurs fiches société ont le même n° de
+ * TVA ; le panel cite les fiches clients B2B et le compte client où l'ajout a échoué.
+ */
+function hdkFrancais(string $titre, string $desc): array
+{
+    if (preg_match('/^Konflikt NIP Webshop:\s*(\S+)\s*$/u', $titre, $m)) {
+        $titre = 'Conflit de n° de TVA sur le webshop : ' . $m[1];
+    }
+    if (preg_match('/^Kilka rekordów firmowych ma ten sam numer VAT\s+(\S+?)\.\s*Sprawdź rekordy klientów B2B:\s*([0-9 ,]+?)\.\s*(?:Próba dodania firmy do faktur na koncie klienta\s*#?(\d+)\.?)?\s*$/u', $desc, $m)) {
+        $fiches = array_values(array_filter(array_map('trim', explode(',', $m[2])), 'strlen'));
+        $liste = count($fiches) > 1 ? implode(', ', array_slice($fiches, 0, -1)) . ' et ' . end($fiches) : ($fiches[0] ?? '');
+        $desc = 'Plusieurs fiches société ont le même n° de TVA ' . $m[1] . '. Vérifiez les fiches des clients B2B ' . $liste . '.'
+            . (!empty($m[3]) ? ' Le problème est apparu en ajoutant la société aux factures du compte client n° ' . $m[3] . '.' : '');
+    }
+    return [$titre, $desc];
+}
+
 /** Une demande du panel, ramenée à ce que l'écran montre (jamais le courriel du demandeur). Fonction pure. */
 function hdkDemande(array $c): array
 {
+    [$c['title'], $c['description']] = hdkFrancais(trim((string) ($c['title'] ?? '')), trim((string) ($c['description'] ?? '')));
     $st = (string) ($c['status'] ?? 'NEW');
     return ['id' => (int) ($c['id'] ?? 0), 'ref' => (string) ($c['ref'] ?? ''), 'domaine' => (string) ($c['area_key'] ?? ''), 'domaineNom' => HDK_DOMAINES[$c['area_key'] ?? ''] ?? (string) ($c['area_key'] ?? ''),
         'statut' => $st, 'statutNom' => HDK_STATUTS[$st] ?? $st, 'ouverte' => in_array($st, ['NEW', 'IN_PROGRESS'], true),

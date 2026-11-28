@@ -34,8 +34,8 @@ module.exports = async function () {
   });
   await f.montrer('.of-onglets .page-tabs', 'En cours');
   await f.dire('« <b>En cours</b> » : les offres envoyées ou à envoyer. Elles s’ouvrent ici par défaut.', 4200);
-  await f.montrer('.of-kpis', 'Les chiffres');
-  await f.dire('En tête : les offres en cours, les converties, le <b>taux de conversion</b> et le prochain événement.', 4600);
+  await f.montrer('.of-res', 'Les chiffres');
+  await f.dire('En tête : les offres en cours, les converties, le <b>taux de conversion</b> ; dessous, « À corriger » : le prochain événement.', 5400);
   await f.cacher(300);
   await f.cliquer('#of-q', { apres: 250 });
   await f.taper('Lambert', 110);
@@ -49,7 +49,7 @@ module.exports = async function () {
   await f.montrer('.of-gestes', 'Les gestes');
   await f.dire('Un clic ouvre l’offre à droite, avec ses gestes : modifier, le PDF, l’e-mail, convertir, archiver, supprimer.', 5400);
   await f.montrer('.of-d .of-marge-k', 'La marge');
-  await f.dire('Dessous, sa <b>marge</b> : vert à 60 % et plus, orange entre 40 et 60 %, rouge en dessous.', 4600);
+  await f.dire('Dessous, sa <b>marge</b> : vert à 60 % et plus, or entre 40 et 60 %, rouge en dessous.', 4600);
   await f.taire(150); await f.cacher(300);
   await f.defiler(-3000);
 

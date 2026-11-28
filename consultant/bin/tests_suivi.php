@@ -19,7 +19,8 @@ declare(strict_types=1);
 // --- doublures : pas de base, pas de réglage, pas de journal ---------------------
 final class Db
 {
-    public static function rows(string $sql, array $a = []): array { return []; }
+    // Des lignes lues en base : aucune, sauf si un test pose sa doublure dans $GLOBALS['DB_ROWS'].
+    public static function rows(string $sql, array $a = []): array { return isset($GLOBALS['DB_ROWS']) ? ($GLOBALS['DB_ROWS'])($sql, $a) : []; }
     // Une ligne lue en base : null, sauf si un test pose sa doublure dans $GLOBALS['DB_ROW'].
     public static function row(string $sql, array $a = []): ?array { return isset($GLOBALS['DB_ROW']) ? ($GLOBALS['DB_ROW'])($sql, $a) : null; }
     public static function exec(string $sql, array $a = []): void {}
@@ -407,6 +408,20 @@ verifie('le rapport parti, ou une vieille visite sans brouillon : plus dans la l
 verifie('signée ou annulée : plus dans la liste', suNonSigneeGroupe($vNs('terminee', '2026-11-17', 'brouillon'), true, $jour) === null && suNonSigneeGroupe($vNs('en_cours', '2026-11-19'), true, $jour) === null
     && suNonSigneeGroupe($vNs('annulee', '2026-11-25'), false, $jour) === null);
 verifie('sans base : la liste est vide, pas d’erreur', suNonSignees() === [] && suNonSignees('c1') === []);
+
+// Les absences de Mon équipe dans l'équipe de la visite (27/11/2026, panel/src/equipe_absences.php) : la table locale
+// du planning en doublure, et les absences payées du jour.
+function venteEmployes(): array { return [12 => ['nom' => 'Lina V.', 'shop' => '4'], 13 => ['nom' => 'Emma D.', 'shop' => '4'], 14 => ['nom' => 'Max P.', 'shop' => '4']]; }
+function eqaAbsencesDuJour(array $shops, string $date): array { return ['id' => [], 'cle' => ['4' => ['13|07:00' => 'cp', '14|06:00' => 'maladie']]]; }
+$GLOBALS['DB_ROWS'] = static fn ($sql, $a) => str_contains($sql, 'franchisee_employee_schedule') ? [
+    ['id_employee' => 12, 'start_hour' => '06:00:00', 'end_hour' => '13:00:00'], ['id_employee' => 13, 'start_hour' => '07:00:00', 'end_hour' => '14:00:00'],
+    ['id_employee' => 14, 'start_hour' => '06:00:00', 'end_hour' => '10:00:00'], ['id_employee' => 14, 'start_hour' => '15:00:00', 'end_hour' => '19:00:00']] : [];
+$EQV = viEquipeJour(4, '2026-11-19');
+$parV = array_column($EQV['personnes'], null, 'nom');
+verifie('la visite : une absence de Mon équipe, avec son motif, sans créneau de présence', ($parV['Emma D.']['absence'] ?? null) === 'cp' && $parV['Emma D.']['creneaux'] === [] && $parV['Emma D.']['absHeures'] === [['07:00', '14:00']], json_encode($EQV, JSON_UNESCAPED_UNICODE));
+verifie('la visite : présente à un autre service ce jour-là, elle compte présente', !isset($parV['Max P.']['absence']) && $parV['Max P.']['creneaux'] === [['15:00', '19:00']]);
+verifie('la visite : les absentes en dernier, les autres par heure d’arrivée', array_column($EQV['personnes'], 'nom') === ['Lina V.', 'Max P.', 'Emma D.'], json_encode(array_column($EQV['personnes'], 'nom')));
+unset($GLOBALS['DB_ROWS']);
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

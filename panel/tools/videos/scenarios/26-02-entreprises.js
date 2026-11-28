@@ -27,14 +27,14 @@ module.exports = async function () {
   });
   await f.montrer('.pcl-tabs', 'Entreprises B2B');
   await f.dire('« <b>Entreprises B2B</b> » : l’onglet qui s’ouvre d’abord, avec le profil commercial que donne le compte du magasin.', 5400);
-  await f.montrer('.pcl-alerte', 'À compléter');
-  await f.dire('En tête : <b>2 entreprises</b> aux données incomplètes. Leurs factures et leurs offres ne peuvent pas partir.', 5000);
+  await f.montrer('.pcl-res', 'À compléter');
+  await f.dire('En tête, « À corriger » : <b>2 entreprises</b> aux données incomplètes. Leurs factures et leurs offres ne peuvent pas partir.', 5400);
   await f.cacher(150); await f.taire(150);
-  await f.cliquer('.pcl-alerte [data-act="e-incompl"]', { apres: 1000 });
+  await f.cliquer('.pcl-res [data-act="e-incompl"]', { apres: 1000 });
   await f.montrer('.pcl-carte', 'Les afficher');
-  await f.dire('« Les afficher » ne garde qu’elles ; le repère <b>à compléter</b> dit ce qui manque.', 4400);
+  await f.dire('« <b>N’afficher que les 2 incomplètes</b> » ne garde qu’elles ; le repère <b>à compléter</b> dit ce qui manque.', 4400);
   await f.cacher(150); await f.taire(150);
-  await f.cliquer('.pcl-alerte [data-act="e-incompl"]', { apres: 900 });
+  await f.cliquer('.pcl-res [data-act="e-incompl"]', { apres: 900 });
   await f.cliquer('[data-act="e-score"][data-v="A"]', { apres: 900 });
   await f.montrer('.pcl-filtres', 'Les filtres');
   await f.dire('Les filtres : le <b>score</b> A à D, le chiffre sur 12 mois, le nombre de commandes ; et la recherche par société, TVA ou ville.', 6000);
@@ -75,7 +75,7 @@ module.exports = async function () {
   await fonction(f, { id: 'clients-donnees-base', titre: 'Compléter les données de base',
     resume: 'Société, TVA, identifiant Peppol, adresse, téléphone, e-mail : ce qui manque à une entreprise pour que ses factures partent.',
     points: ['Une entreprise « à compléter »', '« Données de base »', '« Enregistrer »'] });
-  await f.cliquer('.pcl-alerte [data-act="e-incompl"]', { apres: 900 });
+  await f.cliquer('.pcl-res [data-act="e-incompl"]', { apres: 900 });
   await f.cliquer('.pcl-ligne[data-id="7231"] td:first-child', { apres: 1200 });
   await f.montrer('.pcl-fiche .pcl-ft', 'Manque la TVA');
   await f.dire('Le traiteur n’a pas de <b>TVA</b> : sa fiche le dit.', 3400);
@@ -84,10 +84,10 @@ module.exports = async function () {
   await ecrire(f, '#pcl-c-m-tax_number', 'BE0000.565.656', { delai: 60 });
   await ecrire(f, '#pcl-c-m-email', 'commandes@saveursduval.exemple.be', { delai: 35 });
   await f.cliquer('.pcl-fen [data-act="e-base-ok"]', { apres: 2000 });
-  await f.montrer('.pcl-alerte', 'Une de moins');
+  await f.montrer('.pcl-res', 'Une de moins');
   await f.dire('<b>Enregistrer</b> : la fiche est complète dans TF Buddy, il ne reste qu’une entreprise à compléter.', 4800);
   await f.cacher(150); await f.taire(150);
-  await f.cliquer('.pcl-alerte [data-act="e-incompl"]', { apres: 600 });
+  await f.cliquer('.pcl-res [data-act="e-incompl"]', { apres: 600 });
   await f.defiler(-3000);
 
   /* Profil commercial */

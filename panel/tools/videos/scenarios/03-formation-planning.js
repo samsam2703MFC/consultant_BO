@@ -26,7 +26,7 @@ module.exports = async function () {
   await f.quiz({
     n: 1, question: 'Sous le tableau, un jour affiche <b style="color:#A32014">20,9 %</b> en rouge. Que veut dire le rouge ?',
     reponses: ['Le jour n’est pas encore planifié', 'Le personnel dépasse 20 % du chiffre d’affaires du jour', 'Il manque quelqu’un au comptoir', 'Le chiffre d’affaires est sous l’objectif'],
-    bonne: 1, explication: 'La cible du réseau est 17 % : orange au-dessus, rouge au-dessus de 20 %, noir au-dessus de 22 %. Un trou au comptoir se lit, lui, dans les linéaires.',
+    bonne: 1, explication: 'La cible du réseau est 17 % : or au-dessus, rouge au-dessus de 20 %, noir au-dessus de 22 %. Un trou au comptoir se lit, lui, dans les linéaires.',
   });
 
   // 2. Le budget d'heures
@@ -77,7 +77,7 @@ module.exports = async function () {
 
   return f.fin({
     titre: 'Module terminé', accroche: 'Le planning qui tient le budget',
-    retenir: ['La semaine se lit d’un coup d’œil : personnes, heures, %', 'Cible 17 % : orange, rouge au-dessus de 20 %', 'Un trou au comptoir : déplacer un bord de service', 'Créer un service : tirer une ligne au jour', 'Imprimer le planning pour l’équipe'],
+    retenir: ['La semaine se lit d’un coup d’œil : personnes, heures, %', 'Cible 17 % : or au-dessus, rouge au-dessus de 20 %', 'Un trou au comptoir : déplacer un bord de service', 'Créer un service : tirer une ligne au jour', 'Imprimer le planning pour l’équipe'],
     ms: 8000,
   });
 };

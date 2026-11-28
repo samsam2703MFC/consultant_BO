@@ -85,7 +85,8 @@
   const jmS = s => s ? String(s).slice(8, 10) + '/' + String(s).slice(5, 7) : '';
 
   /* --- les graphiques -------------------------------------------------------------------------------------------- */
-  const halo = (x, y, t, a, c, fw) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="11.5" font-weight="${fw || 600}" text-anchor="${a || 'middle'}" fill="${c || C.encre}" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${esc(t)}</text>`;
+  // Pas de 600 (DESIGN_SYSTEM.md §4.1, 26/11/2026) : le trait normal, sauf demande.
+  const halo = (x, y, t, a, c, fw) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="11.5" font-weight="${fw || 400}" text-anchor="${a || 'middle'}" fill="${c || C.encre}" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${esc(t)}</text>`;
   /** Le nuage : chaque produit, sa marge (verticale) et ses pièces vendues (horizontale, échelle log). */
   function nuage(w) {
     const P = st.d.produits || [], base = st.d.base.base, h = 380, g = 52, dr = 14, hh = 16, b = 42, W = w - g - dr, H = h - hh - b;
@@ -131,7 +132,7 @@
     let s = '';
     for (let v = 0; v <= top; v += top > 6 ? 2 : 1) { s += `<line x1="${g}" x2="${g + W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="${v === 0 ? '#d9d2c7' : C.grille}"/><text x="${g - 8}" y="${(y(v) + 4).toFixed(1)}" font-size="11" text-anchor="end" fill="${C.axe}">${v} €</text>`; }
     cols.forEach((c, i) => {
-      const z = zone(c.remisePct), col = z === 'bon' ? C.x : (z === 'trop' ? '#e9b9a6' : '#d9cfc4'), on = Math.abs(c.prix - st.prix) < 0.001;
+      const z = zone(c.remisePct), col = z === 'bon' ? C.x : (z === 'trop' ? '#F7E0DC' : '#d9cfc4'), on = Math.abs(c.prix - st.prix) < 0.001;
       const x0 = g + i * bw + bw * 0.18, lg = bw * 0.64, yy = y(c.margeBundle), cx = g + i * bw + bw / 2;
       s += `<g data-bdprix="${c.prix}" style="cursor:pointer"><rect x="${(g + i * bw).toFixed(1)}" y="${hh}" width="${bw.toFixed(1)}" height="${(H + b).toFixed(1)}" fill="transparent"/>`
         + `<path d="M${x0.toFixed(1)},${y(0).toFixed(1)}V${(yy + 4).toFixed(1)}Q${x0.toFixed(1)},${yy.toFixed(1)} ${(x0 + 4).toFixed(1)},${yy.toFixed(1)}H${(x0 + lg - 4).toFixed(1)}Q${(x0 + lg).toFixed(1)},${yy.toFixed(1)} ${(x0 + lg).toFixed(1)},${(yy + 4).toFixed(1)}V${y(0).toFixed(1)}Z" fill="${col}"><title>${eur(c.prix)} : marge ${eur(c.margeBundle)} (${pct(c.margeBundlePct)}), le client gagne ${eur(c.remise)}</title></path>`
@@ -156,17 +157,29 @@
   const nomCourt = n => String(n || '').replace(/ \(à emporter\)/i, '');
   const maj = n => (n ? n.charAt(0).toUpperCase() + n.slice(1) : n);
 
+  /* Le résumé du constat (26/11/2026, DESIGN_SYSTEM.md §7.13, la forme des vues refaites) : il remplace les quatre tuiles. La marge
+   * de base en chiffre clé, son état sur l'échelle de la marge brute (MARGES du dashboard : sous 40 % faible, 40 à 60 % à
+   * surveiller, 60 % et plus bonne), d'où vient le chiffre, puis la part des pièces sous la marge de base et au-dessus du seuil
+   * haut. « À corriger » : une fiche de bundle lancé qui n'est pas partie à l'équipe ; le bouton mène à sa ligne, en bas. */
+  const MARGE = m => m < 40 ? ['stop', 'faible'] : (m < 60 ? ['prize', 'à surveiller'] : ['green', 'bonne']);
+  function resume(B, d) {
+    const [sig, mot] = MARGE(B.base);
+    const L = ((d && d.lances) || []).filter(b => b.envoi && b.envoi.erreur);
+    return `<div class="bd-rs"><div class="bd-rs-v"><span class="v">${pct(B.base)}</span><span class="e"><i class="ac-ic ac-${sig}" aria-hidden="true"></i>marge ${mot}</span></div>
+        <div class="bd-rs-q">votre marge de base<span>prix hors TVA − coût de recette, sur ${nf(B.produits)} produits chiffrés · du ${jmS(d.periode.du)} au ${jmS(d.periode.au)}, ${nf(B.pieces)} pièces vendues</span></div>
+        <div class="bd-rs-l"><span>${pct(B.sousPct, 0)} des pièces vendues sous la marge de base</span><span>${pct(B.hautPct)} à ${pct(d.regles.margeHaute, 0)} de marge et plus : ce qu’il faut faire monter</span></div>
+      </div>${L.length ? `<div class="bd-rs-ac"><span class="ac-t">À corriger</span><span class="ac-l">${L.map(b => `<button type="button" class="btn btn--sm ac-b" data-bdac="${b.id}"><i class="ac-ic ac-stop" aria-hidden="true"></i>${esc(b.nom)} : fiche pas envoyée à l’équipe</button>`).join('')}</span></div>` : ''}`;
+  }
   function phase1() {
     const d = st.d, B = d.base, P = d.produits || [], cs = couples();
     const X = cs.map(c => prod(c.x)).filter(Boolean), Y = [...new Map(cs.map(c => [c.y, prod(c.y)])).values()].filter(Boolean);
     const liste = (L, cl) => L.map(p => `<li><i class="${cl}"></i><span class="n" title="${esc(p.nom)}">${esc(maj(nomCourt(p.nom)))}</span><span>${nf(p.q)} pcs</span><b>${pct(p.m)}</b></li>`).join('');
+    // La marge de base se dit une fois, dans le résumé (26/11/2026, « un chiffre, une place ») : la bulle n'en répète plus le chiffre.
     const bulle = cs.length
-      ? `« Votre marge de base est de ${pct(B.base)}. Ce qui fait votre volume (${X.slice(0, 3).map(p => p.nom.toLowerCase()).join(', ')}) est sous cette marge ; ce qui rapporte le plus (${Y.slice(0, 3).map(p => nomCourt(p.nom).toLowerCase()).join(', ')}) se vend peu. Couplons-les : le produit qui attire fait vendre celui qui rapporte. »`
-      : `« Votre marge de base est de ${pct(B.base)}. Je ne trouve pas encore de couple qui la fasse monter : il faut des produits à ${pct(d.regles.margeHaute, 0)} de marge et plus, avec leur coût de recette au panel. »`;
-    return tete('Votre marge de base, et ce qui la tire vers le bas', bulle)
-      + `<div class="bd-k4">${tuile('Marge de base', pct(B.base), 'prix hors TVA − coût de recette, sur ' + nf(B.produits) + ' produits chiffrés')}${tuile('Sous la marge de base', pct(B.sousPct, 0), 'des pièces vendues')}
-        ${tuile('À ' + pct(d.regles.margeHaute, 0) + ' de marge et plus', pct(B.hautPct), 'des pièces vendues : ce qu’il faut faire monter')}${tuile('La période', `<span style="font-size:16px">${jmS(d.periode.du)} → ${jmS(d.periode.au)}</span>`, nf(B.pieces) + ' pièces vendues')}</div>
-      <div class="bd-c1"><div><p class="bd-t">Chaque produit : sa marge et ses ventes</p><div class="bd-graphe" data-bdgraphe="nuage"></div>
+      ? `« Ce qui fait votre volume (${X.slice(0, 3).map(p => p.nom.toLowerCase()).join(', ')}) est sous votre marge de base ; ce qui rapporte le plus (${Y.slice(0, 3).map(p => nomCourt(p.nom).toLowerCase()).join(', ')}) se vend peu. Couplons-les : le produit qui attire fait vendre celui qui rapporte. »`
+      : `« Je ne trouve pas encore de couple qui fasse monter votre marge de base : il faut des produits à ${pct(d.regles.margeHaute, 0)} de marge et plus, avec leur coût de recette au panel. »`;
+    return tete('Votre marge de base, et ce qui la tire vers le bas', bulle) + resume(B, d)
+      + `<div class="bd-c1"><div><p class="bd-t">Chaque produit : sa marge et ses ventes</p><div class="bd-graphe" data-bdgraphe="nuage"></div>
         <p class="bd-leg"><span><i style="background:${C.x}"></i>le produit qui attire, à coupler</span><span><i style="background:${C.y}"></i>le produit à grande valeur ajoutée</span><span><i style="background:${C.autre}"></i>les autres produits</span><span><i class="tir"></i>la marge de base</span></p></div>
         <div class="bd-listes"><p class="bd-t">Ils font le volume, pas la marge</p><ul class="bd-l">${liste(X, 'r') || '<li class="mu">—</li>'}</ul>
           <p class="bd-t" style="margin-top:16px">Grande valeur ajoutée, peu vendus</p><ul class="bd-l">${liste(Y, 'b') || '<li class="mu">—</li>'}</ul></div></div>
@@ -199,7 +212,7 @@
     const c = couple(), X = prod(c.x), Y = prod(c.y), k = chiffrer(X, Y, st.prix), B = st.d.base;
     return tete('Le prix du bundle : ' + X.nom + ' + ' + nomCourt(Y.nom), `« Séparés, ils font ${eur(k.separes)}. À ${eur(st.prix)}, le client gagne ${eur(k.remise)} ; chaque ${X.nom.toLowerCase()} vendu en bundle laisse ${eur(k.margeBundle)} de marge au lieu de ${eur(X.me)}. Cliquez une colonne pour changer le prix. »`)
       + `<div class="bd-c3"><div><p class="bd-t">La marge que laisse un bundle, selon son prix</p><div class="bd-graphe" data-bdgraphe="prix"></div>
-          <p class="bd-leg"><span><i style="background:${C.x}"></i>la remise conseillée : ${st.d.regles.remiseConseil[0]} à ${st.d.regles.remiseConseil[1]} %</span><span><i style="background:#d9cfc4"></i>possible</span><span><i style="background:#e9b9a6"></i>plus de ${st.d.regles.remiseTrop} % : trop de remise</span><span><i class="tir"></i>la marge du produit vendu seul</span></p></div>
+          <p class="bd-leg"><span><i style="background:${C.x}"></i>la remise conseillée : ${st.d.regles.remiseConseil[0]} à ${st.d.regles.remiseConseil[1]} %</span><span><i style="background:#d9cfc4"></i>possible</span><span><i style="background:#F7E0DC"></i>plus de ${st.d.regles.remiseTrop} % : trop de remise</span><span><i class="tir"></i>la marge du produit vendu seul</span></p></div>
         <div class="bd-choix"><p class="bd-t">À ${eur(st.prix)}</p><div class="bd-tuiles">
           ${tuile('Le client gagne', eur(k.remise), '−' + pct(k.remisePct) + ' sur ' + eur(k.separes))}${tuile('Marge du bundle', eur(k.margeBundle) + ' <small>HT</small>', pct(k.margeBundlePct) + ' · le ' + esc(X.nom.toLowerCase()) + ' seul : ' + pct(X.m))}
           ${tuile('Marge en plus', sgn(k.gainTicket) + ' €', 'par client qui prend le bundle au lieu du ' + esc(X.nom.toLowerCase()) + ' seul', 'ok')}${tuile('Par mois, ' + PRISES.find(p => p[0] === st.prise)[1], sgn(k.gainMois, 0) + ' €', nf(k.bundlesMois) + ' bundles · ' + nf(k.bundlesMois / 30, 0) + ' par jour')}</div>
@@ -256,7 +269,7 @@
     if (!L.length) { return ''; }
     const stt = { a_venir: ['att', 'à venir'], en_caisse: ['ok', 'en caisse'], terminee: ['', 'terminée'] };
     return `<section class="db-card bd-suivi"><table><thead><tr><th>Lancés avec le Coach Vente</th><th>Statut</th><th>Période</th><th>Le client paie</th><th>Fiche</th><th></th></tr></thead><tbody>
-      ${L.map(b => `<tr><td><b>${esc(b.nom)}</b><span class="s">1 ${esc(b.xNom.toLowerCase())} + 1 ${esc(nomCourt(b.yNom).toLowerCase())}</span></td><td><span class="bd-st ${stt[b.statut][0]}">${stt[b.statut][1]}</span></td>
+      ${L.map(b => `<tr id="bd-l-${b.id}"><td><b>${esc(b.nom)}</b><span class="s">1 ${esc(b.xNom.toLowerCase())} + 1 ${esc(nomCourt(b.yNom).toLowerCase())}</span></td><td><span class="bd-st ${stt[b.statut][0]}">${stt[b.statut][1]}</span></td>
         <td>${esc(jmS(b.du))} → ${esc(jmS(b.au))}/${esc(String(b.au).slice(0, 4))}</td><td>${eur(b.prix)} au lieu de ${eur(b.separes)}</td>
         <td>${b.envoi ? (b.envoi.erreur ? '<span class="bd-ko">pas envoyée</span>' : 'envoyée à ' + b.envoi.a.length + ' personne' + (b.envoi.a.length > 1 ? 's' : '')) : '<span class="mu">—</span>'}</td>
         <td><button type="button" class="bd-lien" data-bdfiche="${b.id}">PDF</button></td></tr>`).join('')}</tbody></table></section>`;
@@ -312,6 +325,10 @@
     on('[data-bdenvoyer]', 'change', e => { st.envoyer = e.currentTarget.checked; rendre(); });
     on('[data-bdfiche]', 'click', e => ouvrirPdf(fetch(st.api + '/assistant/magasin/bundles/fiche?shop=' + encodeURIComponent(st.shop) + '&id=' + e.currentTarget.dataset.bdfiche, { credentials: 'same-origin' })));
     on('[data-bdrenvoyer]', 'click', e => renvoyer(+e.currentTarget.dataset.bdrenvoyer));
+    // « À corriger » : la ligne du bundle, en bas, encadrée un instant (le geste de la page : ac-vu, dashboard.css).
+    on('[data-bdac]', 'click', e => { const r = st.el.querySelector('#bd-l-' + e.currentTarget.dataset.bdac); if (!r) { return; }
+      const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      r.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'center' }); r.classList.remove('ac-vu'); void r.offsetWidth; r.classList.add('ac-vu'); setTimeout(() => r.classList.remove('ac-vu'), 1800); });
     on('[data-bd]', 'click', e => {
       const a = e.currentTarget.dataset.bd;
       if (a === 'lancer') { lancer(); }

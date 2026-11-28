@@ -1,8 +1,8 @@
 /* Trésorerie › l'onglet « Frais » (5e onglet de la Trésorerie ; ?vue=frais y est redirigée), et ses fonctions en
  * chapitres (24/11/2026). La page Frais du rail n'a pas d'autre onglet : c'est la même vidéo (pas de 09-07) :
- *   onglet    frais-du-mois        les frais du mois au panel, changer de mois, les quatre tuiles, « TVA comprise ? » et
+ *   onglet    frais-du-mois        les frais du mois au panel, changer de mois, le résumé, « TVA comprise ? » et
  *                                  le taux, un poste à indiquer, « Ajouter un frais », ce que ça change dans le P&L court
- *   fonction  frais-tva-comprise   Oui sur l'entretien : le hors TVA et les tuiles se recalculent
+ *   fonction  frais-tva-comprise   Oui sur l'entretien : le hors TVA et le résumé se recalculent
  *   fonction  frais-taux-tva       6 % sur l'eau : un clic sur le taux suffit
  *   fonction  frais-ajouter        un contrat annuel réparti sur l'année : 12 mois au panel
  *   fonction  frais-annuler-ajout  un ajout fait en double, annulé : ses lignes supprimées au panel
@@ -31,7 +31,7 @@ module.exports = async function () {
   /* L'onglet */
   await f.onglet({
     id: 'frais-du-mois', titre: 'Les frais du mois',
-    resume: 'Les frais du magasin saisis au panel, mois par mois : « TVA comprise ? » et le taux de chaque poste, les quatre tuiles, ce que ça change dans le P&L court, et « Ajouter un frais ».',
+    resume: 'Les frais du magasin saisis au panel, mois par mois : « TVA comprise ? » et le taux de chaque poste, le résumé, ce que ça change dans le P&L court, et « Ajouter un frais ».',
     accroche: 'Des frais généraux hors TVA',
     programme: ['Indiquer si un poste contient la TVA', 'Choisir le taux de TVA', 'Ajouter un frais au panel', 'Annuler un ajout'],
   });
@@ -45,13 +45,13 @@ module.exports = async function () {
   await f.dire('Octobre 2026. « <b>Ce mois-ci</b> » ramène au mois en cours ; au mois en cours, › est grisé.', 5000);
   await f.cacher(150); await f.taire(150);
   await f.cliquer(FX + '[data-frm="0"]', { apres: 1500 });
-  await f.montrer(FX + '.fx-tuiles', 'Les tuiles');
-  await f.dire('Quatre tuiles : le saisi au panel, le <b>hors TVA</b> que le P&L compte, la TVA comprise, et les postes à indiquer.', 6000);
+  await f.montrer(FX + '.ac', 'Le résumé');
+  await f.dire('Le résumé : les frais <b>hors TVA</b> que le P&L compte, leur part du saisi au panel ; dessous, « À corriger » : les postes à indiquer.', 6400);
   await f.montrer(FX + '.fx-t thead', 'TVA comprise ? · taux');
   await f.dire('Pour chaque poste : le montant saisi <b>contient-il la TVA</b>, et à quel taux ? Le P&L court la retire.', 5400);
   const ent = await rangPoste(f, 'Entretien et nettoyage');
   await f.montrer(tr(ent), 'À indiquer');
-  await f.dire('Un poste pas encore indiqué compte tel que saisi, et reste en orange : ici, et sous « Frais généraux » du P&L.', 5800);
+  await f.dire('Un poste pas encore indiqué compte tel que saisi, et reste marqué « à indiquer » : ici, et sous « Frais généraux » du P&L.', 5800);
   await f.montrer(FX + '.fx-aj', 'Ajouter un frais');
   await f.dire('Un frais qui manque s’<b>ajoute au panel</b>, pour le mois ou toute l’année. Les ajouts faits d’ici restent listés.', 5600);
   await placeSousLaPage(f);   // la dernière rangée de cartes remonte au-dessus du sous-titre
@@ -62,7 +62,7 @@ module.exports = async function () {
 
   /* TVA comprise ? */
   await fonction(f, { id: 'frais-tva-comprise', titre: 'Indiquer si un poste contient la TVA',
-    resume: 'Oui ou Non sur la ligne : le hors TVA et les tuiles se recalculent ; le choix se garde pour le poste, d’un mois à l’autre.',
+    resume: 'Oui ou Non sur la ligne : le hors TVA et le résumé se recalculent ; le choix se garde pour le poste, d’un mois à l’autre.',
     points: ['« TVA comprise ? » sur la ligne', 'Oui : le P&L en retire la TVA', 'Recliquer le choix : à indiquer'] });
   await f.montrer(tr(ent), 'Entretien et nettoyage');
   await f.dire('L’entretien : 310 € saisis au panel, pas encore indiqué. La facture est TVA comprise.', 4400);
@@ -70,8 +70,8 @@ module.exports = async function () {
   await f.cliquer(FX + `[data-frt="${ent}"][data-v="true"]`, { apres: 1600 });
   await f.montrer(tr(await rangPoste(f, 'Entretien et nettoyage')), 'Oui · 21 %');
   await f.dire('<b>Oui</b> : 21 % proposé d’office. Hors TVA, 256,20 € ; la TVA, 53,80 €, est retirée des frais généraux.', 6000);
-  await f.montrer(FX + '.fx-tuiles', 'Les tuiles suivent');
-  await f.dire('Les tuiles suivent : un poste de moins à indiquer. Le choix se garde pour le poste, d’un mois à l’autre.', 5400);
+  await f.montrer(FX + '.ac', 'Le résumé suit');
+  await f.dire('Le résumé suit : un poste de moins à indiquer. Le choix se garde pour le poste, d’un mois à l’autre.', 5400);
   await f.dire('<b>Non</b> : le montant est déjà hors TVA, ou sans TVA. Recliquer le même choix remet le poste à indiquer.', 5600);
   await f.taire(150); await f.cacher(300);
 
@@ -86,7 +86,7 @@ module.exports = async function () {
   await f.cliquer(FX + `[data-frx="${eau}"][data-v="6"]`, { apres: 1600 });
   await f.montrer(tr(await rangPoste(f, 'Eau')), 'Oui · 6 %');
   await f.dire('Un clic sur <b>6 %</b> suffit : le poste passe à Oui, 6 %. Hors TVA : 60,38 €.', 4800);
-  await f.montrer(FX + '.fx-tuiles', 'Plus rien à indiquer');
+  await f.montrer(FX + '.ac', 'Plus rien à indiquer');
   await f.dire('Plus aucun poste à indiquer : les frais généraux du P&L se lisent entièrement hors TVA.', 4600);
   await f.taire(150); await f.cacher(300);
 
@@ -130,8 +130,8 @@ module.exports = async function () {
   await f.cliquerConfirme(FX + '.fx-aj-l [data-fran]', 'Supprimer au panel les lignes créées par cet ajout ?', '', { apres: 1800 });
   await f.montrer(f.p.locator(FX + '.fx-aj-res').last(), 'Annulé');
   await f.dire('Ajout annulé : <b>2 mois supprimés</b> au panel. Le frais quitte les frais du mois.', 4800);
-  await f.montrer(FX + '.fx-tuiles', 'Les tuiles suivent');
-  await f.dire('Les tuiles se recalculent sans lui.', 3000);
+  await f.montrer(FX + '.ac', 'Le résumé suit');
+  await f.dire('Le résumé se recalcule sans lui.', 3000);
   await f.cacher(300);
 
   return f.fin();

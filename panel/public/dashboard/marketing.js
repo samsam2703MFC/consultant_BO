@@ -120,7 +120,7 @@
     const n = (s.produits || []).length, f = fenetreN1(s, st.an), V = f ? st.ventes[s.id + ':' + f[0]] : null;
     const quand = V && V.repli ? `cette année, du ${dLongue(V.repli.du)} au ${dLongue(V.repli.au)}` : f ? `l’an dernier, du ${dLongue(f[0])} au ${dLongue(f[1])}` : '';
     const tete = `<div class="cal-drop-h"><img src="${esc(img)}" alt=""><div><b>${esc(s.nom)}</b><small>${jourMois(s.debut)} → ${jourMois(s.fin)} · ${n} produit${n > 1 ? 's' : ''} au panel${quand ? ' · les chiffres : ' + quand : ''}</small></div>
-      <button type="button" class="cal-x" data-calsaison="${s.id}" aria-label="Fermer">×</button></div>${s.alerte ? `<p class="cal-alerte">⚠ ${esc(s.alerte)}</p>` : ''}`;
+      <button type="button" class="cal-x" data-calsaison="${s.id}" aria-label="Fermer">×</button></div>${s.alerte ? `<p class="cal-alerte">À vérifier : ${esc(s.alerte)}</p>` : ''}`;
     if (!n) { return `<div class="cal-drop">${tete}<p class="mc-mu">Pas de produit rattaché à cette gamme au panel.</p></div>`; }
     const D = V && V.d, P = D ? D.produits : {};
     const lignes = (s.produits || []).map(r => {
@@ -178,7 +178,7 @@
       const liste = ouv ? listeSaison(s, img) : '';
       return `<div class="cal-l cal-l--s${on ? ' on' : ''}${ouv ? ' ouv' : ''}">
           <button type="button" class="cal-lib cal-lib--s" data-calsaison="${s.id}" aria-expanded="${ouv}"><img class="cal-ill" src="${esc(img)}" alt="" loading="lazy">
-            <div><b>${esc(s.nom)}${s.alerte ? ' <span class="cal-w" title="' + esc(s.alerte) + '">⚠</span>' : ''}</b><small>${jourMois(s.debut)} → ${jourMois(s.fin)}${on ? ' · <span class="cal-maint">en ce moment</span>' : ''}</small></div>
+            <div><b>${esc(s.nom)}${s.alerte ? ' <span class="cal-w" title="' + esc(s.alerte) + '">à vérifier</span>' : ''}</b><small>${jourMois(s.debut)} → ${jourMois(s.fin)}${on ? ' · <span class="cal-maint">en ce moment</span>' : ''}</small></div>
             <span class="cal-nb">${n} produit${n > 1 ? 's' : ''} <i class="cal-chev" aria-hidden="true">▾</i></span></button>
           ${piste(bs.map(b => `<span class="cal-b cal-b--s" style="left:${b[0].toFixed(2)}%;width:${b[1].toFixed(2)}%" title="${esc(s.nom)} · ${jourMois(s.debut)} → ${jourMois(s.fin)}"></span>`).join(''))}
         </div>${liste}`;
@@ -229,7 +229,7 @@
     const o = (st.obj || []).find(x => String(x.id) === String(c.id));
     if (!o) { return ''; }
     const e = ETATS_OBJ[o.etat] || ['mu', o.etat || ''];
-    return `<section class="mc-bloc"><h3>Les produits mis en avant</h3>
+    return `<section class="mc-bloc" id="mc-${esc(c.id)}-obj"><h3>Les produits mis en avant</h3>
       <div class="mc-obj-h"><span>Objectif du magasin : <b>${n0(o.objectif)} pièces</b></span><span class="mm-etat ${e[0]}">${esc(e[1])}</span></div>
       <div class="mm-jauge"><i class="${e[0]}" style="width:${Math.min(100, o.pct || 0).toFixed(1)}%"></i>${o.attendu != null ? `<b style="left:${Math.min(100, o.attendu).toFixed(1)}%" title="où il faudrait en être aujourd’hui"></b>` : ''}</div>
       <p class="mc-mu">${n0(o.vendu)} vendues (${n0(o.pct)} %)${o.reste > 0 ? ' · reste ' + n0(o.reste) + (o.ilFaut ? ', soit ' + n0(o.ilFaut) + ' par jour' : '') : ''}</p>
@@ -253,7 +253,7 @@
     if (!jalons.some(j => j.cle)) { jalons.push({ l: 'Lancement de la campagne', iso: c.du, q: dCourt(c.du), cle: true }); }
     jalons.push({ l: 'Fin de la campagne', iso: c.au, q: dCourt(c.au), cle: true });
     jalons.sort((x, y) => String(x.iso).localeCompare(String(y.iso)));
-    return `<section class="mc-bloc"><h3>Le calendrier</h3><ol class="mc-cal">${jalons.map(j => {
+    return `<section class="mc-bloc" id="mc-${esc(c.id)}-cal"><h3>Le calendrier</h3><ol class="mc-cal">${jalons.map(j => {
       const etat = j.fait ? 'fait' : (j.iso && j.iso <= a ? 'passe' : 'avenir');
       return `<li class="${etat}${j.cle ? ' cle' : ''}"><span class="q">${esc(j.q || '—')}</span><span class="l">${esc(j.l)}</span>${j.fait ? `<span class="s">${ico(I.ok)} fait</span>` : ''}</li>`;
     }).join('')}</ol></section>`;
@@ -281,29 +281,66 @@
     const img = c.image ? (/^(https?:)?\/\//.test(c.image) ? c.image : '../assistant/' + String(c.image).replace(/^\.?\//, '')) : null;
     const gauche = vise(c) + produits(c) + mot(c);
     const droite = calendrier(c) + communication(c) + documents(c);
-    return `<article class="mc">
+    return `<article class="mc" id="mc-${esc(c.id)}">
       <header class="mc-h">${img ? `<img class="mc-img" src="${esc(img)}" alt="">` : `<span class="mc-pastille" style="background:${esc(c.typeCouleur || 'var(--muted)')}">${c.iconePath ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${esc(c.iconePath)}"></path></svg>` : ''}</span>`}
         <div class="mc-h-t"><span class="mc-eyebrow">${esc(c.type || 'Campagne')}${c.levier ? ' · ' + esc(c.levier) : ''}</span><h2>${esc(c.nom)}</h2>
-          <p>du ${dLong(c.du)} au ${dLong(c.au)} · ${portee}</p>${temps(c)}</div>
-        <span class="mm-statut">en cours</span></header>
+          <p>du ${dLong(c.du)} au ${dLong(c.au)} · ${portee}</p>${temps(c)}</div></header>
       ${c.note ? `<p class="mc-mu mc-note">${esc(c.note)}</p>` : ''}
       <div class="mc-corps"><div>${gauche}</div><div>${droite || '<section class="mc-bloc"><h3>Le calendrier</h3><p class="mc-mu">Pas d’étape posée par le réseau.</p></section>'}</div></div>
     </article>`;
+  }
+
+  /* --- le résumé (26/11/2026, DESIGN_SYSTEM.md §7.13, la forme de Mon équipe et de Commandes) ---------------------
+   * Ligne 1 : le chiffre clé (les campagnes en cours, 700 : le seul gras), ce qu'il compte, jusqu'à quand. Ligne 2 :
+   * « À corriger » — rien de calculé en plus : l'état des objectifs produits (« en retard », « sans vente ») et les étapes
+   * du calendrier passées sans « fait », comme chaque campagne les montre déjà. Un bouton mène au bloc, mis en évidence. */
+  function aCorriger(L) {
+    const A = [], a = auj();
+    L.forEach(c => {
+      const o = (st.obj || []).find(x => String(x.id) === String(c.id));
+      if (o && o.etat === 'retard') { A.push({ sig: 'stop', txt: `${esc(c.nom)} · objectif produits en retard`, cible: `mc-${c.id}-obj` }); }
+      else if (o && o.etat === 'sans') { A.push({ sig: 'prize', txt: `${esc(c.nom)} · produits mis en avant sans vente`, cible: `mc-${c.id}-obj` }); }
+      (c.etapes || []).filter(e => !e.fait && /^\d{4}-\d{2}-\d{2}$/.test(isoDe(e.quand) || '') && isoDe(e.quand) <= a)
+        .forEach(e => A.push({ sig: 'prize', txt: `${esc(c.nom)} · ${esc(String(e.quand || '').slice(0, 5))} ${esc(e.libelle)} : pas encore faite`, cible: `mc-${c.id}-cal` }));
+    });
+    return A;
+  }
+  function resume(L) {
+    if (!L.length) { return ''; }
+    const A = st.obj == null && !st.objErr ? null : aCorriger(L);
+    const fins = L.slice().sort((x, y) => String(x.au).localeCompare(String(y.au))).map(c => `${esc(c.nom)} jusqu’au ${isoCourt(c.au)}`).join(' · ');
+    const l2 = A == null ? '<div class="db-sk" style="height:30px"></div>'
+      : A.length ? `<span class="mmr-t">À corriger</span><span class="mmr-l">${A.map(x => `<button type="button" class="btn btn--sm mmr-b" data-mmac="${esc(x.cible)}"><i class="mmr-ic ${x.sig}" aria-hidden="true"></i>${x.txt}</button>`).join('')}</span>`
+        : '<p class="mmr-ok">Rien à corriger : les campagnes en cours suivent leur calendrier et leurs objectifs produits.</p>';
+    return `<section class="mmr" aria-label="Résumé de mes campagnes"><div class="mmr-l1"><span class="mmr-v">${L.length}</span>
+        <span class="mmr-q">campagne${L.length > 1 ? 's' : ''} en cours pour le magasin<small>${fins}</small></span></div>
+      <div class="mmr-l2"${A && A.length ? ' role="region" aria-label="À corriger"' : ''}>${l2}</div></section>`;
+  }
+  /** Le geste d'un point : le bloc à l'écran, encadré un instant (défilement doux sauf « réduire les animations »). */
+  function montrer(id) {
+    const el = st.el && st.el.querySelector('#' + id);
+    if (!el) { return; }
+    const doux = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.style.scrollMarginTop = '16px';
+    el.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+    el.classList.remove('mmr-vu'); void el.offsetWidth; el.classList.add('mmr-vu');
+    clearTimeout(el._mmT); el._mmT = setTimeout(() => el.classList.remove('mmr-vu'), 1800);
   }
 
   function html() {
     if (st.err && !st.d) { return `<div class="db-err">Les campagnes ne se lisent pas : ${esc(st.err)} <button type="button" class="db-btn" data-mmrelire="1">Relire</button></div>`; }
     if (!st.d) { return '<div class="db-sk" style="height:120px;margin-bottom:12px"></div><div class="db-sk" style="height:360px"></div>'; }
     const L = st.d.campagnes || [];
-    return `${calAnnee()}<h3 class="mc-titre">Les campagnes en cours</h3>${L.length ? L.map(campagne).join('') : '<div class="mc-vide">Aucune campagne en cours pour le magasin aujourd’hui.</div>'}
+    return `${resume(L)}${calAnnee()}<h3 class="mc-titre">Les campagnes en cours</h3>${L.length ? L.map(campagne).join('') : '<div class="mc-vide">Aucune campagne en cours pour le magasin aujourd’hui.</div>'}
       ${st.objErr ? `<p class="mc-mu">Les objectifs produits ne se lisent pas : ${esc(st.objErr)}.</p>` : ''}
-      <p class="mm-pied">${L.length ? L.length + ' campagne' + (L.length > 1 ? 's' : '') + ' en cours · ' : ''}lu à ${esc(String(st.d.genere || '').slice(11, 16) || '—')} · <button type="button" class="mm-lienb" data-mmrelire="1">relire</button></p>`;
+      <p class="mm-pied">lu à ${esc(String(st.d.genere || '').slice(11, 16) || '—')} · <button type="button" class="mm-lienb" data-mmrelire="1">relire</button></p>`;
   }
 
   function rendre() {
     if (!st.el) { return; }
     st.el.innerHTML = html();
     st.el.querySelectorAll('[data-mmrelire]').forEach(b => b.addEventListener('click', () => charger(true)));
+    st.el.querySelectorAll('[data-mmac]').forEach(b => b.addEventListener('click', () => montrer(b.dataset.mmac)));
     st.el.querySelectorAll('[data-calan]').forEach(b => b.addEventListener('click', () => { st.an += +b.dataset.calan; st.saisonOuverte = null; chargerAnnee(false); rendre(); }));
     st.el.querySelectorAll('[data-calsaison]').forEach(b => b.addEventListener('click', () => {
       const id = +b.dataset.calsaison; st.saisonOuverte = st.saisonOuverte === id ? null : id;

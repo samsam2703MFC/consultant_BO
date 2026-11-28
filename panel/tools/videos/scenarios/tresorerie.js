@@ -4,9 +4,10 @@
  * prépare pendant son intercalaire (la diapositive couvre la page). Données fictives : mocks/09_tresorerie.js. */
 const API = '../api/cockpit';
 const T = '#db-tresorerie ';
-// Les cartes du haut de l'onglet Plan (`f.montrer` prend la première trouvée : la rangée du haut).
+// L'onglet Plan (26/11/2026, §7.13) : en tête le résumé (le cash prévu, le coussin, la décision, les repères, puis
+// « À corriger ») ; dessous la routine du dimanche et le pilotage côte à côte ; le hors plan sous le plan.
 const ROUTINE = T + '.tr-g2 > .tr-carte:nth-child(1)';
-const DECISION = T + '.tr-g2 > .tr-carte:nth-child(2)';
+const DECISION = T + '.trs-lev';
 const GRAPHE = T + '.tr-carte:has(.tr-graph)';
 const attendre = ms => new Promise(r => setTimeout(r, ms));
 
@@ -46,11 +47,27 @@ async function recharger(p, vue) {
   await p.evaluate(() => window.__film.prets());
 }
 
+/** La tête des grilles est collée en haut de leur fenêtre (.tr-tete dans .tr-defil, 26/11/2026, §7.13) : une case ou une
+ * ligne que f.defilerVers juge visible peut être dessous, et le clic tomberait sur la tête. Fait défiler la fenêtre de la
+ * grille jusqu'à mettre l'élément juste sous la tête, s'il est dessous. */
+async function sousLaTete(f, sel) {
+  const loc = typeof sel === 'string' ? f.p.locator(sel).first() : sel;
+  await loc.evaluate(async el => {
+    const c = el.closest('.tr-defil'), t = c && c.querySelector('.tr-tete, .tr-pay-hd, thead');
+    if (!t || t.contains(el)) { return; }
+    const bas = t.getBoundingClientRect().bottom, haut = el.getBoundingClientRect().top;
+    if (haut >= bas + 6) { return; }
+    const de = c.scrollTop, a = Math.max(0, de + haut - bas - 18), n = 24;
+    for (let i = 1; i <= n; i++) { const x = i / n, e = x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; c.scrollTop = de + (a - de) * e; await new Promise(r => requestAnimationFrame(r)); }
+  });
+}
+
 /** Un cadre autour de lignes d'un tableau de la Trésorerie, coupé au bord de la carte (les lignes sont plus larges
  * qu'elle, qui défile de côté) : l'écran défile d'abord jusqu'à la première. */
 async function lignes(f, sel, etiquette) {
   await f.cacher(150);
   await f.defilerVers(f.p.locator(sel).first());
+  await sousLaTete(f, sel);
   // Tout le groupe au-dessus du sous-titre : sinon, la page remonte jusqu'à mettre la première ligne en haut.
   const dy = await f.p.evaluate(sel => {
     const R = [...document.querySelectorAll(sel)].map(e => e.getBoundingClientRect());
@@ -70,10 +87,11 @@ async function lignes(f, sel, etiquette) {
   await f.p.evaluate(([r, e]) => window.__film.cadre(r, e), [r, etiquette]);
 }
 /** Le sélecteur des lignes du plan dont le libellé est l'un de ceux donnés (leur rang dans la grille : le dessin
- * suivant garde l'ordre des lignes). */
+ * suivant garde l'ordre des lignes). Le rang compte tous les enfants de la grille : la tête collée (.tr-tete, 26/11/2026)
+ * en est le premier. */
 async function ligne(f, ...libelles) {
   const rangs = await f.p.evaluate(L => [...document.querySelectorAll('#db-tresorerie .tr-carte-t .tr-grille > .tr-r')]
-    .map((r, i) => { const s = r.querySelector('.tr-lab-t > span, .tr-lab-s > span'); return s && L.includes(s.textContent.trim()) ? i + 1 : 0; }).filter(Boolean), libelles);
+    .map(r => { const s = r.querySelector('.tr-lab-t > span, .tr-lab-s > span'); return s && L.includes(s.textContent.trim()) ? [...r.parentElement.children].indexOf(r) + 1 : 0; }).filter(Boolean), libelles);
   if (rangs.length !== libelles.length) { throw new Error('lignes introuvables : ' + libelles.join(', ')); }
   return rangs.map(k => T + `.tr-carte-t .tr-grille > .tr-r:nth-child(${k})`).join(', ');
 }
@@ -97,6 +115,12 @@ async function defilerCote(f, x) {
 
 /** Un champ chiffré du module (data-trn) : le clic le sélectionne, on tape, Entrée valide ; l'enregistrement part 0,7 s plus tard. */
 async function saisir(f, cle, valeur, { apres = 1300 } = {}) {
+  const loc = f.p.locator(T + `[data-trn="${cle}"]`).first();
+  await f.defilerVers(loc);   // dans la fenêtre de la grille (.tr-defil, qui défile seule depuis le 26/11/2026)…
+  // … puis la page, si la grille elle-même est hors de l'écran : son haut près du haut de l'écran.
+  const dy = await loc.evaluate(el => { const r = el.getBoundingClientRect(); if (r.top >= 60 && r.bottom <= innerHeight - 140) { return 0; } const c = el.closest('.tr-defil'); return Math.round((c ? c.getBoundingClientRect().top : r.top) - 24); });
+  if (dy) { await f.defiler(dy); await f.defilerVers(loc); }
+  await sousLaTete(f, loc);
   await f.cliquer(T + `[data-trn="${cle}"]`, { apres: 250 });
   await f.taper(String(valeur), 110);
   await f.p.keyboard.press('Enter');
@@ -143,4 +167,4 @@ async function fonctionPreparee(f, opts, preparer) {
   await carte;
 }
 
-module.exports = { fiabiliser, API, T, ROUTINE, DECISION, GRAPHE, poster, lire, modifierPlan, recharger, lignes, ligne, placeSousLaPage, defilerCote, saisir, ecrire, choisir, dater, onglet, fonction, fonctionPreparee, attendre };
+module.exports = { fiabiliser, API, T, ROUTINE, DECISION, GRAPHE, poster, lire, modifierPlan, recharger, lignes, ligne, sousLaTete, placeSousLaPage, defilerCote, saisir, ecrire, choisir, dater, onglet, fonction, fonctionPreparee, attendre };

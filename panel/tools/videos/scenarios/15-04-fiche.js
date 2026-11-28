@@ -28,7 +28,7 @@ module.exports = async function () {
   await f.dire('Un produit s’ouvre d’un clic sur sa ligne du <b>top 10</b>.', 3000);
   await f.taire(150);
   await f.cliquer('[data-bmtop="122"]', { apres: 1300 });
-  await f.montrer('.db-tuiles', 'Sandwich jambon-beurre');
+  await f.montrer('#dash .ac-cle', 'Sandwich jambon-beurre');
   await f.dire('Notre prix face à la médiane des supermarchés, des artisans et des chaînes ; et combien de relevés sont moins chers que nous.', 6400);
   await f.montrer(f.p.locator('.db-card', { hasText: 'Où nous situons-nous' }).first(), 'L’échelle');
   await f.dire('L’échelle : chaque relevé est un point, rangé par type de concurrent ; le trait Ruby, c’est nous.', 4800);

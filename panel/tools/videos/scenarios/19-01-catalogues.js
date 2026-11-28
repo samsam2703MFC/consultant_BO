@@ -1,5 +1,5 @@
 /* Mon catalogue › l'onglet « 1 · Catalogue » (?vue=catalogue), et ses fonctions en chapitres (24/11/2026) :
- *   onglet    catalogue-catalogues   la carte « Nouveau · de la marque », « Le feuilleter », mes catalogues et la suite
+ *   onglet    catalogue-catalogues   le résumé et « À corriger », la carte « Nouveau · de la marque », « Le feuilleter », mes catalogues et la suite
  *   fonction  catalogue-prendre      « Le prendre tel quel › » : à la Validation, les étapes 2 et 3 sous cadenas
  *   fonction  catalogue-adapter      « L'adapter à ma boutique » : une copie à moi, reprise à l'étape 2
  *   fonction  catalogue-supprimer    « Supprimer » sur sa ligne, confirmer : il disparaît aussi du Marketing
@@ -30,6 +30,8 @@ module.exports = async function () {
   });
   await f.montrer('.cm-et5', 'Cinq étapes');
   await f.dire('Mon catalogue est un <b>assistant en cinq étapes</b>. La première, « Catalogue », s’ouvre ici.', 4200);
+  await f.montrer('.cm-res', 'En bref');
+  await f.dire('En tête, le <b>résumé</b> : mes catalogues, d’où ils viennent, combien sont imprimés ; puis ce qui est <b>à corriger</b>, un bouton par catalogue.', 5600);
   await f.montrer('.cm-recu', 'Nouveau · de la marque');
   await f.dire('La marque a préparé un catalogue pour ma boutique : <b>déjà à mes prix</b>, avec mon adresse, mes horaires et mon QR.', 5000);
   await f.cacher(150); await f.taire(150);

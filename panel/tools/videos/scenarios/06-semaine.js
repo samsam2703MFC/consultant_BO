@@ -19,7 +19,7 @@ module.exports = async function () {
   await f.cliquer('#dash .db-frise .fr-c[data-fdate="2026-11-15"]', { apres: 1800 });
   await f.montrer('#dash .db-frise', 'Une semaine close');
   await f.dire('Un clic ouvre une semaine : ici la <b>S46</b>, du 9 au 15 novembre, close.', 4000);
-  await f.montrer('#dash .qb-jauge', 'Le chiffre');
+  await f.montrer('#dash .chr-l1', 'Le chiffre');
   await f.dire('Une semaine close se lit face à son <b>objectif</b> : 101 %, 206 € au-dessus.', 4200);
   await f.montrer('#dash [data-auj]', 'Revenir');
   await f.dire('« <b>Cette semaine</b> » ramène à la semaine en cours.', 3000);
@@ -28,14 +28,15 @@ module.exports = async function () {
 
   await f.chapitre({ n: 2, total: 4, titre: 'Le chiffre et les jours', texte: 'Où en est la semaine, et comment chaque jour s’est passé face à son objectif.' });
   await f.etape('2 · Le chiffre et les jours');
-  await f.montrer('#dash .qb-jauge', 'Le chiffre d’affaires');
+  await f.montrer('#dash .chr-l1', 'Le chiffre d’affaires');
   await f.dire('La semaine en cours se lit face à l’<b>attendu à ce jour</b> : le trait sur la jauge.', 4200);
-  await f.dire('Dessous : au <b>rythme actuel</b>, la fin de semaine, et ce qu’il <b>reste à faire</b> dans les jours qui restent.', 5000);
-  await f.montrer('#dash .qb-tuiles', 'Quatre tuiles');
-  await f.dire('Les <b>clients</b> par jour ouvert, le <b>panier moyen</b> hors clients pro face au réseau, la <b>marge brute</b> et le <b>résultat</b> hors TVA.', 5800);
+  await f.montrer('#dash .chr-lev', 'Reste à faire');
+  await f.dire('À droite : ce qu’il <b>reste à faire</b> dans les jours qui restent, et au <b>rythme actuel</b>, la fin de semaine.', 5000);
+  await f.montrer('#dash .chr-l2', 'À corriger');
+  await f.dire('Dessous, « <b>À corriger</b> » : les coûts au-dessus de leur seuil, les heures sous 20 % de marge nette. Un clic mène à la ligne.', 5800);
   await f.montrer('#dash .qb-jours-c', 'Les jours');
   await f.dire('<b>Les jours</b> : la barre du chiffre, le trait noir de l’objectif du jour, la couleur de l’atteinte.', 4800);
-  await f.dire('Vert foncé à 110 % et plus, orange sous 90 %. Aujourd’hui est <b>hachuré</b> : la journée n’est pas finie.', 5000);
+  await f.dire('Vert à 100 % et plus, or de 90 à 100 %, rouge en dessous. Aujourd’hui est <b>hachuré</b> : la journée n’est pas finie.', 5400);
   await f.dire('Les jours à venir ne montrent que leur objectif.', 3000);
   await f.cacher();
 
@@ -55,7 +56,7 @@ module.exports = async function () {
   await f.etape('4 · La tendance');
   await f.montrer('#dash .qb-douze', 'Douze semaines');
   await f.dire('<b>Les douze dernières semaines</b> : les clients de chaque semaine, et en pointillé la même semaine un an plus tôt.', 5400);
-  await f.dire('Au-dessus de l’an passé en bleu, en dessous en orange ; à droite, l’écart sur douze semaines.', 4800);
+  await f.dire('Au-dessus de l’an passé en vert, en dessous en or ; à droite, l’écart sur douze semaines.', 4800);
   await f.cliquer('#dash .qb-douze button:has-text("Panier moyen")', { apres: 1400 });
   await f.dire('Le même graphique pour le <b>panier moyen</b>, ou les <b>articles par client</b>.', 3800);
   await f.taire(200);

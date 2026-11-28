@@ -38,6 +38,11 @@ const VRF_EFFET_RECETTES = 10;
 const VRF_ECART_ALIGNER = 0.001;
 /** Les recettes d'une tranche de « pertes sur les lignes ». */
 const VRF_LOT_PERTES = 15;
+// Les prix de magasin tenus par un fournisseur intégré (la centrale) : le panel refuse de les écrire (403
+// SUPPLIER_MANAGED_PRICE, règle integrated-supplier-manual-write-block, mesuré le 14/11 et le 27/11/2026). Appris au
+// premier refus, gardés ici : [sid => [mid => date]]. Le même food cost se fait alors en alignant les autres magasins
+// sur ce tarif.
+const VRF_VERROUS = 'vrfVerrous';
 
 /**
  * Les pertes courantes en cuisine, par famille de matière fraîche (proposition, à valider) : [motif, perte %, raison].
@@ -113,7 +118,14 @@ function vrfProposition(array $l, array $f): array
     $mid = (string) (int) $l['mid'];
     $fac = (float) ($l['facteur'] ?? 1) ?: 1.0;
     $r = vrfMoyenneReseau((array) ($l['prix'] ?? []));
-    if ($r['prix'] !== null) { $prix = $r['prix']; $origine = 'reseau'; $source = 'moyenne de ' . $r['n'] . ' magasin(s)' . ($r['min'] !== null && abs($r['max'] - $r['min']) > 1e-9 ? ' (de ' . vfEur($r['min'] * $fac, 2) . ' à ' . vfEur($r['max'] * $fac, 2) . ')' : ''); }
+    $fv = vrfMoyenneReseau(array_filter((array) ($l['prix'] ?? []), static fn ($p) => is_array($p) && !empty($p['verrou'])));
+    if ($fv['prix'] !== null) {
+        // Un magasin paie le tarif d'un fournisseur intégré, que seul ce fournisseur change : la référence le reprend, et les
+        // autres magasins s'y alignent (le même food cost partout).
+        $prix = $fv['prix']; $origine = 'fournisseur'; $r['n'] = $fv['n'];
+        $source = 'tarif du fournisseur intégré (' . $fv['n'] . ' magasin(s)), que seul le fournisseur change : les autres magasins s’y alignent';
+    }
+    elseif ($r['prix'] !== null) { $prix = $r['prix']; $origine = 'reseau'; $source = 'moyenne de ' . $r['n'] . ' magasin(s)' . ($r['min'] !== null && abs($r['max'] - $r['min']) > 1e-9 ? ' (de ' . vfEur($r['min'] * $fac, 2) . ' à ' . vfEur($r['max'] * $fac, 2) . ')' : ''); }
     elseif (isset($f['prix'][$mid]['prix']) && is_numeric($f['prix'][$mid]['prix'])) { $prix = (float) $f['prix'][$mid]['prix'] / $fac; $origine = 'marche'; $source = (string) ($f['prix'][$mid]['source'] ?? 'prix de marché'); }
     else { $prix = null; $origine = null; $source = 'aucun magasin ne la chiffre : prix à saisir'; }
     if (isset($f['pertes'][$mid]['perte']) && is_numeric($f['pertes'][$mid]['perte'])) { $perte = (int) $f['pertes'][$mid]['perte']; $pOrig = 'fichier'; $raison = (string) ($f['pertes'][$mid]['raison'] ?? ''); }
@@ -127,16 +139,54 @@ function vrfProposition(array $l, array $f): array
         'changePrix' => $changePrix, 'changePerte' => $changePerte, 'change' => $changePrix || $changePerte];
 }
 
-/** Les magasins dont le prix propre (local ou fournisseur) s'écarte d'un prix (par unité de base) : [sid, …]. */
+/**
+ * Les magasins dont le prix propre (local ou fournisseur) s'écarte d'un prix (par unité de base) : [sid, …]. Un prix tenu
+ * par un fournisseur intégré (`verrou`) n'y est pas : le panel ne laisse pas l'écrire.
+ */
 function vrfAAligner(array $prix, ?float $ref): array
 {
     if ($ref === null || $ref <= 0) { return []; }
     $out = [];
     foreach ($prix as $sid => $p) {
         if (!is_array($p) || !is_numeric($p['prix'] ?? null) || in_array(strtoupper((string) ($p['src'] ?? '')), ['REFERENCE', 'MISSING'], true)) { continue; }
+        if (!empty($p['verrou'])) { continue; }
         if (abs((float) $p['prix'] - $ref) > VRF_ECART_ALIGNER * $ref) { $out[] = (int) $sid; }
     }
     return $out;
+}
+
+/** Les prix de magasin tenus par un fournisseur intégré, appris aux refus du panel : [sid => [mid => date]]. */
+function vrfVerrous(): array
+{
+    try { $v = setting(VRF_VERROUS, []); } catch (Throwable $e) { $v = []; }
+    return is_array($v) ? $v : [];
+}
+
+function vrfEstVerrou(array $v, int $sid, int $mid): bool
+{
+    return isset($v[(string) $sid][(string) $mid]) || isset($v[$sid][$mid]);
+}
+
+function vrfVerrouiller(int $sid, int $mid): void
+{
+    $v = vrfVerrous();
+    $v[(string) $sid][(string) $mid] = date('Y-m-d');
+    try { vfGarderBrut(VRF_VERROUS, $v); } catch (Throwable $e) { /* sans base : appris à nouveau au prochain refus */ }
+}
+
+/** Le refus d'un prix tenu par un fournisseur intégré (403 SUPPLIER_MANAGED_PRICE). */
+function vrfRefusFournisseur(array $r): bool
+{
+    return ($r['resultat'] ?? '') === 'refuse' && str_contains((string) ($r['message'] ?? '') . ' ' . (string) ($r['reponse'] ?? ''), 'SUPPLIER_MANAGED_PRICE');
+}
+
+/** La ligne du registre d'un prix laissé au fournisseur : pas une erreur, une information. */
+function vrfLigneFournisseur(array $r, string $magasin): array
+{
+    $l = vrcLigneRegistre($r);
+    $l['resultat'] = 'fournisseur'; $l['resultatNom'] = 'tarif du fournisseur, inchangé';
+    $l['message'] = 'À ' . $magasin . ', ce prix vient du tarif d’un fournisseur intégré (la centrale) : le panel ne laisse que ce fournisseur le changer. Les autres magasins s’alignent sur lui.';
+    return $l;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -206,13 +256,15 @@ function ep_verification_references(): array
     $mags = vfMagasins();
     $M = mfMatieresApi(array_keys($mags), !empty($_GET['rafraichir']));
     $f = vrfFichier();
-    $lignes = []; $cpt = ['matieres' => 0, 'aChanger' => 0, 'marche' => 0, 'sansPrix' => 0, 'pertes' => 0, 'aAligner' => 0];
+    $V = vrfVerrous();
+    $lignes = []; $cpt = ['matieres' => 0, 'aChanger' => 0, 'marche' => 0, 'sansPrix' => 0, 'pertes' => 0, 'aAligner' => 0, 'fournisseur' => 0];
     foreach ($mat as $mid => $m) {
         $ident = []; $prix = []; $mags_ = [];
         foreach ($mags as $sid => $nomM) {
             $x = $M[$sid][(string) $mid] ?? null;
-            if (is_array($x)) { $ident = $ident ?: $x; $prix[$sid] = ['prix' => $x['prix'] ?? null, 'src' => $x['src'] ?? '']; }
-            $mags_[] = ['sid' => (int) $sid, 'prix' => is_array($x) ? ($x['prix'] ?? null) : null, 'src' => is_array($x) ? (string) ($x['src'] ?? '') : '', 'lu' => is_array($x)];
+            $vr = vrfEstVerrou($V, (int) $sid, (int) $mid);
+            if (is_array($x)) { $ident = $ident ?: $x; $prix[$sid] = ['prix' => $x['prix'] ?? null, 'src' => $x['src'] ?? '', 'verrou' => $vr]; }
+            $mags_[] = ['sid' => (int) $sid, 'prix' => is_array($x) ? ($x['prix'] ?? null) : null, 'src' => is_array($x) ? (string) ($x['src'] ?? '') : '', 'lu' => is_array($x), 'verrou' => $vr];
         }
         $u = (string) (($ident['unite'] ?? '') ?: $m['u']);
         $U = mfUnite($u);
@@ -222,6 +274,7 @@ function ep_verification_references(): array
         $cpt['matieres']++;
         if ($p['change']) { $cpt['aChanger']++; }
         if ($p['origine'] === 'marche') { $cpt['marche']++; }
+        if ($p['origine'] === 'fournisseur') { $cpt['fournisseur']++; }
         if ($p['prix'] === null) { $cpt['sansPrix']++; }
         if ($p['changePerte']) { $cpt['pertes']++; }
         $aligner = vrfAAligner($prix, $p['prix']);
@@ -277,6 +330,7 @@ function wr_verification_references(): array
     $al = vmxAllergenesRef();
     $sidsTous = array_map('intval', array_keys(vfMagasins()));
     $M = null;   // les prix des magasins, lus une fois (frais) s'il faut aligner
+    $V = vrfVerrous();
     $plans = []; $erreurs = [];
     foreach (array_slice(array_values(array_filter((array) ($b['lignes'] ?? []), 'is_array')), 0, 400) as $x) {
         $mid = (int) ($x['mid'] ?? 0);
@@ -302,7 +356,7 @@ function wr_verification_references(): array
         if (!empty($x['aligner']) && $refBase !== null && $refBase > 0) {
             $M ??= mfMatieresApi($sidsTous, true);
             $px = [];
-            foreach ($sidsTous as $s) { $y = $M[$s][(string) $mid] ?? null; if (is_array($y)) { $px[$s] = ['prix' => $y['prix'] ?? null, 'src' => $y['src'] ?? '']; } }
+            $px = vrfPrixMagasins($M, $sidsTous, $mid, $V);
             foreach (vrfAAligner($px, $refBase) as $s) { $aligner[$s] = $px[$s]['prix']; }
         }
         if ($m['corps'] === [] && $aligner === []) { continue; }
@@ -344,13 +398,33 @@ function wr_verification_references(): array
         }
         // Le même prix dans tous les magasins : chaque prix propre qui s'écarte reprend la référence (au registre, « Annuler »).
         if ($okMat) {
-            foreach ($p['aligner'] as $s => $avantPx) {
-                $faites[] = vrcLigneRegistre(vrcEcrirePrix(['geste' => 'prix', 'cle' => 'aligner:' . $p['mid'], 'pid' => null, 'nom' => $p['nom'], 'shop' => $s, 'coutAvant' => null, 'coutApres' => null],
-                    $s, $p['mid'], (float) $p['refBase'], $p['nom'], (float) $avantPx));
+            $fixes = vrfAligner($p, $p['aligner'], (float) $p['refBase'], $faites);
+            // Un magasin tient le tarif d'un fournisseur intégré : la référence le reprend, et les autres magasins s'y alignent.
+            if ($fixes !== []) {
+                $ref2 = array_sum($fixes) / count($fixes);
+                if (abs($ref2 - (float) $p['refBase']) > VRF_ECART_ALIGNER * (float) $p['refBase']) {
+                    $o = vrcObjet('matiere', $p['mid']);
+                    $m2 = $o !== null ? vmxChangements($o, ['reference_unit_price_net' => $ref2], $al) : ['corps' => [], 'inverse' => null, 'lisible' => []];
+                    $ok2 = true;
+                    if ($m2['corps'] !== []) {
+                        $r = vrcEcrireObjet(['geste' => 'matiere', 'cle' => 'ref:' . $p['mid'], 'pid' => null, 'nom' => $p['nom'], 'shop' => null, 'objet' => 'matiere', 'id' => $p['mid'], 'objetId' => $p['mid'],
+                            'corps' => $m2['corps'], 'inverse' => $m2['inverse'], 'resume' => $p['nom'] . ' : prix de référence ' . vfEur($ref2 * $p['facteur'], 2) . ' / ' . $p['par'] . ', le tarif du fournisseur intégré']);
+                        $faites[] = vrcLigneRegistre($r);
+                        $ok2 = $r['resultat'] === 'ok';
+                    }
+                    if ($ok2) {
+                        foreach ($sidsTous as $s) { vrcOublier('matieresApi:' . $s); }
+                        $px2 = vrfPrixMagasins(mfMatieresApi($sidsTous, true), $sidsTous, $p['mid'], vrfVerrous());
+                        $al2 = [];
+                        foreach (vrfAAligner($px2, $ref2) as $s) { $al2[$s] = $px2[$s]['prix']; }
+                        vrfAligner($p, $al2, $ref2, $faites);
+                    }
+                }
             }
         }
     }
     $okN = count(array_filter($faites, static fn ($f) => $f['resultat'] === 'ok'));
+    $nInfo = count(array_filter($faites, static fn ($f) => $f['resultat'] === 'fournisseur'));
     $effet = [];
     if ($okN > 0) {
         vrcOublier('vmpTable'); vrcOublier('vfAnalyse');
@@ -374,7 +448,39 @@ function wr_verification_references(): array
             'message' => $non === [] ? 'La perte posée sur les matières entre dans le coût de la recette.'
                 : 'La perte de ' . count($non) . ' matière(s) n’entre pas dans le coût de la recette : le panel lit la perte de la ligne. « Poser les pertes sur les lignes » la met dans la recette.'];
     }
-    return ['ok' => $okN === count($faites), 'ecritures' => $faites, 'effet' => $effet, 'pertes' => $pertes, 'erreurs' => $erreurs];
+    return ['ok' => $okN + $nInfo === count($faites), 'ecritures' => $faites, 'effet' => $effet, 'pertes' => $pertes, 'erreurs' => $erreurs];
+}
+
+/** Les prix des magasins pour une matière : [sid => [prix, src, verrou]]. */
+function vrfPrixMagasins(array $M, array $sids, int $mid, array $V): array
+{
+    $px = [];
+    foreach ($sids as $s) {
+        $y = $M[$s][(string) $mid] ?? null;
+        if (is_array($y)) { $px[$s] = ['prix' => $y['prix'] ?? null, 'src' => $y['src'] ?? '', 'verrou' => vrfEstVerrou($V, (int) $s, $mid)]; }
+    }
+    return $px;
+}
+
+/**
+ * Aligne des magasins sur un prix (unité de base) ; les lignes vont dans $faites. Un prix que le panel laisse au
+ * fournisseur intégré n'est pas une erreur : il est appris (vrfVerrous) et rendu, [sid => son prix].
+ */
+function vrfAligner(array $p, array $aligner, float $ref, array &$faites): array
+{
+    $fixes = [];
+    foreach ($aligner as $s => $avantPx) {
+        $r = vrcEcrirePrix(['geste' => 'prix', 'cle' => 'aligner:' . $p['mid'], 'pid' => null, 'nom' => $p['nom'], 'shop' => $s, 'coutAvant' => null, 'coutApres' => null],
+            (int) $s, (int) $p['mid'], $ref, $p['nom'], (float) $avantPx);
+        if (vrfRefusFournisseur($r)) {
+            vrfVerrouiller((int) $s, (int) $p['mid']);
+            $fixes[(int) $s] = (float) $avantPx;
+            $faites[] = vrfLigneFournisseur($r, vfMagasins()[$s] ?? ('magasin ' . $s));
+            continue;
+        }
+        $faites[] = vrcLigneRegistre($r);
+    }
+    return $fixes;
 }
 
 /* ---------------------------------------------------------------------------------------------

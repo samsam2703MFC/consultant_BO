@@ -13,15 +13,15 @@ module.exports = async function () {
 
   await f.chapitre({ n: 1, total: 4, titre: 'Ce qu’est un temps mort', texte: '10 minutes ou plus sans un seul ticket, entre le premier et le dernier ticket de la journée.' });
   await f.etape('1 · Le temps mort');
-  await f.montrer('.db-sec', 'La définition');
+  await f.montrer('.tm-sous', 'La définition');
   await f.dire('Un <b>temps mort</b> : 10 minutes ou plus sans un seul ticket, entre le premier et le dernier ticket du jour.', 5200);
-  await f.montrer('.tm-tuiles .db-tui:nth-child(1)', 'Temps morts');
+  await f.montrer('.tm-res .tm-v', 'Sans client');
+  await f.dire('En tête, le temps <b>sans client</b> : 49 minutes sur l’ouverture, du premier au dernier ticket.', 4400);
+  await f.montrer('.tm-res .tm-r1 > .tm-q:nth-child(3)', 'Temps morts');
   await f.dire('Aujourd’hui, en cours : <b>2 temps morts</b>. Dessous, l’habitude : les 4 jeudis d’avant.', 4600);
-  await f.montrer('.tm-tuiles .db-tui:nth-child(2)', 'Sans client');
-  await f.dire('Le temps <b>sans client</b> : 49 minutes sur l’ouverture, du premier au dernier ticket.', 4400);
-  await f.montrer('.tm-tuiles .db-tui:nth-child(4)', 'Le plus long trou');
+  await f.montrer('.tm-res .tm-r1 > .tm-q:nth-child(4)', 'Le plus long trou');
   await f.dire('Le <b>plus long trou</b> : 39 minutes, de 14 h 19 à 14 h 58.', 3800);
-  await f.montrer('.tm-tuiles .db-tui:nth-child(5)', 'Tickets');
+  await f.montrer('.tm-res', 'Le résumé');
   await f.dire('Tous les tickets comptent : ceux du <b>comptoir</b> et ceux des <b>pros</b>.', 3800);
   await f.taire(150); await f.cacher();
 
@@ -47,7 +47,7 @@ module.exports = async function () {
   await f.dire('Seules les <b>journées closes</b> comptent dans les moyennes.', 3400);
   await f.taire(150); await f.cacher(200);
   await f.cliquer('[data-tmjour="2026-11-17"]', { apres: 1500 });
-  await f.montrer('.tm-tuiles', 'Mardi');
+  await f.montrer('.tm-res', 'Mardi');
   await f.dire('Un clic sur un jour l’ouvre : mardi, <b>12 temps morts</b>, 2 de plus que l’habitude des 4 mardis d’avant.', 5200);
   await f.dire('Rouge : plus de temps mort qu’à l’habitude. Vert : moins.', 3400);
   await f.montrer('.tm-frise', 'Mardi, minute par minute');
@@ -60,11 +60,11 @@ module.exports = async function () {
   await f.dire('Le <b>seuil</b> se choisit en haut : 5, 10 ou 15 minutes. 10, par défaut.', 4000);
   await f.cacher(150);
   await f.cliquer('[data-tmseuil="15"]', { apres: 1400 });
-  await f.montrer('.tm-tuiles .db-tui:nth-child(1)', 'Dès 15 min');
+  await f.montrer('.tm-res .tm-r1 > .tm-q:nth-child(3)', 'Dès 15 min');
   await f.dire('Dès 15 minutes, ne restent que les longs creux : <b>2</b> ce mardi.', 3800);
   await f.taire(150); await f.cacher(150);
   await f.cliquer('[data-tmseuil="5"]', { apres: 1400 });
-  await f.montrer('.tm-tuiles .db-tui:nth-child(1)', 'Dès 5 min');
+  await f.montrer('.tm-res .tm-r1 > .tm-q:nth-child(3)', 'Dès 5 min');
   await f.dire('Dès 5 minutes, chaque petit creux compte : <b>58</b>.', 3600);
   await f.taire(150); await f.cacher(150);
   await f.cliquer('[data-tmseuil="10"]', { apres: 1400 });

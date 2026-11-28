@@ -88,6 +88,7 @@ require __DIR__ . '/../../../consultant/src/rapports.php';
 require __DIR__ . '/../../../panel/src/planning_sync.php';
 require __DIR__ . '/../../../shared/src/panel_ventes.php';
 require __DIR__ . '/../../../consultant/src/analyse_produits.php';
+require __DIR__ . '/../../../consultant/src/ventes_groupes.php';   // Résultat › Mois : le CA par catégorie principale, mois par mois (27/11/2026)
 require __DIR__ . '/../../../panel/src/recette_produit.php';
 require __DIR__ . '/../../../panel/src/matiere_fiche.php';
 require __DIR__ . '/../../../consultant/src/pnl_mois.php';
@@ -183,6 +184,7 @@ require __DIR__ . '/../../../panel/src/boite_mail.php';         // Boîte mail d
 require __DIR__ . '/../../../panel/src/dashboard_analyse.php';  // Vendre › Analyse : le magasin face au réseau sans nom, mois par mois, jour par jour (15/11/2026)
 require __DIR__ . '/../../../panel/src/equipe.php';             // Mon équipe : la carte des responsabilités, le planning et son budget d'heures (23/11/2026)
 require __DIR__ . '/../../../panel/src/equipe_fiche.php';       // Mon équipe › la fiche d'une personne : identité, contrat, taux, évaluations, ventes (24/11/2026)
+require __DIR__ . '/../../../panel/src/equipe_absences.php';    // Mon équipe › absences, congés et remplacements : le coût reste, le remplaçant s'ajoute (27/11/2026)
 require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
 require __DIR__ . '/../../../panel/src/tfb_magasin.php';               // Le compte TF Buddy du magasin : téléphone, PIN, SMS ; le jeton reste dans le navigateur (25/11/2026)
 require __DIR__ . '/../../../panel/src/clients_panel.php';
@@ -268,6 +270,13 @@ try {
     }
     if (($method === 'GET' || $method === 'POST') && preg_match('#^/bureau-questionnaire/([a-f0-9]{32})(/tva)?$#', $path, $m)) {
         echo json_encode(bdvPublic($method, $m[1], isset($m[2]) ? 'tva' : ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    // Une demande « Ma zone n'est pas dans la liste » (27/11/2026) : PUBLIC, les deux pages Livraison au bureau (la landing
+    // atelierby.be, la landing du webshop) y laissent leur copie ; depuis la landing, le cockpit la transmet à TF Buddy
+    // (panel/src/bureaux_dev.php : limite par IP et par magasin, champ piège). Le webshop l'envoie en text/plain (sendBeacon).
+    if ($method === 'POST' && $path === '/bureau-hors-zone') {
+        echo json_encode(bdvPublicHorsZone(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
     // Le flux ICS d'un consultant : Google Agenda le relit sans session — le jeton de l'adresse est sa clé.
@@ -716,6 +725,7 @@ function route(string $method, string $path): mixed
             $path === '/push/cle'                    => ep_push_cle(),
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/stats/reseau'          => ep_stats_ventes_reseau(),
+            $path === '/ventes/groupes-mois'          => ep_ventes_groupes_mois(),
             $path === '/historique/ventes'            => ep_historique_etat(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
