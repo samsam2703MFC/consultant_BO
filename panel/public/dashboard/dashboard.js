@@ -7225,7 +7225,8 @@
   /** Le niveau du barème pour une note : nom court et couleur (le barème part avec la journée). */
   function tjNiveau(n, niveaux) {
     const lv = (Array.isArray(niveaux) ? niveaux : []).find(x => +x.n === +n);
-    const def = { 5: ['Exemplaire', '#C9A227'], 4: ['Conforme', 'var(--green)'], 3: ['NC mineur', 'var(--prize)'], 2: ['NC majeur', 'var(--stop)'], 1: ['NC critique', 'var(--ink)'] }[n] || ['', '#5c5852'];
+    // Une échelle par mesure (§7.13, 26/11/2026) : plus d'or « exemplaire » à part ; 5 et 4 en vert, leur mot les distingue.
+    const def = { 5: ['Exemplaire', 'var(--green)'], 4: ['Conforme', 'var(--green)'], 3: ['NC mineur', 'var(--prize)'], 2: ['NC majeur', 'var(--stop)'], 1: ['NC critique', 'var(--ink)'] }[n] || ['', 'var(--muted-2)'];
     return { nom: lv && lv.nom ? String(lv.nom).replace(/^Non conforme\s*[—–-]\s*/i, 'NC ') : def[0], couleur: (lv && lv.couleur) || def[1] };
   }
   /** Les checklists de la journée : les tâches obligatoires rangées sous chaque checklist qui les porte (une tâche citée
