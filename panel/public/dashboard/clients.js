@@ -1,8 +1,8 @@
 /* Dashboard magasin › Vendre › Clients (25/11/2026 ; maquettes panel/docs/maquettes/clients-panel/). Le module « Klienci »
  * du panel TF Buddy dans le dashboard franchisé : une entrée de rail, quatre onglets.
- *   - PARTICULIERS : la recherche d'abord (le téléphone en partie dans la liste ; le compte en ligne et son filtre, 28/11/2026),
- *     la fiche à côté ; ajouter, modifier, passer en entreprise (la TVA vérifiée par TF Buddy, puis VIES), supprimer (un
- *     client né dans ce magasin) ;
+ *   - PARTICULIERS : la recherche d'abord (le téléphone en partie dans la liste ; le compte en ligne et son filtre, 28/11/2026 ;
+ *     la fidélité, le profil du client scanné en caisse, et son radar dans la fiche, 28/11/2026), la fiche à côté ; ajouter,
+ *     modifier, passer en entreprise (la TVA vérifiée par TF Buddy, puis VIES), supprimer (un client né dans ce magasin) ;
  *   - ENTREPRISES B2B : les entreprises à compléter en tête, les filtres (score, CA 12 mois, fréquence), la fiche à côté
  *     (le crédit, ses bureaux, ses factures), le profil commercial (score, type, mode, crédit), ajouter par la TVA ;
  *   - BUREAUX : une ligne par bureau, la fiche en onglets (Livraison, Catalogue, Offres, Personnes, Documents),
@@ -39,6 +39,7 @@
 
   const st = { shop: null, api: '../api/cockpit', el: null, aller: null, nomShop: '', onglet: 'b2b', mo: null,
     p: { q: '', filtre: '', compte: '', d: null, err: null, lecture: false, sel: null, fiche: null, ficheErr: null },
+    f: { shop: null, d: null, err: null, lecture: false, vue: 'recurrence' },
     e: { d: null, err: null, lecture: false, q: '', score: '', ca: '', freq: '', incompl: false, sel: null, fiche: null, ficheErr: null },
     b: { d: null, err: null, lecture: false, q: '', statut: '', sel: null, ong: 'livraison', det: {}, options: null, w: null },
     a: { annee: null, mois: null, d: null, err: null, lecture: false, metrique: 'ventes' } };
@@ -77,7 +78,17 @@
 
   /* ── Les lectures ─────────────────────────────────────────────────────────────────────────────────────────── */
   let tRech = null;
+  /** La fidélité des particuliers (28/11/2026, GET /fidelite/profils/clients, marketing/src/fidelite_profils.php) : le profil
+   *  et les radars de chaque client reconnu en caisse sur 90 jours, lus une fois par magasin et relus avec « relire ». */
+  function lireFidelite(frais) {
+    const F = st.f, shop = st.shop;
+    if (!frais && F.shop === shop && (F.d || F.lecture || F.err)) { return; }
+    F.shop = shop; F.lecture = true; F.err = null;
+    lire('/fidelite/profils/clients').then(d => { if (F.shop === shop) { F.d = d; } })
+      .catch(e => { if (F.shop === shop) { F.err = e.message; } }).finally(() => { if (F.shop === shop) { F.lecture = false; rendre(); } });
+  }
   function lireParticuliers(frais) {
+    lireFidelite(false);
     const P = st.p, q = P.q, f = P.filtre, cpt = P.compte; P.lecture = true; rendre();
     return lire('/dashboard/clients/particuliers', Object.assign({ q, filtre: f, compte: cpt }, frais ? { frais: 1 } : {}))
       .then(d => { if (P.q === q && P.filtre === f && P.compte === cpt) { P.d = d; P.err = null; } })
@@ -128,7 +139,7 @@
     lire('/dashboard/clients/bureaux', { chemin: '/' + B.sel + chemin }).then(d => { B.det[k] = d; }).catch(e => { B.det[k] = { ok: false, motif: e.message }; }).finally(rendre);
   }
   function charger(frais) {
-    if (st.onglet === 'b2c') { return lireParticuliers(frais); }
+    if (st.onglet === 'b2c') { lireFidelite(frais); return lireParticuliers(frais); }
     if (st.onglet === 'b2b') { if (!st.b.d && !st.b.lecture) { lireBureaux(); } return lireEntreprises(frais); }
     if (st.onglet === 'bur') { st.b.det = {}; if (frais) { st.b.tour = null; } lireDev(); return lireBureaux(); }
     return lireAnalyse();
@@ -233,6 +244,45 @@
       <div class="pcl-jauge-b" role="progressbar" aria-label="Part des particuliers avec un compte en ligne" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p}"><i style="width:${p}%"></i></div>
       <div class="pcl-jauge-s">${nf(d.enLigne)} sur ${nf(d.total)} clients</div></div>`;
   }
+  /* ── La fidélité (28/11/2026, Sam : « dans clients rajouter un indicateur de fidélité du client, rien si pas de fidélité ;
+   *    on clique, et dans le tiroir avec le détail, le spider ») ──────────────────────────────────────────────────────────
+   * Le profil de fréquence du client (Fidélité › Profils clients : Découverte … Fanbase, réglés au cockpit), lu sur ses
+   * tickets reconnus en caisse ; rien pour un client que la caisse n'a pas reconnu sur la mémoire (90 jours). */
+  function fidDe(id) {
+    const d = st.f.d;
+    if (!d || st.f.shop !== st.shop || !d.clients) { return null; }
+    const c = d.clients[id], p = c && (d.profils || []).find(x => String(x.id) === String(c.profil));
+    return p ? { c, p, d } : null;
+  }
+  const fidDepuis = j => j == null ? '' : j === 0 ? 'passé aujourd’hui' : j === 1 ? 'passé hier' : 'passé il y a ' + j + ' j';
+  /** L'indicateur de la liste : la pastille et le nom du profil, le dernier passage dessous ; un clic ouvre la fiche sur le radar. */
+  function fidelite(id) {
+    const x = fidDe(id);
+    if (!x) { return ''; }
+    return `<button type="button" class="pcl-fid" data-act="p-fid" data-id="${esc(id)}" title="${esc(x.p.nom + ' : ' + x.p.condition + ' — voir son radar')}"><i style="background:${esc(x.p.couleur)}" aria-hidden="true"></i>${esc(x.p.nom)}</button><span class="sub">${esc(fidDepuis(x.c.depuis))}</span>`;
+  }
+  /** Sa fidélité dans la fiche : le profil, ses chiffres et le radar (récurrence ou type d'achat) face à la moyenne du magasin. */
+  function blocFidelite(id) {
+    const F = st.f;
+    if (!F.d || F.shop !== st.shop) { return F.lecture ? `<div class="pcl-bloc" id="pcl-fid"><h4>Fidélité</h4>${attente('Lecture des passages en caisse…')}</div>` : ''; }
+    const x = fidDe(id);
+    if (!x) { return ''; }
+    const { c, p, d } = x, M = d.moyenne || {}, R = window.DashFidelite;
+    const achat = F.vue === 'achat' && !!c.familles;
+    const serie = { c: p.couleur, lib: p.nom }, moy = 'Moyenne des ' + nf(d.scannes) + ' clients scannés';
+    const radar = !R ? '' : achat
+      ? R.radar([{ v: M.familles, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: c.familles, c: p.couleur, fond: 0.16, w: 2.2 }], d.familles, 310, 80) + R.legende(serie, moy)
+      : R.radar([{ v: M.radar, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: c.radar, c: p.couleur, fond: 0.16, w: 2.2 }], d.axes, 310) + R.legende(serie, moy);
+    const choix = c.familles ? seg('p-fid-vue', achat ? 'achat' : 'recurrence', [['recurrence', 'Récurrence'], ['achat', 'Type d’achat']]) : '';
+    const tk = Math.max(1, c.tk);
+    return `<div class="pcl-bloc pcl-fid-bloc" id="pcl-fid"><h4>Fidélité<span>reconnu en caisse sur ${nf(d.memoire)} jours</span></h4>
+      ${ligneF('Profil', `<span class="pcl-fid pcl-fid--fiche"><i style="background:${esc(p.couleur)}" aria-hidden="true"></i>${esc(p.nom)}</span><span class="sub">${esc(p.condition)}</span>`)}
+      ${ligneF('Rythme', `${nf(c.rythme, 1)} passage${c.rythme >= 2 ? 's' : ''} par mois<span class="sub">${nf(c.passagesFenetre)} sur les ${nf(d.fenetre)} derniers jours</span>`)}
+      ${ligneF('Passages', `${nf(c.passages)} en ${nf(d.memoire)} jours<span class="sub">${esc(fidDepuis(c.depuis))}</span>`)}
+      ${ligneF('Panier moyen', fE(c.eur / tk))}${ligneF('En commande', nf(Math.round(100 * c.cmd / tk)) + ' %')}
+      <div class="pcl-fid-radar">${choix ? `<div class="pcl-fid-seg">${choix}</div>` : ''}${radar}<p class="pcl-aide">${achat ? 'La part de ses articles par famille, en % (80 au bord).' : '0 au centre, 100 au bord : fréquence, récence, ancienneté, panier, diversité et achats au comptoir.'}</p></div>
+      ${st.aller ? '<button type="button" class="linklike" data-act="p-fid-historique" data-id="' + esc(id) + '">Son historique : Fidélité ›</button>' : ''}</div>`;
+  }
   /* ── Nettoyer la base (28/11/2026, panel/src/clients_nettoyage.php) ─────────────────────────────────────────── */
   function ouvrirNettoyage() {
     ouvrir('n-nettoyer', {}, { d: null, exclus: {}, prog: null, fin: null });
@@ -301,9 +351,10 @@
     else if (!d) { corps = attente('Lecture des particuliers du magasin…'); }
     else if (!d.clients.length) { corps = `<div class="pcl-vide">${d.q ? 'Aucun particulier ne répond à « ' + esc(d.q) + ' ».' : 'Aucun particulier.'}</div>`; }
     else {
-      corps = `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Client</th><th>Téléphone</th><th>Compte en ligne</th><th class="num">Remise</th><th></th></tr></thead><tbody>
+      const F = st.f, thFid = `<th${F.err ? ` title="${esc('Fidélité illisible : ' + F.err)}"` : ''}>Fidélité${F.lecture && !F.d ? '<span class="sub">lecture…</span>' : F.err ? '<span class="sub">illisible</span>' : ''}</th>`;
+      corps = `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Client</th><th>Téléphone</th><th>Compte en ligne</th>${thFid}<th class="num">Remise</th><th></th></tr></thead><tbody>
         ${d.clients.map(c => `<tr class="pcl-ligne${P.sel === c.id ? ' is-sel' : ''}" data-act="p-sel" data-id="${c.id}"><td>${esc(c.nom)}${c.incomplet ? ' <span class="tag-warn" title="La caisse a tapé « ... » à la place du prénom ou du nom : à compléter au comptoir">nom incomplet</span>' : ''}<span class="sub">${[c.cp, c.ville].filter(Boolean).map(esc).join(' ') || (c.cree ? 'depuis ' + fD(c.cree) : '')}</span></td>
-          <td>${esc(c.tel) || '<span class="muted">—</span>'}</td><td>${compteEnLigne(c)}</td><td class="num">${c.remise ? nf(c.remise, 1).replace(',0', '') + ' %' : '<span class="muted">—</span>'}</td>
+          <td>${esc(c.tel) || '<span class="muted">—</span>'}</td><td>${compteEnLigne(c)}</td><td>${fidelite(c.id)}</td><td class="num">${c.remise ? nf(c.remise, 1).replace(',0', '') + ' %' : '<span class="muted">—</span>'}</td>
           <td class="num"><button type="button" class="btn btn--sm" data-act="p-offre" data-id="${c.id}">Offre</button></td></tr>`).join('')}</tbody></table></div>
         <div class="pcl-pied">${d.trouves > d.clients.length ? nf(d.trouves) + ' trouvés, les ' + d.clients.length + ' premiers montrés : précisez la recherche.' : nf(d.trouves) + (d.q ? ' trouvé' + (d.trouves > 1 ? 's' : '') : ' — les derniers créés d’abord ; cherchez par le nom, le téléphone ou l’e-mail.')}</div>`;
     }
@@ -325,14 +376,15 @@
     if (!F) { return `<aside class="card pcl-fiche">${attente('Lecture de la fiche…')}</aside>`; }
     const c = F.client, adr = [[c.street, c.street_number].filter(Boolean).join(' '), [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
     const mien = +c.id_main_shop === +st.shop;
-    return `<aside class="card pcl-fiche"><div class="pcl-ft"><div class="pcl-fnom">${esc(c.nom)}</div><div class="pcl-fmeta">${c.create_timestamp ? 'client depuis ' + fD(String(c.create_timestamp).slice(0, 10)) : ''}${mien ? '' : ' · créé par un autre magasin'}</div></div>
+    return `<aside class="card pcl-fiche pcl-fiche-defile"><div class="pcl-ft"><div class="pcl-fnom">${esc(c.nom)}</div><div class="pcl-fmeta">${c.create_timestamp ? 'client depuis ' + fD(String(c.create_timestamp).slice(0, 10)) : ''}${mien ? '' : ' · créé par un autre magasin'}</div></div>
       <div class="pcl-kpis"><div><div class="v">${c.personal_discount_percent ? nf(c.personal_discount_percent, 1).replace(',0', '') + ' %' : '—'}</div><div class="k">Remise</div></div>
         <div><div class="v">${c.can_deferral ? 'Oui' : 'Non'}</div><div class="k">Paiement différé</div></div><div><div class="v">${esc(c.city || '—')}</div><div class="k">Ville</div></div></div>
       <div class="pcl-bloc"><h4>Coordonnées</h4>${ligneF('Téléphone', c.phone ? `<a href="tel:${esc(String(c.phone).replace(/\s/g, ''))}">${esc(c.phone)}</a>` : '')}${ligneF('E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '')}${ligneF('Adresse', esc(adr))}${c.comment ? ligneF('Note', esc(c.comment)) : ''}
         ${ligneF('Compte en ligne', c.connexion ? `<span class="chip chip--ok">En ligne</span> connecté le ${fD(c.connexion)}` : '<span class="chip chip--draft">Pas de compte</span>')}</div>
       <div class="pcl-bloc pcl-acts"><button type="button" class="btn btn--primary btn--sm" data-act="p-offre" data-id="${c.id}">Préparer une offre</button><button type="button" class="btn btn--sm" data-act="p-modifier">Modifier</button>
         <button type="button" class="btn btn--sm" data-act="p-entreprise">Passer en entreprise</button>${mien ? '<button type="button" class="btn btn--sm btn--danger" data-act="p-supprimer">Supprimer</button>' : ''}</div>
-      <div class="pcl-bloc pcl-doux"><h4>Passer en entreprise</h4><div class="pcl-aide">Le numéro de TVA se vérifie dans TF Buddy puis dans VIES et remplit la société et l’adresse ; la fiche passe dans Entreprises B2B avec ses conditions de paiement et sa remise.</div></div></aside>`;
+      <div class="pcl-bloc pcl-doux"><h4>Passer en entreprise</h4><div class="pcl-aide">Le numéro de TVA se vérifie dans TF Buddy puis dans VIES et remplit la société et l’adresse ; la fiche passe dans Entreprises B2B avec ses conditions de paiement et sa remise.</div></div>
+      ${blocFidelite(c.id)}</aside>`;
   }
 
   /* ── Entreprises B2B ──────────────────────────────────────────────────────────────────────────────────────── */
@@ -1024,6 +1076,10 @@
       case 'p-filtre': P.filtre = v; lireParticuliers(); break;
       case 'p-compte': P.compte = v; lireParticuliers(); break;
       case 'p-sel': lireFiche(P, id); break;
+      // La fidélité (28/11/2026) : l'indicateur ouvre la fiche et y montre le radar ; le radar bascule ; l'historique complet.
+      case 'p-fid': if (P.sel !== id) { lireFiche(P, id).then(() => montrer('#pcl-fid')); } else { montrer('#pcl-fid'); } break;
+      case 'p-fid-vue': st.f.vue = v; rendre(); break;
+      case 'p-fid-historique': if (st.aller) { st.aller('fidelite', { fdClient: id }); } break;
       case 'p-offre': { const c = (P.fiche && P.fiche.id === id ? { id, nom: P.fiche.client.nom, ville: P.fiche.client.city } : (P.d.clients.find(x => x.id === id) || {})); offre(Object.assign({ b2b: false }, c, { id })); break; }
       case 'p-ajouter': ouvrir('p-form', { name: '', surname: '', phone: '', email: '', street: '', street_number: '', zip: '', city: '', comment: '' }); break;
       case 'p-modifier': { const c = P.fiche.client; ouvrir('p-form', vide({ name: c.name, surname: c.surname, phone: c.phone, email: c.email, street: c.street, street_number: c.street_number, zip: c.zip, city: c.city, comment: c.comment }), { id: P.sel }); break; }
@@ -1173,7 +1229,8 @@
       if (!st.el || st.shop !== String(shop)) {
         const auj = new Date();
         Object.assign(st, { shop: String(shop), mo: null });
-        st.p = { q: '', filtre: '', d: null, err: null, lecture: false, sel: null, fiche: null, ficheErr: null };
+        st.p = { q: '', filtre: '', compte: '', d: null, err: null, lecture: false, sel: null, fiche: null, ficheErr: null };
+        st.f = { shop: null, d: null, err: null, lecture: false, vue: st.f.vue };
         st.e = { d: null, err: null, lecture: false, q: '', score: '', ca: '', freq: '', incompl: false, sel: null, fiche: null, ficheErr: null };
         st.b = { d: null, err: null, lecture: false, q: '', statut: '', sel: null, ong: 'livraison', det: {}, options: null, w: null, pdf: null, dev: null, devErr: null, devSel: null, devMsg: null, devBusy: false, devTraitees: false };
         st.a = { annee: auj.getFullYear(), mois: auj.getMonth() + 1, d: null, err: null, lecture: false, metrique: 'ventes' };

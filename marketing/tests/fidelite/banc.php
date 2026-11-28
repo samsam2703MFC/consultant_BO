@@ -39,6 +39,24 @@ $m2 = fpMagasin(4);
 verifie('seconde lecture : seuls aujourd’hui et la veille se relisent (+ noms)', PanelApi::$appels - $avant <= 2 + 7, (string) (PanelApi::$appels - $avant) . ' appels');
 verifie('mêmes comptes à la relecture', array_column($m2['profils'], 'clients', 'nom') === $par);
 
+echo "== Chaque client scanné (GET /fidelite/profils/clients, Clients › Particuliers, 28/11/2026)\n";
+$_GET = ['shop' => '4'];
+$pc = ep_fidelite_profils_clients();
+$K = $pc['clients'];
+verifie('les 8 clients scannés, par identifiant', is_array($K) && count($K) === 8 && isset($K[1], $K[2], $K[6]), implode(',', array_keys((array) $K)));
+verifie('ni le pro (55) ni les clients hors mémoire (8, 10)', !isset($K[55]) && !isset($K[8]) && !isset($K[10]));
+verifie('client 1 Fanbase, client 6 Découverte', ($K[1]['profil'] ?? 0) === $P[0]['id'] && ($K[6]['profil'] ?? 0) === $P[5]['id'], json_encode([$K[1]['profil'] ?? null, $K[6]['profil'] ?? null]));
+verifie('mêmes profils que la page Fidélité', array_count_values(array_map(static fn ($x) => $x['profil'], $K)) == array_filter(array_column($m['profils'], 'clients', 'id')));
+verifie('un radar à six branches par client', count(array_filter($K, static fn ($x) => array_keys($x['radar']) === array_keys(FP_AXES))) === 8, json_encode($K[1]['radar']));
+verifie('aucun nom (les noms restent dans TF Buddy)', !array_filter($K, static fn ($x) => isset($x['nom'])));
+verifie('les profils avec leur condition, la moyenne', count($pc['profils']) === 6 && ($pc['profils'][2]['condition'] ?? '') === '1 fois par semaine' && is_array($pc['moyenne']['radar'] ?? null));
+$avant = PanelApi::$appels;
+ep_fidelite_profils_clients();
+verifie('relue : seuls aujourd’hui et la veille, ni articles ni noms', PanelApi::$appels - $avant <= 2, (string) (PanelApi::$appels - $avant) . ' appels');
+$_GET = [];
+$sans = @ep_fidelite_profils_clients();   // @ : en ligne de commande, le code HTTP 422 ne part pas
+verifie('sans magasin : un message', isset($sans['error']));
+
 echo "== La fiche d'un client\n";
 $c = ep_fidelite_client_test(4, 2);
 function ep_fidelite_client_test(int $s, int $c): array { $_GET = ['shop' => (string) $s, 'client' => (string) $c]; return ep_fidelite_client(); }

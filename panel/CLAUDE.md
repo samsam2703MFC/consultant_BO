@@ -41,7 +41,12 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   module se rabat sur `/shops/{s}/clients…` et le relevé des tickets pro. Commandes lit aussi ses livraisons avec lui.
   Les offres restent la page Offres. **Le compte en ligne** (28/11/2026) : la colonne et le filtre des particuliers
   (`compte=en_ligne|sans_compte`) et la fiche lisent `last_login_at` de TF Buddy (rempli seulement si le client a un mot de passe).
-  La jauge « Compte en ligne » (la part des particuliers qui en ont un) est dans le résumé. **Nettoyer la base**
+  La jauge « Compte en ligne » (la part des particuliers qui en ont un) est dans le résumé. **La fidélité** (28/11/2026,
+  Sam : « rajouter un indicateur de fidélité du client, rien si pas de fidélité ; au clic, dans le tiroir, le spider ») : la
+  colonne Fidélité des particuliers (le profil de Fidélité › Profils clients, Découverte … Fanbase, et le dernier passage ;
+  vide pour un client que la caisse n'a pas reconnu sur 90 jours) et, en bas de la fiche, ses chiffres et son radar
+  (récurrence ou type d'achat) face à la moyenne, dessiné par le radar de la page Fidélité (`window.DashFidelite`). Une
+  lecture par magasin : `GET /fidelite/profils/clients` (`marketing/src/fidelite_profils.php`). **Nettoyer la base**
   (`src/clients_nettoyage.php`, 28/11/2026) : les noms en MAJUSCULES ou en minuscules passent en Nom Propre dans TF Buddy, après un aperçu
   avant → après, par lots de 25, annulable (table `panel_clients_nettoyage`, 90 jours). Les noms incomplets (« ... » de la caisse) se
   signalent (filtre `filtre=incomplet`), **ne s'effacent jamais d'ici** (Sam : « aucune, juste les signaler »).

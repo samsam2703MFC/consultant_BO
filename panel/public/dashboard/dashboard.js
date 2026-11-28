@@ -273,7 +273,12 @@
     rendre();
   }
   /** Une page du dashboard, avec ce qu'elle doit faire en s'ouvrant (la boîte mail ↔ les offres, 15/11/2026). */
-  function allerVers(vue, intention) { S.vue = vue; S.intention = intention || null; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); window.scrollTo(0, 0); }
+  function allerVers(vue, intention) {
+    S.vue = vue; S.intention = intention || null; S.heure = null; S.jourH = null; S.anQ = null;
+    // « Son historique » depuis la fiche d'un particulier (clients.js, 28/11/2026) : la fiche Fidélité de ce client.
+    if (vue === 'fidelite' && intention && intention.fdClient) { S.fdClient = String(intention.fdClient); S.intention = null; }
+    urlMaj(); charger(false); window.scrollTo(0, 0);
+  }
   /** Les non-lus de la boîte mail du magasin, sur l'entrée du rail (null : boîte non reliée ou fermée sur cet appareil). */
   function bmCompte(n) { if (S.bmN !== n) { S.bmN = n; railMaj(avecRail()); } }
   function bmCompter() { if (window.DashBoite && !document.hidden && S.vue !== 'boite') { window.DashBoite.compter(S.shop, API, bmCompte); } }
@@ -6584,6 +6589,8 @@
   }
   const fdDepuis = j => j == null ? '—' : (j === 0 ? 'aujourd’hui' : (j === 1 ? 'hier' : 'il y a ' + j + ' j'));
   function fdLegende(a, b) { return `<div class="fd-leg"><span><i style="background:${a.c}"></i>${esc(a.lib)}</span><span><i style="background:var(--color-text-muted)"></i>${esc(b)}</span></div>`; }
+  // Le radar et sa légende, prêtés à la fiche d'un particulier (clients.js, 28/11/2026) : un seul dessin pour les deux écrans.
+  window.DashFidelite = { radar: fdRadar, legende: fdLegende };
   /* La part des tickets scannés (12/11/2026, Sam : « une grosse vignette sur le % de clients scannés sur l'ensemble des
    * clients ; en dessous une échelle de 0 à 90 % »). Un ticket compte comme scanné quand la caisse a reconnu le client (carte
    * ou commande) ; la part se lit sur la mémoire des profils.

@@ -346,3 +346,21 @@
 .pcl-n-avant { color: var(--muted-2); }
 .pcl-n-off td { opacity: .45; }
 .pcl-n-echecs { margin: 0 0 10px; padding-left: 18px; font-size: 12.5px; color: var(--muted-2); }
+
+/* La fidélité (28/11/2026) : l'indicateur de la liste (le profil du client scanné en caisse, rien sinon), le bloc et le
+   radar de la fiche. La pastille prend la couleur du profil réglée au cockpit (Fidélité › Profils clients). */
+.pcl-fid { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; color: var(--ink); white-space: nowrap; }
+.pcl-fid i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+button.pcl-fid { cursor: pointer; }
+button.pcl-fid:hover { text-decoration: underline; text-decoration-color: var(--line); }
+.pcl-fid-bloc .sub { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+.pcl-fid-radar { margin-top: 10px; }
+/* Le radar garde 72 px de marge autour du cercle pour ses libellés : la fiche en reprend une partie, en haut et en bas. */
+.pcl-fid-radar .fd-radar { margin: -30px auto -26px; }
+.pcl-fid-seg { display: flex; justify-content: center; margin-bottom: 2px; }
+.pcl-fid-radar .pcl-aide { margin: 6px 0 0; text-align: center; }
+.pcl-fid-bloc > .linklike { display: block; margin: 8px auto 0; }
+.pcl-fid-bloc.pcl-vu { outline-offset: -3px; }
+/* La fiche d'un particulier, plus haute avec le radar : elle défile dans sa colonne au lieu de sortir de l'écran. */
+.pcl-fiche-defile { max-height: calc(100vh - 24px); overflow-y: auto; }
+@media (max-width: 1100px) { .pcl-fiche-defile { max-height: none; overflow: visible; } }

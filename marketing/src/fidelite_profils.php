@@ -13,7 +13,8 @@ declare(strict_types=1);
  *      POST /fidelite/profils            publie les profils modifiés, ajoutés ou retirés, et la fenêtre.
  *  - Le dashboard du magasin les lit :
  *      GET  /fidelite/profils/magasin?shop=   les profils du magasin, leurs radars, les clients qui reviennent ;
- *      GET  /fidelite/client?shop=&client=    l'historique d'un client.
+ *      GET  /fidelite/client?shop=&client=    l'historique d'un client ;
+ *      GET  /fidelite/profils/clients?shop=   le profil et les radars de chaque client scanné (Clients › Particuliers).
  *
  * Comment on compte (réglable) : le rythme se lit sur les FENETRE derniers jours (30), ramené à un mois de 30 jours ;
  * les clients comptés sont ceux passés au moins une fois sur les MEMOIRE derniers jours (90) — un client de la mémoire
@@ -321,8 +322,12 @@ function fpProfilClient(array $c, array $profils, array $R, string $au): array
     ];
 }
 
-/** Le calcul d'un magasin : par profil, les clients, leur part, leur CA, leurs radars moyens ; et les clients. */
-function fpMagasin(int $sid, bool $lire = true, bool $detail = true): array
+/**
+ * Le calcul d'un magasin : par profil, les clients, leur part, leur CA, leurs radars moyens ; et les clients.
+ * $tous (28/11/2026) : en plus, `parClient`, le profil et les radars de CHAQUE client scanné (pas seulement ceux qui
+ * reviennent), pour la liste Clients du dashboard.
+ */
+function fpMagasin(int $sid, bool $lire = true, bool $detail = true, bool $tous = false): array
 {
     $R = fpReglages();
     $profils = fpProfils(true);
@@ -365,11 +370,20 @@ function fpMagasin(int $sid, bool $lire = true, bool $detail = true): array
     foreach ($rev as &$x) { $x['nom'] = $noms[$x['client']] ?? ('Client ' . $x['client']); }
     unset($x);
     $jours = Db::row('SELECT COALESCE(SUM(tickets),0) t, COALESCE(SUM(identifies),0) i, COUNT(*) j FROM mar_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
-    return ['shop' => (string) $sid, 'du' => $du, 'au' => $au, 'fenetre' => $R['fenetre'], 'memoire' => $R['memoire'], 'axes' => FP_AXES, 'familles' => FP_FAMILLES,
+    $out = ['shop' => (string) $sid, 'du' => $du, 'au' => $au, 'fenetre' => $R['fenetre'], 'memoire' => $R['memoire'], 'axes' => FP_AXES, 'familles' => FP_FAMILLES,
         'scannes' => $N, 'tickets' => (int) $jours['t'], 'identifies' => (int) $jours['i'], 'joursLus' => (int) $jours['j'], 'aLire' => $reste, 'sansFamilles' => $sansFam,
         'profils' => $sortie, 'moyenne' => $N ? ['radar' => array_map(static fn ($v) => (int) round($v / $N), $moy['radar']),
             'familles' => $moy['famN'] ? array_map(static fn ($v) => (int) round($v / $moy['famN']), $moy['fam']) : null] : null,
         'clients' => $rev];
+    if ($tous) {
+        $out['parClient'] = [];
+        foreach ($liste as $x) {
+            $out['parClient'][$x['client']] = ['profil' => $x['profil'], 'rythme' => $x['rythme'], 'passagesFenetre' => $x['passagesFenetre'], 'passages' => $x['passages'],
+                'premier' => $x['premier'], 'dernier' => $x['dernier'], 'depuis' => $x['depuis'], 'tk' => $x['tk'], 'eur' => $x['eur'], 'cmd' => $x['cmd'],
+                'radar' => $x['radar'], 'familles' => $x['famLues'] ? $x['familles'] : null];
+        }
+    }
+    return $out;
 }
 
 /** Prénom et initiale du nom des clients, lus sur leur fiche (`/shops/{id}/clients/{id}`), jamais gardés. */
@@ -422,6 +436,25 @@ function ep_fidelite_profils_magasin(): array
     $sid = fpShop();
     if ($sid <= 0) { http_response_code(422); return ['error' => 'magasin manquant (?shop=)']; }
     return fpMagasin($sid, true);
+}
+
+/**
+ * GET /fidelite/profils/clients?shop= : le profil et les deux radars de chaque client scanné du magasin, pour Clients ›
+ * Particuliers du dashboard (clients.js). 28/11/2026, Sam : « dans clients rajouter un indicateur de fidélité du client,
+ * rien si pas de fidélité ; au clic, dans le tiroir avec le détail, mettre le spider ». Le calcul de
+ * /fidelite/profils/magasin, sans relire les articles des tickets ni les noms : seules les journées de tickets manquantes
+ * se lisent. Un client absent de `clients` n'a pas été reconnu en caisse sur la mémoire (90 jours) : rien à montrer.
+ */
+function ep_fidelite_profils_clients(): array
+{
+    $sid = fpShop();
+    if ($sid <= 0) { http_response_code(422); return ['error' => 'magasin manquant (?shop=)']; }
+    $m = fpMagasin($sid, true, false, true);
+    $profils = array_map(static fn ($p) => array_intersect_key($p, array_flip(['id', 'nom', 'couleur', 'unite', 'seuil', 'condition', 'equivalent', 'clients', 'part'])), $m['profils']);
+    // Un objet JSON même vide : les identifiants des clients sont les clés.
+    return ['shop' => $m['shop'], 'au' => $m['au'], 'fenetre' => $m['fenetre'], 'memoire' => $m['memoire'], 'axes' => $m['axes'], 'familles' => $m['familles'],
+        'scannes' => $m['scannes'], 'aLire' => $m['aLire'], 'profils' => $profils, 'moyenne' => $m['moyenne'],
+        'clients' => $m['parClient'] === [] ? new stdClass() : $m['parClient']];
 }
 
 /**
