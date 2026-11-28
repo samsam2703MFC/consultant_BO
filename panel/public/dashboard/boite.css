@@ -101,7 +101,7 @@
 .bx-lire { min-height: 420px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .bx-lire--vide { display: grid; place-items: center; font-size: 13px; color: var(--muted); }
 .bx-m-h { margin-bottom: 12px; }
-.bx-m-h h2 { margin: 0 0 10px; font-size: 19px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
+.bx-m-h h2 { margin: 0 0 10px; font-size: 18px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
 .bx-m-qui { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--ink); }
 .bx-m-qui b { font-weight: 400; }
 .bx-av { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--chip); color: var(--muted-2); font-size: 14px; }
@@ -154,7 +154,7 @@
 .bx-pjp-v { padding: 14px 12px; color: var(--muted); font-size: 12.5px; }
 .bx-piece-lien small { color: var(--accent); }
 @media (max-width: 640px) { .bx-pj-l { width: 100%; } .bx-pjp-q { width: 100%; margin-left: 0; } }
-.bx-zone { width: 100%; resize: vertical; line-height: 1.55; font-size: 13.5px; }
+.bx-zone { width: 100%; resize: vertical; line-height: 1.55; font-size: 13px; }
 .bx-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 
 /* Modèles, messages automatiques. */
@@ -195,8 +195,8 @@
 /* La sélection, dans le volet de droite (21/11/2026 : « tout sélectionner, effacer, tout archiver, mettre en dossier »). */
 .bx-sel-h { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--row-line); }
 .bx-sel-h > div { flex: 1; min-width: 0; }
-.bx-sel-h h2 { margin: 0 0 2px; font-size: 19px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
-.bx-sel-n { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--accent); color: #fff; font-size: 17px; }
+.bx-sel-h h2 { margin: 0 0 2px; font-size: 18px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
+.bx-sel-n { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--accent); color: #fff; font-size: 18px; }
 .bx-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; margin-bottom: 18px; }
 .bx-tuile { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-size: 12.5px; color: var(--ink); text-align: left; cursor: pointer; transition: border-color 0.12s, background 0.12s; }
 .bx-tuile .ico { width: 18px; height: 18px; color: var(--accent); }
@@ -386,7 +386,7 @@
 .bx-cran span { font-size: 11.5px; line-height: 1.35; color: var(--muted-2); }
 .bx-cran:hover:not(:disabled) i { transform: scale(1.1); }
 .bx-pi-gain { display: grid; justify-items: end; gap: 2px; text-align: right; }
-.bx-pi-gain b { font-size: 34px; font-weight: 400; letter-spacing: -0.02em; color: var(--ink); }
+.bx-pi-gain b { font-size: 26px; font-weight: 400; letter-spacing: -0.02em; color: var(--ink); }
 .bx-pi-chiffres { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .bx-pi-chiffres > div { display: grid; gap: 2px; padding: 12px 16px; border-left: 1px solid var(--row-line); }
 .bx-pi-chiffres > div:first-child { border-left: 0; }
@@ -429,7 +429,7 @@
 .bx-ra-al { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-size: 12.5px; color: var(--muted-2); }
 .bx-ra-al > .ico { width: 32px; height: 32px; padding: 8px; box-sizing: border-box; flex: none; border-radius: 8px; background: var(--chip); color: var(--muted-2); }
 .bx-ra-al > div { display: grid; gap: 4px; justify-items: start; }
-.bx-ra-al b { font-size: 13.5px; font-weight: 400; color: var(--ink); }
+.bx-ra-al b { font-size: 13px; font-weight: 400; color: var(--ink); }
 .bx-ra-al.or { border-color: rgba(176, 121, 42, 0.45); background: #fff; }
 .bx-ra-al.or > .ico { background: var(--prize-soft); color: var(--prize-ink); }
 .bx-ra-al.rouge > .ico { background: var(--stop-soft); color: var(--stop); }
@@ -469,6 +469,6 @@
 .bx-ra-thermo-l { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
 .bx-ra-pc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
 .bx-ra-pc div { display: grid; gap: 2px; }
-.bx-ra-pc b { font-size: 20px; font-weight: 400; color: var(--ink); }
+.bx-ra-pc b { font-size: 21px; font-weight: 400; color: var(--ink); }
 .bx-ra-pc span { font-size: 11.5px; color: var(--muted-2); }
 .bx-ra-pc .rouge b { color: var(--stop); }
