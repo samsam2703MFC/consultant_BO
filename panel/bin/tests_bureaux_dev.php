@@ -32,6 +32,9 @@ function pmMienne(int $shop, int $id): ?array { return $id === 321 ? ['panelId' 
 function pmMiennes(int $shop): array { return [[pmMienne($shop, 321), ['panelId' => 4, 'nom' => 'Sans bon', 'statut' => 'en_caisse', 'bon' => null]], null]; }
 function pbLire(int $camp, array $c = []): ?array { return ['campagne' => $camp, 'cible' => $GLOBALS['cible'], 'code' => $GLOBALS['cible'] === 'code' ? 'BUREAU10' : null]; }
 function body(): array { return $GLOBALS['corps'] ?? []; }
+/** Les SMS des formulaires (sms_formulaires.php) : notés, jamais envoyés. */
+$GLOBALS['sms'] = [];
+function smsfNotifier(string $shop, string $quoi, array $d): void { $GLOBALS['sms'][] = [$shop, $quoi, $d]; }
 
 require __DIR__ . '/../src/bureaux_dev.php';
 
@@ -174,6 +177,37 @@ Db::$base = null;
 verifie('renvoyée après reprise : la copie reprise ne bouge pas, une demande ouverte arrive', $sql('UPDATE') === [] && count($sql('INSERT')) === 1,
     json_encode(Db::$exec, JSON_UNESCAPED_UNICODE));
 Db::$exec = []; Db::$ligne = null; $GLOBALS['corps'] = [];
+
+echo "Le SMS des formulaires\n";
+verifie('les données du SMS : la société, le lieu, l’effectif, rien d’autre', bdvSmsDonnees(['bureau' => 'Siège Horizon', 'societe' => 'Horizon SRL', 'cp' => '1348', 'ville' => 'LLN', 'personnes' => 18, 'email' => 'a@b.be', 'tel' => '0470'])
+    === ['nom' => 'Siège Horizon', 'cp' => '1348', 'ville' => 'LLN', 'personnes' => 18] && bdvSmsDonnees(['societe' => 'Horizon SRL'])['nom'] === 'Horizon SRL');
+Db::$exec = []; $GLOBALS['sms'] = []; Db::$ligne = null;
+[$dz] = bdvHorsZoneNettoyer(['cp' => '1370', 'commune' => 'Jodoigne', 'societe' => 'Imprimerie du Val', 'effectif' => 22, 'email' => 'a@b.be', 'origine' => 'webshop', 'tfbuddy' => 'ok', 'request_key' => 'cleSms001']);
+Db::$base = static fn (string $q, array $a) => str_starts_with($q, 'SELECT *') ? ['id' => 78, 'shop_id' => '2', 'source' => 'hors_zone', 'statut' => 'hors_zone', 'donnees' => '{}', 'client_id' => null, 'societe_id' => null,
+    'bon_code' => null, 'office_id' => null, 'erreurs' => null, 'cree_le' => '2026-11-28 09:00:00', 'traite_le' => '2026-11-28 09:00:00'] : null;
+bdvHorsZoneEnregistrer('2', $dz, 'ip');
+verifie('une nouvelle demande hors zone : un SMS', $GLOBALS['sms'] === [['2', 'hors_zone', ['nom' => 'Imprimerie du Val', 'cp' => '1370', 'ville' => 'Jodoigne', 'personnes' => 22]]], json_encode($GLOBALS['sms'], JSON_UNESCAPED_UNICODE));
+$GLOBALS['sms'] = [];
+$prev = Db::$base;
+Db::$base = static fn (string $q, array $a) => str_contains($q, 'donnees LIKE') ? ['id' => 78] : $prev($q, $a);
+bdvHorsZoneEnregistrer('2', $dz, 'ip');
+verifie('la même demande renvoyée (un nouvel essai) : pas de second SMS', $GLOBALS['sms'] === [], json_encode($GLOBALS['sms'], JSON_UNESCAPED_UNICODE));
+Db::$base = null; Db::$exec = []; $GLOBALS['sms'] = [];
+// Le formulaire en six étapes : une inscription acceptée envoie un SMS ; une réponse refusée (incomplète), aucun.
+$jeton = str_repeat('a1', 16);
+Db::$base = static fn (string $q, array $a) => str_contains($q, 'FROM panel_bureau_questionnaire WHERE jeton') ? ['shop_id' => '2', 'actif' => 1, 'promo' => null, 'titre' => '', 'message' => '']
+    : (str_contains($q, 'COUNT(*)') ? ['n' => 0] : (str_starts_with($q, 'SELECT * FROM panel_bureau_dev') ? ['id' => 79, 'shop_id' => '2', 'source' => 'questionnaire', 'statut' => 'a_valider', 'donnees' => '{}',
+        'client_id' => null, 'societe_id' => null, 'bon_code' => null, 'office_id' => null, 'erreurs' => null, 'cree_le' => '2026-11-28 09:00:00', 'traite_le' => null] : null));
+$GLOBALS['corps'] = ['prenom' => 'Marie', 'nom' => 'Dupont', 'email' => 'marie@horizon.be', 'tel' => '+32 470 12 34 56', 'societe' => 'Centre Horizon', 'tva' => 'BE0789114256',
+    'factRue' => 'Rue A', 'factNum' => '1', 'factCp' => '6041', 'factVille' => 'Gosselies', 'adresse' => 'Rue de la Station 14', 'cp' => '6040', 'ville' => 'Jumet', 'personnes' => '18',
+    'jours' => [1, 5], 'de' => '11:30', 'a' => '12:15', 'accord' => true];
+$r = bdvPublic('POST', $jeton);
+verifie('une inscription par le formulaire : un SMS', ($r['ok'] ?? false) === true && $GLOBALS['sms'] === [['2', 'inscription', ['nom' => 'Centre Horizon', 'cp' => '6040', 'ville' => 'Jumet', 'personnes' => 18]]],
+    json_encode([$r, $GLOBALS['sms']], JSON_UNESCAPED_UNICODE));
+$GLOBALS['sms'] = []; $GLOBALS['corps'] = ['prenom' => 'Marie', 'accord' => true];
+$r = bdvPublic('POST', $jeton);
+verifie('une réponse incomplète, refusée : pas de SMS', isset($r['manque']) && $GLOBALS['sms'] === [], json_encode($r, JSON_UNESCAPED_UNICODE));
+Db::$base = null; Db::$exec = []; $GLOBALS['sms'] = []; $GLOBALS['corps'] = [];
 
 echo "Les tournées publiées\n";
 $t = bdvTourneeLigne(['id' => 1, 'tour' => 'LLN', 'zoneSecondary' => '', 'zonePrincipal' => 'Atelier by Berlo - Corbais'],

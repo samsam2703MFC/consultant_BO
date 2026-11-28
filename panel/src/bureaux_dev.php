@@ -398,6 +398,8 @@ function bdvPublic(string $method, string $jeton, string $sous = ''): array
     if ($e) { http_response_code(422); return ['error' => 'Il manque ' . implode(', ', $e) . '.', 'manque' => $e]; }
     bdvPurger();
     $l = bdvCreer($shop, $d, 'questionnaire', $ip, $promo);
+    // Le SMS au franchisé et au siège (sms_formulaires.php), après la réponse.
+    if (function_exists('smsfNotifier')) { smsfNotifier((string) $shop, 'inscription', bdvSmsDonnees($d)); }
     return ['ok' => true, 'magasin' => $nom, 'bon' => $l['bon'], 'compte' => $l['compte'] ?: null, 'rejoint' => $l['rejoint'], 'bureau' => $d['bureau']];
 }
 
@@ -511,6 +513,13 @@ function bdvHorsZoneTfb(string $shop, array $d): array
     return bdvHorsZoneLireTfb((int) $c, $r);
 }
 
+/** Ce que le SMS d'un formulaire dit du prospect (sms_formulaires.php) : sa société (ou son bureau), son lieu, son effectif ; jamais son e-mail ni son téléphone. */
+function bdvSmsDonnees(array $d): array
+{
+    return ['nom' => (string) (($d['bureau'] ?? '') !== '' ? $d['bureau'] : ($d['societe'] ?? '')), 'cp' => (string) ($d['cp'] ?? ''),
+        'ville' => (string) ($d['ville'] ?? ''), 'personnes' => (int) ($d['personnes'] ?? 0)];
+}
+
 /** La copie gardée (ou mise à jour, même request_key), puis, depuis la landing, l'envoi à TF Buddy. Rend la ligne. */
 function bdvHorsZoneEnregistrer(string $shop, array $d, string $ipHash): array
 {
@@ -533,6 +542,8 @@ function bdvHorsZoneEnregistrer(string $shop, array $d, string $ipHash): array
         Db::exec('INSERT INTO panel_bureau_dev (shop_id, source, statut, donnees, erreurs, ip_hash, cree_le, traite_le) VALUES (?, "hors_zone", "hors_zone", ?, ?, ?, NOW(), NOW())',
             [$shop, $json, $motif, $ipHash]);
         $id = (int) Db::pdo()->lastInsertId();
+        // Le SMS au franchisé et au siège (sms_formulaires.php), à la première arrivée seulement (pas à un nouvel essai).
+        if (function_exists('smsfNotifier')) { smsfNotifier($shop, 'hors_zone', bdvSmsDonnees($d)); }
         if (function_exists('journalAdd')) {
             journalAdd('dashboard', 'bureaux', null, 'Magasin ' . $shop . ' : demande hors zone (' . $d['cp'] . ($d['ville'] !== '' ? ' ' . $d['ville'] : '') . ', '
                 . ($d['origine'] === 'webshop' ? 'landing du webshop' : 'landing atelierby.be') . ') — TF Buddy : ' . ($d['_tfbuddy'] === 'ok' ? 'reçue' : 'pas reçue'));
