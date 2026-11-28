@@ -18,7 +18,7 @@
 .au-res-q{font-size:13px;line-height:1.35;color:var(--ink)}.au-res-q>span{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
 .au-res-h{display:flex;flex-direction:column;gap:3px;padding-left:18px;border-left:1px solid var(--line);font-size:13px;color:var(--ink)}
 .au-res-h>span+span{font-size:12px;color:var(--muted)}
-.au-pt{flex:none;width:8px;height:8px;border-radius:50%;background:#c9c1b4}
+.au-pt{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint)}
 .au-pt.green{background:var(--green)}.au-pt.prize{background:var(--prize)}.au-pt.stop{background:var(--stop)}
 .au-res-l2{display:flex;align-items:flex-start;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .au-res-t{flex:none;font-size:12.5px;line-height:30px;color:var(--muted-2)}
