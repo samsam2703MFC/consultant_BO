@@ -241,7 +241,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
    trimestre ouvert, les douze mois en une bande face à l'an passé, les plis. */
 .db-an-obj{padding:16px 20px 18px}
 .db-an-obj .hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
-.db-an-obj .hd .v{font:400 30px/1.1 var(--font-display);margin-top:4px;font-variant-numeric:tabular-nums}
+.db-an-obj .hd .v{font:400 26px/1.1 var(--font-display);margin-top:4px;font-variant-numeric:tabular-nums}
 .db-an-barre{position:relative;height:16px;border-radius:8px;background:var(--color-background-secondary);margin:14px 0 26px}
 .db-an-barre i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:var(--color-primary)}
 .db-an-barre s{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(141,29,44,.28) 0 3px,transparent 3px 7px)}
@@ -253,18 +253,18 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-an-3 .v{font:400 22px/1.15 var(--font-display);margin:3px 0 2px;font-variant-numeric:tabular-nums}
 .db-an-3 .s{font:400 11px var(--font-ui);color:var(--color-text-muted)}
 .db-an-3>.vif{border-color:var(--color-primary);background:rgba(141,29,44,.05)}.db-an-3>.vif .v{color:var(--color-primary)}
-.db-an-3>.bon{border-color:rgba(63,122,82,.3);background:#f0f7f2}.db-an-3>.bon .v{color:var(--green)}
+.db-an-3>.bon{border-color:rgba(63,122,82,.3);background:rgba(63,122,82,.12)}.db-an-3>.bon .v{color:var(--green)}
 .db-an-q{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
 .db-an-qc{appearance:none;-webkit-appearance:none;text-align:left;cursor:pointer;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font:400 12px var(--font-ui);color:var(--color-text);min-width:0}
 .db-an-qc:hover{border-color:var(--color-border-secondary)}
 .db-an-qc.on{border-color:var(--color-primary);box-shadow:inset 0 0 0 1px var(--color-primary);background:rgba(141,29,44,.03)}
 .db-an-qc:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .db-an-qc .hd{display:flex;align-items:center}.db-an-qc .hd .t{font:400 16px var(--font-display)}.db-an-qc .hd .db-pill{margin-left:auto;font-size:11px;padding:2px 8px;border-radius:6px}
-.db-an-qc .v{font:400 20px var(--font-display);font-variant-numeric:tabular-nums}.db-an-qc .v small{font:400 12px var(--font-ui);color:var(--color-text-muted)}
+.db-an-qc .v{font:400 21px var(--font-display);font-variant-numeric:tabular-nums}.db-an-qc .v small{font:400 12px var(--font-ui);color:var(--color-text-muted)}
 .db-an-qc .mi{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .db-an-qc .mi>span{text-align:center;font-size:10px;color:var(--color-text-muted)}
 .db-an-qc .bb{height:48px;display:flex;align-items:flex-end;justify-content:center;gap:3px;border-bottom:1px solid var(--color-border-tertiary);margin-bottom:3px}
-.db-an-qc .bb i{display:block;width:12px;border-radius:3px 3px 0 0;min-height:1px}.db-an-qc .bb i.b{background:#e9e2d8}
+.db-an-qc .bb i{display:block;width:12px;border-radius:3px 3px 0 0;min-height:1px}.db-an-qc .bb i.b{background:var(--chip)}
 .db-an-qc .s{font-size:11px;color:var(--color-text-muted)}
 .db-an-det .g{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr) minmax(0,1.1fr);align-items:start}
 .db-an-det .kv{margin:0;padding:14px 16px;display:flex;flex-direction:column;gap:9px;border-left:1px solid var(--color-border-tertiary);border-right:1px solid var(--color-border-tertiary)}
@@ -282,7 +282,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-an-12 .m{text-align:center;min-width:0}
 .db-an-12 .bb{position:relative;height:120px;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--color-border-tertiary)}
 .db-an-12 .bb i{display:block;width:60%;max-width:34px;border-radius:4px 4px 0 0;min-height:1px}
-.db-an-12 .bb u{position:absolute;left:12%;right:12%;height:0;border-top:2px solid #8a847c;opacity:.55}
+.db-an-12 .bb u{position:absolute;left:12%;right:12%;height:0;border-top:2px solid var(--muted);opacity:.55}
 .db-an-12 .n{font:400 11.5px var(--font-ui);margin-top:5px}
 .db-an-12 .d{font:400 10.5px var(--font-ui);color:var(--color-text-muted);font-variant-numeric:tabular-nums;min-height:1.3em}
 .db-an-pli{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;margin-bottom:10px}

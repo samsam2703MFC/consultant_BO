@@ -84,3 +84,13 @@
 .cm .lv-ev .bm .lv-c{font-size:10px;padding:1px 7px;font-weight:400}
 .cm .lv-ev .an{text-align:right;min-width:0}.cm .lv-ev .an b{display:block;font:400 15px var(--font-ui);font-variant-numeric:tabular-nums}.cm .lv-ev .an small{display:block;font-size:10.5px;color:var(--color-text-muted);margin:1px 0 3px}.cm .lv-ev .an .lv-c{font-size:10px;padding:1px 7px;font-weight:400}
 @media (max-width:760px){.cm .lv-ev{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px}.cm .lv-ev .bm{grid-column:1/-1;order:3}.cm .lv-ev .an{grid-column:2;grid-row:1}}
+
+/* 28/11/2026 (design system §7.6, §7.13) : les vues d'une même carte en sélecteur segmenté (.db-ong--seg) ; l'écart au
+   N-1 en étiquette au fond teinté de son état (classes posées par cartes-magasin.js à la place de l'aplat en ligne). */
+.cm .db-ong.db-ong--seg{gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
+.cm .db-ong.db-ong--seg button{border-radius:7px;color:var(--muted-2)}
+.cm .db-ong.db-ong--seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.cm .db-s6ch .ch em{border-radius:4px}
+.cm .db-s6ch .ch em.haut{background:rgba(63,122,82,.14);color:var(--green)}
+.cm .db-s6ch .ch em.bas{background:var(--prize-soft);color:var(--prize-ink)}
+.cm .db-s6ch .ch em.eq,.cm .db-s6ch .ch em.nul{background:var(--chip);color:var(--muted-2)}

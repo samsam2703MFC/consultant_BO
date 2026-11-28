@@ -40,7 +40,7 @@
         cumul: L => ({ a: L.reduce((t, x) => t + x.articles, 0), b: L.reduce((t, x) => t + x.tickets, 0) }) }
     };
     const mk = AN_MESURES[o.mesure] ? o.mesure : 'clients', M = AN_MESURES[mk];
-    const bascule = `<span class="db-ong db-ong-p">${Object.entries(AN_MESURES).map(([k, x]) => `<button type="button" data-anm="${k}" class="${k === mk ? 'on' : ''}" aria-pressed="${k === mk}">${x.nom}</button>`).join('')}</span>`;
+    const bascule = `<span class="db-ong db-ong-p db-ong--seg">${Object.entries(AN_MESURES).map(([k, x]) => `<button type="button" data-anm="${k}" class="${k === mk ? 'on' : ''}" aria-pressed="${k === mk}">${x.nom}</button>`).join('')}</span>`;
     const carte = (corps, sous) => `<div class="db-card"><div class="ct" style="flex-wrap:wrap;gap:8px"><span class="db-lab">${Y}, mois par mois — ${M.titre}, face à ${Y - 1}</span>${bascule}${sous ? `<span class="db-mini" style="margin-left:auto">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
     if (!D) { return carte(`<div class="db-note">${o.err ? esc(o.err) : 'Lecture des douze mois…'}</div>`); }
     const pc = (a, b) => b ? 100 * a / b : 0;
@@ -76,7 +76,7 @@
     const ft = 'font-family:var(--font-ui)';
     const iEc = T.findIndex(w => w.enCours);
     let svg = `<svg viewBox="0 0 ${Wd} ${Hh}" preserveAspectRatio="xMinYMin meet" class="db-s6c">`;
-    if (iEc >= 0) { const w = (Wd - ml - mr) / 11; svg += `<rect x="${(+X(iEc) - w / 2).toFixed(1)}" y="${mt - 12}" width="${w.toFixed(1)}" height="${Hh - mb - mt + 12}" fill="#8D1D2C" fill-opacity="0.045" rx="4"/>`; }
+    if (iEc >= 0) { const w = (Wd - ml - mr) / 11; svg += `<rect x="${(+X(iEc) - w / 2).toFixed(1)}" y="${mt - 12}" width="${w.toFixed(1)}" height="${Hh - mb - mt + 12}" fill="#B03048" fill-opacity="0.045" rx="4"/>`; }
     [1, 2].forEach(k => { const y = Yp(lo + (hi - lo) * k / 3); svg += `<line x1="${ml}" x2="${Wd - mr}" y1="${y}" y2="${y}" stroke="rgba(34,34,34,.10)"/>`; });
     // La bande entre les deux courbes, mois par mois (pas vers le mois en cours prolongé).
     for (let i = 0; i < 11; i++) {
@@ -87,18 +87,18 @@
     const seg = (get, garde) => { const out = []; let cur = []; T.forEach((w, i) => { const v = get(w, i); if (v != null && garde(w)) { cur.push(X(i) + ',' + Yp(v)); } else { if (cur.length) { out.push(cur); } cur = []; } }); if (cur.length) { out.push(cur); } return out; };
     seg(v1T, () => true).forEach(s => { if (s.length > 1) { svg += `<polyline points="${s.join(' ')}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4"/>`; } });
     const projete = mk === 'clients';
-    seg(vT, w => !(projete && w.enCours)).forEach(s => { if (s.length > 1) { svg += `<polyline points="${s.join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>`; } });
+    seg(vT, w => !(projete && w.enCours)).forEach(s => { if (s.length > 1) { svg += `<polyline points="${s.join(' ')}" fill="none" stroke="#B03048" stroke-width="2.5"/>`; } });
     if (iEc > 0 && vT(T[iEc], iEc) != null && vT(T[iEc - 1], iEc - 1) != null) {
-      svg += `<line x1="${X(iEc - 1)}" y1="${Yp(vT(T[iEc - 1], iEc - 1))}" x2="${X(iEc)}" y2="${Yp(vT(T[iEc], iEc))}" stroke="#8D1D2C" stroke-width="2.2" ${projete ? 'stroke-dasharray="2 4"' : ''} stroke-linecap="round"/>`;
+      svg += `<line x1="${X(iEc - 1)}" y1="${Yp(vT(T[iEc - 1], iEc - 1))}" x2="${X(iEc)}" y2="${Yp(vT(T[iEc], iEc))}" stroke="#B03048" stroke-width="2.2" ${projete ? 'stroke-dasharray="2 4"' : ''} stroke-linecap="round"/>`;
     }
     T.forEach((w, i) => {
       const n = vT(w, i), n1 = v1T(w, i), up = n1 == null || n == null || n >= n1;
       if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Yp(n1)}" r="3.5" fill="#fff" stroke="#B8B2A8" stroke-width="2"/><text x="${X(i)}" y="${(+Yp(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#7a736a" style="${ft}">${M.f(n1)}</text>`; }
       if (n != null) {
-        svg += w.enCours ? `<circle cx="${X(i)}" cy="${Yp(n)}" r="4.4" fill="#fff" stroke="#8D1D2C" stroke-width="2"/>` : `<circle cx="${X(i)}" cy="${Yp(n)}" r="4" fill="#8D1D2C"/>`;
-        svg += `<text x="${X(i)}" y="${(+Yp(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`;
+        svg += w.enCours ? `<circle cx="${X(i)}" cy="${Yp(n)}" r="4.4" fill="#fff" stroke="#B03048" stroke-width="2"/>` : `<circle cx="${X(i)}" cy="${Yp(n)}" r="4" fill="#B03048"/>`;
+        svg += `<text x="${X(i)}" y="${(+Yp(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="400" text-anchor="middle" fill="#B03048" style="${ft}">${M.f(n)}</text>`;
       }
-      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${w.enCours ? '#8D1D2C' : (w.futur ? '#a8a197' : '#1c1a17')}" style="${ft}">${MO[i]}${w.enCours ? ' · ' + w.joursServis + ' j' : ''}</text>`;
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="400" text-anchor="middle" fill="${w.enCours ? '#B03048' : (w.futur ? '#a8a197' : '#1c1a17')}" style="${ft}">${MO[i]}${w.enCours ? ' · ' + w.joursServis + ' j' : ''}</text>`;
     });
     svg += '</svg>';
     const chips = T.map((w, i) => {
@@ -108,8 +108,9 @@
           + (n1 != null ? ' · ' + (Y - 1) + (w.enCours ? ' aux mêmes jours' : '') + ' : ' + M.f(n1) : ' · pas de N-1')
           + (i === iOuv || i === iOuv1 ? ' · mois d’ouverture, pas d’écart' : '');
       const pas1 = w.futur ? '<em style="background:transparent;color:var(--color-text-muted)">à venir</em>'
-        : (i === iOuv || i === iOuv1 ? '<em style="background:var(--faint)">ouv.</em>'
-        : (avecN1 ? `<em style="background:${e == null ? '#B8B2A8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`));
+        : (i === iOuv || i === iOuv1 ? '<em class="nul">ouv.</em>'
+        // L'écart au N-1 en étiquette au fond teinté de son état (§7.13, 28/11/2026) : la classe, plus l'aplat plein en ligne.
+        : (avecN1 ? `<em class="${e == null ? 'nul' : (e >= 3 ? 'haut' : (e <= -3 ? 'bas' : 'eq'))}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`));
       // Sans N-1, la valeur du mois est dans la pastille : elle ne se répète pas sous le nom du mois.
       const sous = w.enCours ? 'en cours' : (w.futur ? (nm != null ? M.f(nm) : '') : (!avecN1 ? '' : (n != null ? M.f(n) : '—')));
       return `<div class="ch" title="${esc(titre)}"><span><b>${MO[i]}</b><span>${sous}</span></span>${pas1}</div>`;
@@ -138,7 +139,7 @@
       tuile(mk === 'clients' ? 'Meilleur mois' : 'Mois le plus haut', meilleur ? M.f(M.v(meilleur)) : '—', meilleur ? MO[T.indexOf(meilleur)] + ' ' + Y : '')
     ].join('');
     const corps = `<div class="db-s6"><div>${svg}
-        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--accent);border-radius:50%"></i>${esc(M.unite)}${projete && ec ? ' (le mois en cours prolongé au rythme de ses jours)' : ''}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>même mois en ${Y - 1} (pointillé, mois entier)</span><span><i class="c" style="background:${HAUT};opacity:.35"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.35"></i>en dessous</span>` : ''}</div>
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--chart-real);border-radius:50%"></i>${esc(M.unite)}${projete && ec ? ' (le mois en cours prolongé au rythme de ses jours)' : ''}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>même mois en ${Y - 1} (pointillé, mois entier)</span><span><i class="c" style="background:${HAUT};opacity:.35"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.35"></i>en dessous</span>` : ''}</div>
         <div class="db-s6ch">${chips}</div></div>
       <div class="db-s6t">${tuiles}</div></div>`;
     return carte(corps, (D.source || '').replace(/ · N-1 = .*$/, '') + ' · écart du mois en cours aux mêmes jours de ' + (Y - 1));
