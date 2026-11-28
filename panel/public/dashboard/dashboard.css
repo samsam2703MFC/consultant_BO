@@ -3855,6 +3855,9 @@ body.db-vue-social{overflow:hidden}
 .fdp-hi i{display:block;width:100%;background:#fff;border-radius:3px 3px 0 0}
 .fdp-hi span{font-size:11px;min-height:13px;font-variant-numeric:tabular-nums}
 .fdp-hi small{font-size:10px;opacity:.8;white-space:nowrap;min-height:12px}
+.fdp-vz{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fdp-vt{margin-top:12px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.fdp-vt+.fdp-hi{margin-top:4px}
 .fdp-sem{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:5px;margin-top:16px}
 .fdp-sem>i{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;font-style:normal}
 .fdp-sem b{display:flex;align-items:center;justify-content:center;width:100%;max-width:34px;aspect-ratio:1;border-radius:50%;border:2px dashed rgba(255,255,255,.5);font-weight:400;font-size:12px;font-variant-numeric:tabular-nums}
