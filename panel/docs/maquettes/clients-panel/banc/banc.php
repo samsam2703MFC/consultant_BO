@@ -111,7 +111,9 @@ function bancDonnees(): array
     $nom = ['Bertrand', 'Gilles', 'Vandenberghe', 'Martin', 'Dubois', 'Peeters', 'Lambert', 'Dupont', 'Renard', 'Simon', 'Claes', 'Leroy', 'Hermans', 'Mertens', 'Jacobs', 'Wouters', 'Goossens', 'Lemaire', 'Maes', 'Willems'];
     for ($i = 0; $i < 120; $i++) {
         $id = 1000 + $i;
-        $D['b2c'][$id] = ['id' => $id, 'id_main_shop' => $i % 7 === 0 ? 2 : 3, 'is_b2b' => 0, 'name' => $pre[$i % 20], 'surname' => $nom[($i * 7) % 20], 'phone' => '+32 4' . (70 + $i % 29) . ' ' . str_pad((string) (10 + $i), 2, '0') . ' ' . (20 + $i % 70) . ' ' . str_pad((string) ($i % 97), 2, '0', STR_PAD_LEFT),
+        // Comme à la caisse (28/11/2026) : un client sur trois en MAJUSCULES, un sur dix sans prénom (« ... »).
+        $D['b2c'][$id] = ['id' => $id, 'id_main_shop' => $i % 7 === 0 ? 2 : 3, 'is_b2b' => 0, 'name' => $i % 10 === 4 ? '...' : ($i % 3 === 0 ? mb_strtoupper($pre[$i % 20]) : $pre[$i % 20]),
+            'surname' => $i % 3 === 0 ? mb_strtoupper($nom[($i * 7) % 20]) : $nom[($i * 7) % 20], 'phone' => '+32 4' . (70 + $i % 29) . ' ' . str_pad((string) (10 + $i), 2, '0') . ' ' . (20 + $i % 70) . ' ' . str_pad((string) ($i % 97), 2, '0', STR_PAD_LEFT),
             'email' => $i % 3 ? strtolower($pre[$i % 20]) . '.' . strtolower($nom[($i * 7) % 20]) . '@exemple.be' : '', 'street' => 'rue de Namur', 'street_number' => (string) (1 + $i), 'zip' => '6041', 'city' => 'Gosselies',
             'personal_discount_percent' => $i % 9 === 0 ? 5 : ($i % 13 === 0 ? 10 : 0), 'can_deferral' => 0, 'create_timestamp' => date('Y-m-d H:i:s', strtotime('2026-11-24 -' . ($i * 5) . ' day')), 'password_hash' => 'x', 'api_key' => 'k',
             // Le compte en ligne (28/11/2026) : un client sur quatre s'est déjà connecté au webshop.
@@ -228,6 +230,7 @@ final class PanelApi
 }
 require RACINE . '/panel/src/tfb_magasin.php';
 require RACINE . '/panel/src/clients_panel.php';
+require RACINE . '/panel/src/clients_nettoyage.php';
 require RACINE . '/panel/src/bureaux_dev.php';
 header('Content-Type: application/json; charset=utf-8');
 $path = preg_replace('#^.*/api/cockpit#', '', $chemin);

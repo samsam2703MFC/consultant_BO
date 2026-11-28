@@ -209,7 +209,7 @@
   function tete() {
     const n = (o, k) => o && o.d ? ` <span class="page-tabs__count">${nf(o.d[k])}</span>` : '';
     const ong = [['b2c', 'Particuliers', n(st.p, 'total')], ['b2b', 'Entreprises B2B', n(st.e, 'total')], ['bur', 'Bureaux', st.b.d && st.b.d.ok ? ` <span class="page-tabs__count">${st.b.d.data.bureaux.length}</span>` : ''], ['an', 'Analyse B2B', '']];
-    const act = st.b.w && st.onglet === 'bur' ? '' : st.onglet === 'b2c' ? `<button type="button" class="btn btn--primary" data-act="p-ajouter">${SVG(ICO.plus)}Ajouter un client</button>`
+    const act = st.b.w && st.onglet === 'bur' ? '' : st.onglet === 'b2c' ? `<button type="button" class="btn" data-act="n-ouvrir">Nettoyer la base</button><button type="button" class="btn btn--primary" data-act="p-ajouter">${SVG(ICO.plus)}Ajouter un client</button>`
       : st.onglet === 'b2b' ? `<button type="button" class="btn btn--primary" data-act="e-ajouter">${SVG(ICO.plus)}Ajouter une entreprise</button>`
       : st.onglet === 'bur' ? `<button type="button" class="btn btn--primary" data-act="w-ouvrir"${st.b.d && st.b.d.ok ? '' : ' disabled title="TF Buddy ne donne pas les bureaux au cockpit"'}>${SVG(ICO.plus)}Ajouter un bureau</button>` : '';
     // Le titre : le dashboard met déjà le sien (le magasin, « Clients ») ; le module ne garde que son action (26/11/2026).
@@ -225,10 +225,75 @@
     return c.enLigne ? `<span class="chip chip--ok">En ligne</span><span class="sub">connecté le ${fD(c.connexion)}</span>`
       : `<span class="chip chip--draft">Pas de compte</span>${c.email ? '<span class="sub">e-mail connu</span>' : ''}`;
   }
+  /** La part des particuliers qui ont un compte en ligne (le webshop), une jauge. */
+  function jaugeEnLigne(d) {
+    if (d.enLigne == null || !d.total) { return ''; }
+    const p = Math.round(100 * d.enLigne / d.total);
+    return `<div class="pcl-jauge"><div class="pcl-jauge-t">Compte en ligne <span class="pcl-jauge-v">${p} %</span></div>
+      <div class="pcl-jauge-b" role="progressbar" aria-label="Part des particuliers avec un compte en ligne" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p}"><i style="width:${p}%"></i></div>
+      <div class="pcl-jauge-s">${nf(d.enLigne)} sur ${nf(d.total)} clients</div></div>`;
+  }
+  /* ── Nettoyer la base (28/11/2026, panel/src/clients_nettoyage.php) ─────────────────────────────────────────── */
+  function ouvrirNettoyage() {
+    ouvrir('n-nettoyer', {}, { d: null, exclus: {}, prog: null, fin: null });
+    const m = st.mo;
+    lire('/dashboard/clients/nettoyage').then(d => { if (st.mo === m) { m.d = d; } }).catch(e => { if (st.mo === m) { m.err = e.message; } }).finally(rendre);
+  }
+  function fenNettoyage(m) {
+    const d = m.d;
+    if (!d) { return fenetre('Nettoyer la base', m.err ? '' : attente('Lecture des particuliers dans TF Buddy…'), '', true); }
+    const P = d.propositions, choisis = P.filter(x => !m.exclus[x.id]).length, enCours = m.prog && !m.fin;
+    const regle = `<p class="pcl-aide">Les prénoms et les noms écrits TOUT EN MAJUSCULES ou tout en minuscules passent en Nom Propre
+      (« JEAN-PIERRE » → « Jean-Pierre », « VAN DEN BERGHE » → « Van den Berghe ») ; les espaces en trop partent ; l’e-mail passe en minuscules.
+      Une casse déjà mêlée (« McDonald ») ne bouge pas, ni le téléphone, ni « ... » : un nom incomplet se complète à la main. Rien ne s’efface, et le nettoyage s’annule.</p>`;
+    const cellule = (x, cote) => esc(cote === 'apres' ? x.nomApres : x.nom) + (x.apres.email != null ? `<span class="sub">${esc(cote === 'apres' ? x.apres.email : x.avant.email)}</span>` : '');
+    const lignes = P.map(x => `<tr${m.exclus[x.id] ? ' class="pcl-n-off"' : ''}><td class="pcl-n-case"><input type="checkbox" data-n-id="${x.id}"${m.exclus[x.id] ? '' : ' checked'}${enCours || m.fin ? ' disabled' : ''} aria-label="Mettre en forme ${esc(x.nom)}"></td>
+      <td class="pcl-n-avant">${cellule(x, 'avant')}${x.incomplet ? ' <span class="tag-warn">nom incomplet</span>' : ''}</td><td class="pcl-n-fl" aria-hidden="true">→</td><td>${cellule(x, 'apres')}</td></tr>`).join('');
+    const dernier = d.dernier && d.dernier.restants > 0 && !m.fin ? `<p class="pcl-n-dernier">Dernier nettoyage le ${fD(String(d.dernier.le).slice(0, 10))} : ${nf(d.dernier.restants)} fiche${d.dernier.restants > 1 ? 's' : ''} mise${d.dernier.restants > 1 ? 's' : ''} en forme. <button type="button" class="linklike" data-act="n-annuler" data-v="${esc(d.dernier.lot)}"${enCours ? ' disabled' : ''}>Annuler ce nettoyage</button></p>` : '';
+    const prog = m.prog ? `<div class="pcl-n-prog"><div class="pcl-jauge-b"><i style="width:${m.prog.total ? Math.round(100 * m.prog.fait / m.prog.total) : 0}%"></i></div>
+      <div class="pcl-n-prog-t">${m.prog.annulation ? 'Annulation' : 'Mise en forme'} : ${nf(m.prog.fait)} / ${nf(m.prog.total)}${m.prog.echecs.length ? ` · ${nf(m.prog.echecs.length)} refusée${m.prog.echecs.length > 1 ? 's' : ''}` : ''}${m.prog.laisses ? ` · ${nf(m.prog.laisses)} laissée${m.prog.laisses > 1 ? 's' : ''} (modifiée${m.prog.laisses > 1 ? 's' : ''} depuis)` : ''}</div></div>` : '';
+    const fin = m.fin ? `<p class="pcl-ok">${esc(m.fin)}</p>${m.prog && m.prog.echecs.length ? `<ul class="pcl-n-echecs">${m.prog.echecs.slice(0, 12).map(e => `<li>${esc(e.nom || 'client n° ' + e.id)} : ${esc(e.motif)}</li>`).join('')}</ul>` : ''}
+      ${m.lot && !m.prog.annulation ? `<p class="pcl-n-dernier"><button type="button" class="linklike" data-act="n-annuler" data-v="${esc(m.lot)}">Annuler ce nettoyage</button> : les fiches reprennent leur forme d’avant.</p>` : ''}` : '';
+    const corps = !P.length ? `${regle}<p class="pcl-ok">Les ${nf(d.total)} fiches du magasin sont déjà en forme.</p>${dernier}`
+      : `${regle}<div class="pcl-n-tete"><span><b>${nf(P.length)}</b> fiche${P.length > 1 ? 's' : ''} sur ${nf(d.total)} à mettre en forme · ${nf(d.regles.noms)} nom${d.regles.noms > 1 ? 's' : ''} · ${nf(d.regles.emails)} e-mail${d.regles.emails > 1 ? 's' : ''}</span>
+          ${enCours || m.fin ? '' : `<button type="button" class="linklike" data-act="n-tous">${choisis === P.length ? 'Tout décocher' : 'Tout cocher'}</button>`}</div>
+        ${dernier}${prog}${fin}<div class="pcl-n-liste"><table class="ds-table pcl-n-table"><thead><tr><th></th><th>Avant</th><th></th><th>Après</th></tr></thead><tbody>${lignes}</tbody></table></div>`;
+    const pied = m.fin ? `<button type="button" class="btn btn--primary" data-act="fermer">Fermer</button>`
+      : `<button type="button" class="btn btn--ghost" data-act="fermer"${enCours ? ' disabled' : ''}>Annuler</button><button type="button" class="btn btn--primary${enCours ? ' is-busy' : ''}" data-act="n-appliquer"${enCours || !choisis ? ' disabled' : ''}>${enCours ? 'Mise en forme…' : `Mettre en forme ${nf(choisis)} fiche${choisis > 1 ? 's' : ''}`}</button>`;
+    return fenetre('Nettoyer la base', corps, P.length || m.fin ? pied : `<button type="button" class="btn btn--primary" data-act="fermer">Fermer</button>`, true);
+  }
+  /** Les fiches cochées, par lots de `lotMax` (25), l'un après l'autre : l'avancement se voit, un refus ne bloque pas le reste. */
+  function appliquerNettoyage() {
+    const m = st.mo, d = m.d, ids = d.propositions.filter(x => !m.exclus[x.id]).map(x => x.id), n = d.lotMax || 25;
+    if (!ids.length) { return; }
+    const noms = {}; d.propositions.forEach(x => { noms[x.id] = x.nom; });
+    m.prog = { fait: 0, total: ids.length, echecs: [], laisses: 0 }; m.err = null; m.lot = null; rendre();
+    const lot = i => {
+      if (i >= ids.length || st.mo !== m) { return Promise.resolve(); }
+      return envoyer('/dashboard/clients/nettoyage', { action: 'appliquer', ids: ids.slice(i, i + n), lot: m.lot || undefined }).then(r => {
+        m.lot = r.lot; m.prog.fait += r.faits.length + r.echecs.length + (r.ignores || 0); m.prog.echecs = m.prog.echecs.concat(r.echecs.map(e => Object.assign({ nom: noms[e.id] }, e))); rendre();
+        return lot(i + n);
+      });
+    };
+    lot(0).then(() => { const ok = m.prog.total - m.prog.echecs.length; m.fin = `${nf(ok)} fiche${ok > 1 ? 's' : ''} mise${ok > 1 ? 's' : ''} en forme dans TF Buddy.`; })
+      .catch(e => { m.err = e.message + ' — ce qui est déjà fait le reste, et s’annule.'; m.fin = `${nf(m.prog.fait)} fiche${m.prog.fait > 1 ? 's' : ''} traitée${m.prog.fait > 1 ? 's' : ''} avant l’arrêt.`; })
+      .finally(() => { rendre(); lireParticuliers(true); });
+  }
+  function annulerNettoyage(lotId) {
+    const m = st.mo; if (!m || !lotId) { return; }
+    const total = m.d && m.d.dernier && m.d.dernier.lot === lotId ? m.d.dernier.restants : (m.prog ? m.prog.total - m.prog.echecs.length : 0);
+    m.prog = { fait: 0, total, echecs: [], laisses: 0, annulation: true }; m.fin = null; m.err = null; rendre();
+    const tour = () => envoyer('/dashboard/clients/nettoyage', { action: 'annuler', lot: lotId }).then(r => {
+      m.prog.fait += r.annules + r.laisses; m.prog.laisses += r.laisses; m.prog.echecs = m.prog.echecs.concat(r.echecs); rendre();
+      return r.reste > 0 && st.mo === m ? tour() : null;
+    });
+    tour().then(() => { m.fin = `Nettoyage annulé : ${nf(m.prog.fait - m.prog.laisses)} fiche${m.prog.fait - m.prog.laisses > 1 ? 's' : ''} remise${m.prog.fait - m.prog.laisses > 1 ? 's' : ''} comme avant.`; m.lot = null; })
+      .catch(e => { m.err = e.message; m.fin = 'L’annulation s’est arrêtée.'; }).finally(() => { rendre(); lireParticuliers(true); });
+  }
   function vueParticuliers() {
     const P = st.p, d = P.d;
     const barre = `<div class="pcl-filtres"><input id="pcl-pq" type="search" placeholder="Nom, téléphone, e-mail" value="${esc(P.q)}" autocomplete="off">
-      <span class="pcl-grp">Avec ${seg('p-filtre', P.filtre, [['', 'Tous'], ['remise', 'Une remise' + (d ? ' · ' + nf(d.avecRemise) : '')]])}</span>
+      <span class="pcl-grp">Avec ${seg('p-filtre', P.filtre, [['', 'Tous'], ['remise', 'Une remise' + (d ? ' · ' + nf(d.avecRemise) : '')], ['incomplet', 'Nom incomplet' + (d && d.incomplets != null ? ' · ' + nf(d.incomplets) : '')]])}</span>
       <span class="pcl-grp">Compte en ligne ${seg('p-compte', P.compte, [['', 'Tous'], ['en_ligne', 'En ligne' + (d && d.enLigne != null ? ' · ' + nf(d.enLigne) : '')], ['sans_compte', 'Pas de compte' + (d && d.enLigne != null ? ' · ' + nf(d.total - d.enLigne) : '')]])}</span>
       <span class="pcl-sp"></span><button type="button" class="linklike" data-act="relire">relire</button></div>`;
     let corps;
@@ -237,13 +302,19 @@
     else if (!d.clients.length) { corps = `<div class="pcl-vide">${d.q ? 'Aucun particulier ne répond à « ' + esc(d.q) + ' ».' : 'Aucun particulier.'}</div>`; }
     else {
       corps = `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Client</th><th>Téléphone</th><th>Compte en ligne</th><th class="num">Remise</th><th></th></tr></thead><tbody>
-        ${d.clients.map(c => `<tr class="pcl-ligne${P.sel === c.id ? ' is-sel' : ''}" data-act="p-sel" data-id="${c.id}"><td>${esc(c.nom)}<span class="sub">${[c.cp, c.ville].filter(Boolean).map(esc).join(' ') || (c.cree ? 'depuis ' + fD(c.cree) : '')}</span></td>
+        ${d.clients.map(c => `<tr class="pcl-ligne${P.sel === c.id ? ' is-sel' : ''}" data-act="p-sel" data-id="${c.id}"><td>${esc(c.nom)}${c.incomplet ? ' <span class="tag-warn" title="La caisse a tapé « ... » à la place du prénom ou du nom : à compléter au comptoir">nom incomplet</span>' : ''}<span class="sub">${[c.cp, c.ville].filter(Boolean).map(esc).join(' ') || (c.cree ? 'depuis ' + fD(c.cree) : '')}</span></td>
           <td>${esc(c.tel) || '<span class="muted">—</span>'}</td><td>${compteEnLigne(c)}</td><td class="num">${c.remise ? nf(c.remise, 1).replace(',0', '') + ' %' : '<span class="muted">—</span>'}</td>
           <td class="num"><button type="button" class="btn btn--sm" data-act="p-offre" data-id="${c.id}">Offre</button></td></tr>`).join('')}</tbody></table></div>
         <div class="pcl-pied">${d.trouves > d.clients.length ? nf(d.trouves) + ' trouvés, les ' + d.clients.length + ' premiers montrés : précisez la recherche.' : nf(d.trouves) + (d.q ? ' trouvé' + (d.trouves > 1 ? 's' : '') : ' — les derniers créés d’abord ; cherchez par le nom, le téléphone ou l’e-mail.')}</div>`;
     }
     // Le résumé (26/11/2026, §7.13) : le nombre de particuliers, une liste à lire — pas de « À corriger ».
-    const res = d ? resume({ aria: 'Résumé des particuliers', v: nf(d.total), q: 'particuliers dans TF Buddy', q2: `${d.enLigne != null ? nf(d.enLigne) + ' avec un compte en ligne · ' : ''}${nf(d.avecRemise)} avec une remise personnelle${d.lu ? ' · lus à ' + esc(d.lu) : ''}` }) : '';
+    // La jauge du compte en ligne et « À corriger » (28/11/2026, Sam : « rajouter une jauge avec le % de clients en ligne
+    // par rapport à tous les clients », « un bouton nettoyage de la base », les noms incomplets signalés, jamais effacés).
+    const res = d ? resume({ aria: 'Résumé des particuliers', v: nf(d.total), q: 'particuliers dans TF Buddy', q2: `${nf(d.avecRemise)} avec une remise personnelle${d.lu ? ' · lus à ' + esc(d.lu) : ''}`,
+      ctx: [jaugeEnLigne(d), d.incomplets != null ? `<p>${nf(d.incomplets)} nom${d.incomplets > 1 ? 's' : ''} incomplet${d.incomplets > 1 ? 's' : ''}<span>« ... » tapé à la caisse : à compléter au comptoir</span></p>` : ''],
+      L: [d.aMettreEnForme ? { sig: 'prize', txt: `${nf(d.aMettreEnForme)} fiche${d.aMettreEnForme > 1 ? 's' : ''} à mettre en forme`, attr: 'data-act="n-ouvrir"', titre: 'Nettoyer la base : les noms en MAJUSCULES passent en Nom Propre' } : null,
+        d.incomplets && P.filtre !== 'incomplet' ? { sig: 'prize', txt: `${nf(d.incomplets)} nom${d.incomplets > 1 ? 's' : ''} incomplet${d.incomplets > 1 ? 's' : ''}`, attr: 'data-act="p-filtre" data-v="incomplet"', titre: 'Voir les fiches à compléter' } : null].filter(Boolean),
+      ok: 'Les fiches sont en forme.' }) : '';
     return `<div class="pcl-2"><div>${res}<section class="card pcl-carte">${barre}${P.lecture && d ? '<div class="pcl-fil"></div>' : ''}${corps}</section></div>${ficheParticulier()}</div>`;
   }
   function ficheParticulier() {
@@ -832,6 +903,7 @@
   function fenCourante() {
     const m = st.mo;
     if (!m) { return ''; }
+    if (m.type === 'n-nettoyer') { return fenNettoyage(m); }
     const pied = (lib, act, danger) => `<button type="button" class="btn btn--ghost" data-act="fermer">Annuler</button><button type="button" class="btn ${danger ? 'confirm__danger' : 'btn--primary'}${m.busy ? ' is-busy' : ''}" data-act="${act}"${m.busy ? ' disabled' : ''}>${lib}</button>`;
     const tvaBloc = `<div class="pcl-ligne-in plein">${champ('tax_number', 'Numéro de TVA', { requis: true, aide: 'BE0123456789' })}<button type="button" class="btn btn--sm" data-act="tva">Vérifier</button></div>
       ${m.tva ? `<p class="${m.tva.trouve ? 'pcl-ok' : 'error'} plein">${m.tva.trouve ? 'Trouvée' + (m.tva.source ? ' (' + esc(m.tva.source) + ')' : '') + (m.tva.existe ? ' · déjà cliente dans TF Buddy' + (m.tva.rattache ? ', déjà rattachée à ce magasin' : ' : elle sera rattachée à ce magasin') : '') : 'Introuvable : vérifiez le numéro.'}</p>` : ''}`;
@@ -931,14 +1003,18 @@
     const a = ev.target.closest('[data-act]');
     if (!a || !st.el.contains(a)) { return; }
     const act = a.dataset.act, id = a.dataset.id ? +a.dataset.id : null, v = a.dataset.v;
-    if (act === 'fermer-fond') { if (ev.target === a) { st.mo = null; rendre(); } return; }
+    if (act === 'fermer-fond') { if (ev.target === a && !(st.mo && st.mo.prog && !st.mo.fin)) { st.mo = null; rendre(); } return; }
     if (act === 'b-fermer-fond') { if (ev.target === a) { st.b.sel = null; st.b.pdf = null; rendre(); } return; }
     if (act === 'dev-fermer-fond') { if (ev.target === a) { st.b.devSel = null; st.b.devMsg = null; rendre(); } return; }
     if (a.tagName === 'TR' && ev.target.closest('button')) { return; }
     ev.preventDefault();
     const P = st.p, E = st.e, B = st.b, A = st.a, m = st.mo;
     switch (act) {
-      case 'fermer': st.mo = null; rendre(); break;
+      case 'fermer': if (st.mo && st.mo.prog && !st.mo.fin) { break; } st.mo = null; rendre(); break;
+      case 'n-ouvrir': ouvrirNettoyage(); break;
+      case 'n-tous': { const m = st.mo; if (!m || !m.d) { break; } const tous = m.d.propositions.every(x => !m.exclus[x.id]); m.exclus = {}; if (tous) { m.d.propositions.forEach(x => { m.exclus[x.id] = true; }); } rendre(); break; }
+      case 'n-appliquer': appliquerNettoyage(); break;
+      case 'n-annuler': annulerNettoyage(v); break;
       case 'onglet': st.onglet = v; memo('pcl-onglet:' + st.shop, v); st.mo = null; if (v === 'b2c' && !P.d) { lireParticuliers(); } else if (v === 'b2b' && !E.d) { charger(); } else if (v === 'bur') { if (!B.d) { lireBureaux(); } lireDev(); } /* les bureaux en développement se lisent même si Entreprises B2B a déjà lu les bureaux (26/11/2026) */ else if (v === 'an' && !A.d) { lireAnalyse(); } else { rendre(); } break;
       case 'aller-offres': if (st.aller) { st.aller('offres'); } break;
       case 'tfb-connecter': if (window.DashTfb) { window.DashTfb.ouvrir(st.shop, st.api, toutRelire); } break;
@@ -1065,6 +1141,7 @@
   function majResume() { const r = st.el.querySelector('#pcl-ass-resume'); if (r && st.b.w) { r.outerHTML = resumeAssistant(); } }
   function saisie(ev) {
     const t = ev.target;
+    if (t.dataset && t.dataset.nId !== undefined) { if (ev.type === 'change' && st.mo && st.mo.exclus) { st.mo.exclus[t.dataset.nId] = !t.checked; rendre(); } return; }
     if (t.id === 'pcl-pq') { st.p.q = t.value; clearTimeout(tRech); tRech = setTimeout(() => lireParticuliers(), 300); return; }
     if (t.id === 'pcl-eq') { st.e.q = t.value; rendre(); return; }
     if (t.id === 'pcl-bq') { st.b.q = t.value; rendre(); return; }
@@ -1085,6 +1162,7 @@
   }
   document.addEventListener('keydown', ev => {
     if (ev.key !== 'Escape' || !st.el || !document.body.contains(st.el)) { return; }
+    if (st.mo && st.mo.prog && !st.mo.fin) { return; }   // un nettoyage en cours ne se ferme pas d'un geste
     if (st.mo) { st.mo = null; rendre(); } else if (st.onglet === 'bur' && st.b.devSel && !st.b.w) { st.b.devSel = null; st.b.devMsg = null; rendre(); } else if (st.onglet === 'bur' && st.b.sel && !st.b.w) { st.b.sel = null; st.b.pdf = null; rendre(); }
   });
 

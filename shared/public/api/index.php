@@ -188,6 +188,7 @@ require __DIR__ . '/../../../panel/src/equipe_absences.php';    // Mon équipe �
 require __DIR__ . '/../../../panel/src/commandes_tournees.php';        // Commandes : webshop, comptoir, bureau, liées aux tournées et aux bureaux à livrer (24/11/2026)
 require __DIR__ . '/../../../panel/src/tfb_magasin.php';               // Le compte TF Buddy du magasin : téléphone, PIN, SMS ; le jeton reste dans le navigateur (25/11/2026)
 require __DIR__ . '/../../../panel/src/clients_panel.php';
+require __DIR__ . '/../../../panel/src/clients_nettoyage.php';        // Vendre › Clients › « Nettoyer la base » : la mise en forme des noms dans TF Buddy, annulable (28/11/2026)
 require __DIR__ . '/../../../panel/src/bureaux_dev.php';                // Bureaux en développement : le questionnaire public du magasin, les demandes à valider (26/11/2026)             // Vendre › Clients : le module Klienci de TF Buddy, par les comptes du cockpit (25/11/2026)
 require __DIR__ . '/../../../commercial/src/commercial.php';        // Le portail Commercial : bureaux, offres, échantillons, B2B (19/11/2026, tables sm_)
 require __DIR__ . '/../../../commercial/src/commercial_gains.php';  // … et les gains du commercial (commissions par secteur, plancher)

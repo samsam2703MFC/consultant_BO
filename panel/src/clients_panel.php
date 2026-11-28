@@ -10,13 +10,14 @@ declare(strict_types=1);
  * TF Buddy garde tout : rien n'est stocké ici, sauf la liste des clients du magasin gardée un quart d'heure
  * (`pclClients:{shop}:{type}`, ceo_app_setting) et les mois clos du relevé des tickets pro (`pclMois:{shop}:{mois}`).
  *
- *   GET  /dashboard/clients/particuliers?shop=3&q=dup[&filtre=remise][&compte=en_ligne|sans_compte][&frais=1]
+ *   GET  /dashboard/clients/particuliers?shop=3&q=dup[&filtre=remise|incomplet][&compte=en_ligne|sans_compte][&frais=1]
  *                                                                                 recherche (50 au plus) ; `enLigne`, ceux qui ont un compte webshop
  *   GET  /dashboard/clients/entreprises?shop=3[&frais=1]                          toutes les entreprises du magasin
  *   GET  /dashboard/clients/fiche?shop=3&id=812                                   la fiche (profil, factures, 12 mois)
  *   POST /dashboard/clients/client {shop, action, id?, champs}                    creer · modifier · profil · entreprise · supprimer
  *   POST /dashboard/clients/tva {shop, tva}                                       la TVA vue par TF Buddy, puis VIES
  *   GET  /dashboard/clients/analyse?shop=3&annee=2026&mois=11                     les six chiffres du mois, l'année
+ *   GET|POST /dashboard/clients/nettoyage                                          « Nettoyer la base » (clients_nettoyage.php)
  *   GET  /dashboard/clients/bureaux?shop=3&chemin=/12/sites[&query=…]             relais des bureaux (liste blanche)
  *   POST /dashboard/clients/bureaux {shop, methode, chemin, corps}                écriture des bureaux (liste blanche)
  *   POST /dashboard/clients/bureaux/pdf {shop, bureau, type, corps}               affiche, cartes, brochure (le PDF tel quel)
@@ -155,6 +156,13 @@ function pclCourt(array $c): array
         'connexion' => substr(pclTexte($c['last_login_at'] ?? ''), 0, 10)];
 }
 
+/** Un prénom et un nom qui ont chacun au moins une lettre (28/11/2026) : la caisse tape « ... », « ---- » quand elle ne sait
+ *  pas. Un nom incomplet se signale (filtre « Nom incomplet ») ; il ne s'efface jamais d'ici (Sam : « aucune, juste les signaler »). */
+function pclNomComplet(string $prenom, string $nom): bool
+{
+    return preg_match('/\p{L}/u', $prenom) === 1 && preg_match('/\p{L}/u', $nom) === 1;
+}
+
 /** Le texte où chercher un client : nom, société, TVA, e-mail, et les chiffres du téléphone. */
 function pclCle(array $c): string
 {
@@ -169,6 +177,7 @@ function pclChercher(array $liste, string $q, string $filtre = '', string $compt
     $out = [];
     foreach ($liste as $c) {
         if ($filtre === 'remise' && !(($c['remise'] ?? 0) > 0)) { continue; }
+        if ($filtre === 'incomplet' && pclNomComplet($c['prenom'] ?? '', $c['nomFam'] ?? '')) { continue; }
         if ($compte !== '' && (($c['connexion'] ?? '') !== '') !== ($compte === 'en_ligne')) { continue; }
         $cle = pclCle($c);
         foreach ($mots as $m) {
@@ -190,7 +199,8 @@ function pclLigneParticulier(array $c): array
 {
     return ['id' => $c['id'], 'nom' => $c['nom'], 'tel' => pclMasqueTel($c['tel']), 'email' => $c['email'] !== '', 'ville' => $c['ville'],
         'cp' => $c['cp'], 'remise' => $c['remise'], 'cree' => $c['cree'],
-        'enLigne' => ($c['connexion'] ?? '') !== '', 'connexion' => ($c['connexion'] ?? '') !== '' ? $c['connexion'] : null];
+        'enLigne' => ($c['connexion'] ?? '') !== '', 'connexion' => ($c['connexion'] ?? '') !== '' ? $c['connexion'] : null,
+        'incomplet' => !pclNomComplet($c['prenom'] ?? '', $c['nomFam'] ?? '')];
 }
 
 /** Le niveau d'alerte d'un crédit utilisé (les seuils du panel) : danger ≥ 100 %, attention ≥ 80 %, moyen ≥ 50 %. */
@@ -604,13 +614,15 @@ function ep_clients_particuliers(): array
     $l = pclListe($shop, 'b2c', !empty($_GET['frais']), $lu);
     if ($l === null) { http_response_code(502); return ['error' => 'les particuliers du magasin ne se lisent pas dans TF Buddy']; }
     $q = mb_substr(pclTexte($_GET['q'] ?? ''), 0, 80);
-    $f = pclTexte($_GET['filtre'] ?? '') === 'remise' ? 'remise' : '';
+    $f = in_array(pclTexte($_GET['filtre'] ?? ''), ['remise', 'incomplet'], true) ? pclTexte($_GET['filtre']) : '';
     $compte = in_array(pclTexte($_GET['compte'] ?? ''), PCL_FILTRES_COMPTE, true) ? pclTexte($_GET['compte']) : '';
     $t = pclChercher(array_values($l), $q, $f, $compte);
     return ['shop' => $shop, 'total' => count($l), 'trouves' => count($t), 'q' => $q, 'filtre' => $f, 'compte' => $compte,
         'clients' => array_map('pclLigneParticulier', array_slice($t, 0, PCL_LIMITE)), 'limite' => PCL_LIMITE,
         'avecRemise' => count(array_filter($l, static fn ($c) => ($c['remise'] ?? 0) > 0)),
-        'enLigne' => count(array_filter($l, static fn ($c) => ($c['connexion'] ?? '') !== '')), 'lu' => $lu ? date('H:i', $lu) : null];
+        'enLigne' => count(array_filter($l, static fn ($c) => ($c['connexion'] ?? '') !== '')),
+        'incomplets' => count(array_filter($l, static fn ($c) => !pclNomComplet($c['prenom'] ?? '', $c['nomFam'] ?? ''))),
+        'aMettreEnForme' => function_exists('pcnAFormer') ? pcnAFormer($l) : null, 'lu' => $lu ? date('H:i', $lu) : null];
 }
 
 /** GET /dashboard/clients/entreprises — les entreprises du magasin (la liste riche du panel, sinon la base + le relevé). */
@@ -978,6 +990,7 @@ function pclRoute(string $method, string $path): ?array
             case '/dashboard/clients/fiche': return ep_clients_fiche();
             case '/dashboard/clients/analyse': return ep_clients_analyse();
             case '/dashboard/clients/bureaux': return ep_clients_bureaux();
+            case '/dashboard/clients/nettoyage': return ep_clients_nettoyage();   // panel/src/clients_nettoyage.php (28/11/2026)
         }
     }
     if ($method === 'POST') {
@@ -985,6 +998,7 @@ function pclRoute(string $method, string $path): ?array
             case '/dashboard/clients/client': return wr_clients_client();
             case '/dashboard/clients/tva': return wr_clients_tva();
             case '/dashboard/clients/bureaux': return wr_clients_bureaux();
+            case '/dashboard/clients/nettoyage': return wr_clients_nettoyage();
         }
     }
     http_response_code(404);

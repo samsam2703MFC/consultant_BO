@@ -41,6 +41,10 @@ Lire d'abord le `CLAUDE.md` de la racine (règles des quatre domaines, clés, mi
   module se rabat sur `/shops/{s}/clients…` et le relevé des tickets pro. Commandes lit aussi ses livraisons avec lui.
   Les offres restent la page Offres. **Le compte en ligne** (28/11/2026) : la colonne et le filtre des particuliers
   (`compte=en_ligne|sans_compte`) et la fiche lisent `last_login_at` de TF Buddy (rempli seulement si le client a un mot de passe).
+  La jauge « Compte en ligne » (la part des particuliers qui en ont un) est dans le résumé. **Nettoyer la base**
+  (`src/clients_nettoyage.php`, 28/11/2026) : les noms en MAJUSCULES ou en minuscules passent en Nom Propre dans TF Buddy, après un aperçu
+  avant → après, par lots de 25, annulable (table `panel_clients_nettoyage`, 90 jours). Les noms incomplets (« ... » de la caisse) se
+  signalent (filtre `filtre=incomplet`), **ne s'effacent jamais d'ici** (Sam : « aucune, juste les signaler »).
   **Bureaux en développement** (`src/bureaux_dev.php`, 26/11/2026) : une nouvelle personne et son futur bureau, saisis au
   dashboard ou par le questionnaire public du magasin (`public/bureau/`, un par magasin, lien et QR dans Clients ›
   Bureaux) ; la personne, la société (si TVA) et le bon de bienvenue se créent tout de suite, le bureau à la validation

@@ -17,7 +17,8 @@ ob_start(); // http_response_code() des écritures, sans en-têtes déjà partis
 final class Db
 {
     public static array $exec = [];
-    public static function rows(string $sql, array $a = []): array { return []; }
+    public static array $lignes = [];
+    public static function rows(string $sql, array $a = []): array { foreach (self::$lignes as $motif => $L) { if (str_contains($sql, $motif)) { return $L; } } return []; }
     public static function row(string $sql, array $a = []): ?array { return null; }
     public static function exec(string $sql, array $a = []): int { self::$exec[] = [$sql, $a]; return 1; }
 }
@@ -33,7 +34,8 @@ final class PanelApi
     /** Avec un jeton imposé (le magasin), les réponses de $repMagasin ; sinon celles du consultant. */
     private static function rep(string $k): array { if (self::$jetonImpose !== null) { self::$vus[] = 'magasin ' . $k; return self::$repMagasin[$k] ?? [401, ['error' => 'PANEL_SESSION_EXPIRED']]; } self::$vus[] = $k; return self::$rep[$k] ?? [404, ['description' => 'ORDER_NOT_FOUND']]; }
     public static function sondeGet(string $p, int $t = 12): array { $r = self::rep('GET ' . $p); return ['code' => $r[0], 'corps' => $r[1], 'erreur' => null]; }
-    public static function requete(string $m, string $p, ?array $b = null, int $t = 20): array { $r = self::rep($m . ' ' . $p); return ['code' => $r[0], 'data' => $r[1], 'erreur' => null]; }
+    public static array $corps = [];
+    public static function requete(string $m, string $p, ?array $b = null, int $t = 20): array { self::$corps[$m . ' ' . $p] = $b; $r = self::rep($m . ' ' . $p); return ['code' => $r[0], 'data' => $r[1], 'erreur' => null]; }
 }
 /** Le compte admin. */
 final class ErpApi
@@ -52,6 +54,7 @@ function journalAdd(string $a, string $k, ?string $p, string $m): void {}
 
 require __DIR__ . '/../src/tfb_magasin.php';
 require __DIR__ . '/../src/clients_panel.php';
+require __DIR__ . '/../src/clients_nettoyage.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -60,7 +63,7 @@ function verifie(string $nom, bool $cond, string $detail = ''): void
     if ($cond) { $ok++; echo "  ok  $nom\n"; }
     else { $ko++; echo "  KO  $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
 }
-function remettre(): void { PanelApi::$rep = []; PanelApi::$repMagasin = []; PanelApi::$jetonImpose = null; unset($_SERVER['HTTP_X_TFB_JETON']); PanelApi::$vus = []; ErpApi::$rep = []; ErpApi::$vus = []; ErpApi::$corps = []; $GLOBALS['pclGarde'] = []; Db::$exec = []; }
+function remettre(): void { PanelApi::$corps = []; Db::$lignes = []; PanelApi::$rep = []; PanelApi::$repMagasin = []; PanelApi::$jetonImpose = null; unset($_SERVER['HTTP_X_TFB_JETON']); PanelApi::$vus = []; ErpApi::$rep = []; ErpApi::$vus = []; ErpApi::$corps = []; $GLOBALS['pclGarde'] = []; Db::$exec = []; }
 
 echo "Les champs secrets\n";
 $p = pclPropre(['id' => 4, 'password_hash' => 'x', 'name' => 'A', 'api_key' => 'k', 'pin' => '1234', 'pinned' => true, 'profile' => ['refresh_token' => 'r', 'score' => 'A'], 'iban' => 'BE1', 'l' => [['access_token' => 't', 'v' => 1]]]);
@@ -133,6 +136,87 @@ $_GET = ['shop' => '4', 'id' => '11']; $fc = ep_clients_fiche();
 $_GET = ['shop' => '4', 'id' => '12']; $fc2 = ep_clients_fiche();
 verifie('la fiche : la dernière connexion au webshop (le jour), sinon rien ; jamais le mot de passe', ($fc['client']['connexion'] ?? 'absent') === '2026-11-26' && array_key_exists('connexion', $fc2['client'] ?? []) && $fc2['client']['connexion'] === null && !isset($fc['client']['password_hash']), json_encode($fc['client'] ?? $fc));
 $_GET = [];
+
+echo "Les noms incomplets (28/11/2026 : signalés, jamais effacés)\n";
+verifie('« ... », « ---- », vide : pas une lettre', !pclNomComplet('...', 'Dupont') && !pclNomComplet('Gabrielle', '....') && !pclNomComplet('', 'Dupont') && !pclNomComplet('Anne', '--'));
+verifie('un vrai prénom et un vrai nom, même courts ou accentués', pclNomComplet('Al', 'Li') && pclNomComplet('Élodie', 'Öz') && pclNomComplet("D'Arc", 'Van den Berghe'));
+$I = array_map('pclCourt', [
+    ['id' => 21, 'is_b2b' => 0, 'name' => '...', 'surname' => 'GABRIELLE', 'phone' => '0476 00 00 12'],
+    ['id' => 22, 'is_b2b' => 0, 'name' => 'JAN', 'surname' => 'PEETERS', 'phone' => '0478 00 00 40', 'personal_discount_percent' => 5],
+    ['id' => 23, 'is_b2b' => 0, 'name' => 'Mehdi', 'surname' => '----', 'phone' => '0485 00 00 63', 'personal_discount_percent' => 10],
+]);
+verifie('le filtre « nom incomplet »', array_column(pclChercher($I, '', 'incomplet'), 'id') === [23, 21]);
+verifie('la ligne le dit', pclLigneParticulier($I[0])['incomplet'] === true && pclLigneParticulier($I[1])['incomplet'] === false);
+remettre();
+PanelApi::$rep['GET /shops/4/clients?type=b2c'] = [200, [
+    ['id' => 21, 'is_b2b' => 0, 'name' => '...', 'surname' => 'GABRIELLE', 'phone' => '0476 00 00 12'],
+    ['id' => 22, 'is_b2b' => 0, 'name' => 'JAN', 'surname' => 'PEETERS', 'phone' => '0478 00 00 40', 'last_login_at' => '2026-11-26 10:00:00'],
+    ['id' => 23, 'is_b2b' => 0, 'name' => 'Mehdi', 'surname' => '----', 'phone' => '0485 00 00 63'],
+]];
+$_GET = ['shop' => '4', 'filtre' => 'incomplet'];
+$ri = ep_clients_particuliers();
+verifie('la route : le filtre « incomplet » et le nombre de noms incomplets', $ri['filtre'] === 'incomplet' && ($ri['incomplets'] ?? null) === 2 && array_column($ri['clients'], 'id') === [23, 21], json_encode($ri));
+$_GET = [];
+
+echo "Le nettoyage de la base : la mise en forme (28/11/2026)\n";
+verifie('tout en majuscules : Nom Propre', pcnNomPropre('GABRIELLE', false) === 'Gabrielle' && pcnNomPropre('PEETERS', true) === 'Peeters');
+verifie('tout en minuscules aussi', pcnNomPropre('jan', false) === 'Jan' && pcnNomPropre('dupont', true) === 'Dupont');
+verifie('le trait d’union et l’apostrophe', pcnNomPropre('JEAN-PIERRE', false) === 'Jean-Pierre' && pcnNomPropre("D'HONDT", true) === "D'Hondt" && pcnNomPropre('D’HAESE', true) === 'D’Haese');
+verifie('les particules d’un nom de famille, sauf en tête', pcnNomPropre('VAN DEN BERGHE', true) === 'Van den Berghe' && pcnNomPropre('DE SMET', true) === 'De Smet' && pcnNomPropre('DE LA FONTAINE', true) === 'De la Fontaine');
+verifie('un prénom n’a pas de particule', pcnNomPropre('MARIE DE LA PAIX', false) === 'Marie De La Paix');
+verifie('les accents', pcnNomPropre('ÉLODIE', false) === 'Élodie' && pcnNomPropre('ÇA VA', false) === 'Ça Va' && pcnNomPropre('MÜLLER', true) === 'Müller');
+verifie('une casse mêlée se respecte (McDonald, DeSmet)', pcnNomPropre('McDonald', true) === 'McDonald' && pcnNomPropre('DeSmet', true) === 'DeSmet' && pcnNomPropre('Anne', false) === 'Anne');
+verifie('les espaces en trop partent, même sur une casse mêlée', pcnNomPropre('  Anne   Marie ', false) === 'Anne Marie' && pcnNomPropre(' VAN  DAMME', true) === 'Van Damme');
+verifie('« ... », « ---- », vide : laissés tels quels (signalés ailleurs)', pcnNomPropre('...', false) === '...' && pcnNomPropre('----', true) === '----' && pcnNomPropre('', true) === '');
+verifie('l’e-mail en minuscules, sans espace ; un e-mail invalide ne bouge pas', pcnEmail(' Jan.Peeters@Exemple.BE ') === 'jan.peeters@exemple.be' && pcnEmail('pas un mail') === 'pas un mail' && pcnEmail('') === '');
+$pp = pcnProposer(['id' => 22, 'name' => 'JAN', 'surname' => 'PEETERS', 'email' => 'Jan@Exemple.BE', 'phone' => '0478']);
+verifie('la proposition : avant et après, seulement ce qui change', $pp['id'] === 22 && $pp['avant'] === ['name' => 'JAN', 'surname' => 'PEETERS', 'email' => 'Jan@Exemple.BE'] && $pp['apres'] === ['name' => 'Jan', 'surname' => 'Peeters', 'email' => 'jan@exemple.be'], json_encode($pp));
+$pp2 = pcnProposer(['id' => 21, 'name' => '...', 'surname' => 'GABRIELLE']);
+verifie('un nom incomplet : seule la partie connue se met en forme', $pp2['apres'] === ['surname' => 'Gabrielle'] && $pp2['incomplet'] === true);
+verifie('le nom entier, avant et après, pour l’aperçu', $pp['nom'] === 'JAN PEETERS' && $pp['nomApres'] === 'Jan Peeters' && $pp2['nom'] === '... GABRIELLE' && $pp2['nomApres'] === '... Gabrielle');
+verifie('une fiche propre : rien à proposer', pcnProposer(['id' => 23, 'name' => 'Mehdi', 'surname' => 'Benali', 'email' => 'm@exemple.be']) === null);
+
+remettre();
+$brut = [
+    ['id' => 21, 'is_b2b' => 0, 'name' => '...', 'surname' => 'GABRIELLE', 'phone' => '0476 00 00 12'],
+    ['id' => 22, 'is_b2b' => 0, 'name' => 'JAN', 'surname' => 'PEETERS', 'email' => 'Jan@Exemple.BE', 'phone' => '0478 00 00 40'],
+    ['id' => 23, 'is_b2b' => 0, 'name' => 'Mehdi', 'surname' => 'Benali', 'phone' => '0485 00 00 63'],
+    ['id' => 24, 'is_b2b' => 0, 'name' => 'ANNE', 'surname' => 'DUBOIS', 'blocked' => 1],
+];
+PanelApi::$rep['GET /shops/4/clients?type=b2c'] = [200, $brut];
+$_GET = ['shop' => '4'];
+$ap = ep_clients_nettoyage();
+verifie('GET /dashboard/clients/nettoyage : les fiches à mettre en forme, et combien par règle', array_column($ap['propositions'], 'id') === [21, 22] && $ap['regles'] === ['noms' => 2, 'emails' => 1] && $ap['total'] === 3, json_encode($ap));
+verifie('l’aperçu ne dit jamais le téléphone ni le mot de passe', strpos(json_encode($ap), '0478') === false && strpos(json_encode($ap), 'password') === false);
+verifie('le nombre à mettre en forme se lit aussi dans la liste des particuliers', ep_clients_particuliers()['aMettreEnForme'] === 2);
+
+remettre();
+PanelApi::$rep['GET /shops/4/clients?type=b2c'] = [200, $brut];
+PanelApi::$rep['PATCH /clients/21'] = [200, ['ok' => true]];
+PanelApi::$rep['PATCH /clients/22'] = [422, ['description' => 'EMAIL_TAKEN']];
+$GLOBALS['corpsTest'] = ['shop' => 4, 'action' => 'appliquer', 'ids' => [21, 22, 23, 99]];
+$wa = wr_clients_nettoyage();
+verifie('appliquer : TF Buddy reçoit seulement l’« après » d’une fiche du magasin', PanelApi::$corps['PATCH /clients/21'] === ['surname' => 'Gabrielle'] && !isset(PanelApi::$corps['PATCH /clients/23']) && !isset(PanelApi::$corps['PATCH /clients/99']), json_encode(PanelApi::$corps));
+verifie('appliquer : ce qui est fait, ce qui est refusé et pourquoi, le lot', $wa['faits'] === [21] && count($wa['echecs']) === 1 && $wa['echecs'][0]['id'] === 22 && preg_match('/^[a-z0-9]{12}$/', $wa['lot']) === 1, json_encode($wa));
+$ins = array_values(array_filter(Db::$exec, static fn ($e) => str_contains($e[0], 'INSERT INTO panel_clients_nettoyage')));
+verifie('appliquer : l’avant est gardé pour pouvoir annuler', count($ins) === 1 && $ins[0][1][2] === 21 && json_decode($ins[0][1][3], true) === ['surname' => 'GABRIELLE'], json_encode($ins));
+$GLOBALS['corpsTest'] = ['shop' => 4, 'action' => 'appliquer', 'ids' => array_fill(0, 30, 21)];
+verifie('appliquer : 25 fiches au plus par appel', isset(wr_clients_nettoyage()['error']));
+$GLOBALS['corpsTest'] = ['shop' => 4, 'action' => 'appliquer', 'ids' => [21], 'lot' => '../x'];
+verifie('un lot mal formé est refusé', isset(wr_clients_nettoyage()['error']));
+
+remettre();
+PanelApi::$rep['GET /shops/4/clients?type=b2c'] = [200, [['id' => 21, 'is_b2b' => 0, 'name' => '...', 'surname' => 'Gabrielle'], ['id' => 22, 'is_b2b' => 0, 'name' => 'Janneke', 'surname' => 'Peeters']]];
+PanelApi::$rep['PATCH /clients/21'] = [200, ['ok' => true]];
+Db::$lignes['FROM panel_clients_nettoyage'] = [
+    ['id' => 1, 'client_id' => 21, 'avant' => '{"surname":"GABRIELLE"}', 'apres' => '{"surname":"Gabrielle"}'],
+    ['id' => 2, 'client_id' => 22, 'avant' => '{"name":"JAN"}', 'apres' => '{"name":"Jan"}'],
+];
+$GLOBALS['corpsTest'] = ['shop' => 4, 'action' => 'annuler', 'lot' => 'abcdef123456'];
+$wn = wr_clients_nettoyage();
+verifie('annuler : l’avant revient', (PanelApi::$corps['PATCH /clients/21'] ?? null) === ['surname' => 'GABRIELLE'], json_encode(PanelApi::$corps));
+verifie('annuler : une fiche changée depuis ne s’écrase pas', !isset(PanelApi::$corps['PATCH /clients/22']) && $wn['annules'] === 1 && $wn['laisses'] === 1, json_encode($wn));
+$GLOBALS['corpsTest'] = []; $_GET = [];
 
 echo "Le crédit\n";
 verifie('les seuils du panel', pclAlerteCredit(100.0) === 'danger' && pclAlerteCredit(80.0) === 'attention' && pclAlerteCredit(50.0) === 'moyen' && pclAlerteCredit(10.0) === 'ok' && pclAlerteCredit(null) === null);
