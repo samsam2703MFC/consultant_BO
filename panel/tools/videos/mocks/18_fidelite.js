@@ -3,7 +3,8 @@
  * fiche d'un client) et marketing/src/fidelite_cartes.php (cartes de fidélité de l'ERP). Tout est fictif : 612 clients
  * reconnus en caisse sur 90 jours, six profils (les réglages par défaut du réseau), des prénoms inventés, deux cartes à
  * timbres, un réseau de magasins aux noms génériques. Depuis le 28/11/2026 (les cartes par public) : une carte à points,
- * trois sociétés et leurs personnes, et le bingo d'une saison fictive (GET /fidelite/cartes/bingo), semaine 4 en cours. */
+ * trois sociétés et leurs personnes, et le bingo d'une saison fictive (GET /fidelite/cartes/bingo), semaine 4 en cours.
+ * Depuis le 28/11/2026 (Clients › Particuliers) : le profil de chaque particulier de 26_clients.js (GET /fidelite/profils/clients). */
 'use strict';
 const D = require('./lib/demo');
 
@@ -50,6 +51,31 @@ function profilsMagasin() {
   const P = PROFILS.map(p => Object.assign({}, p, STATS[p.id], { part: D.r1(100 * STATS[p.id].clients / N), dernierPassage: p.id < 4 ? 2 : 9 }));
   return { shop: D.SHOP, du: D.plus(AUJ, -89), au: AUJ, fenetre: 30, memoire: 90, axes: AXES, familles: FAMILLES, scannes: N, tickets: 13480, identifies: 2140, joursLus: 90,
     aLire: 0, sansFamilles: 0, profils: P, moyenne: MOYENNE, clients: CLIENTS };
+}
+/* GET /fidelite/profils/clients (28/11/2026, Clients › Particuliers : l'indicateur de fidélité et le radar de la fiche) : le
+ * profil et les radars de chaque particulier scanné. Les particuliers sont ceux de 26_clients.js (8100 à 8337, Benoît
+ * Lefèvre 8390, Sophie Renard 8391) ; un sur trois n'a pas été reconnu en caisse (rien à montrer), la fiche en double de
+ * Sophie Renard (8392) non plus. */
+function profilsClients() {
+  const ids = []; for (let i = 8100; i < 8338; i++) { ids.push(i); } ids.push(8390, 8391);
+  const L = {};
+  ids.forEach(id => {
+    const a = D.alea('fidcli' + id);
+    if (id < 8390 && a() < 0.35) { return; }
+    const x = a();
+    const rythme = id === 8391 ? 5.0 : id === 8390 ? 2.0 : D.r1(x < 0.04 ? 12 + a() * 3 : x < 0.1 ? 8 + a() * 3 : x < 0.22 ? 4 + a() * 3.5 : x < 0.4 ? 2 + a() * 1.8 : x < 0.62 ? 1 + a() * 0.9 : 0);
+    const profil = PROFIL_DE(rythme), s = STATS[profil];
+    const radar = {}, familles = {};
+    Object.keys(s.radar).forEach(k => { radar[k] = Math.max(0, Math.min(100, Math.round(s.radar[k] * (0.75 + a() * 0.5)))); });
+    Object.keys(s.familles).forEach(k => { familles[k] = Math.round(s.familles[k] * (0.6 + a() * 0.8)); });
+    const passages = Math.max(1, Math.round(Math.max(rythme, 0.4) * 3 * (0.8 + a() * 0.3))), tk = passages + Math.round(a() * passages * 0.1);
+    const depuis = rythme >= 4 ? Math.floor(a() * 4) : rythme >= 1 ? Math.floor(a() * 20) : 31 + Math.floor(a() * 55);
+    L[id] = { profil, rythme, passagesFenetre: Math.round(rythme), passages, premier: D.plus(AUJ, -Math.min(89, depuis + passages * 6)), dernier: D.plus(AUJ, -depuis), depuis,
+      tk, eur: D.r2(tk * s.panier * (0.7 + a() * 0.6)), cmd: Math.round(tk * s.commande / 100), radar, familles };
+  });
+  const P = PROFILS.map(p => ({ id: p.id, nom: p.nom, couleur: p.couleur, unite: p.unite, seuil: p.seuil, condition: p.condition, equivalent: p.equivalent,
+    clients: STATS[p.id].clients, part: D.r1(100 * STATS[p.id].clients / N) }));
+  return { shop: D.SHOP, au: AUJ, fenetre: 30, memoire: 90, axes: AXES, familles: FAMILLES, scannes: N, aLire: 0, profils: P, moyenne: MOYENNE, clients: L };
 }
 function scan() {
   const j = D.journee(AUJ, D.MAINTENANT), t = j.tickets, i = Math.round(t * 0.186);
@@ -201,6 +227,7 @@ function carteClient(cid) {
 module.exports = function (m, p, q) {
   if (m !== 'GET' || !p.startsWith('/fidelite/')) { return undefined; }
   if (p === '/fidelite/profils/magasin') { return profilsMagasin(); }
+  if (p === '/fidelite/profils/clients') { return profilsClients(); }
   if (p === '/fidelite/scan') { return scan(); }
   if (p === '/fidelite/profils/tendance') { return tendance([30, 90, 180].includes(+q.get('jours')) ? +q.get('jours') : 90); }
   if (p === '/fidelite/client') { return fiche(q.get('client')); }

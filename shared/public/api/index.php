@@ -869,6 +869,7 @@ function route(string $method, string $path): mixed
             $path === '/fidelite/carte-client'         => ep_fidelite_carte_client(),
             $path === '/fidelite/carte'                => ep_fidelite_carte(),
             $path === '/fidelite/profils/magasin'      => ep_fidelite_profils_magasin(),
+            $path === '/fidelite/profils/clients'      => ep_fidelite_profils_clients(),
             $path === '/fidelite/client'               => ep_fidelite_client(),
             $path === '/assistant/magasin/questions'    => ep_assistant_questions(),
             $path === '/assistant/coachs'               => ep_assistant_coachs(),
