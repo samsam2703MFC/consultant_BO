@@ -956,6 +956,14 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   d'instruction, Clients › Bureaux, connexion TF Buddy, Coffre-fort, corrections (Mois : le dernier jour du mois compte ;
   Concurrence : changer de sujet ferme le relevé ; Opérationnel : pluriels, étiquettes) sans effet sur le texte.
   ART-PIL-01 v1.11 et SOP-PIL-01 v1.8 inchangées.
+- **28/11/2026 — ART-PIL-01 v1.12, SOP-PIL-01 v1.9** (dashboard jusqu'à `4c588047` du 27/11, 25 commits du dashboard
+  depuis `312efae6`) : le nouveau style (`docs/DESIGN_SYSTEM.md` §7.13) — un résumé et « À corriger » en tête de
+  l'Opérationnel, des Tâches, de Semaine, Mois, Année, des Frais, des Promotions et de la Concurrence ; une échelle de
+  couleur par mesure (atteinte < 90 / 90–100 / ≥ 100 %, marge brute 40 / 60 %, marge nette perte / 0–20 / ≥ 20 %) ; les
+  absences de Mon équipe hors poste et hors primes. Article : nouvelle partie 4 « Le résumé et « À corriger » » (37
+  parties), parties 2, 3, 11 à 16, 18, 22, 25, 26, 28 à 36, deux questions ; SOP 1.2 à 1.5, 3.3, 5.3 (les jours en rouge,
+  sous 90 %), 5.7, une question. 18 captures refaites (dont `dash-acorriger`, nouvelle). NL à relire. À décider : le seuil
+  de la SOP 5.3 (75 → 90 %).
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
