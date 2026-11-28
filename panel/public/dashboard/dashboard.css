@@ -4071,24 +4071,13 @@ body.db-vue-social{overflow:hidden}
 .op-ds .op-vd.manque{background:var(--prize-soft);color:var(--prize-ink)}
 .op-ds .op-vd.trop{background:var(--chip);color:var(--muted-2)}
 
-/* Les contrôles en photo : le filtre choisi en bordeaux plein (§7.6), des cartes blanches dont la zone n'est plus qu'un
- * point (une couleur d'identification ne fait pas un fond de bloc, §3), l'état en étiquette teintée. */
+/* Les contrôles en photo : le filtre choisi en bordeaux plein (§7.6), le corps des cartes blanc. Les checklists gardent
+ * leur couleur (Sam, 28/11/2026 : « les checklists gardent leur couleur ») : le bandeau de la carte et le liseré de son
+ * repère d'heure restent à la couleur de la zone (--z), comme avant. */
 .op-ds .db-cqf button{padding:5px 11px;font-size:12px}
 .op-ds .db-cqf button.on{background:var(--accent);border-color:var(--accent)}
-.op-ds .cqk-ch{border-color:var(--line);font-size:12px}
-.op-ds .cqk-ch b{color:var(--ink)}
-.op-ds .cqk-ch.vu{background:rgba(141,29,44,.05);border-color:var(--accent);color:var(--accent)}
-.op-ds .cqk-ch.vu b{color:var(--accent)}
-.op-ds .cqk-ch.vu i{box-shadow:none}
-.op-ds .cqk-ch.vu span.e-ok{color:var(--green)}.op-ds .cqk-ch.vu span.e-wa{color:var(--prize-ink)}.op-ds .cqk-ch.vu span.e-ko{color:var(--stop)}
+.op-ds .cqk-ch{font-size:12px}
 .op-ds .cqk-c{background:#fff}
-.op-ds .cqf-b{padding:9px 12px;background:#fff;color:var(--ink);border-bottom:1px solid var(--line)}
-.op-ds .cqf-b::before{content:'';flex:none;width:8px;height:8px;border-radius:50%;background:var(--z)}
-.op-ds .cqf-code{font:400 13px var(--font-ui);color:var(--muted-2)}
-.op-ds .cqf-b b{font-size:13px}
-.op-ds .cqf-hh{opacity:1;font-size:11.5px;color:var(--muted)}
-.op-ds .cqf-s{padding:2px 8px;font-size:11.5px}
-.op-ds .cqf-s.e-ok{background:rgba(63,122,82,.12)}.op-ds .cqf-s.e-wa{background:var(--prize-soft)}.op-ds .cqf-s.e-ko{background:var(--stop-soft)}
 /* La vue d'une carte (Liste, Treemap, Promotions, Portions) : un sélecteur segmenté, plus un bouton bordeaux plein. */
 .op-ds .db-ong{gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
 .op-ds .db-ong button{border-radius:7px;color:var(--muted-2)}
