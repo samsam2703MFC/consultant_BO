@@ -1,0 +1,167 @@
+/* Maquettes « Fidélité : points et bingo, particuliers et entreprises » (28/11/2026). Par-dessus dashboard.css :
+ * les couleurs des deux cartes (identification, comme color_fill de l'ERP) et les pièces nouvelles. */
+:root { --fe-pt: #8D1D2C; --fe-bg: #2E6385; }
+#dash { max-width: 1200px; }
+.fe-s { font-size: 11px; color: var(--muted); }
+.fe-s.ok, .ok { color: var(--green); }
+.fe-s.att, .att { color: var(--prize-ink); }
+.fe-s .ac-ic { display: inline-block; margin-right: 5px; vertical-align: 0; }
+.fe-q { display: block; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-bottom: 2px; }
+.fe-sp { margin-left: auto; }
+.db-sec .fe-sp .pco-bascule button { font-size: 12.5px; padding: 6px 12px; }
+
+/* L'identité d'une carte (pastille + nom) */
+.fe-id { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.fe-id small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.fe-id .fdc-ic.g { width: 30px; height: 20px; }
+th .fe-id { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted-2); gap: 7px; }
+th .fe-id .fdc-ic.g { width: 16px; height: 11px; border-radius: 3px; }
+th .fe-id small { display: none; }
+
+/* Points : la barre jusqu'au bon */
+.fe-pt { display: flex; flex-direction: column; gap: 3px; }
+.fe-pt-l { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fe-pt-l b { font-weight: 400; min-width: 52px; }
+.fe-bar { position: relative; display: inline-block; width: 84px; height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; flex: none; vertical-align: middle; }
+.fe-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--fe-pt); border-radius: 3px; }
+.fe-bar.g i { background: var(--muted-2); }
+.fe-bar.w { width: 100%; display: block; margin: 6px 0 4px; }
+
+/* Bingo : 13 cases */
+.fe-bgc { display: flex; flex-direction: column; gap: 4px; }
+.fe-bg { display: inline-flex; gap: 3px; }
+.fe-bg i { position: relative; display: block; width: 11px; height: 11px; border-radius: 3px; border: 1px solid var(--line); background: #fff; overflow: hidden; }
+.fe-bg i.ok { background: var(--fe-bg); border-color: var(--fe-bg); }
+.fe-bg i.cours { border-color: var(--fe-bg); }
+.fe-bg i.cours::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--p); background: var(--fe-bg); opacity: .4; }
+.fe-bg i.av { background: var(--paper); }
+
+/* La case de la semaine : cochée · à moins de 3 € · pas encore */
+.fe-sg { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--chip); margin: 10px 0 6px; }
+.fe-sg i { display: block; height: 100%; }
+.fe-sg .co, .fe-lg .co { background: var(--fe-bg); }
+.fe-sg .pr, .fe-lg .pr { background: var(--prize); }
+.fe-sg .pa, .fe-lg .pa { background: var(--chip); }
+.fe-lg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted-2); }
+.fe-lg i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+
+/* Chiffres clés dans une case */
+.fe-kps { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; }
+.fe-kp b { display: block; font-size: 22px; font-weight: 400; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.fe-kp b small { font-size: 13px; color: var(--muted); }
+.fe-kp b.fe-mini { font-size: 13px; line-height: 1.6; }
+.fe-kp.ok b { color: var(--green); }
+.fe-kp span { font-size: 11px; color: var(--muted); }
+
+/* Les soldes par tranche */
+.fe-hi { display: flex; align-items: flex-end; gap: 6px; margin-top: 12px; }
+.fe-hi > div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.fe-hi i { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--fe-pt); }
+.fe-hi span { font-size: 11px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.fe-hi small { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.fe-hi.w i { background: #fff; }
+.fe-hi.w span, .fe-hi.w small { color: #fff; }
+.fe-hi.w small { opacity: .8; }
+
+/* La saison en petit (A) */
+.fe-sm { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 4px; margin-top: 12px; }
+.fe-sm > div { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.fe-sm i { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 1; max-width: 30px; border-radius: 5px; border: 1px dashed #C9D6DF; background: #fff; font-style: normal; font-size: 11.5px; color: #fff; }
+.fe-sm .on i { background: var(--fe-bg); border: 1px solid var(--fe-bg); }
+.fe-sm small { font-size: 9.5px; color: var(--muted); min-height: 12px; }
+
+/* A · le tableau croisé */
+.fe-mx { display: grid; grid-template-columns: 250px 1fr 1fr; }
+.fe-mx > div { padding: 16px 20px; border-top: 1px solid var(--line); }
+.fe-mx > .h { border-top: 0; padding: 11px 20px; font-size: 13px; color: var(--ink); background: var(--table-head); border-radius: 12px 12px 0 0; }
+.fe-mx > .h small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.fe-mx > .c { border-left: 1px solid var(--line); }
+.fe-mx > .lab { display: flex; flex-direction: column; gap: 10px; }
+.fe-role { align-self: flex-start; font-size: 11px; color: var(--muted-2); background: var(--chip); border-radius: 5px; padding: 2px 7px; }
+
+/* Les tables */
+.fe-t td { vertical-align: middle; }
+.fe-t td:first-child { font-size: 13px; }
+.fe-t td:first-child small { font-size: 11px; }
+.fe-plus td { font-size: 12px; color: var(--muted); background: var(--table-head); }
+.fe-sub td { background: #FDFBF8; }
+.fe-sub td:first-child { padding-left: 40px; color: var(--muted-2); }
+.fe-soc.on td { background: rgba(141, 29, 44, .04); }
+.fe-chev { display: inline-block; width: 16px; color: var(--muted); }
+.fe-te td:first-child small { padding-left: 16px; }
+.fe-dbl { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.fe-ins { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+.fe-ins b { font-weight: 400; font-size: 15px; }
+.fe-ins .btn { align-self: flex-start; }
+
+/* B et C : le choix en tête */
+.fe-choix { display: flex; align-items: center; gap: 16px; margin: 14px 0 4px; }
+.fe-choix .fd-tg { margin-left: auto; }
+.pco-bascule.fe-gr button { font-size: 14px; padding: 9px 18px; }
+
+/* B · la saison */
+.fe-sn { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 6px; padding: 12px; }
+.fe-sw { display: flex; flex-direction: column; gap: 4px; min-height: 118px; padding: 8px 8px 7px; border: 1px solid var(--line); border-radius: 8px; font-size: 11px; }
+.fe-sw .no { font-size: 10px; color: var(--muted); letter-spacing: .02em; }
+.fe-sw .tt { font-size: 11.5px; color: var(--ink); line-height: 1.25; }
+.fe-sw .st { margin-top: auto; font-size: 10.5px; color: var(--muted); }
+.fe-sw .st b { display: block; font-size: 20px; font-weight: 400; color: var(--fe-bg); line-height: 1.1; }
+.fe-sw .st small { display: block; font-size: 10px; color: var(--muted); }
+.fe-sw .st.av { color: var(--faint); }
+.fe-sw .bn { font-size: 9.5px; color: var(--prize-ink); background: var(--prize-soft); border-radius: 4px; padding: 1px 4px; align-self: flex-start; }
+.fe-sw.on { border-color: var(--fe-bg); background: rgba(46, 99, 133, .06); }
+.fe-sw.fut { background: var(--table-head); }
+.fe-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+.fe-2 > .db-card { margin: 0; }
+.fe-bd { padding: 14px 18px 16px; }
+.fe-bd .lab, .fe-ti .lab { margin: 16px 0 6px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fe-rl { list-style: none; margin: 0; padding: 0; }
+.fe-rl li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--row-line); font-size: 12.5px; }
+.fe-rl li small { margin-left: 8px; font-size: 11px; color: var(--muted); }
+.fe-nm { display: flex; flex-wrap: wrap; gap: 6px; }
+.fe-nm span { font-size: 12px; background: var(--table-head); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+.fe-nm.d span { position: relative; padding-left: 20px; }
+.fe-nm.d span::before { content: ""; position: absolute; left: 8px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--chip); border: 1px solid var(--faint); }
+.fe-nm.d span.co::before { background: var(--fe-bg); border-color: var(--fe-bg); }
+.fe-nm.d span.pr::before { background: var(--prize); border-color: var(--prize); }
+.fe-bd p.fe-s { margin: 6px 0 0; }
+.fe-ls { display: flex; flex-direction: column; }
+.fe-lr { display: grid; grid-template-columns: 1.1fr 1.2fr 1fr; gap: 14px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--row-line); font-size: 12.5px; }
+.fe-lr.p { grid-template-columns: 1fr 1.4fr; }
+.fe-lr small { display: block; font-size: 11px; color: var(--muted); }
+.fe-lr .fe-dbl { grid-template-columns: 1fr 1fr; }
+
+/* C · les cartes dessinées et les sociétés en tuiles */
+.fe-cv { border-radius: 16px; padding: 18px 20px; color: #fff; }
+.fe-cv .nm { display: flex; align-items: center; gap: 10px; font-size: 16px; }
+.fe-cv .nm span { font-size: 11px; background: rgba(255, 255, 255, .18); border-radius: 5px; padding: 2px 7px; }
+.fe-cv .rc { font-size: 12px; opacity: .85; margin-top: 2px; }
+.fe-cv-k { display: flex; gap: 30px; margin-top: 16px; font-size: 11.5px; opacity: .95; }
+.fe-cv-k b { display: block; font-size: 24px; font-weight: 400; line-height: 1.1; }
+.fe-cv-k b small { font-size: 13px; opacity: .75; }
+.fe-cv-g { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 6px; margin-top: 18px; }
+.fe-cv-g i { display: flex; flex-direction: column; align-items: center; gap: 4px; font-style: normal; }
+.fe-cv-g i b { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px dashed rgba(255, 255, 255, .5); font-weight: 400; font-size: 13px; }
+.fe-cv-g i.on b { background: #fff; color: var(--fe-bg); border: 2px solid #fff; }
+.fe-cv-g small { font-size: 9.5px; opacity: .75; }
+.fe-tl { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+.fe-tl > .db-card { margin: 0; }
+.fe-ti-h { display: flex; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+.fe-ti-h small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.fe-ti-h .r { text-align: right; font-size: 12.5px; color: var(--ink); }
+.fe-ti-b { padding: 0 18px 12px; }
+.fe-ti-b + .fe-ti-b { border-top: 1px solid var(--row-line); }
+.fe-ti-b .lab { margin-top: 12px; }
+.fe-ti-b p.fe-s { margin: 0; font-size: 12px; }
+.fe-ti-2 { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; align-items: start; }
+.fe-ti-2 .fe-sg { margin-top: 4px; }
+.fe-ti .fe-nm { margin-top: 10px; }
+.fe-ti-f { display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 10px 18px; border-top: 1px solid var(--line); background: var(--table-head); border-radius: 0 0 12px 12px; font-size: 12.5px; }
+.db-sec .fe-fl { margin-left: auto; padding: 0; border: 0; font-family: var(--font-ui); }
+.db-sec .fe-fl input { width: 220px; }
+tr.moi td { background: rgba(141, 29, 44, .05); }
+.fe-pt .fdc-pret { align-self: flex-start; }
+.fe-ti { display: flex; flex-direction: column; }
+.fe-ti-f { margin-top: auto; }
+.fe-sw .st b { font-size: 18px; }
+.fe-or { margin: 10px 0 0; }
