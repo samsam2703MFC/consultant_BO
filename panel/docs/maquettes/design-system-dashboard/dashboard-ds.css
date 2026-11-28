@@ -1,0 +1,207 @@
+/* ==========================================================================
+   Maquette — le dashboard magasin au design system (28/11/2026)
+   Composants PROPRES au dashboard, écrits avec les seuls jetons de
+   shared/public/assets/ds/global.css (§3) : aucune couleur en dur, aucune
+   ombre, aucun dégradé, aucun gras hors des valeurs clés, aucune pilule.
+   Les composants communs (rail, barre, cartes, boutons, .seg, .filter,
+   tableaux, .chip, .tag-warn…) viennent de global.css, sans copie.
+   ========================================================================== */
+
+/* Capture pleine page : la coquille cesse de défiler pour être photographiée. */
+.plein .workspace { height: auto; overflow: visible; min-height: 100vh; }
+.plein .app__body { overflow: visible; }
+
+.app__body > * + * { margin-top: 16px; }
+.app__body h2 { margin: 0; }
+
+/* --- Rail : deux repères du jour, sobres (bloc bordé, barre fine, un mot) --- */
+.rail-rep { margin: 12px 12px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.rail-rep + .rail-rep { margin-top: 8px; }
+.rail-rep__t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.rail-rep__t span { text-transform: none; letter-spacing: normal; font-size: 11px; color: var(--muted-2); }
+.rail-rep__v { margin-top: 5px; font-size: 15px; color: var(--ink); }
+.rail-rep__v small { font-size: 12px; color: var(--muted); }
+.rail-rep__n { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; color: var(--muted-2); }
+
+/* Barre de progression fine (seule forme allongée aux bouts ronds admise, §5) */
+.fine { position: relative; height: 4px; margin-top: 8px; border-radius: 999px; background: var(--chip); }
+.fine > i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--green); }
+.fine > b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+
+/* Points d'état : toujours suivis d'un mot */
+.dot--ok { background: var(--green); }
+.dot--warn { background: var(--prize); }
+.dot--stop { background: var(--stop); }
+.dot--neutre { background: var(--faint); }
+.dot--encours { background: var(--chip); outline: 1px solid var(--muted); outline-offset: -1px; }
+
+.ok { color: var(--green); }
+.warn { color: var(--prize-ink); }
+.stop { color: var(--stop); }
+.mu { color: var(--muted); }
+.mu2 { color: var(--muted-2); }
+.tab { font-variant-numeric: tabular-nums; }
+
+/* --- Barre supérieure : la navigation des jours y vit --- */
+.jour-nav { display: inline-flex; align-items: center; gap: 6px; }
+.jour-nav__d { min-width: 170px; text-align: center; font-size: 13px; color: var(--ink); }
+.ico-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* --- Bandeau d'état du magasin : une carte, des cellules séparées par un filet --- */
+.etat { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
+.etat > div { padding: 12px 18px; border-left: 1px solid var(--line); }
+.etat > div:first-child { border-left: 0; }
+.etat .lab { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.etat .val { margin-top: 4px; font-size: 13px; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.etat .val .linklike { margin-left: auto; }
+
+/* --- Les jours de la semaine : un choix, donc la sélection du §7.6 --- */
+.jours { display: grid; grid-template-columns: 28px repeat(7, minmax(0, 1fr)) 28px; gap: 8px; align-items: stretch; }
+.jours .btn--icon { height: auto; align-self: stretch; }
+.jour { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 9px 12px; text-align: left;
+  background: #fff; border: 1px solid rgba(34, 34, 34, 0.14); border-radius: 10px; color: var(--ink);
+  font: 400 13px 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.jour:hover { border-color: var(--muted-2); }
+.jour.is-on { border: 2px solid var(--accent); background: rgba(141, 29, 44, 0.05); padding: 8px 11px; }
+.jour__n { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--muted-2); }
+.jour.is-on .jour__n { color: var(--accent); }
+.jour__v { font-size: 15px; font-variant-numeric: tabular-nums; }
+.jour__s { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.jour--futur .jour__v { color: var(--faint); }
+
+/* --- Le résumé du jour (§7.13) --- */
+.rs { padding: 16px 20px 14px; }
+.rs-l1 { display: grid; grid-template-columns: auto minmax(200px, auto) minmax(260px, 1fr) minmax(230px, auto); gap: 26px; align-items: center; }
+.rs-v { display: flex; flex-direction: column; gap: 4px; }
+.rs-val { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.rs-niv { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted-2); white-space: nowrap; }
+.rs-q { font-size: 13px; line-height: 1.35; }
+.rs-q span { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.jauge { position: relative; height: 8px; border-radius: 4px; background: var(--chip); }
+.jauge > i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--green); }
+.jauge > b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.jauge-ech { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10.5px; color: var(--muted-2); }
+.rs-meta { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.rs-lev { display: flex; flex-direction: column; gap: 3px; padding-left: 18px; border-left: 1px solid var(--line); }
+.rs-lev span:first-child { font-size: 13px; }
+.rs-lev span + span { font-size: 12px; color: var(--muted); line-height: 1.4; max-width: 34ch; }
+.rs-l2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.rs-ct { margin-right: 2px; font-size: 12.5px; color: var(--muted-2); }
+.rs-b { gap: 8px; }
+.rs-b:hover:not(:disabled) { border-color: var(--accent); }
+.rs-b .dot { flex: none; }
+
+/* --- En-tête d'une carte : titre (h2 du §7.2), légende à droite --- */
+.card__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.card__aside { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+.card__foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 11.5px; color: var(--muted-2); }
+.legende span { display: inline-flex; align-items: center; gap: 6px; }
+.legende i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.legende i.ligne { height: 2px; width: 14px; border-radius: 0; }
+
+/* Couleurs de graphique : les jetons §3 « réservés à l'identification » */
+.c-real { background: var(--chart-real); }
+.c-prev { background: var(--chart-prev); }
+.c-goal { background: var(--chart-goal); }
+.c-hach { background: repeating-linear-gradient(135deg, var(--chart-prev) 0 4px, #fff 4px 8px); outline: 1px solid var(--chart-prev); outline-offset: -1px; }
+.c-pond { background: var(--chart-real); }
+.c-trait { background: var(--muted); }
+
+/* --- L'objectif comptoir : barres horizontales --- */
+.obj { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px 18px; align-items: center; }
+.obj__l { font-size: 13px; }
+.obj__l span { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+.obj__b { position: relative; height: 26px; border-radius: 6px; background: var(--table-head); border: 1px solid var(--line); }
+.obj__b > i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 5px 0 0 5px; }
+.obj__b > em { position: absolute; top: 50%; transform: translateY(-50%); font-style: normal; font-size: 11.5px; white-space: nowrap; }
+.obj__b > em.in { color: #fff; }
+.obj__b > em.out { color: var(--muted-2); }
+.obj__goal { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--chart-goal); }
+.obj__ax { grid-column: 2; position: relative; height: 16px; font-size: 10.5px; color: var(--muted-2); }
+.obj__ax span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.obj__ax span:first-child { transform: none; }
+
+.canaux { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; padding-top: 4px; border-top: 1px solid var(--line); }
+.canal { padding: 12px 18px 4px; border-left: 3px solid var(--line); }
+.canal__lab { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.canal__v { margin-top: 5px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.canal__n { margin-top: 3px; font-size: 12px; color: var(--muted); }
+.canal__c { margin-top: 6px; font-size: 12px; color: var(--muted-2); }
+
+/* --- Courbe heure par heure --- */
+.courbe svg { display: block; width: 100%; height: auto; font-family: 'Gotham', system-ui, sans-serif; }
+.courbe .grille line { stroke: var(--row-line); }
+.courbe .axe text { fill: var(--muted-2); font-size: 10.5px; }
+.courbe .l-real { stroke: var(--chart-real); stroke-width: 2.2; fill: none; }
+.courbe .l-proj { stroke: var(--chart-real); stroke-width: 1.6; fill: none; stroke-dasharray: 4 4; opacity: 0.55; }
+.courbe .l-prev { stroke: var(--muted); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.courbe .a-prev { fill: var(--chart-prev); opacity: 0.45; }
+.courbe .l-goal { stroke: var(--chart-goal); stroke-width: 1.4; stroke-dasharray: 6 4; }
+.courbe .now { stroke: var(--ink); stroke-width: 1; }
+.courbe .etq { font-size: 10.5px; }
+.courbe .etq-goal { fill: var(--chart-goal); }
+.courbe .etq-real { fill: var(--chart-real); }
+.courbe .etq-mu { fill: var(--muted-2); }
+
+/* --- Tableaux denses du dashboard : le §7.8, sans la largeur mini des listes --- */
+table.ds-table.dense { min-width: 0; }
+table.ds-table.dense tbody td { padding: 11px 14px; vertical-align: top; }
+table.ds-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.ds-table th.num { text-align: right; }
+.card--table { padding: 0; overflow: hidden; }
+.card--table .card__head { padding: 16px 20px 0; }
+.card--table .card__foot { margin: 0; padding: 12px 20px; }
+.val-cle { font-size: 15px; }
+.ecart { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.ecart small { font-size: 10.5px; color: var(--muted-2); }
+
+/* Rang dans le réseau : neuf points, le mien à l'encre */
+.rang { display: inline-flex; gap: 4px; vertical-align: middle; margin-right: 8px; }
+.rang i { width: 8px; height: 8px; border-radius: 50%; background: var(--chip); }
+.rang i.moi { background: var(--chart-real); }
+
+/* Poids d'une catégorie : une rampe d'une seule teinte (§7.13) */
+.poids { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+.poids > span { position: relative; flex: 1; height: 8px; border-radius: 4px; background: var(--table-head); border: 1px solid var(--line); }
+.poids > span > i { position: absolute; inset: -1px auto -1px -1px; border-radius: 4px; background: var(--chart-real); }
+.btn-pli { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-right: 8px; padding: 0;
+  border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--muted-2); vertical-align: middle; }
+.btn-pli svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Grilles de la page */
+.g2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.g2 > * { margin-top: 0 !important; }
+
+/* --- La vitrine --- */
+.vit { display: grid; grid-template-columns: 30px 170px 1fr auto; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--row-line); }
+.vit:first-of-type { border-top: 0; padding-top: 0; }
+.vit__l { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px;
+  background: var(--chip); color: var(--ink); font-size: 12px; }
+.vit__n { font-size: 15px; }
+.vit__n span { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+.vit__d { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted-2); }
+
+/* --- Les contrôles en photo --- */
+.ctl-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.ctl-bar .filter { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.ctl-bar .filter span { font-size: 11px; color: var(--muted); }
+.ctl-bar .filter.is-on span { color: #fff; }
+.ctls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ctl { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.ctl__h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.ctl__code { font-size: 11.5px; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+.ctl__t { flex: 0 0 100%; order: 3; font-size: 13px; }
+.ctl__nb { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+.ctl__ph { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.ph { position: relative; aspect-ratio: 4 / 3; border-radius: 8px; background: var(--chip); display: flex; align-items: center; justify-content: center; color: var(--faint); }
+.ph svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.ph em { position: absolute; left: 6px; top: 6px; padding: 1px 6px; border-radius: 4px; background: #fff; color: var(--muted-2); font-style: normal; font-size: 10.5px; }
+.ph--vide { background: #fff; border: 1px dashed var(--line); }
+.ctl__f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.ctl__f > span:first-child { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* Titre de carte : le h2 du §7.2 (capitales espacées, gris) — global.css le porte sous le nom .block-title. */
+.card__head h2 { font-size: 0.95rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }

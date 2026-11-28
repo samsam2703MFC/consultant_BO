@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Dashboard magasin au design system · Opérationnel</title>
+<!-- La feuille commune du design system (jetons, police, composants, rail) : la même que le dashboard en ligne. -->
+<link rel="stylesheet" href="../../../../shared/public/assets/ds/global.css">
+<!-- Les composants propres au dashboard, écrits avec les seuls jetons. -->
+<link rel="stylesheet" href="dashboard-ds.css">
+<script>if (location.hash === '#plein') document.documentElement.classList.add('plein');</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-tdb" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-ctl" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="i-jrn" viewBox="0 0 24 24"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"/></symbol>
+  <symbol id="i-pers" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></symbol>
+  <symbol id="i-calm" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
+  <symbol id="i-perf" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></symbol>
+  <symbol id="i-fonds" viewBox="0 0 24 24"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"/></symbol>
+  <symbol id="i-loupe" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"/></symbol>
+  <symbol id="i-bund" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/></symbol>
+  <symbol id="i-pct" viewBox="0 0 24 24"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"/></symbol>
+  <symbol id="i-form" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-ana" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-pub" viewBox="0 0 24 24"><path d="M3 11l14-7v16L3 13zM7 14v5"/></symbol>
+  <symbol id="i-com" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5"/></symbol>
+  <symbol id="i-etoile" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></symbol>
+  <symbol id="i-broch" viewBox="0 0 24 24"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 6l9 7 9-7"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><path d="M4 4h16v12H4zM2 20h20M9 8l4 2-4 2z"/></symbol>
+  <symbol id="i-cadenas" viewBox="0 0 24 24"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"/></symbol>
+  <symbol id="i-regl" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-relire" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></symbol>
+  <symbol id="i-g" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-d" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-bas" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-photo" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6M15.5 9a1.5 1.5 0 1 0 0-.01"/></symbol>
+</svg>
+
+<div class="workspace">
+  <!-- ===================== RAIL (§8) ===================== -->
+  <nav class="sidebar" aria-label="Navigation du magasin">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../../shared/public/assets/img/logo.png" alt="L'Atelier By">
+      <div class="sidebar__kicker">Dashboard magasin</div>
+    </div>
+    <div class="sidebar__brand">Magasin démo</div>
+
+    <div class="rail-rep">
+      <div class="rail-rep__t">Objectif du jour <span>en direct</span></div>
+      <div class="rail-rep__v tab">88 % <small>de 1 910 €</small></div>
+      <div class="fine"><i style="width:88%"></i><b style="left:79%"></b></div>
+      <div class="rail-rep__n"><i class="dot dot--ok"></i>en avance · projection 2 118 €</div>
+    </div>
+    <div class="rail-rep">
+      <div class="rail-rep__t">Note Google <span>318 avis</span></div>
+      <div class="rail-rep__v tab">4,6 <small>sur 5 · cible 4,5</small></div>
+      <div class="rail-rep__n"><i class="dot dot--ok"></i>au-dessus de la cible</div>
+    </div>
+
+    <div class="sidebar__groups">
+      <div class="sidebar__group">
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-mail"/></svg><span class="sidebar__item-label">Boîte mail</span><span class="sidebar__count">3</span></a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-com"/></svg><span class="sidebar__item-label">Assistant IA</span></a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-video"/></svg><span class="sidebar__item-label">Vidéos</span><span class="sidebar__count">1 nouvelle</span></a>
+      </div>
+      <div class="sidebar__group">
+        <div class="sidebar__group-label">La journée</div>
+        <a class="sidebar__item is-active" aria-current="page" href="#"><svg class="ico"><use href="#i-tdb"/></svg>Opérationnel</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-doc"/></svg>Commandes</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-ctl"/></svg>Tâches</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-jrn"/></svg>Temps morts</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-pers"/></svg>Mon équipe</a>
+      </div>
+      <div class="sidebar__group">
+        <div class="sidebar__group-label">Les chiffres</div>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-cal"/></svg>Semaine</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-calm"/></svg>Mois</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-perf"/></svg>Année</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-fonds"/></svg>Trésorerie</a>
+      </div>
+      <div class="sidebar__group">
+        <div class="sidebar__group-label">Vendre</div>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-loupe"/></svg>Analyse</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-bund"/></svg>Produits</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-pct"/></svg>Promotions</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-pers"/></svg>Clients</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-form"/></svg>Offres</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-ana"/></svg>Concurrence</a>
+      </div>
+      <div class="sidebar__group">
+        <div class="sidebar__group-label">Marketing</div>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-pub"/></svg>Mon marketing</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-com"/></svg>Réseaux sociaux</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-etoile"/></svg>Fidélité</a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-broch"/></svg>Mon catalogue</a>
+      </div>
+      <div class="sidebar__group">
+        <div class="sidebar__group-label">Se former</div>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-doc"/></svg>Formations et suivi</a>
+      </div>
+      <div class="sidebar__group">
+        <div class="sidebar__group-label">Mon magasin</div>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-cadenas"/></svg><span class="sidebar__item-label">Mon coffre-fort</span><span class="sidebar__count">2</span></a>
+        <a class="sidebar__item" href="#"><svg class="ico"><use href="#i-regl"/></svg>Paramètres</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="workspace__main">
+    <!-- ===================== BARRE SUPÉRIEURE (§7.1) ===================== -->
+    <header class="topbar">
+      <div>
+        <p class="topbar__kicker">Vue Franchisé · Magasin démo</p>
+        <h1>Opérationnel</h1>
+      </div>
+      <div class="topbar__actions">
+        <button class="btn btn--sm ico-btn" type="button"><svg><use href="#i-relire"/></svg>Relu à 15 h 40</button>
+        <span class="jour-nav">
+          <button class="btn btn--icon ico-btn" type="button" aria-label="Jour précédent"><svg><use href="#i-g"/></svg></button>
+          <span class="jour-nav__d">jeudi 19 novembre 2026</span>
+          <button class="btn btn--icon ico-btn" type="button" aria-label="Jour suivant" disabled><svg><use href="#i-d"/></svg></button>
+        </span>
+      </div>
+    </header>
+
+    <main class="app__body">
+      <!-- Bandeau d'état : quatre cartes deviennent une carte -->
+      <section class="card etat" aria-label="État du magasin">
+        <div><div class="lab">Valeur du magasin</div><div class="val tab">729 977 €</div></div>
+        <div><div class="lab">Demande au bureau</div><div class="val"><a class="linklike" style="margin:0;padding:0" href="#">Faire une nouvelle demande</a></div></div>
+        <div><div class="lab">Revue du soir</div><div class="val">à 18 h</div></div>
+        <div><div class="lab">API</div><div class="val tab">21 appels</div></div>
+      </section>
+
+      <!-- Les jours : un choix exclusif → la sélection du §7.6 (liseré bordeaux, fond teinté) -->
+      <section class="jours" aria-label="Jours de la semaine 47">
+        <button class="btn btn--icon ico-btn" type="button" aria-label="Semaine précédente"><svg><use href="#i-g"/></svg></button>
+        <button class="jour" type="button"><span class="jour__n">lun. 16</span><span class="jour__v">1 660 €</span><span class="jour__s"><i class="dot dot--ok"></i>108 % · atteint</span></button>
+        <button class="jour" type="button"><span class="jour__n">mar. 17</span><span class="jour__v">1 854 €</span><span class="jour__s"><i class="dot dot--ok"></i>115 % · atteint</span></button>
+        <button class="jour" type="button"><span class="jour__n">mer. 18</span><span class="jour__v">1 745 €</span><span class="jour__s"><i class="dot dot--ok"></i>100 % · atteint</span></button>
+        <button class="jour is-on" type="button" aria-pressed="true"><span class="jour__n">jeu. 19 · aujourd’hui</span><span class="jour__v">1 673 €</span><span class="jour__s"><i class="dot dot--encours"></i>en cours</span></button>
+        <button class="jour jour--futur" type="button"><span class="jour__n">ven. 20</span><span class="jour__v">—</span><span class="jour__s">objectif 2 210 €</span></button>
+        <button class="jour jour--futur" type="button"><span class="jour__n">sam. 21</span><span class="jour__v">—</span><span class="jour__s">objectif 2 810 €</span></button>
+        <button class="jour jour--futur" type="button"><span class="jour__n">dim. 22</span><span class="jour__v">—</span><span class="jour__s">objectif 2 490 €</span></button>
+        <button class="btn btn--icon ico-btn" type="button" aria-label="Semaine suivante" disabled><svg><use href="#i-d"/></svg></button>
+      </section>
+
+      <!-- Le résumé du jour (§7.13) : la valeur clé, son état en mots, la jauge, le geste ; puis « À corriger » -->
+      <section class="card rs">
+        <div class="rs-l1">
+          <div class="rs-v">
+            <span class="rs-val">1 673 €</span>
+            <span class="rs-niv"><i class="dot dot--ok"></i>en avance sur l’attendu</span>
+          </div>
+          <div class="rs-q">Chiffre d’affaires du jeudi 19/11 à 15 h 40<span>comptoir 1 542 € + clients pro 131 € · caisse lue à 15 h 40</span></div>
+          <div>
+            <div class="jauge"><i style="width:87.6%"></i><b style="left:79%"></b></div>
+            <div class="jauge-ech tab"><span>0 €</span><span>attendu à 15 h 40 : 1 509 €</span><span>objectif 1 910 €</span></div>
+            <p class="rs-meta">88 % de l’objectif · + 164 € sur l’attendu · 79 % de la journée écoulée</p>
+          </div>
+          <div class="rs-lev">
+            <span>Reste 237 € en 3 h 20</span>
+            <span>au rythme actuel : 2 118 € à la fermeture, soit 111 % de l’objectif</span>
+          </div>
+        </div>
+        <div class="rs-l2">
+          <span class="rs-ct">À corriger</span>
+          <button class="btn btn--sm rs-b" type="button"><i class="dot dot--warn"></i>5 produits vont manquer · 64 € à sauver</button>
+          <button class="btn btn--sm rs-b" type="button"><i class="dot dot--warn"></i>1 écart sur les photos</button>
+          <button class="btn btn--sm rs-b" type="button"><i class="dot dot--stop"></i>1 photo pas encore rendue</button>
+          <button class="btn btn--sm rs-b" type="button"><i class="dot dot--warn"></i>4 références sous le minimum · 1 à zéro</button>
+          <button class="btn btn--sm rs-b" type="button"><i class="dot dot--neutre"></i>Dossier de formation : 3 à faire</button>
+        </div>
+      </section>
+
+      <!-- L'objectif comptoir et pro : couleurs de graphique du §3 (réalisé, période précédente, objectif) -->
+      <section class="card">
+        <div class="card__head">
+          <h2>Objectif du jeudi</h2>
+          <span class="card__aside">comptoir 1 780 € · clients pro 130 € · 15 h 40, 79 % de la journée écoulée</span>
+        </div>
+        <div class="obj">
+          <div class="obj__l">Comptoir aujourd’hui<span>à 15 h 40 · projection 1 952 €</span></div>
+          <div class="obj__b">
+            <i class="c-hach" style="width:97.6%"></i>
+            <i class="c-real" style="width:77.1%"></i>
+            <em class="in tab" style="left:12px">1 542 € · 87 %</em>
+            <span class="obj__goal" style="left:89%"></span>
+          </div>
+          <div class="obj__l">Comptoir jeudi dernier<span>12/11</span></div>
+          <div class="obj__b">
+            <i class="c-prev" style="width:91.5%"></i>
+            <em class="out tab" style="left:12px;color:var(--ink)">1 448 € à 15 h 40 · journée 1 829 € (103 %)</em>
+            <span class="obj__goal" style="left:89%"></span>
+          </div>
+          <div class="obj__ax tab"><span style="left:0">0 €</span><span style="left:50%">1 000 €</span><span style="left:89%;color:var(--chart-goal)">objectif 1 780 €</span></div>
+        </div>
+        <div class="legende">
+          <span><i class="c-real"></i>aujourd’hui</span>
+          <span><i class="c-hach"></i>projection au rythme actuel</span>
+          <span><i class="c-prev"></i>jeudi dernier</span>
+          <span><i class="c-goal ligne"></i>objectif</span>
+        </div>
+        <div class="canaux">
+          <div class="canal">
+            <div class="canal__lab">Comptoir</div>
+            <div class="canal__v">1 377 €</div>
+            <div class="canal__n">89 % · vente directe</div>
+            <div class="canal__c tab">jeu. 12/11 : 1 296 € · <span class="ok">+ 6,3 %</span></div>
+          </div>
+          <div class="canal">
+            <div class="canal__lab">Commandes</div>
+            <div class="canal__v">67 €</div>
+            <div class="canal__n">2 prises au comptoir · 1 à venir</div>
+            <div class="canal__c tab">jeu. 12/11 : 77 € · <span class="warn">− 13 %</span></div>
+          </div>
+          <div class="canal">
+            <div class="canal__lab">Webshop</div>
+            <div class="canal__v">98 €</div>
+            <div class="canal__n">2 click &amp; collect · 1 livraison · 2 à venir</div>
+            <div class="canal__c tab">jeu. 12/11 : 90 € · <span class="ok">+ 8,1 %</span></div>
+          </div>
+          <div class="canal">
+            <div class="canal__lab">Clients pro</div>
+            <div class="canal__v">131 €</div>
+            <div class="canal__n">2 tickets · objectif 130 €</div>
+            <div class="canal__c"><span class="badge badge--ok">atteint · 101 %</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Heure par heure : deux sélecteurs segmentés (§7.6), plus de bouton bordeaux plein pour choisir une vue -->
+      <section class="card courbe">
+        <div class="card__head">
+          <h2>Heure par heure</h2>
+          <div class="seg" role="tablist" aria-label="Canaux"><button type="button">Comptoir et pro séparés</button><button type="button" class="is-on">Combinés</button></div>
+          <div class="seg" role="tablist" aria-label="Mesure"><button type="button" class="is-on">CA</button><button type="button">Clients</button><button type="button">Panier</button></div>
+          <span class="card__aside">chiffre d’affaires cumulé, TVA comprise</span>
+        </div>
+        <svg viewBox="0 0 1100 222" role="img" aria-label="Chiffre d’affaires cumulé heure par heure, aujourd’hui et jeudi dernier">
+  <g class="grille"><line x1="56" x2="1066" y1="196.0" y2="196.0"/><line x1="56" x2="1066" y1="157.4" y2="157.4"/><line x1="56" x2="1066" y1="118.7" y2="118.7"/><line x1="56" x2="1066" y1="80.1" y2="80.1"/><line x1="56" x2="1066" y1="41.5" y2="41.5"/></g>
+  <polygon class="a-prev" points="56.0,196.0 56.0,196.0 133.7,193.3 211.4,185.2 289.1,172.8 366.8,159.7 444.5,146.5 522.2,130.3 599.8,113.3 677.5,100.2 755.2,86.3 807.0,79.0 832.9,75.5 910.6,64.6 988.3,55.4 1066.0,49.5 1066.0,196.0"/>
+  <line class="l-goal" x1="56" x2="1066" y1="48.4" y2="48.4"/>
+  <text class="etq etq-goal" x="62" y="42.4">objectif du jour 1 910 €</text>
+  <polyline class="l-prev" points="56.0,196.0 133.7,193.3 211.4,185.2 289.1,172.8 366.8,159.7 444.5,146.5 522.2,130.3 599.8,113.3 677.5,100.2 755.2,86.3 807.0,79.0 832.9,75.5 910.6,64.6 988.3,55.4 1066.0,49.5"/>
+  <polyline class="l-proj" points="807.0,66.7 1066.0,32.3"/>
+  <polyline class="l-real" points="56.0,196.0 133.7,192.9 211.4,183.6 289.1,170.5 366.8,155.8 444.5,141.9 522.2,124.1 599.8,104.8 677.5,90.9 755.2,75.5 807.0,66.7"/>
+  <line class="now" x1="807.0" x2="807.0" y1="26.0" y2="196.0"/>
+  <text class="etq etq-mu" x="813.0" y="36.0">15 h 40</text>
+  <circle cx="807.0" cy="66.7" r="4" fill="var(--chart-real)"/>
+  <text class="etq etq-real" x="799.0" y="57.7" text-anchor="end">aujourd’hui 1 673 €</text>
+  <text class="etq etq-mu" x="815.0" y="94.0">jeudi dernier 1 514 €</text>
+  <text class="etq etq-real" x="1062.0" y="24.299999999999997" text-anchor="end">projection 2 118 €</text>
+  <g class="axe"><text x="48" y="199.5" text-anchor="end">0</text><text x="48" y="160.9" text-anchor="end">500</text><text x="48" y="122.2" text-anchor="end">1 000</text><text x="48" y="83.6" text-anchor="end">1 500</text><text x="48" y="45.0" text-anchor="end">2 000</text><text x="56.0" y="214" text-anchor="middle">6 h</text><text x="133.7" y="214" text-anchor="middle">7 h</text><text x="211.4" y="214" text-anchor="middle">8 h</text><text x="289.1" y="214" text-anchor="middle">9 h</text><text x="366.8" y="214" text-anchor="middle">10 h</text><text x="444.5" y="214" text-anchor="middle">11 h</text><text x="522.2" y="214" text-anchor="middle">12 h</text><text x="599.8" y="214" text-anchor="middle">13 h</text><text x="677.5" y="214" text-anchor="middle">14 h</text><text x="755.2" y="214" text-anchor="middle">15 h</text><text x="832.9" y="214" text-anchor="middle">16 h</text><text x="910.6" y="214" text-anchor="middle">17 h</text><text x="988.3" y="214" text-anchor="middle">18 h</text><text x="1066.0" y="214" text-anchor="middle">19 h</text></g>
+</svg>
+        <div class="legende">
+          <span><i class="c-real ligne"></i>aujourd’hui</span>
+          <span><i class="c-real ligne" style="opacity:.55"></i>projection</span>
+          <span><i class="c-trait ligne"></i>jeudi dernier (12/11), en pointillé</span>
+          <span><i class="c-goal ligne"></i>objectif du jour</span>
+        </div>
+      </section>
+
+      <!-- Le duel : un tableau du §7.8 ; les valeurs à l'encre, l'écart dit en mots -->
+      <section class="card card--table">
+        <div class="card__head"><h2>Le duel, chiffre par chiffre</h2><span class="card__aside">aujourd’hui contre le même jeudi, à la même heure</span></div>
+        <table class="ds-table dense">
+          <thead><tr><th>Mesure</th><th class="num">Aujourd’hui · 15 h 40</th><th class="num">Jeudi dernier · 15 h 40</th><th class="num">Écart</th><th class="num">Jeudi dernier · journée</th><th class="num">Référence</th></tr></thead>
+          <tbody>
+            <tr><td>Chiffre d’affaires</td><td class="num"><span class="val-cle">1 673 €</span><span class="sub">88 % de l’objectif</span></td><td class="num">1 514 €</td><td class="num"><span class="ecart ok">+ 10,5 %<small>devant</small></span></td><td class="num">1 896 €<span class="sub">99 % de l’objectif</span></td><td class="num">1 428 €<span class="sub">moyenne des 4 derniers jeudis</span></td></tr>
+            <tr><td>Clients</td><td class="num"><span class="val-cle">129</span></td><td class="num">117</td><td class="num"><span class="ecart ok">+ 10,3 %<small>devant</small></span></td><td class="num">146</td><td class="num">114<span class="sub">+ 13,2 % face à la référence</span></td></tr>
+            <tr><td>Panier moyen<span class="sub">hors clients pro</span></td><td class="num"><span class="val-cle">12,14 €</span><span class="sub">2,30 produits par client</span></td><td class="num">12,48 €</td><td class="num"><span class="ecart warn">− 2,7 %<small>derrière</small></span></td><td class="num">12,62 €</td><td class="num">12,13 €<span class="sub">réseau aujourd’hui</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <div class="g2">
+        <!-- Le P&L court : seuils dits par une étiquette (§7.9), plus de barres de couleur -->
+        <section class="card card--table">
+          <div class="card__head"><h2>Le P&amp;L court de la journée</h2><span class="card__aside">hors TVA</span></div>
+          <table class="ds-table dense">
+            <thead><tr><th>Ligne</th><th class="num">Montant</th><th class="num">Part</th><th>Seuil</th></tr></thead>
+            <tbody>
+              <tr><td>Chiffre d’affaires encaissé<span class="sub">129 clients · panier 12,14 € hors pro · TVA comprise</span></td><td class="num">1 673 €</td><td class="num"></td><td class="mu">ce que la caisse a encaissé</td></tr>
+              <tr><td>− TVA des tickets<span class="sub">5,7 % du TTC · taux des produits vendus</span></td><td class="num">− 95 €</td><td class="num"></td><td class="mu">reversée à l’État</td></tr>
+              <tr class="total-row"><td>= Chiffre d’affaires hors TVA</td><td class="num">1 578 €</td><td class="num">100 %</td><td></td></tr>
+              <tr><td>− Coût matière<span class="sub">seuil 32,0 %</span></td><td class="num">− 530 €</td><td class="num">33,6 %</td><td><span class="tag-warn">au-dessus du seuil</span></td></tr>
+              <tr class="total-row"><td>= Marge brute</td><td class="num">1 048 €</td><td class="num">66,4 %</td><td><span class="chip chip--ok">bonne</span></td></tr>
+              <tr><td>− Invendus et poubelle<span class="sub">35 pièces</span></td><td class="num">− 31 €</td><td class="num">2,0 %</td><td><a class="linklike" href="#">les saisies</a></td></tr>
+              <tr><td>− Main-d’œuvre<span class="sub">seuil 17,0 % · hors 8,0 h de franchisé</span></td><td class="num">− 268 €</td><td class="num">17,0 %</td><td><span class="chip chip--ok">au seuil</span></td></tr>
+              <tr><td>− Frais généraux hors TVA<span class="sub">seuil 13,5 % · 251 € saisis, 27 € de TVA retirée</span></td><td class="num">− 224 €</td><td class="num">14,2 %</td><td><span class="tag-warn">au-dessus du seuil</span></td></tr>
+              <tr class="total-row"><td>= Résultat hors TVA</td><td class="num"><span class="val-cle">+ 525 €</span></td><td class="num">33,3 %</td><td><span class="chip chip--ok">20 % et plus</span></td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Ma place dans le réseau : cinq tuiles deviennent un tableau ; le rang en mots et en points -->
+        <section class="card card--table">
+          <div class="card__head"><h2>Ma place dans le réseau</h2><span class="card__aside">9 magasins ouverts · 15 h 40</span></div>
+          <table class="ds-table dense">
+            <thead><tr><th>Mesure</th><th class="num">Moi</th><th>Rang</th><th class="num">Médiane</th></tr></thead>
+            <tbody>
+              <tr><td>Chiffre d’affaires</td><td class="num">1 673 €</td><td><span class="rang"><i></i><i></i><i></i><i class="moi"></i><i></i><i></i><i></i><i></i><i></i></span>4<sup>e</sup> sur 9</td><td class="num">1 589 €<span class="sub ok">+ 84 €</span></td></tr>
+              <tr><td>Clients</td><td class="num">129</td><td><span class="rang"><i></i><i></i><i></i><i class="moi"></i><i></i><i></i><i></i><i></i><i></i></span>4<sup>e</sup> sur 9</td><td class="num">123<span class="sub ok">+ 6</span></td></tr>
+              <tr><td>Panier moyen<span class="sub">hors clients pro</span></td><td class="num">12,14 €</td><td><span class="rang"><i></i><i></i><i></i><i></i><i></i><i></i><i class="moi"></i><i></i><i></i></span>7<sup>e</sup> sur 9</td><td class="num">12,16 €<span class="sub warn">− 0,02 €</span></td></tr>
+              <tr><td>Marge brute</td><td class="num">66,4 %</td><td><span class="rang"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="moi"></i><i></i></span>8<sup>e</sup> sur 9</td><td class="num">67,1 %<span class="sub warn">− 0,7 pt</span></td></tr>
+              <tr><td>Clients pro</td><td class="num">131 €</td><td><span class="rang"><i></i><i></i><i></i><i></i><i class="moi"></i><i></i><i></i><i></i><i></i></span>5<sup>e</sup> sur 9</td><td class="num">131 €<span class="sub">au niveau</span></td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <!-- Les ventes par catégorie : la marge brute sur l'échelle unique du §7.13 (trois états, trois mots) -->
+      <section class="card card--table">
+        <div class="card__head">
+          <h2>Ventes par catégorie</h2>
+          <div class="seg" role="tablist" aria-label="Vue"><button type="button" class="is-on">Liste</button><button type="button">Treemap</button><button type="button">Promotions</button><button type="button">Portions</button></div>
+          <span class="card__aside">hors TVA · 6 groupes, 14 catégories</span>
+        </div>
+        <table class="ds-table dense">
+          <thead><tr><th>Groupe</th><th>Poids dans le CA</th><th class="num">CA HT</th><th class="num">Part</th><th class="num">Marge brute</th><th class="num">Taux</th><th>Marge</th><th class="num">Coef.</th></tr></thead>
+          <tbody>
+            <tr class="row-link"><td><button class="btn-pli" type="button" aria-label="Ouvrir"><svg><use href="#i-d"/></svg></button>Pâtisserie<span class="sub" style="margin-left:28px">3 catégories</span></td><td><span class="poids"><span><i style="width:23%"></i></span></span></td><td class="num">363 €</td><td class="num">23 %</td><td class="num">226 €</td><td class="num">62 %</td><td><span class="chip chip--ok">bonne</span></td><td class="num">× 2,66</td></tr>
+            <tr class="row-link"><td><button class="btn-pli" type="button" aria-label="Ouvrir"><svg><use href="#i-d"/></svg></button>Viennoiserie<span class="sub" style="margin-left:28px">3 catégories</span></td><td><span class="poids"><span><i style="width:23%"></i></span></span></td><td class="num">361 €</td><td class="num">23 %</td><td class="num">250 €</td><td class="num">69 %</td><td><span class="chip chip--ok">bonne</span></td><td class="num">× 3,26</td></tr>
+            <tr class="row-link"><td><button class="btn-pli" type="button" aria-label="Ouvrir"><svg><use href="#i-d"/></svg></button>Snacking<span class="sub" style="margin-left:28px">2 catégories</span></td><td><span class="poids"><span><i style="width:21%"></i></span></span></td><td class="num">330 €</td><td class="num">21 %</td><td class="num">180 €</td><td class="num">54 %</td><td><span class="tag-warn">moyenne</span></td><td class="num">× 2,20</td></tr>
+            <tr class="row-link"><td><button class="btn-pli" type="button" aria-label="Ouvrir"><svg><use href="#i-d"/></svg></button>Pains<span class="sub" style="margin-left:28px">2 catégories</span></td><td><span class="poids"><span><i style="width:15%"></i></span></span></td><td class="num">234 €</td><td class="num">15 %</td><td class="num">181 €</td><td class="num">77 %</td><td><span class="chip chip--ok">bonne</span></td><td class="num">× 4,37</td></tr>
+            <tr class="row-link"><td><button class="btn-pli" type="button" aria-label="Ouvrir"><svg><use href="#i-d"/></svg></button>Boissons<span class="sub" style="margin-left:28px">2 catégories</span></td><td><span class="poids"><span><i style="width:11%"></i></span></span></td><td class="num">172 €</td><td class="num">11 %</td><td class="num">132 €</td><td class="num">77 %</td><td><span class="chip chip--ok">bonne</span></td><td class="num">× 4,29</td></tr>
+            <tr class="row-link"><td><button class="btn-pli" type="button" aria-label="Ouvrir"><svg><use href="#i-d"/></svg></button>Biscuiterie<span class="sub" style="margin-left:28px">2 catégories</span></td><td><span class="poids"><span><i style="width:7%"></i></span></span></td><td class="num">106 €</td><td class="num">7 %</td><td class="num">61 €</td><td class="num">57 %</td><td><span class="tag-warn">moyenne</span></td><td class="num">× 2,34</td></tr>
+            <tr><td class="mu">Non ventilé<span class="sub">lignes sans produit, remises, tickets pas encore lus</span></td><td></td><td class="num mu">12 €</td><td class="num mu">1 %</td><td class="num mu">18 €</td><td class="num"></td><td></td><td class="num"></td></tr>
+            <tr class="total-row"><td>Total</td><td></td><td class="num">1 578 €</td><td class="num">100 %</td><td class="num">1 048 €</td><td class="num">66,4 %</td><td><span class="chip chip--ok">bonne</span></td><td class="num">× 2,98</td></tr>
+          </tbody>
+        </table>
+        <div class="card__foot"><span class="legende" style="margin:0"><span><i class="dot dot--stop"></i>sous 40 % : faible</span><span><i class="dot dot--warn"></i>40 à 60 % : moyenne</span><span><i class="dot dot--ok"></i>60 % et plus : bonne</span><span><i class="c-pond"></i>poids dans le CA</span></span><span>coût matière inconnu : ligne non jugée</span></div>
+      </section>
+
+      <!-- La vitrine : plus de lettres de couleur, une case neutre et l'état en mots -->
+      <section class="card">
+        <div class="card__head"><h2>La vitrine</h2><span class="card__aside">prochaine cuisson : l’après-midi à 16 h 30 (four 1)</span></div>
+        <div class="vit"><span class="vit__l">S</span><span class="vit__n">Short life<span>19 références</span></span><span class="vit__d"><span class="tag-warn">4 vont manquer</span>+ 36 à cuire · 64 € à sauver</span><a class="linklike" href="#">la liste</a></div>
+        <div class="vit"><span class="vit__l">M</span><span class="vit__n">Medium life<span>8 références</span></span><span class="vit__d"><span class="chip chip--ok">rien ne va manquer</span></span><a class="linklike" href="#">la liste</a></div>
+        <div class="vit"><span class="vit__l">L</span><span class="vit__n">Long life<span>5 références</span></span><span class="vit__d"><span class="tag-warn">1 va manquer</span>+ 72 à refaire</span><a class="linklike" href="#">la liste</a></div>
+      </section>
+
+      <!-- Les contrôles en photo : filtres du §7.6, cartes blanches, l'état par une étiquette, jamais un bandeau de couleur -->
+      <section class="card">
+        <div class="card__head"><h2>Les contrôles en photo</h2><span class="card__aside">5 photos rendues de 06 h 41 à 12 h 41 · moyenne 4,0 sur 5</span></div>
+        <div class="ctl-bar">
+          <button class="filter is-on" type="button">Tout <span>6</span></button>
+          <button class="filter" type="button">Écarts <span>1</span></button>
+          <button class="filter" type="button">À contrôler <span>1</span></button>
+          <button class="filter" type="button">Conformes <span>3</span></button>
+          <button class="filter" type="button">Non rendues <span>1</span></button>
+        </div>
+        <div class="ctls">
+          <article class="ctl">
+            <div class="ctl__h"><span class="ctl__code">2.1.01</span><span class="ctl__t">Cuisson du matin</span><span class="ctl__nb">06 h 30 · 1/1</span></div>
+            <div class="ctl__ph"><span class="ph"><em>06:41</em><svg><use href="#i-photo"/></svg></span></div>
+            <div class="ctl__f"><span><span class="tag-warn">écart mineur · 3/5</span></span><span>coloration inégale · Thomas D.</span></div>
+          </article>
+          <article class="ctl">
+            <div class="ctl__h"><span class="ctl__code">1.1.01</span><span class="ctl__t">Ouverture du comptoir</span><span class="ctl__nb">06 h 45 · 2/2</span></div>
+            <div class="ctl__ph"><span class="ph"><em>06:52</em><svg><use href="#i-photo"/></svg></span><span class="ph"><em>06:58</em><svg><use href="#i-photo"/></svg></span></div>
+            <div class="ctl__f"><span><span class="badge badge--ok">conforme · 5/5 et 4/5</span></span><span>Julie M. · noté à 09 h 10</span></div>
+          </article>
+          <article class="ctl">
+            <div class="ctl__h"><span class="ctl__code">3.1.01</span><span class="ctl__t">Mise en place snacking</span><span class="ctl__nb">10 h 45 · 1/1</span></div>
+            <div class="ctl__ph"><span class="ph"><em>10:56</em><svg><use href="#i-photo"/></svg></span></div>
+            <div class="ctl__f"><span><span class="tag-warn">à contrôler</span></span><span>photo déposée, pas encore notée · Lucas V.</span></div>
+          </article>
+          <article class="ctl">
+            <div class="ctl__h"><span class="ctl__code">1.2.01</span><span class="ctl__t">Vitrine de l’après-midi</span><span class="ctl__nb">16 h 00 · 0/1</span></div>
+            <div class="ctl__ph"><span class="ph ph--vide"><svg><use href="#i-photo"/></svg></span></div>
+            <div class="ctl__f"><span><span class="chip chip--draft">pas encore rendue</span></span><span>attendue à 16 h 00</span></div>
+          </article>
+        </div>
+        <div class="card__foot"><span>2 autres contrôles conformes ce jour</span><a class="linklike" href="#">les 6 contrôles et les 7 derniers jours</a></div>
+      </section>
+    </main>
+  </div>
+</div>
+</body>
+</html>
