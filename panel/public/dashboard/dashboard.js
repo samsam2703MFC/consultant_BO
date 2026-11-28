@@ -45,7 +45,7 @@
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false,
     // L'onglet Tâches (08/11/2026) : le filtre des checklists, celles dépliées, le guide (replié s'il a été replié), tous les retours.
     // L'onglet Fidélité (12/11/2026) : le profil choisi pour les radars, le client dont la fiche est ouverte.
-    fdProfil: null, fdT: 90, fdOnglet: 'p', fdPer: 'mois', fdCQ: '', fdCF: 'tous', fdCarte: null, fdClient: /^\d+$/.test(q.get('client') || '') ? q.get('client') : null,
+    fdProfil: null, fdT: 90, fdOnglet: q.get('pub') ? 'c' : 'p', fdPer: 'mois', fdCQ: '', fdCF: 'tous', fdCarte: null, fdPub: q.get('pub') === 'e' ? 'e' : 'p', fdClient: /^\d+$/.test(q.get('client') || '') ? q.get('client') : null,
     tjF: 'tout', tjOuv: {}, tjRetTout: false, tjGuide: (function () { try { return localStorage.getItem('db.tjGuide') !== '0'; } catch (e) { return true; } })(),
     tmSeuil: (function () { try { const v = +localStorage.getItem('db.tmSeuil'); return [5, 10, 15].includes(v) ? v : 10; } catch (e) { return 10; } })() };
   const AUJ = new Date().toISOString().slice(0, 10);
@@ -178,7 +178,7 @@
     // Les tâches et les checklists du magasin (08/11/2026) : la semaine jour par jour, les photos et les retours du contrôle.
     if (S.vue === 'taches') { tjCharger(force); rendre(); return; }
     // La fidélité du magasin (12/11/2026) : ses profils de fréquence, ou la fiche d'un client.
-    if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); lireAux(cleFDK(), cheminFDK(), force); } else if (S.fdOnglet === 'c') { lireAux(cleFDCA(), cheminFDCA(), force); if (S.fdCarte) { lireAux(cleFDCD(), cheminFDCD(), force); } } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); lireAux(cleFDS(), cheminFDS(), force); } rendre(); return; }
+    if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); lireAux(cleFDK(), cheminFDK(), force); } else if (S.fdOnglet === 'c') { lireAux(cleFDCA(), cheminFDCA(), force); lireAux(cleFDB(), cheminFDB(), force); if (S.fdCarte) { lireAux(cleFDCD(), cheminFDCD(), force); } } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); lireAux(cleFDS(), cheminFDS(), force); } rendre(); return; }
     // La trésorerie (14/11/2026) : le module lit et écrit lui-même (tresorerie.js) ; « ↻ Relire » relit ses repères.
     // Les Frais (22/11/2026, Sam : « mettre les Frais dans la Trésorerie pour gagner de la place dans le rail ») : un onglet
     // de la Trésorerie ; une adresse « vue=frais » ou le lien « Frais ▸ » du P&L ouvrent cet onglet.
@@ -284,6 +284,8 @@
     if (EMBED_PM) { u.searchParams.delete('date'); u.searchParams.delete('ouvrir'); }
     if (estMobile() && S.vue === 'jour') { u.searchParams.set('mo', S.mo); } else { u.searchParams.delete('mo'); }
     if (S.vue === 'fidelite' && S.fdClient) { u.searchParams.set('client', S.fdClient); } else { u.searchParams.delete('client'); }
+    // Fidélité › Cartes (28/11/2026) : le public choisi (particuliers, entreprises) reste dans l'adresse.
+    if (S.vue === 'fidelite' && S.fdOnglet === 'c' && !S.fdClient) { u.searchParams.set('pub', S.fdPub); } else { u.searchParams.delete('pub'); }
     // Vendre › Analyse garde sa période et sa page dans l'adresse (analyse.js) ; hors de l'onglet, elles s'effacent.
     if (S.vue !== 'analyse') { ['per', 'a', 'du', 'au', 'produit', 'famille'].forEach(k => u.searchParams.delete(k)); }
     if (S.vue === 'concurrence') { u.searchParams.set('bmf', S.bmF); if (S.bmF === 'produit' && S.bmP) { u.searchParams.set('bmp', S.bmP); } else { u.searchParams.delete('bmp'); } } else { u.searchParams.delete('bmf'); u.searchParams.delete('bmp'); }
@@ -6663,60 +6665,196 @@
     }
     if (p.points) {
       const prochain = (p.points.paliers || []).find(t => !t.atteint);
-      return `<span class="fdc-chip"><i class="fdc-ic" style="background:${esc(col)}"></i>${esc(p.nom)} <b>${nf(p.points.solde, 0)} pts</b>${prochain ? `<small>${nf(prochain.reste, 0)} pts du palier ${nf(prochain.euros, 0)} €</small>` : ''}</span>`;
+      // Un palier atteint, c'est un bon prêt à échanger (28/11/2026 : il ne se voyait pas quand tous les paliers étaient atteints).
+      const atteint = (p.points.paliers || []).filter(t => t.atteint).pop();
+      return `<span class="fdc-chip"><i class="fdc-ic" style="background:${esc(col)}"></i>${esc(p.nom)} <b>${nf(p.points.solde, 0)} pts</b>${atteint ? `<span class="fdc-pret">bon de ${nf(atteint.euros, 0)} € prêt</span>` : ''}${prochain ? `<small>${nf(prochain.reste, 0)} pts du palier ${nf(prochain.euros, 0)} €</small>` : ''}</span>`;
     }
     return `<span class="fdc-chip"><i class="fdc-ic" style="background:${esc(col)}"></i>${esc(p.nom)}</span>`;
   }
-  function rendCartes() {
-    const k = cleFDCA(), d = S.aux[k];
-    const per = `<span class="fd-tg">${[['mois', 'Ce mois'], ['30', '30 j'], ['annee', 'Année']].map(([v, l]) => `<button type="button" data-fdper="${v}" class="${S.fdPer === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
-    let h = `<div class="db-sec">Du client reconnu à la récompense<small>${esc(nomShop())}${d && !d.error ? ' · lu dans l’ERP à ' + esc(String(d.lu).slice(11, 16)) : ''}</small>${per}</div>`;
-    if (S.err[k]) { return h + `<div class="db-err">Cartes de fidélité : ${esc(S.err[k])}</div>`; }
-    if (!d) { return h + '<div class="db-attente">Lecture des cartes de fidélité dans l’ERP…</div>'; }
-    if (d.error) { return h + `<div class="db-err">Cartes de fidélité : ${esc(d.error)}</div>`; }
-    const Pa = d.participants || {}, C = d.cartes || [], defs = d.definitions || [];
-    const presque = C.reduce((a, c) => a + (c.presque || 0), 0), pretes = C.reduce((a, c) => a + (c.pretes || 0), 0);
-    // Le résumé (27/11/2026, DESIGN_SYSTEM.md §7.13) à la place des cinq tuiles de l'entonnoir : le chiffre clé (les inscrits),
-    // d'où ils viennent (les clients reconnus en caisse, ceux à inscrire), ce qu'ils ont fait sur la période ; puis « À
-    // corriger » : les récompenses prêtes (le filtre « Récompense prête » de la liste) et, carte par carte, les clients à 1 ou
-    // 2 timbres du cadeau (le détail de la carte, ses clients du plus avancé au moins avancé). Rien de calculé en plus.
-    const pl = (n, a, b) => nf(n, 0) + ' ' + (n > 1 ? b : a);
-    const AC = [];
-    if (pretes) { AC.push({ sig: 'prize', txt: `${pl(pretes, 'récompense prête', 'récompenses prêtes')} à offrir en caisse`, attr: 'data-fdac="pret" title="la liste des clients, filtrée sur « Récompense prête »"' }); }
-    C.filter(c => c.presque).forEach(c => AC.push({ sig: 'prize', txt: `${esc(c.nom)} : ${pl(c.presque, 'client', 'clients')} à 1 ou 2 timbres, à relancer`, attr: `data-fdacc="${esc(c.id)}" title="le détail de la carte et ses clients"` }));
-    if (Pa.unique_customers != null) {
-      const aIns = d.reconnusCaisse90 != null ? Math.max(0, d.reconnusCaisse90 - (Pa.unique_customers || 0)) : null;
-      // Sans jauge : la colonne de la jauge se retire (fd-chr-c), la phrase garde sa largeur.
-      h += chrResume({ aria: 'Résumé des cartes de fidélité', v: nf(Pa.unique_customers, 0),
-        q: (Pa.unique_customers > 1 ? 'clients inscrits' : 'client inscrit') + ' à une carte',
-        q2: d.reconnusCaisse90 != null ? `sur ${pl(d.reconnusCaisse90, 'client reconnu', 'clients reconnus')} en caisse ces 90 derniers jours · ${nf(aIns, 0)} à inscrire` : '',
-        lev: Pa.active_in_period != null ? `<span class="chr-lh">${pl(Pa.active_in_period, 'a gagné', 'ont gagné')} sur leur carte</span><span>sur la période choisie</span>` : '',
-        L: AC, ok: 'Rien à corriger : aucune récompense en attente, aucun client à relancer.' }).replace('class="db-card chr"', 'class="db-card chr fd-chr-c fdc-fun"'); // fdc-fun : le nom de l'ancien entonnoir (vidéos 18)
+  /* --- Les cartes, par public (28/11/2026 ; maquette C retenue : panel/docs/maquettes/fidelite-particuliers-entreprises) ---
+   * Sam : « réorganiser la vision des cartes des points et bingo par rapport aux clients et aux firmes » ; « C, code-le ».
+   * L'interrupteur abricot choisit le public, Particuliers ou Entreprises, et tout l'onglet suit : le résumé et « À
+   * corriger », les cartes, la liste. Le serveur range chaque inscrit (GET /fidelite/cartes : `type` particulier, societe
+   * ou personne, `societe`, `entreprises`, `liens`) ; le bingo de la saison se lit à côté (GET /fidelite/cartes/bingo : ses
+   * semaines, et pour chaque client ses achats semaine après semaine, tous magasins). */
+  function cleFDB() { return 'fdb|' + S.shop; }
+  function cheminFDB() { return '/fidelite/cartes/bingo?shop=' + encodeURIComponent(S.shop); }
+  const fdPl = (n, a, b) => nf(n, 0) + ' ' + (n > 1 ? b : a);
+  const fdJJMM = iso => iso ? String(iso).slice(8, 10) + '/' + String(iso).slice(5, 7) : '';
+  /** Un montant rond sans décimales (« 10 € »), les autres au centime. */
+  const fdE = v => Number.isInteger(+v) ? nf(v, 0) + ' €' : fU(v);
+  /** Le bingo lu ({saison, regles, semaine, clients}) ; null tant qu'il n'est pas lu, ou s'il n'a pas pu l'être. */
+  function fdBg() { const x = S.aux[cleFDB()]; return x && !x.error && x.saison ? x : null; }
+  /** Où en est un client au bingo : ses achats de la semaine en cours (tous magasins), sa case, ses cases de la saison. */
+  function fdBgEtat(id, B) {
+    const x = B && B.clients ? B.clients[id] : null, eu = x ? x.euros : [], seuil = B ? B.regles.seuil : 10;
+    const cours = !!(B && B.saison.enCours), cur = cours ? (eu[B.semaine - 1] || 0) : 0, co = cours && cur >= seuil - 0.001;
+    return { eu, cases: x ? x.cases : 0, cours, cur, co, pr: cours && !co && cur > 0 && seuil - cur <= 3, seuil };
+  }
+  /** « jusqu'au dimanche 29/11 » : la fin de la semaine en cours. */
+  function fdBgFin(B) { const w = B && B.saison.enCours ? B.saison.semaines[B.saison.enCours - 1] : null; return w ? 'jusqu’au dimanche ' + fdJJMM(w.au) : ''; }
+  /** La grille d'un client : ses 13 cases (cochée, en cours remplie à hauteur de ses achats, manquée, à venir) et sa semaine. */
+  function fdGrille(id, B) {
+    if (!B) { return `<span class="fd-note">${S.err[cleFDB()] || (S.aux[cleFDB()] || {}).error ? 'bingo illisible' : '…'}</span>`; }
+    const e = fdBgEtat(id, B), N = B.saison.semaines.length;
+    const cases = B.saison.semaines.map((w, i) => {
+      if (w.etat === 'avenir') { return '<i class="av"></i>'; }
+      const v = e.eu[i] || 0, t = ` title="semaine ${i + 1} : ${fU(v)}"`;
+      if (v >= e.seuil - 0.001) { return `<i class="ok"${t}></i>`; }
+      return w.etat === 'cours' ? `<i class="cours" style="--p:${Math.min(100, Math.round(100 * v / e.seuil))}%"${t}></i>` : `<i class="vide"${t}></i>`;
+    }).join('');
+    const t = !e.cours ? (B.saison.etat === 'avenir' ? 'la saison commence le ' + fdJJMM(B.saison.du) : fdPl(e.cases, 'case', 'cases') + ' sur ' + N)
+      : e.co ? `<span class="ok">case cochée · ${fU(e.cur)}</span>`
+        : e.pr ? `<span class="att"><i class="ac-ic ac-prize"></i>${fU(e.cur)} · encore ${fU(e.seuil - e.cur)}</span>`
+          : e.cur > 0 ? `${fU(e.cur)} sur ${fdE(e.seuil)}` : 'pas encore d’achat cette semaine';
+    return `<div class="fdp-bgc" title="${esc(fdPl(e.cases, 'case cochée', 'cases cochées') + ' sur ' + B.semaine + ' semaine' + (B.semaine > 1 ? 's' : ''))}"><span class="fdp-bg">${cases}</span><span class="fdp-s">${t}${e.cours && e.cases && B.semaine > 1 ? ' · ' + fdPl(e.cases, 'case', 'cases') : ''}</span></div>`;
+  }
+  /** Les récompenses prêtes d'un client : celles d'une carte à timbres remplie, et un palier de points atteint. */
+  const fdPrets = c => (c.cartes || []).reduce((s, p) => s + (p.timbres ? p.timbres.pretes : 0) + (p.points && (p.points.paliers || []).some(t => t.atteint) ? 1 : 0), 0);
+  /** La barre de la case de la semaine : cochée · à moins de 3 € · pas encore. */
+  function fdSeg(co, pr, pas) {
+    const t = Math.max(1, co + pr + pas), w = n => (100 * n / t).toFixed(1) + '%';
+    return `<div class="fdp-sg"><i class="co" style="width:${w(co)}"></i><i class="pr" style="width:${w(pr)}"></i></div>
+      <div class="fdp-lg"><span><i class="co"></i>${nf(co, 0)} ${co > 1 ? 'cochées' : 'cochée'}</span><span><i class="pr"></i>${nf(pr, 0)} à moins de 3 €</span><span><i class="pa"></i>${nf(pas, 0)} pas encore</span></div>`;
+  }
+  /** Des barres blanches sur la carte : le nombre au-dessus, le libellé dessous. */
+  const fdBarres = (R, lab) => { const mx = Math.max(1, ...R); return `<div class="fdp-hi">${R.map((n, i) => `<div><span>${n || ''}</span><i style="height:${n ? Math.max(4, 44 * n / mx) : 2}px;opacity:${n ? (0.45 + 0.55 * i / Math.max(1, R.length - 1)).toFixed(2) : 0.25}"></i><small>${lab(i)}</small></div>`).join('')}</div>`; };
+  /** Une carte de l'ERP dessinée pour un public : ses inscrits, ce qu'ils ont gagné ici, les récompenses prêtes, où ils en sont. */
+  function fdBloc(def, L) {
+    const col = def.couleur || '#8D1D2C', P = L.map(c => (c.cartes || []).find(p => p.id === def.id)).filter(Boolean);
+    const ici = P.reduce((s, p) => s + ((p.gagnesIci || {}).timbres || (p.gagnesIci || {}).points || 0), 0);
+    const pretes = P.reduce((s, p) => s + (p.timbres ? p.timbres.pretes : 0) + (p.points && (p.points.paliers || []).some(t => t.atteint) ? 1 : 0), 0);
+    let viz = '', k3 = '';
+    if (def.timbres) {
+      const R = Array(def.timbres).fill(0); P.forEach(p => { if (p.timbres) { R[Math.max(0, Math.min(def.timbres - 1, p.timbres.progres))]++; } });
+      k3 = `<div><b>${nf(P.filter(p => p.timbres && [1, 2].includes(p.timbres.reste)).length, 0)}</b>à 1 ou 2 timbres</div>`;
+      viz = fdBarres(R, i => i === 0 || i === def.timbres - 1 || i % 3 === 0 ? String(i) : '');
+    } else {
+      const pal = (P.map(p => ((p.points || {}).paliers || [])[0]).find(Boolean) || { points: 100 }).points || 100, R = [0, 0, 0, 0, 0];
+      P.forEach(p => { if (p.points) { R[Math.min(4, Math.floor(4 * p.points.solde / pal))]++; } });
+      k3 = `<div><b>${nf(R[3], 0)}</b>à moins de ${nf(pal / 4, 0)} pts du bon</div>`;
+      viz = fdBarres(R, i => i === 4 ? nf(pal, 0) + ' et +' : nf(i * pal / 4, 0) + '–' + nf((i + 1) * pal / 4 - 1, 0));
     }
-    h += `<div class="db-sec">${C.length > 1 ? 'Les cartes' : 'La carte'}<small>où en sont les clients · soldes actuels, tous magasins</small></div>`;
-    h += C.length ? `<div class="db-card">${C.map(c => {
-      const def = c.definition || {}, col = def.couleur || '#8D1D2C', R = c.repartition || [], mx = Math.max(1, ...R);
-      const viz = R.length ? `<div class="fdc-mini">${R.map((n, i) => `<i title="${i} timbre${i > 1 ? 's' : ''} : ${n} client${n > 1 ? 's' : ''}" style="height:${n ? Math.max(4, 44 * n / mx) : 2}px;background:${esc(col)};opacity:${n ? (0.35 + 0.65 * i / Math.max(1, R.length - 1)).toFixed(2) : 0.12}"></i>`).join('')}</div><div class="fdc-mini-l"><span>0 timbre</span><span>${R.length - 1} timbres</span></div>`
-        : (c.pointsSoldes || []).length ? `<div class="fdc-mini-t">${c.pointsSoldes.length} comptes de points · solde médian ${nf(c.pointsSoldes[Math.floor(c.pointsSoldes.length / 2)], 0)} pts</div>` : '';
-      const sous = [def.timbres ? def.timbres + ' timbres' : (def.points ? 'points' : ''), def.recompense, def.au ? 'jusqu’au ' + def.au.slice(8, 10) + '/' + def.au.slice(5, 7) : ''].filter(Boolean).join(' · ');
-      const ouverte = String(S.fdCarte) === String(c.id);
-      return `<div class="fdc-row${ouverte ? ' on' : ''}" id="fdc-carte-${esc(c.id)}" data-fdcarte="${esc(c.id)}" title="${ouverte ? 'Fermer le détail' : 'Voir le détail de la carte'}"><div class="fdc-t"><i class="fdc-ic g" style="background:${esc(col)}"></i><div>${esc(c.nom)}<small>${esc(sous)}</small></div></div><div>${viz}</div>
-        <div class="fdc-v"><b>${nf(c.clients, 0)}</b><span>clients</span></div><div class="fdc-v"><b>${nf(c.timbresIci || c.pointsIci, 0)}</b><span>${c.timbresIci ? 'timbres gagnés ici' : 'points gagnés ici'}</span></div><div class="fdc-v"><b class="ok">${nf(c.pretes, 0)}</b><span>prêtes</span></div></div>${ouverte ? fdCarteDetail(c, d) : ''}`;
-    }).join('')}</div>` : '<div class="db-alerte">Aucun client de ce magasin n’est inscrit à une carte pour l’instant.</div>';
-    const rc = d.reconnaissances || {};
-    h += `<p class="fd-note">${rc.count ? nf(rc.count, 0) + ' reconnaissances de carte en caisse, ' + nf(rc.unique_customers, 0) + ' clients.' : 'Aucun scan de carte n’est encore compté par l’ERP : les timbres viennent des achats des clients inscrits.'} Une reconnaissance est un scan réussi, pas un ticket.</p>`;
-    // Par client · le réseau
-    const L = d.clients || [];
-    const filtres = `<span class="fd-tg">${[['tous', 'Tous'], ['pret', 'Récompense prête'], ['inactif', 'Inactifs ici']].map(([v, l]) => `<button type="button" data-fdcf="${v}" class="${S.fdCF === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
-    const lignes = L.map(c => `<tr data-fdc="${esc(c.id)}" data-fdct="${esc(c.nom.toLowerCase())}" data-fdcp="${c.pretes ? 1 : 0}" data-fdci="${c.achats ? 0 : 1}"><td>${esc(c.nom)}${c.bloque ? '<small>bloqué</small>' : ''}</td><td>${c.cartes.map(p => fdCarteChip(p, defs)).join('')}</td>
-      <td class="n">${nf(c.achats, 0)}<small>${fU(c.montant)}</small></td><td>${esc(fdJour(c.dernierAchat))}</td><td class="n"><span class="db-lien">Sa fiche ›</span></td></tr>`).join('');
+    const sous = [def.timbres ? def.timbres + ' timbres' : 'points', def.recompense, def.au ? 'jusqu’au ' + fdJJMM(def.au) : ''].filter(Boolean).join(' · ');
+    const ouverte = String(S.fdCarte) === String(def.id);
+    return `<div class="fdp-carte${ouverte ? ' on' : ''}" id="fdc-carte-${esc(def.id)}" data-fdcarte="${esc(def.id)}" style="background:${esc(col)}" title="${ouverte ? 'Fermer le détail' : 'Voir le détail de la carte'}">
+      <div class="nm">${esc(def.nom)}<span>${def.timbres ? 'à timbres' : 'fait consommer'}</span></div><div class="rc">${esc(sous)}</div>
+      <div class="fdp-k"><div><b>${nf(P.length, 0)}</b>inscrit${P.length > 1 ? 's' : ''}</div><div><b>${nf(ici, 0)}</b>${def.timbres ? 'timbres' : 'points'} gagnés ici</div><div><b>${nf(pretes, 0)}</b>${def.timbres ? 'récompenses prêtes' : 'bons prêts'}</div>${k3}</div>${viz}</div>`;
+  }
+  /** Le bingo de la saison dessiné pour un public : la case de cette semaine, et semaine après semaine qui a coché. */
+  function fdBlocBingo(L, B) {
+    const k = cleFDB(), x = S.aux[k], err = S.err[k] || (x && x.error);
+    const tete = nom => `<div class="nm">${esc(nom)}<span>fait revenir</span></div>`;
+    if (!B) { return `<div class="fdp-carte fdp-bingo">${tete('Bingo de la saison')}<div class="rc">${err ? 'Le bingo n’a pas pu être lu : ' + esc(err) : (x && !x.saison ? 'Aucune saison de bingo n’est réglée.' : 'Lecture des achats de la saison dans l’ERP…')}</div></div>`; }
+    const R = B.regles, s = B.saison, E = L.map(c => fdBgEtat(c.id, B));
+    const co = E.filter(e => e.co).length, pr = E.filter(e => e.pr).length;
+    const sous = `la case de la semaine dès ${fdE(R.seuil)} d’achats, tous magasins · un bon de ${nf(R.bons[0] || 0, 0)} € toutes les ${R.tousLes} cases${R.superBon ? ' · ' + s.semaines.length + ' / ' + s.semaines.length + ' : ' + nf(R.superBon, 0) + ' €' : ''}`;
+    const kp = s.enCours ? `<div><b>${nf(co, 0)}<small> / ${nf(L.length, 0)}</small></b>ont coché la semaine ${s.enCours}</div><div><b>${nf(pr, 0)}</b>à moins de 3 €</div><div><b>${nf(L.length - co - pr, 0)}</b>pas encore</div>`
+      : s.etat === 'avenir' ? `<div><b>${fdJJMM(s.du)}</b>début de la saison</div>` : `<div><b>${nf(E.reduce((a, e) => a + e.cases, 0), 0)}</b>cases cochées sur la saison</div>`;
+    const sem = s.semaines.map((w, i) => { const n = w.etat === 'avenir' ? '' : nf(E.filter(e => (e.eu[i] || 0) >= R.seuil - 0.001).length, 0);
+      return `<i class="${w.etat}" title="${esc('Semaine ' + w.n + ' · ' + w.titre + (w.etat === 'avenir' ? '' : ' : ' + n + ' case(s) cochée(s)'))}"><b>${n}</b><small>${fdJJMM(w.du)}</small></i>`; }).join('');
+    return `<div class="fdp-carte fdp-bingo">${tete('Bingo · ' + s.nom)}<div class="rc">${esc(sous)}</div><div class="fdp-k">${kp}</div><div class="fdp-sem">${sem}</div></div>`;
+  }
+  /** Le réseau, sur la même période. */
+  function fdReseau(d) {
     const reseau = (d.reseau || []).map(m => `<tr class="${String(m.id) === String(S.shop) ? 'moi' : ''}"><td>${esc(m.nom)}</td><td class="n">${nf(m.inscrits, 0)}</td><td class="n">${nf(m.actifs, 0)}</td><td class="n">${nf(m.timbres || m.points, 0)}</td><td class="n">${fU(m.ventes)}</td></tr>`).join('');
-    h += `<div class="fdc-g2"><div><div class="db-sec" id="fdc-clients">Par client<small>${nf(d.clientsTotal || L.length, 0)} inscrits · chercher un client pour vérifier sa carte</small></div>
-      <div class="db-card"><div class="fdc-filtre"><input type="search" class="db-sel" data-fdcq="1" placeholder="Rechercher un client…" value="${esc(S.fdCQ)}">${filtres}</div>
-      ${L.length ? `<table class="fd-t"><thead><tr><th>Client</th><th>Sa carte et où il en est</th><th class="n">Achats</th><th>Dernier achat</th><th></th></tr></thead><tbody>${lignes}</tbody></table><p class="fd-dd-rien" hidden>Aucun client ne correspond.</p>` : '<p class="fd-dd-rien">Aucun client inscrit.</p>'}
-      ${d.erreurClients ? `<p class="fd-note">Liste incomplète : ${esc(d.erreurClients)}</p>` : ''}</div></div>
-      <div><div class="db-sec">Le réseau<small>même période</small></div><div class="db-card"><table class="fd-t"><thead><tr><th>Magasin</th><th class="n">Inscrits</th><th class="n">Actifs</th><th class="n">Timbres</th><th class="n">Ventes inscrits</th></tr></thead><tbody>${reseau}</tbody></table></div></div></div>`;
-    return h;
+    return reseau ? `<div class="db-sec">Le réseau<small>même période · tous les inscrits, particuliers et entreprises</small></div><div class="db-card"><table class="fd-t"><thead><tr><th>Magasin</th><th class="n">Inscrits</th><th class="n">Actifs</th><th class="n">Timbres et points</th><th class="n">Ventes inscrits</th></tr></thead><tbody>${reseau}</tbody></table></div>` : '';
+  }
+  /** Le résumé d'un public (chrResume, sans jauge) ; « fdc-fun » : le nom de l'ancien entonnoir, que la vidéo 18 montre. */
+  const fdResume = (o, fun) => chrResume(o).replace('class="db-card chr"', 'class="db-card chr fd-chr-c' + (fun ? ' fdc-fun' : '') + '"');
+  function rendCartes() {
+    const k = cleFDCA(), d = S.aux[k], B = fdBg();
+    const per = `<span class="fd-tg">${[['mois', 'Ce mois'], ['30', '30 j'], ['annee', 'Année']].map(([v, l]) => `<button type="button" data-fdper="${v}" class="${S.fdPer === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+    if (S.err[k]) { return `<div class="fdp-choix">${per}</div><div class="db-err">Cartes de fidélité : ${esc(S.err[k])}</div>`; }
+    if (!d) { return `<div class="fdp-choix">${per}</div><div class="db-attente">Lecture des cartes de fidélité dans l’ERP…</div>`; }
+    if (d.error) { return `<div class="fdp-choix">${per}</div><div class="db-err">Cartes de fidélité : ${esc(d.error)}</div>`; }
+    const L = d.clients || [], defs = d.definitions || [], E = d.entreprises || [], li = d.liens || {};
+    const P = L.filter(c => (c.type || 'particulier') === 'particulier');
+    const gens = L.filter(c => c.type === 'personne'), comptes = L.filter(c => c.type === 'societe');
+    const pub = S.fdPub === 'e' ? 'e' : 'p';
+    const bascule = `<div class="pco-bascule fdp-pub" role="tablist" aria-label="Particuliers ou entreprises">${[['p', 'Particuliers', fdPl(P.length, 'inscrit', 'inscrits')],
+      ['e', 'Entreprises', fdPl(E.length, 'société', 'sociétés') + ' · ' + fdPl(gens.length, 'personne', 'personnes')]].map(([v, l, em]) =>
+      `<button type="button" role="tab" aria-selected="${pub === v}" data-fdpub="${v}" class="${pub === v ? 'is-on' : ''}">${l} <em>${em}</em></button>`).join('')}</div>`;
+    let h = `<div class="fdp"><div class="fdp-choix">${bascule}${per}</div>`;
+    const lu = esc(nomShop()) + ' · lu dans l’ERP à ' + esc(String(d.lu).slice(11, 16));
+    const sem = B && B.saison.enCours ? `bingo, semaine ${B.saison.enCours} sur ${B.saison.semaines.length} · ${fdBgFin(B)}` : '';
+    if (pub === 'p') {
+      // Les particuliers : le résumé, leurs cartes (une par carte de l'ERP, et le bingo), la liste.
+      const prets = P.reduce((s, c) => s + fdPrets(c), 0), bP = B ? P.filter(c => fdBgEtat(c.id, B).pr).length : 0;
+      const AC = [];
+      if (prets) { AC.push({ sig: 'prize', txt: `${fdPl(prets, 'récompense prête', 'récompenses prêtes')} à offrir en caisse`, attr: 'data-fdac="pret" title="la liste, filtrée sur « Récompense prête »"' }); }
+      defs.forEach(def => { const n = P.filter(c => (c.cartes || []).some(p => p.id === def.id && p.timbres && [1, 2].includes(p.timbres.reste))).length;
+        if (n) { AC.push({ sig: 'prize', txt: `${esc(def.nom)} : ${fdPl(n, 'client', 'clients')} à 1 ou 2 timbres, à relancer`, attr: `data-fdacc="${esc(def.id)}" title="le détail de la carte et ses clients"` }); } });
+      if (bP) { AC.push({ sig: 'prize', txt: `Bingo : ${fdPl(bP, 'client', 'clients')} à moins de 3 € de leur case, ${fdBgFin(B)}`, attr: 'data-fdac="case" title="la liste, filtrée sur « À moins de 3 € »"' }); }
+      const aIns = d.reconnusCaisse90 != null ? Math.max(0, d.reconnusCaisse90 - L.length) : null, coP = B ? P.filter(c => fdBgEtat(c.id, B).co).length : 0;
+      h += `<div class="db-sec">Les particuliers, du client reconnu à la récompense<small>${lu}</small></div>`;
+      h += fdResume({ aria: 'Résumé des cartes des particuliers', v: nf(P.length, 0), q: (P.length > 1 ? 'particuliers inscrits' : 'particulier inscrit') + ' à une carte',
+        q2: d.reconnusCaisse90 != null ? `sur ${fdPl(d.reconnusCaisse90, 'client reconnu', 'clients reconnus')} en caisse ces 90 derniers jours · ${nf(aIns, 0)} à inscrire` : '',
+        lev: B && B.saison.enCours ? `<span class="chr-lh">${fdPl(coP, 'a coché sa case', 'ont coché leur case')} cette semaine</span><span>${sem}</span>`
+          : `<span class="chr-lh">${fdPl(P.filter(c => c.achats).length, 'a acheté', 'ont acheté')} ici</span><span>sur la période choisie</span>`,
+        L: AC, ok: 'Rien à corriger : aucune récompense en attente, aucun client à relancer.' }, true);
+      const cartes = defs.filter(def => P.some(c => (c.cartes || []).some(p => p.id === def.id)));
+      h += `<div class="db-sec">Leurs cartes<small>soldes actuels, tous magasins · un clic sur une carte ouvre son détail${B && B.saison.enCours ? ' · bingo : la semaine du ' + fdJJMM(B.saison.semaines[B.saison.enCours - 1].du) + ' au ' + fdJJMM(B.saison.semaines[B.saison.enCours - 1].au) : ''}</small></div>`;
+      h += `<div class="fdp-cartes">${cartes.map(def => fdBloc(def, P)).join('')}${fdBlocBingo(P, B)}</div>`;
+      const ouverte = (d.cartes || []).find(c => String(c.id) === String(S.fdCarte));
+      if (ouverte) { h += `<div class="db-card fdp-det">${fdCarteDetail(ouverte, d)}</div>`; }
+      const rc = d.reconnaissances || {};
+      h += `<p class="fd-note">${rc.count ? nf(rc.count, 0) + ' reconnaissances de carte en caisse, ' + nf(rc.unique_customers, 0) + ' clients (tous publics).' : 'Aucun scan de carte n’est encore compté par l’ERP : les timbres et les points viennent des achats des clients inscrits.'} Une reconnaissance est un scan réussi, pas un ticket.</p>`;
+      const filtres = `<span class="fd-tg">${[['tous', 'Tous'], ['pret', 'Récompense prête'], ['case', 'À moins de 3 €'], ['inactif', 'Inactifs ici']].map(([v, l]) => `<button type="button" data-fdcf="${v}" class="${S.fdCF === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+      const lignes = P.map(c => { const e = fdBgEtat(c.id, B);
+        return `<tr data-fdc="${esc(c.id)}" data-fdct="${esc(c.nom.toLowerCase())}" data-fdcp="${fdPrets(c) ? 1 : 0}" data-fdci="${c.achats ? 0 : 1}" data-fdcb="${e.pr ? 1 : 0}"><td>${esc(c.nom)}${c.bloque ? '<small>bloqué</small>' : ''}</td><td>${(c.cartes || []).map(p => fdCarteChip(p, defs)).join('')}</td>
+        <td>${fdGrille(c.id, B)}</td><td class="n">${nf(c.achats, 0)}<small>${fU(c.montant)}</small></td><td>${esc(fdJour(c.dernierAchat))}</td><td class="n"><span class="db-lien">Sa fiche ›</span></td></tr>`; }).join('');
+      h += `<div class="db-sec" id="fdc-clients">Par client<small>${fdPl(P.length, 'particulier inscrit', 'particuliers inscrits')} · ses cartes et sa grille de bingo</small></div>
+        <div class="db-card fdp-liste"><div class="fdc-filtre"><input type="search" class="db-sel" data-fdcq="1" placeholder="Rechercher un client…" value="${esc(S.fdCQ)}" aria-label="Rechercher un client">${filtres}</div>
+        ${P.length ? `<table class="fd-t fdp-t"><thead><tr><th>Client</th><th>Ses cartes et où il en est</th><th><i class="fdp-pt"></i>${B ? 'Bingo · semaine ' + (B.saison.enCours || B.semaine) + ' sur ' + B.saison.semaines.length : 'Bingo'}</th><th class="n">Achats</th><th>Dernier achat</th><th></th></tr></thead><tbody>${lignes}</tbody></table><p class="fd-dd-rien" hidden>Aucun client ne correspond.</p>` : '<p class="fd-dd-rien">Aucun particulier inscrit.</p>'}
+        ${d.erreurClients ? `<p class="fd-note">Liste incomplète : ${esc(d.erreurClients)}</p>` : ''}</div>`;
+    } else {
+      // Les entreprises : le résumé, puis une tuile par société — son compte en haut, ses personnes en bas.
+      const prets = [...gens, ...comptes].reduce((s, c) => s + fdPrets(c), 0);
+      const bE = B ? [...gens, ...comptes].filter(c => fdBgEtat(c.id, B).pr).length : 0;
+      const coG = B ? gens.filter(c => fdBgEtat(c.id, B).co).length : 0, coS = B ? comptes.filter(c => fdBgEtat(c.id, B).co).length : 0;
+      const sansP = E.filter(e => e.personnes > 0 && !e.inscrites), pers = E.reduce((s, e) => s + (e.personnes || 0), 0);
+      const AC = [];
+      if (prets) { AC.push({ sig: 'prize', txt: `${fdPl(prets, 'récompense prête', 'récompenses prêtes')} à offrir (comptes société et personnes)`, attr: 'data-fdac="pret" title="les sociétés qui en ont une"' }); }
+      if (bE) { AC.push({ sig: 'prize', txt: `Bingo : ${bE} à moins de 3 € de leur case, ${fdBgFin(B)}`, attr: 'data-fdac="tuiles" title="les sociétés"' }); }
+      sansP.forEach(e => AC.push({ sig: 'prize', txt: `${esc(e.nom)} : aucune des ${nf(e.personnes, 0)} personnes rattachées n’a la carte`, attr: `data-fdacs="${esc(e.id)}" title="la société"` }));
+      h += `<div class="db-sec">Les entreprises, leurs comptes et leurs personnes<small>${lu}</small></div>`;
+      h += fdResume({ aria: 'Résumé des cartes des entreprises', v: nf(E.length, 0), q: (E.length > 1 ? 'entreprises' : 'entreprise') + ' à la carte',
+        q2: `${fdPl(gens.length, 'personne inscrite', 'personnes inscrites')} sur ${nf(pers, 0)} rattachées à ces sociétés dans TF Buddy · ${fdPl(comptes.length, 'compte société', 'comptes société')} à la carte`,
+        lev: B && B.saison.enCours ? `<span class="chr-lh">${fdPl(coG + coS, 'case cochée', 'cases cochées')} cette semaine</span><span>${fdPl(coG, 'personne', 'personnes')} et ${fdPl(coS, 'compte société', 'comptes société')} · ${fdBgFin(B)}</span>`
+          : `<span class="chr-lh">${fdPl([...gens, ...comptes].filter(c => c.achats).length, 'a acheté', 'ont acheté')} ici</span><span>sur la période choisie</span>`,
+        L: AC, ok: 'Rien à corriger : aucune récompense en attente, chaque société a au moins une personne inscrite.' });
+      if (!li.lu) { h += '<div class="db-alerte">Les clients de TF Buddy du magasin n’ont pas pu être lus : les sociétés et leurs personnes restent parmi les particuliers.</div>'; }
+      const filtres = `<span class="fd-tg">${[['tous', 'Toutes'], ['pret', 'Récompense prête'], ['sans', 'Sans personne inscrite']].map(([v, l]) => `<button type="button" data-fdcf="${v}" class="${S.fdCF === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+      h += `<div class="db-sec" id="fdc-clients">Société par société<small>en haut le compte de la société, en bas ses personnes · un nom ouvre sa fiche</small></div>
+        <div class="fdc-filtre fdp-fl"><input type="search" class="db-sel" data-fdcq="1" placeholder="Rechercher une société ou une personne…" value="${esc(S.fdCQ)}" aria-label="Rechercher une société">${filtres}</div>`;
+      h += E.length ? `<div class="fdp-tl">${E.map(e => fdTuile(e, L, B, defs)).join('')}</div><p class="fd-dd-rien" hidden>Aucune société ne correspond.</p>`
+        : '<div class="db-alerte">Aucune entreprise du magasin n’a de carte, et aucune de leurs personnes n’en a une pour l’instant.</div>';
+      const notes = [];
+      if (li.sansCarte) { notes.push(`${fdPl(li.sansCarte, 'autre société', 'autres sociétés')} du magasin ${li.sansCarte > 1 ? 'n’ont' : 'n’a'} ni carte ni personne inscrite.`); }
+      if (li.lu && !li.bureaux) { notes.push('Les personnes rattachées à une société par leur bureau apparaissent quand le compte TF Buddy du magasin est connecté (Vendre › Clients).'); }
+      if (notes.length) { h += `<p class="fd-note">${notes.join(' ')}</p>`; }
+    }
+    return h + fdReseau(d) + '</div>';
+  }
+  /** Une société : son compte (s'il a une carte) et ses personnes inscrites, leurs cartes et leur bingo. */
+  function fdTuile(e, L, B, defs) {
+    const compte = L.find(c => c.type === 'societe' && c.id === e.id), gens = L.filter(c => c.type === 'personne' && c.societe === e.id);
+    const tous = compte ? [compte, ...gens] : gens, prets = tous.reduce((s, c) => s + fdPrets(c), 0);
+    const ach = tous.reduce((s, c) => s + (c.achats || 0), 0), mt = tous.reduce((s, c) => s + (c.montant || 0), 0);
+    const sous = [e.bureaux && e.bureaux.length ? (e.bureaux.length > 1 ? 'bureaux ' : 'bureau ') + e.bureaux.join(', ') : e.ville, (e.facturation || []).join(' / ')].filter(Boolean).join(' · ');
+    const etat = c => { const x = fdBgEtat(c.id, B); return x.co ? 'co' : x.pr ? 'pr' : ''; };
+    const E2 = B ? gens.map(c => fdBgEtat(c.id, B)) : [], co = E2.filter(x => x.co).length, pr = E2.filter(x => x.pr).length;
+    const cherche = [e.nom, ...gens.map(c => c.nom)].join(' ').toLowerCase();
+    return `<div class="db-card fdp-ti" id="fdc-soc-${esc(e.id)}" data-fdst="${esc(cherche)}" data-fdsp="${prets ? 1 : 0}" data-fdsv="${gens.length ? 0 : 1}">
+      <div class="fdp-ti-h"><div>${esc(e.nom)}${sous ? `<small>${esc(sous)}</small>` : ''}</div><div class="r">${fdPl(ach, 'achat', 'achats')} ici<small>${fU(mt)} sur la période</small></div></div>
+      <div class="fdp-ti-b"><div class="fdp-lab">Le compte de la société</div>${compte ? `<div class="fdp-ti-v"><div>${(compte.cartes || []).map(p => fdCarteChip(p, defs)).join('')}</div>${fdGrille(compte.id, B)}</div>
+        <p class="fdp-ti-l"><span class="db-lien" data-fdc="${esc(compte.id)}">Sa fiche ›</span></p>` : '<p class="fdp-s">Pas de carte au nom de la société.</p>'}</div>
+      <div class="fdp-ti-b"><div class="fdp-lab">Ses personnes · ${fdPl(gens.length, 'inscrite', 'inscrites')} sur ${nf(e.personnes || 0, 0)}</div>
+        ${gens.length ? `<div class="fdp-ti-2"><div><span class="fdp-s">${prets ? `<span class="fdc-pret">${fdPl(prets, 'récompense prête', 'récompenses prêtes')}</span>` : 'aucune récompense prête'}</span>${e.personnes ? `<span class="fdp-bar"><i style="width:${Math.min(100, Math.round(100 * gens.length / e.personnes))}%"></i></span><span class="fdp-s">${Math.round(100 * gens.length / e.personnes)} % des personnes de la société</span>` : ''}</div>
+          <div>${B && B.saison.enCours ? fdSeg(co, pr, gens.length - co - pr) : ''}</div></div>
+          <div class="fdp-nm">${gens.map(c => `<span class="${B ? etat(c) : ''}" data-fdc="${esc(c.id)}" title="Ouvrir sa fiche">${esc(c.nom)}</span>`).join('')}</div>`
+          : `<p class="fdp-s">${e.personnes ? `Aucune des ${nf(e.personnes, 0)} personnes rattachées n’a la carte : à leur proposer.` : 'Aucune personne n’est rattachée à cette société dans TF Buddy.'}</p>`}</div></div>`;
   }
   /* Le détail d'une carte (13/11/2026, Sam : « en cliquant sur la carte, je dois avoir les détails de la carte ») :
    * sa définition dans l'ERP (GET /fidelite/carte) et ce qu'elle donne dans le magasin (la vue des cartes). */
@@ -6907,20 +7045,28 @@
     $.querySelectorAll('[data-fdp]').forEach(b => b.addEventListener('click', () => { S.fdProfil = b.dataset.fdp; rendre(); }));
     $.querySelectorAll('[data-fdt]').forEach(b => b.addEventListener('click', () => { S.fdT = +b.dataset.fdt; charger(false); }));
     // Les cartes : sous-onglet, période, filtres et recherche sur place.
-    $.querySelectorAll('[data-fdong]').forEach(b => b.addEventListener('click', () => { S.fdOnglet = b.dataset.fdong; charger(false); }));
+    $.querySelectorAll('[data-fdong]').forEach(b => b.addEventListener('click', () => { S.fdOnglet = b.dataset.fdong; urlMaj(); charger(false); }));
+    // Le public (28/11/2026) : particuliers ou entreprises ; les filtres et la recherche repartent de zéro.
+    $.querySelectorAll('[data-fdpub]').forEach(b => b.addEventListener('click', () => { if (S.fdPub === b.dataset.fdpub) { return; } S.fdPub = b.dataset.fdpub; S.fdCF = 'tous'; S.fdCQ = ''; urlMaj(); rendre(); }));
     $.querySelectorAll('[data-fdper]').forEach(b => b.addEventListener('click', () => { S.fdPer = b.dataset.fdper; charger(false); }));
     $.querySelectorAll('[data-fdcarte]').forEach(b => b.addEventListener('click', () => { S.fdCarte = String(S.fdCarte) === b.dataset.fdcarte ? null : b.dataset.fdcarte; charger(false); }));
     // « À corriger » (27/11/2026) : les gestes qui existent — le filtre « Récompense prête », le détail d'une carte ouvert.
     $.querySelectorAll('[data-fdac="pret"]').forEach(b => b.addEventListener('click', () => { S.fdCF = 'pret'; $.querySelectorAll('[data-fdcf]').forEach(x => x.classList.toggle('on', x.dataset.fdcf === 'pret')); filtrerCartes(); acMontrer(document.getElementById('fdc-clients')); }));
     $.querySelectorAll('[data-fdacc]').forEach(b => b.addEventListener('click', () => { S.fdCarte = b.dataset.fdacc; charger(false); acMontrer(document.getElementById('fdc-carte-' + b.dataset.fdacc)); }));
+    // « À corriger » des cartes par public (28/11/2026) : le filtre « À moins de 3 € », les sociétés, une société.
+    $.querySelectorAll('[data-fdac="case"]').forEach(b => b.addEventListener('click', () => { S.fdCF = 'case'; $.querySelectorAll('[data-fdcf]').forEach(x => x.classList.toggle('on', x.dataset.fdcf === 'case')); filtrerCartes(); acMontrer(document.getElementById('fdc-clients')); }));
+    $.querySelectorAll('[data-fdac="tuiles"]').forEach(b => b.addEventListener('click', () => acMontrer($.querySelector('.fdp-tl'))));
+    $.querySelectorAll('[data-fdacs]').forEach(b => b.addEventListener('click', () => acMontrer(document.getElementById('fdc-soc-' + b.dataset.fdacs))));
     const filtrerCartes = () => {
       const q = (S.fdCQ || '').trim().toLowerCase(); let n = 0;
-      $.querySelectorAll('tr[data-fdct]').forEach(tr => { const ok = (!q || tr.dataset.fdct.includes(q)) && (S.fdCF !== 'pret' || tr.dataset.fdcp === '1') && (S.fdCF !== 'inactif' || tr.dataset.fdci === '1'); tr.hidden = !ok; n += ok ? 1 : 0; });
-      const r = $.querySelector('.fdc-g2 .fd-dd-rien'); if (r && $.querySelector('tr[data-fdct]')) { r.hidden = n > 0; }
+      $.querySelectorAll('tr[data-fdct]').forEach(tr => { const ok = (!q || tr.dataset.fdct.includes(q)) && (S.fdCF !== 'pret' || tr.dataset.fdcp === '1') && (S.fdCF !== 'case' || tr.dataset.fdcb === '1') && (S.fdCF !== 'inactif' || tr.dataset.fdci === '1'); tr.hidden = !ok; n += ok ? 1 : 0; });
+      // Les sociétés : la recherche porte sur leur nom et celui de leurs personnes.
+      $.querySelectorAll('[data-fdst]').forEach(t => { const ok = (!q || t.dataset.fdst.includes(q)) && (S.fdCF !== 'pret' || t.dataset.fdsp === '1') && (S.fdCF !== 'sans' || t.dataset.fdsv === '1'); t.hidden = !ok; n += ok ? 1 : 0; });
+      const r = $.querySelector('.fdp .fd-dd-rien'); if (r && $.querySelector('tr[data-fdct], [data-fdst]')) { r.hidden = n > 0; }
     };
     $.querySelectorAll('[data-fdcf]').forEach(b => b.addEventListener('click', () => { S.fdCF = b.dataset.fdcf; $.querySelectorAll('[data-fdcf]').forEach(x => x.classList.toggle('on', x === b)); filtrerCartes(); }));
     $.querySelectorAll('[data-fdcq]').forEach(i => { i.addEventListener('input', () => { S.fdCQ = i.value; filtrerCartes(); }); });
-    if ($.querySelector('tr[data-fdct]')) { filtrerCartes(); }
+    if ($.querySelector('tr[data-fdct], [data-fdst]')) { filtrerCartes(); }
     $.querySelectorAll('[data-fdc]').forEach(b => b.addEventListener('click', () => { S.fdClient = b.dataset.fdc; urlMaj(); charger(false); window.scrollTo(0, 0); }));
     $.querySelectorAll('[data-fdretour]').forEach(b => b.addEventListener('click', () => { S.fdClient = null; urlMaj(); charger(false); }));
     // La liste des clients : ouvrir et fermer sans relire ; filtrer sur place (le champ garde son curseur).

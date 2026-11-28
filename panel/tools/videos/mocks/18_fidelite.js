@@ -2,7 +2,8 @@
  * rendCartes, rendFideliteClient), aux formes de marketing/src/fidelite_profils.php (profils, tendance, part scannée,
  * fiche d'un client) et marketing/src/fidelite_cartes.php (cartes de fidélité de l'ERP). Tout est fictif : 612 clients
  * reconnus en caisse sur 90 jours, six profils (les réglages par défaut du réseau), des prénoms inventés, deux cartes à
- * timbres, un réseau de magasins aux noms génériques. */
+ * timbres, un réseau de magasins aux noms génériques. Depuis le 28/11/2026 (les cartes par public) : une carte à points,
+ * trois sociétés et leurs personnes, et le bingo d'une saison fictive (GET /fidelite/cartes/bingo), semaine 4 en cours. */
 'use strict';
 const D = require('./lib/demo');
 
@@ -117,7 +118,15 @@ function fiche(cid) {
 const DEFS = [
   { id: 1, nom: 'Carte café', timbres: 10, recompense: 'Un café offert', couleur: '#8D1D2C', points: false, du: '2026-06-01', au: null, active: true, portee: 'NETWORK' },
   { id: 2, nom: 'Carte viennoiserie', timbres: 8, recompense: 'Une viennoiserie offerte', couleur: '#B0792A', points: false, du: '2026-09-01', au: '2026-12-31', active: true, portee: 'NETWORK' },
+  { id: 3, nom: 'Carte à points', timbres: null, recompense: 'Un bon de 5 € tous les 100 points', couleur: '#6B4F3A', points: true, du: '2026-11-01', au: null, active: true, portee: 'NETWORK' },
 ];
+/* Les sociétés (fictives) : le compte de la société inscrit ou non, ses personnes parmi les clients (par leur rang). */
+const SOCIETES = [
+  { id: 70001, nom: 'Brasserie du Canal', ville: 'Halle', bureaux: ['Siège'], facturation: ['facturé à la société'], personnes: 23, compte: 'Brasserie du Canal', rangs: [5, 9, 13, 17] },
+  { id: 70002, nom: 'Fiduciaire Lambert', ville: 'Halle', bureaux: ['Rue du Marché'], facturation: ['chaque personne paie'], personnes: 11, compte: null, rangs: [11, 21] },
+  { id: 70003, nom: 'Garage du Pont', ville: 'Lembeek', bureaux: [], facturation: [], personnes: 7, compte: 'Garage du Pont', rangs: [] },
+];
+const pointsDe = (a, n) => { const solde = n == null ? Math.floor(a() * 140) : n; return { solde, gagnes: solde, depenses: 0, paliers: [{ points: 100, euros: 5, atteint: solde >= 100, reste: Math.max(0, 100 - solde) }] }; };
 const REPART = { 1: [21, 18, 22, 19, 17, 16, 14, 12, 13, 12], 2: [16, 14, 12, 11, 9, 8, 7, 6] };
 function cartesClients() {
   return CLIENTS.slice(0, 24).map((c, i) => {
@@ -125,9 +134,35 @@ function cartesClients() {
     const t1 = Math.floor(a() * 10), t2 = Math.floor(a() * 8);
     cartes.push({ id: 1, nom: 'Carte café', active: true, timbres: { progres: t1, requis: 10, reste: 10 - t1, pretes: i % 7 === 2 ? 1 : 0, dette: 0 }, points: null, gagnesIci: { timbres: 2 + Math.floor(a() * 9), points: 0 } });
     if (i % 3 !== 1) { cartes.push({ id: 2, nom: 'Carte viennoiserie', active: true, timbres: { progres: t2, requis: 8, reste: 8 - t2, pretes: i % 9 === 4 ? 1 : 0, dette: 0 }, points: null, gagnesIci: { timbres: 1 + Math.floor(a() * 6), points: 0 } }); }
-    return { id: c.client, nom: c.nom, actif: true, bloque: false, cartes, achats: Math.max(1, Math.round(c.rythme * 0.7)), montant: D.r2(c.eur / 4), dernierAchat: D.plus(AUJ, -c.depuis) + 'T10:12:00+01:00',
+    if (i % 2 === 1) { const pt = pointsDe(a); cartes.push({ id: 3, nom: 'Carte à points', active: true, timbres: null, points: pt, gagnesIci: { timbres: 0, points: Math.min(pt.solde, 20 + Math.floor(a() * 40)) } }); }
+    const soc = SOCIETES.find(x => x.rangs.includes(i));
+    return { id: c.client, nom: c.nom, actif: true, bloque: false, cartes, type: soc ? 'personne' : 'particulier', societe: soc ? soc.id : null, achats: Math.max(1, Math.round(c.rythme * 0.7)), montant: D.r2(c.eur / 4), dernierAchat: D.plus(AUJ, -c.depuis) + 'T10:12:00+01:00',
       reconnaissances: Math.round(c.rythme * 0.6), derniereReconnaissance: D.plus(AUJ, -c.depuis) + 'T10:12:00+01:00', pretes: cartes.reduce((s, p) => s + (p.timbres ? p.timbres.pretes : 0), 0) };
-  }).sort((x, y) => (y.pretes - x.pretes) || (y.achats - x.achats));
+  }).concat(SOCIETES.filter(x => x.compte).map((x, k) => {
+    const a = D.alea('soc' + x.id), pt = pointsDe(a, k ? 128 : 340);
+    return { id: x.id, nom: x.compte, actif: true, bloque: false, cartes: [{ id: 3, nom: 'Carte à points', active: true, timbres: null, points: pt, gagnesIci: { timbres: 0, points: Math.round(pt.solde * 0.4) } }],
+      type: 'societe', societe: x.id, achats: k ? 6 : 31, montant: k ? 128.4 : 1486.2, dernierAchat: D.plus(AUJ, -k * 2) + 'T09:30:00+01:00', reconnaissances: 0, derniereReconnaissance: null, pretes: 0 };
+  })).sort((x, y) => (y.pretes - x.pretes) || (y.achats - x.achats));
+}
+/* Les entreprises montrées (celles qui ont une carte ou une personne inscrite) et les liens lus dans TF Buddy. */
+function entreprises(L) {
+  return SOCIETES.map(x => ({ id: x.id, nom: x.nom, ville: x.ville, bureaux: x.bureaux, facturation: x.facturation, personnes: x.personnes,
+    compte: !!x.compte, inscrites: L.filter(c => c.type === 'personne' && c.societe === x.id).length }));
+}
+/* Le bingo d'une saison fictive de 13 semaines, commencée le lundi 26/10 : la semaine 4 (16 au 22/11) est en cours. */
+const SAISON_DU = '2026-10-26';
+const THEMES = ['La rentrée des soupes', 'Toussaint', 'La tarte aux pommes', 'Saint-Martin', 'Le pain d’épices', 'Saint-Nicolas', 'Le chocolat chaud', 'Noël',
+  'Nouvel An', 'Épiphanie', 'Le bon pain', 'Le croissant', 'Chandeleur'];
+function bingo() {
+  const sem = THEMES.map((titre, i) => { const du = D.plus(SAISON_DU, 7 * i), au = D.plus(du, 6); return { n: i + 1, du, au, titre, sous: '', etat: au < AUJ ? 'passee' : du <= AUJ ? 'cours' : 'avenir' }; });
+  const n = sem.filter(w => w.etat !== 'avenir').length, clients = {};
+  cartesClients().forEach((c, k) => {
+    const a = D.alea('bingo' + c.id), fid = 0.25 + a() * 0.7;
+    const euros = sem.slice(0, n).map((w, i) => { const r = a(); return i === n - 1 ? D.r2(k % 5 === 1 ? 7 + a() * 2.6 : r < fid ? 10 + a() * 25 : a() * 9) : D.r2(r < fid ? 10 + a() * 30 : r < fid + 0.2 ? a() * 9 : 0); });
+    clients[c.id] = { euros, cases: euros.filter(e => e >= 10).length };
+  });
+  return { saison: { id: 'DEMO', nom: 'Automne 2026', du: SAISON_DU, au: sem[12].au, tirage: null, etat: 'cours', enCours: n, closes: n - 1, semaines: sem },
+    regles: { seuil: 10, tousLes: 3, bons: [2, 2, 2, 2], superBon: 10 }, semaine: n, clients, autresIllisibles: 0, lu: AUJ + ' 15:40' };
 }
 function cartes(periode) {
   const k = periode === 'annee' ? 3.2 : periode === '30' ? 1.1 : 1;
@@ -140,6 +175,7 @@ function cartes(periode) {
   return { shop: D.SHOP, periode: periode || 'mois', du: '2026-11-01', au: AUJ, lu: AUJ + ' 15:40',
     participants: { unique_customers: 248, active_in_period: Math.round(131 * Math.min(1.6, k)) }, reconnaissances: { count: Math.round(402 * k), unique_customers: Math.round(167 * Math.min(1.5, k)) },
     activite: { stamps_earned: Math.round(780 * k) }, reconnusCaisse90: N, cartes: C, definitions: DEFS, clients: L, clientsTotal: 248, erreurClients: null,
+    entreprises: entreprises(L), liens: { lu: true, bureaux: true, societes: 31, sansCarte: 28 },
     reseau: [['4', D.NOM, 248, 131, 780, 4210], ['11', 'Magasin Nord', 312, 164, 1020, 5480], ['12', 'Magasin Gare', 187, 92, 540, 2890], ['13', 'Magasin Centre', 276, 140, 860, 4630], ['14', 'Magasin Sud', 154, 71, 410, 2240]]
       .map(([id, nom, inscrits, actifs, timbres, ventes]) => ({ id, nom, inscrits, actifs: Math.round(actifs * Math.min(1.6, k)), timbres: Math.round(timbres * k), points: 0, ventes: D.r2(ventes * k), reconnaissances: 0 })) };
 }
@@ -166,6 +202,7 @@ module.exports = function (m, p, q) {
   if (p === '/fidelite/client') { return fiche(q.get('client')); }
   if (p === '/fidelite/carte-client') { return carteClient(q.get('client')); }
   if (p === '/fidelite/cartes') { return cartes(q.get('periode')); }
+  if (p === '/fidelite/cartes/bingo') { return bingo(); }
   if (p === '/fidelite/carte') { return carte(q.get('id')); }
   return undefined;
 };
