@@ -9237,7 +9237,7 @@
       <div class="r"><span>En cours, ${esc(T[n - 1] || '')}${W.jours ? ' (' + W.jours[n - 1] + ' j)' : ''}</span><b>${f(M[n - 1])}</b></div>
       <div class="r"><span>Face au réseau, ${clos.length} semaines</span><b class="${cls(face)}">${fSg(face)}</b></div></div>`;
     return `<div class="fi-barre"><span class="fi-seg">${[['ca', 'Chiffre d’affaires'], ['q', 'Pièces']].map(([v, l]) => `<button type="button" data-c12u="${v}" class="${F.u === v ? 'on' : ''}">${l}</button>`).join('')}</span><span class="fi-note">semaines du lundi au dimanche · la dernière est en cours${W.jours ? ' (' + W.jours[n - 1] + ' j)' : ''} · le réseau : la moyenne par magasin</span></div>
-      <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span><span><i class="ln tdc"></i>la tendance de ${esc(court)}</span><span>▲▼ : face à la semaine d’avant · un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W, eu, P)}</div>${cote}</div>
+      <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#B03048"></i>${esc(court)}</span><span><i class="ln" style="background:#7a736a"></i>le réseau, moyenne par magasin</span><span><i class="ln tdc"></i>la tendance de ${esc(court)}</span><span>▲▼ : face à la semaine d’avant · un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W, eu, P)}</div>${cote}</div>
       <div class="fi-note">${eu ? 'Ventes encaissées, remises comprises.' : 'En pièces.'}</div>`;
   }
   function c12Journee(F, court) {
@@ -9271,16 +9271,16 @@
     if (now != null && now < h0 + H.length) { const xn = X(Math.max(h0, now)); g += `<rect x="${xn.toFixed(1)}" y="${m.t}" width="${(X(h0 + H.length) - xn).toFixed(1)}" height="${(Y(0) - m.t).toFixed(1)}" fill="#f7f3ed"/>`; }
     H.forEach(x => { const x0 = X(x.h) + bw * 0.16, w = bw * 0.32;
       if (mv(x) > 0) { g += `<rect x="${x0.toFixed(1)}" y="${Y(mv(x)).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(0) - Y(mv(x))).toFixed(1)}" rx="3" fill="#cfc6ba"><title>${x.h} h · moyenne ${f(mv(x))}</title></rect>`; }
-      if (vu(x) && v(x) > 0) { g += `<rect x="${(x0 + w + 2).toFixed(1)}" y="${Y(v(x)).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(0) - Y(v(x))).toFixed(1)}" rx="3" fill="#2a78d6"><title>${x.h} h · ${quand.toLowerCase()} ${f(v(x))}</title></rect>`; }
+      if (vu(x) && v(x) > 0) { g += `<rect x="${(x0 + w + 2).toFixed(1)}" y="${Y(v(x)).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(0) - Y(v(x))).toFixed(1)}" rx="3" fill="#B03048"><title>${x.h} h · ${quand.toLowerCase()} ${f(v(x))}</title></rect>`; }
       g += `<text class="ax" x="${(X(x.h) + bw / 2).toFixed(1)}" y="${Hd - 9}" text-anchor="middle">${x.h} h</text>`; });
     if (now != null && now >= h0 && now < h0 + H.length) { const xn = X(now); g += `<line x1="${xn.toFixed(1)}" x2="${xn.toFixed(1)}" y1="${m.t - 2}" y2="${Y(0).toFixed(1)}" stroke="#A32014" stroke-width="1.5"/><text class="ax" x="${(xn + 4).toFixed(1)}" y="${m.t + 10}" style="fill:var(--stop);font-weight:400">${esc(J.maintenant)}</text>`; }
     // Un clic sur une heure : la mini-vignette de ses valeurs, au lieu d'un tableau (10/10/2026).
-    H.forEach(x => { const e = v(x) - mv(x), tip = `<b>${x.h} h – ${x.h + 1} h</b>${vu(x) ? `<i style="background:#2a78d6"></i>${quand.toLowerCase()} ${f(v(x))}<br>` : ''}<i style="background:#cfc6ba"></i>moyenne ${n ? f(mv(x)) : '—'}${passe(x) && n ? `<br>${e >= 0 ? '▲ +' : '▼ −'}${f(Math.abs(e))}` : ''}`;
+    H.forEach(x => { const e = v(x) - mv(x), tip = `<b>${x.h} h – ${x.h + 1} h</b>${vu(x) ? `<i style="background:#B03048"></i>${quand.toLowerCase()} ${f(v(x))}<br>` : ''}<i style="background:#cfc6ba"></i>moyenne ${n ? f(mv(x)) : '—'}${passe(x) && n ? `<br>${e >= 0 ? '▲ +' : '▼ −'}${f(Math.abs(e))}` : ''}`;
       g += `<rect class="hit" x="${X(x.h).toFixed(1)}" y="${m.t}" width="${bw.toFixed(1)}" height="${(Y(0) - m.t).toFixed(1)}" data-tip="${esc(tip)}" data-tx="${(100 * (X(x.h) + bw / 2) / Wd).toFixed(1)}" data-ty="${(100 * Y(Math.max(vu(x) ? v(x) : 0, mv(x))) / Hd).toFixed(1)}"/>`; });
     const graphe = `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Les ventes de chaque heure face à la moyenne">${g}</svg></div>`;
     const manq = (J.manquants || []).length ? ` · ${J.manquants.length} jour${J.manquants.length > 1 ? 's' : ''} pas encore lu${J.manquants.length > 1 ? 's' : ''}` : '';
     return `<div class="fi-barre"><span class="fi-seg">${[['ca', 'Chiffre d’affaires'], ['q', 'Pièces']].map(([x, l]) => `<button type="button" data-c12u="${x}" class="${F.u === x ? 'on' : ''}">${l}</button>`).join('')}</span><span class="fi-note">${esc(dj)} · heure par heure · face à la moyenne des ${n} derniers ${esc(jns)}${manq}</span></div>
-      <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln br" style="background:#cfc6ba"></i>moyenne des ${n} derniers ${esc(jns)}</span><span><i class="ln br" style="background:#2a78d6"></i>${quand.toLowerCase()}</span><span>un clic sur une heure : sa valeur</span></div>${graphe}</div>${cote}</div>
+      <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln br" style="background:#cfc6ba"></i>moyenne des ${n} derniers ${esc(jns)}</span><span><i class="ln br" style="background:#B03048"></i>${quand.toLowerCase()}</span><span>un clic sur une heure : sa valeur</span></div>${graphe}</div>${cote}</div>
       <div class="fi-note">${eu ? 'Montants en euros, ventes encaissées.' : 'En pièces.'} Les tickets du magasin, de 6 h à 18 h.</div>`;
   }
   function c12Rendre(box) {
@@ -9366,9 +9366,9 @@
     const pasX = (Wd - m.l - m.r) / Math.max(1, n - 1), court = esc(nomShop().replace(/^.* - /, ''));
     const hits = lib.map((l, k) => { if (M[k] == null && R[k] == null) { return ''; }
       const dl = tend && k > 0 && k < n - 1 && M[k - 1] && M[k] != null ? 100 * (M[k] - M[k - 1]) / M[k - 1] : null;
-      const tip = `<b>${esc(l)} · ${k === iEnC ? (W.jours ? W.jours[k] + ' j, en cours' : 'en cours') : 'du ' + date(k)}</b>${M[k] != null ? `<i style="background:#2a78d6"></i>${court} ${eu ? vU(M[k]) : nf(M[k], M[k] % 1 ? 1 : 0) + ' pièces'}<br>` : ''}${R[k] != null ? `<i style="background:#eb6834"></i>réseau ${eu ? vU(R[k]) : nf(R[k], R[k] % 1 ? 1 : 0) + ' pièces'}` : ''}${dl != null ? `<br>${dl >= 0 ? '▲ +' : '▼ −'}${nf(Math.abs(dl), 1)} % face à ${esc(lib[k - 1])}` : ''}`;
+      const tip = `<b>${esc(l)} · ${k === iEnC ? (W.jours ? W.jours[k] + ' j, en cours' : 'en cours') : 'du ' + date(k)}</b>${M[k] != null ? `<i style="background:#B03048"></i>${court} ${eu ? vU(M[k]) : nf(M[k], M[k] % 1 ? 1 : 0) + ' pièces'}<br>` : ''}${R[k] != null ? `<i style="background:#7a736a"></i>réseau ${eu ? vU(R[k]) : nf(R[k], R[k] % 1 ? 1 : 0) + ' pièces'}` : ''}${dl != null ? `<br>${dl >= 0 ? '▲ +' : '▼ −'}${nf(Math.abs(dl), 1)} % face à ${esc(lib[k - 1])}` : ''}`;
       return `<rect class="hit" x="${(cx(k) - pasX / 2).toFixed(1)}" y="${m.t}" width="${pasX.toFixed(1)}" height="${(Hd - m.t - m.b).toFixed(1)}" data-tip="${esc(tip)}" data-tx="${(100 * cx(k) / Wd).toFixed(1)}" data-ty="${(100 * y(Math.max(M[k] || 0, R[k] || 0)) / Hd).toFixed(1)}"/>`; }).join('');
-    return `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Ventes par semaine face à la moyenne du réseau">${g}${ligne(R, '#eb6834', 'moyenne par magasin du réseau', true)}${ligne(M, '#2a78d6', 'le magasin', true)}${fin}${hits}</svg></div>`;
+    return `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Ventes par semaine face à la moyenne du réseau">${g}${ligne(R, '#7a736a', 'moyenne par magasin du réseau', true)}${ligne(M, '#B03048', 'le magasin', true)}${fin}${hits}</svg></div>`;
   }
   /** Onglet 2 : le nuage prix × volume, le seul point du magasin, le prix réseau et le volume moyen en repères. */
   function ficheNuage(P) {
@@ -9385,9 +9385,9 @@
     const q = (x, yy, t, a) => `<text x="${x}" y="${yy}" text-anchor="${a}" style="font:400 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;fill:#b3aca2">${t}</text>`;
     g += q(m.l + 8, m.t + 26, 'moins cher · vend plus', 'start') + q(Wd - m.r - 8, m.t + 26, 'plus cher · vend plus', 'end') + q(m.l + 8, Hd - m.b - 8, 'moins cher · vend moins', 'start') + q(Wd - m.r - 8, Hd - m.b - 8, 'plus cher · vend moins', 'end');
     // La plage du réseau, sans magasin : du prix le plus bas au plus haut, du volume le plus bas au plus haut.
-    g += `<rect x="${X(re.min).toFixed(1)}" y="${Y(re.volMax).toFixed(1)}" width="${Math.max(2, X(re.max) - X(re.min)).toFixed(1)}" height="${Math.max(2, Y(re.volMin) - Y(re.volMax)).toFixed(1)}" fill="#eb6834" opacity=".07" rx="6"><title>la plage du réseau : prix de ${fPx(re.min)} à ${fPx(re.max)}, volume de ${nf(re.volMin, 1)} à ${nf(re.volMax, 1)}</title></rect>`;
+    g += `<rect x="${X(re.min).toFixed(1)}" y="${Y(re.volMax).toFixed(1)}" width="${Math.max(2, X(re.max) - X(re.min)).toFixed(1)}" height="${Math.max(2, Y(re.volMin) - Y(re.volMax)).toFixed(1)}" fill="#7a736a" opacity=".07" rx="6"><title>la plage du réseau : prix de ${fPx(re.min)} à ${fPx(re.max)}, volume de ${nf(re.volMin, 1)} à ${nf(re.volMax, 1)}</title></rect>`;
     const nomM = esc(nomShop().replace(/^.* - /, '')), t = `${nomM} · ${fPx(me.p)}`, lg = t.length * 6.4, xd = X(me.p) + 15, gauche = xd + lg > Wd - m.r;
-    g += `<circle cx="${X(me.p).toFixed(1)}" cy="${Y(me.v10k).toFixed(1)}" r="9" fill="#2a78d6" stroke="#fff" stroke-width="2"><title>${nomM} · ${fPx(me.p)} (${fSg(me.ec, 1)} face au prix réseau) · ${nf(me.v10k, 1)} pièces pour 10 000 € de chiffre (${fSg(me.rel)} face aux autres) · ${fN(me.q)} pièces</title></circle><text class="lab" x="${(gauche ? X(me.p) - 15 : xd).toFixed(1)}" y="${(Y(me.v10k) + 4).toFixed(1)}" text-anchor="${gauche ? 'end' : 'start'}">${t}</text>`;
+    g += `<circle cx="${X(me.p).toFixed(1)}" cy="${Y(me.v10k).toFixed(1)}" r="9" fill="#B03048" stroke="#fff" stroke-width="2"><title>${nomM} · ${fPx(me.p)} (${fSg(me.ec, 1)} face au prix réseau) · ${nf(me.v10k, 1)} pièces pour 10 000 € de chiffre (${fSg(me.rel)} face aux autres) · ${fN(me.q)} pièces</title></circle><text class="lab" x="${(gauche ? X(me.p) - 15 : xd).toFixed(1)}" y="${(Y(me.v10k) + 4).toFixed(1)}" text-anchor="${gauche ? 'end' : 'start'}">${t}</text>`;
     g += `<text class="ax" x="${(m.l + Wd - m.r) / 2}" y="${Hd - 6}" text-anchor="middle" style="font-weight:400">prix encaissé →</text><text class="ax" transform="translate(13 ${(m.t + Hd - m.b) / 2}) rotate(-90)" text-anchor="middle" style="font-weight:400">pièces pour 10 000 € de chiffre →</text>`;
     // Les autres magasins (10/10/2026), en gris et nommés ; chaque point s'ouvre au clic.
     (P.magasins || []).filter(x => !x.moi && x.p != null && x.v10k != null).forEach(x => { const cx = X(x.p), cy = Y(x.v10k), d = cx + 70 > Wd - m.r;
@@ -9604,7 +9604,7 @@
       const av = clos.slice(0, 6).reduce((a, v) => a + (v || 0), 0), ap = clos.slice(6).reduce((a, v) => a + (v || 0), 0), tend = av > 0 ? 100 * (ap - av) / av : null;
       const face = totR > 0 ? 100 * (tot - totR) / totR : null;
       corps = `<div class="fi-barre"><span class="fi-note">semaines du lundi au dimanche · la dernière est en cours (${W.jours ? W.jours[W.jours.length - 1] : '?'} j) · le réseau : la moyenne par magasin, sans magasin nommé</span></div>
-        <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span><span>un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W)}</div>
+        <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#B03048"></i>${esc(court)}</span><span><i class="ln" style="background:#7a736a"></i>le réseau, moyenne par magasin</span><span>un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W)}</div>
           <div class="fi-cote"><div class="k">${esc(court)}, 12 semaines</div>
             <div class="r"><span>Pièces</span><b>${fN(tot)}</b></div><div class="r"><span>Par semaine</span><b>${nf(moy, 1)}</b></div>
             <div class="r"><span>6 dernières face aux 6 d’avant</span><b class="${tend == null ? '' : (tend >= 0 ? 'up' : 'dn')}">${fSg(tend)}</b></div>
@@ -9830,7 +9830,8 @@
   /* Les portions (10/10/2026, maquette A + la colonne « reste » de B) : les catégories qui vendent en parts. Par produit,
    * combien en entière, en ½, en ¼… ; ce que ça fait en pièces entières ; ce qui reste en parts dans la dernière pièce
    * coupée (estimation : rien de la veille, rien de recoupé) ; le CA et le CA par pièce entière. */
-  const PORT_COUL = ['#1f4e8c', '#2a78d6', '#5c9be3', '#9cc3f0', '#c5dcf6'];
+  // Les portions : une rampe d'une seule teinte, celle du réalisé (§7.13 : une intensité sans état), plus le bleu (28/11/2026).
+  const PORT_COUL = ['#7C1C30', '#B03048', '#CF7488', '#E2AAB5', '#EFD3D9'];
   const PORT_LIB = { 1: 'Entière', 0.5: '½', 0.3333: '⅓', 0.25: '¼', 0.1667: '⅙', 0.125: '⅛', 0.75: '¾' };
   const portLib = (f, lib) => PORT_LIB[f] || lib || nf(f, 2);
   /** Un nombre de pièces en quarts lisibles : 3 ¾, ½ ; sinon deux décimales. */
