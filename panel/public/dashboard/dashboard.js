@@ -10079,14 +10079,16 @@
     if (!st) { return `<div class="db-card" id="qb-heures">${tete}</div><div class="db-sk" style="height:110px;margin:14px"></div></div>`; }
     const L = (st.heures || []).filter(l => l.ca > 0);
     if (!L.length) { return `<div class="db-card" id="qb-heures">${tete}</div><p class="db-note" style="padding:14px 16px">Aucune heure vendue sur cette période.</p></div>`; }
-    const teinte = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#A32014' : (pct < 20 ? '#B0792A' : '#3f7a52'));
+    // La case d'une heure prend le fond teinté de son état, son texte à la couleur de l'état (§7.13, comme une case de
+    // calendrier, 28/11/2026) : plus d'aplat plein en texte blanc ; la légende le dit en mots.
+    const teinte = pct => pct == null ? 'background:var(--color-background-secondary);color:var(--ink)' : (pct < 0 ? 'background:var(--stop-soft);color:var(--stop)' : (pct < 20 ? 'background:var(--prize-soft);color:var(--prize-ink)' : 'background:rgba(63, 122, 82, 0.14);color:var(--green)'));
     const best = L.reduce((a, b) => b.moy.res > a.moy.res ? b : a), worst = L.reduce((a, b) => b.moy.res < a.moy.res ? b : a);
     const cols = `grid-template-columns:repeat(${L.length},minmax(0,1fr))`;
     return `<div class="db-card" id="qb-heures">${tete}<span class="db-mini">${best.h}–${best.h + 1} h rapporte le plus (${fS(best.moy.res)} par jour) · ${worst.h}–${worst.h + 1} h ${worst.moy.res < 0 ? 'perd' : 'rapporte le moins'} (${fS(worst.moy.res)})</span></div>
       <div class="qb-h" style="${cols}">${L.map(l => { const pct = l.moy.ca > 0 ? 100 * l.moy.res / l.moy.ca : null;
-        return `<div style="background:${teinte(pct)}" title="${l.h} – ${l.h + 1} h · ventes ${fE(l.moy.ca)} · marge nette ${fS(l.moy.res)} par jour ouvert">${fN(l.moy.ca)} €<small>${fS(l.moy.res).replace(' €', '')}</small></div>`; }).join('')}</div>
+        return `<div style="${teinte(pct)}" title="${l.h} – ${l.h + 1} h · ventes ${fE(l.moy.ca)} · marge nette ${fS(l.moy.res)} par jour ouvert">${fN(l.moy.ca)} €<small>${fS(l.moy.res).replace(' €', '')}</small></div>`; }).join('')}</div>
       <div class="qb-hl" style="${cols}">${L.map(l => `<span>${l.h} h</span>`).join('')}</div>
-      <p class="qb-note">ventes de l’heure en moyenne par jour ouvert · dessous : sa marge nette (ventes − matière − rémunération)</p></div>`;
+      <p class="qb-note">ventes de l’heure en moyenne par jour ouvert · dessous : sa marge nette (ventes − matière − rémunération) · <span class="ok">vert : 20 % et plus</span>, <span class="wa">or : 0 à 20 %</span>, <span class="ko">rouge : à perte</span></p></div>`;
   }
   // « Ce qui rapporte » (les 3 produits à la plus forte marge brute hors TVA) : retiré du dashboard, Semaine puis Mois
   // (16/11/2026, Sam : « take off »).

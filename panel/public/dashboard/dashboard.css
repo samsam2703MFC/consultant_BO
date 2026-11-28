@@ -155,7 +155,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 @keyframes db-sk{0%{background-position:100% 0}100%{background-position:0 0}}
 /* La cascade du P&L à barres et seuils. */
 .db-cascade{padding:6px 16px 10px}
-.db-cl{display:grid;grid-template-columns:190px 1fr 90px 64px minmax(0,150px);gap:12px;align-items:center;padding:8px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12px}
+.db-cl{display:grid;grid-template-columns:190px 1fr 90px 64px minmax(0,150px);gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--row-line);font-size:12px}
 .db-cl:last-child{border-bottom:none}
 .db-cl.fort{font-weight:400}
 .db-cl .b{height:8px;background:var(--color-background-secondary);border-radius:4px;position:relative;overflow:hidden}
@@ -1978,7 +1978,8 @@ html.db-fiche-ouverte{overflow:hidden}
 .fr-c{all:unset;box-sizing:border-box;cursor:pointer;flex:1 1 0;min-width:0;border-radius:10px;padding:6px 8px;background:var(--color-background-secondary);border:2px solid transparent;display:flex;flex-direction:column;gap:3px}
 .fr-c:hover{border-color:var(--color-border-secondary)}
 .fr-c .n{font:400 10.5px var(--font-ui);color:var(--color-text-muted);display:flex;justify-content:space-between;align-items:center;gap:4px;white-space:nowrap}
-.fr-c .n em{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;background:#1d1d1b;color:#fff;border-radius:8px;padding:1px 5px}
+/* « en cours » : une étiquette neutre, pas une alerte (28/11/2026 ; était noire). */
+.fr-c .n em{font-style:normal;font:400 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;background:var(--chip);color:var(--ink);border-radius:4px;padding:1px 5px}
 .fr-c .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
 .fr-c b{font:400 16px/1 var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fr-c .jg{height:4px;border-radius:2px;background:#e6ded3;position:relative;display:block}.fr-c .jg em{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
@@ -3572,15 +3573,15 @@ body.db-vue-social{overflow:hidden}
 .qb-leg{display:flex;flex-wrap:wrap;gap:6px 14px;padding:0 16px 14px;font-size:11px;color:var(--color-text-muted)}
 .qb-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .qb-leg i.tr{height:2px;background:var(--color-text);vertical-align:3px}
-.qb-leg i.hach{background:repeating-linear-gradient(135deg,#c9c1b4 0 3px,#e8e1d6 3px 6px)}
+.qb-leg i.hach{background:repeating-linear-gradient(135deg,var(--faint) 0 3px,var(--chip) 3px 6px)}
 .qb-g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:stretch}
 .qb-g2>.db-card{margin:0}
 .qb-pile{display:flex;flex-direction:column;gap:12px}
 .qb-pile>.db-card{margin:0}
 .qb-pile>.db-card:last-child{flex:1}
 .qb-h{display:grid;gap:4px;padding:14px 16px 6px}
-.qb-h div{height:46px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden}
-.qb-h div small{font-size:9.5px;opacity:.85}
+.qb-h div{height:46px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink);font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden}
+.qb-h div small{font-size:10px}
 .qb-hl{display:grid;gap:4px;padding:0 16px;font-size:10.5px;color:var(--color-text-muted);text-align:center}
 .qb-note{margin:8px 16px 14px;font-size:11.5px;color:var(--color-text-muted)}
 .qb-plus{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
@@ -3754,7 +3755,7 @@ body.db-vue-social{overflow:hidden}
 /* La jauge : le repère (attendu à ce jour ou objectif), la projection hachurée en gris chaud. */
 .qb-barre{height:8px;border-radius:4px}.qb-barre i{border-radius:4px}
 .qb-barre b{top:-5px;height:18px}
-.qb-barre s{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,#c9c1b4 0 3px,transparent 3px 7px)}
+.qb-barre s{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,var(--faint) 0 3px,transparent 3px 7px)}
 .qb-ctx{margin-top:0}
 @media (max-width:1365px){
   .chr-l1{grid-template-columns:auto minmax(170px,1fr) minmax(200px,1fr)}
@@ -4047,7 +4048,7 @@ body.db-vue-social{overflow:hidden}
 .op-ds .op-dl .d{font-family:var(--font-ui)}
 
 /* Le P&L court : des filets pleins entre les lignes (§7.8), la piste de chaque barre bordée. */
-.op-ds .db-cl{border-bottom:1px solid var(--row-line);font-size:12.5px}
+.op-ds .db-cl{font-size:12.5px}
 .op-ds .db-cl .mu,.op-ds .db-cl .n{font-size:11px}
 .op-ds .db-cl .b{background:var(--table-head);outline:1px solid var(--line);outline-offset:-1px}
 
