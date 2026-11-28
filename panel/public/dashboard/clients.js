@@ -1,7 +1,8 @@
 /* Dashboard magasin › Vendre › Clients (25/11/2026 ; maquettes panel/docs/maquettes/clients-panel/). Le module « Klienci »
  * du panel TF Buddy dans le dashboard franchisé : une entrée de rail, quatre onglets.
- *   - PARTICULIERS : la recherche d'abord (le téléphone en partie dans la liste), la fiche à côté ; ajouter, modifier,
- *     passer en entreprise (la TVA vérifiée par TF Buddy, puis VIES), supprimer (un client né dans ce magasin) ;
+ *   - PARTICULIERS : la recherche d'abord (le téléphone en partie dans la liste ; le compte en ligne et son filtre, 28/11/2026),
+ *     la fiche à côté ; ajouter, modifier, passer en entreprise (la TVA vérifiée par TF Buddy, puis VIES), supprimer (un
+ *     client né dans ce magasin) ;
  *   - ENTREPRISES B2B : les entreprises à compléter en tête, les filtres (score, CA 12 mois, fréquence), la fiche à côté
  *     (le crédit, ses bureaux, ses factures), le profil commercial (score, type, mode, crédit), ajouter par la TVA ;
  *   - BUREAUX : une ligne par bureau, la fiche en onglets (Livraison, Catalogue, Offres, Personnes, Documents),
@@ -37,7 +38,7 @@
   const JOURS = [[1, 'L'], [2, 'M'], [3, 'M'], [4, 'J'], [5, 'V'], [6, 'S'], [7, 'D']];
 
   const st = { shop: null, api: '../api/cockpit', el: null, aller: null, nomShop: '', onglet: 'b2b', mo: null,
-    p: { q: '', filtre: '', d: null, err: null, lecture: false, sel: null, fiche: null, ficheErr: null },
+    p: { q: '', filtre: '', compte: '', d: null, err: null, lecture: false, sel: null, fiche: null, ficheErr: null },
     e: { d: null, err: null, lecture: false, q: '', score: '', ca: '', freq: '', incompl: false, sel: null, fiche: null, ficheErr: null },
     b: { d: null, err: null, lecture: false, q: '', statut: '', sel: null, ong: 'livraison', det: {}, options: null, w: null },
     a: { annee: null, mois: null, d: null, err: null, lecture: false, metrique: 'ventes' } };
@@ -77,9 +78,9 @@
   /* ── Les lectures ─────────────────────────────────────────────────────────────────────────────────────────── */
   let tRech = null;
   function lireParticuliers(frais) {
-    const P = st.p, q = P.q, f = P.filtre; P.lecture = true; rendre();
-    return lire('/dashboard/clients/particuliers', Object.assign({ q, filtre: f }, frais ? { frais: 1 } : {}))
-      .then(d => { if (P.q === q && P.filtre === f) { P.d = d; P.err = null; } })
+    const P = st.p, q = P.q, f = P.filtre, cpt = P.compte; P.lecture = true; rendre();
+    return lire('/dashboard/clients/particuliers', Object.assign({ q, filtre: f, compte: cpt }, frais ? { frais: 1 } : {}))
+      .then(d => { if (P.q === q && P.filtre === f && P.compte === cpt) { P.d = d; P.err = null; } })
       .catch(e => { P.err = e.message; }).finally(() => { P.lecture = false; rendre(); });
   }
   function lireEntreprises(frais) {
@@ -218,24 +219,31 @@
   }
 
   /* ── Particuliers ─────────────────────────────────────────────────────────────────────────────────────────── */
+  /** Le compte en ligne d'un particulier (28/11/2026, Sam : « rajoute dans la liste si le client a un compte online ») : TF Buddy
+   *  note sa dernière connexion au webshop (last_login_at), qui n'existe que s'il a un mot de passe. */
+  function compteEnLigne(c) {
+    return c.enLigne ? `<span class="chip chip--ok">En ligne</span><span class="sub">connecté le ${fD(c.connexion)}</span>`
+      : `<span class="chip chip--draft">Pas de compte</span>${c.email ? '<span class="sub">e-mail connu</span>' : ''}`;
+  }
   function vueParticuliers() {
     const P = st.p, d = P.d;
     const barre = `<div class="pcl-filtres"><input id="pcl-pq" type="search" placeholder="Nom, téléphone, e-mail" value="${esc(P.q)}" autocomplete="off">
       <span class="pcl-grp">Avec ${seg('p-filtre', P.filtre, [['', 'Tous'], ['remise', 'Une remise' + (d ? ' · ' + nf(d.avecRemise) : '')]])}</span>
+      <span class="pcl-grp">Compte en ligne ${seg('p-compte', P.compte, [['', 'Tous'], ['en_ligne', 'En ligne' + (d && d.enLigne != null ? ' · ' + nf(d.enLigne) : '')], ['sans_compte', 'Pas de compte' + (d && d.enLigne != null ? ' · ' + nf(d.total - d.enLigne) : '')]])}</span>
       <span class="pcl-sp"></span><button type="button" class="linklike" data-act="relire">relire</button></div>`;
     let corps;
     if (P.err && !d) { corps = `<div class="pcl-vide error">${esc(P.err)}</div>`; }
     else if (!d) { corps = attente('Lecture des particuliers du magasin…'); }
     else if (!d.clients.length) { corps = `<div class="pcl-vide">${d.q ? 'Aucun particulier ne répond à « ' + esc(d.q) + ' ».' : 'Aucun particulier.'}</div>`; }
     else {
-      corps = `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Client</th><th>Téléphone</th><th class="num">Remise</th><th></th></tr></thead><tbody>
+      corps = `<div class="table-scroll"><table class="ds-table pcl-table"><thead><tr><th>Client</th><th>Téléphone</th><th>Compte en ligne</th><th class="num">Remise</th><th></th></tr></thead><tbody>
         ${d.clients.map(c => `<tr class="pcl-ligne${P.sel === c.id ? ' is-sel' : ''}" data-act="p-sel" data-id="${c.id}"><td>${esc(c.nom)}<span class="sub">${[c.cp, c.ville].filter(Boolean).map(esc).join(' ') || (c.cree ? 'depuis ' + fD(c.cree) : '')}</span></td>
-          <td>${esc(c.tel) || '<span class="muted">—</span>'}</td><td class="num">${c.remise ? nf(c.remise, 1).replace(',0', '') + ' %' : '<span class="muted">—</span>'}</td>
+          <td>${esc(c.tel) || '<span class="muted">—</span>'}</td><td>${compteEnLigne(c)}</td><td class="num">${c.remise ? nf(c.remise, 1).replace(',0', '') + ' %' : '<span class="muted">—</span>'}</td>
           <td class="num"><button type="button" class="btn btn--sm" data-act="p-offre" data-id="${c.id}">Offre</button></td></tr>`).join('')}</tbody></table></div>
         <div class="pcl-pied">${d.trouves > d.clients.length ? nf(d.trouves) + ' trouvés, les ' + d.clients.length + ' premiers montrés : précisez la recherche.' : nf(d.trouves) + (d.q ? ' trouvé' + (d.trouves > 1 ? 's' : '') : ' — les derniers créés d’abord ; cherchez par le nom, le téléphone ou l’e-mail.')}</div>`;
     }
     // Le résumé (26/11/2026, §7.13) : le nombre de particuliers, une liste à lire — pas de « À corriger ».
-    const res = d ? resume({ aria: 'Résumé des particuliers', v: nf(d.total), q: 'particuliers dans TF Buddy', q2: `${nf(d.avecRemise)} avec une remise personnelle${d.lu ? ' · lus à ' + esc(d.lu) : ''}` }) : '';
+    const res = d ? resume({ aria: 'Résumé des particuliers', v: nf(d.total), q: 'particuliers dans TF Buddy', q2: `${d.enLigne != null ? nf(d.enLigne) + ' avec un compte en ligne · ' : ''}${nf(d.avecRemise)} avec une remise personnelle${d.lu ? ' · lus à ' + esc(d.lu) : ''}` }) : '';
     return `<div class="pcl-2"><div>${res}<section class="card pcl-carte">${barre}${P.lecture && d ? '<div class="pcl-fil"></div>' : ''}${corps}</section></div>${ficheParticulier()}</div>`;
   }
   function ficheParticulier() {
@@ -249,7 +257,8 @@
     return `<aside class="card pcl-fiche"><div class="pcl-ft"><div class="pcl-fnom">${esc(c.nom)}</div><div class="pcl-fmeta">${c.create_timestamp ? 'client depuis ' + fD(String(c.create_timestamp).slice(0, 10)) : ''}${mien ? '' : ' · créé par un autre magasin'}</div></div>
       <div class="pcl-kpis"><div><div class="v">${c.personal_discount_percent ? nf(c.personal_discount_percent, 1).replace(',0', '') + ' %' : '—'}</div><div class="k">Remise</div></div>
         <div><div class="v">${c.can_deferral ? 'Oui' : 'Non'}</div><div class="k">Paiement différé</div></div><div><div class="v">${esc(c.city || '—')}</div><div class="k">Ville</div></div></div>
-      <div class="pcl-bloc"><h4>Coordonnées</h4>${ligneF('Téléphone', c.phone ? `<a href="tel:${esc(String(c.phone).replace(/\s/g, ''))}">${esc(c.phone)}</a>` : '')}${ligneF('E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '')}${ligneF('Adresse', esc(adr))}${c.comment ? ligneF('Note', esc(c.comment)) : ''}</div>
+      <div class="pcl-bloc"><h4>Coordonnées</h4>${ligneF('Téléphone', c.phone ? `<a href="tel:${esc(String(c.phone).replace(/\s/g, ''))}">${esc(c.phone)}</a>` : '')}${ligneF('E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '')}${ligneF('Adresse', esc(adr))}${c.comment ? ligneF('Note', esc(c.comment)) : ''}
+        ${ligneF('Compte en ligne', c.connexion ? `<span class="chip chip--ok">En ligne</span> connecté le ${fD(c.connexion)}` : '<span class="chip chip--draft">Pas de compte</span>')}</div>
       <div class="pcl-bloc pcl-acts"><button type="button" class="btn btn--primary btn--sm" data-act="p-offre" data-id="${c.id}">Préparer une offre</button><button type="button" class="btn btn--sm" data-act="p-modifier">Modifier</button>
         <button type="button" class="btn btn--sm" data-act="p-entreprise">Passer en entreprise</button>${mien ? '<button type="button" class="btn btn--sm btn--danger" data-act="p-supprimer">Supprimer</button>' : ''}</div>
       <div class="pcl-bloc pcl-doux"><h4>Passer en entreprise</h4><div class="pcl-aide">Le numéro de TVA se vérifie dans TF Buddy puis dans VIES et remplit la société et l’adresse ; la fiche passe dans Entreprises B2B avec ses conditions de paiement et sa remise.</div></div></aside>`;
@@ -937,6 +946,7 @@
       case 'relire': charger(true); break;
       // Particuliers
       case 'p-filtre': P.filtre = v; lireParticuliers(); break;
+      case 'p-compte': P.compte = v; lireParticuliers(); break;
       case 'p-sel': lireFiche(P, id); break;
       case 'p-offre': { const c = (P.fiche && P.fiche.id === id ? { id, nom: P.fiche.client.nom, ville: P.fiche.client.city } : (P.d.clients.find(x => x.id === id) || {})); offre(Object.assign({ b2b: false }, c, { id })); break; }
       case 'p-ajouter': ouvrir('p-form', { name: '', surname: '', phone: '', email: '', street: '', street_number: '', zip: '', city: '', comment: '' }); break;

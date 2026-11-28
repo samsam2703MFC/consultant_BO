@@ -10,7 +10,8 @@ declare(strict_types=1);
  * TF Buddy garde tout : rien n'est stocké ici, sauf la liste des clients du magasin gardée un quart d'heure
  * (`pclClients:{shop}:{type}`, ceo_app_setting) et les mois clos du relevé des tickets pro (`pclMois:{shop}:{mois}`).
  *
- *   GET  /dashboard/clients/particuliers?shop=3&q=dup[&filtre=remise][&frais=1]   recherche (50 au plus)
+ *   GET  /dashboard/clients/particuliers?shop=3&q=dup[&filtre=remise][&compte=en_ligne|sans_compte][&frais=1]
+ *                                                                                 recherche (50 au plus) ; `enLigne`, ceux qui ont un compte webshop
  *   GET  /dashboard/clients/entreprises?shop=3[&frais=1]                          toutes les entreprises du magasin
  *   GET  /dashboard/clients/fiche?shop=3&id=812                                   la fiche (profil, factures, 12 mois)
  *   POST /dashboard/clients/client {shop, action, id?, champs}                    creer · modifier · profil · entreprise · supprimer
@@ -41,6 +42,12 @@ const PCL_TTL_LISTE = 900;       // la liste des clients d'un magasin, gardée u
 const PCL_LIMITE = 50;           // une recherche de particuliers rend 50 fiches au plus
 const PCL_PAGE = 500;            // le repli par pages (limit + offset), comme les bons (marketing/src/promos_bons.php)
 const PCL_PAGES_MAX = 80;
+/** La forme d'une ligne gardée (`pclClients:{shop}:{type}`) : 2 depuis le 28/11/2026, la date de la dernière connexion au
+ *  webshop (`connexion`), la société et le bureau (`societeId`, `bureauId`). Une liste gardée sous une autre forme se relit
+ *  dans TF Buddy. */
+const PCL_VERSION_LISTE = 2;
+/** Le filtre du compte en ligne des particuliers (28/11/2026) : ceux qui ont un compte webshop, ceux qui n'en ont pas. */
+const PCL_FILTRES_COMPTE = ['en_ligne', 'sans_compte'];
 const PCL_TYPES_CLIENT = ['standard', 'vip', 'restaurant', 'hotel', 'wholesale', 'other'];
 const PCL_MODES = ['delivery', 'pickup', 'both'];
 const PCL_SCORES = ['A', 'B', 'C', 'D'];
@@ -142,7 +149,10 @@ function pclCourt(array $c): array
         'differe' => !empty($c['can_deferral']), 'cree' => substr(pclTexte($c['create_timestamp'] ?? ''), 0, 10),
         'main' => (int) ($c['id_main_shop'] ?? 0), 'manques' => !empty($c['is_b2b']) ? pclManques($c) : [],
         // Sa société et son bureau (28/11/2026) : la Fidélité range les personnes d'une société sous elle (marketing/src/fidelite_cartes.php).
-        'societeId' => (int) ($c['company_client_id'] ?? 0), 'bureauId' => (int) ($c['office_id'] ?? 0)];
+        'societeId' => (int) ($c['company_client_id'] ?? 0), 'bureauId' => (int) ($c['office_id'] ?? 0),
+        // Le compte en ligne (28/11/2026) : TF Buddy note la dernière connexion au webshop (last_login_at) ; elle n'existe
+        // que pour un client qui a un mot de passe. Le jour seulement ; vide = pas de compte (un client créé en caisse).
+        'connexion' => substr(pclTexte($c['last_login_at'] ?? ''), 0, 10)];
 }
 
 /** Le texte où chercher un client : nom, société, TVA, e-mail, et les chiffres du téléphone. */
@@ -153,12 +163,13 @@ function pclCle(array $c): string
 }
 
 /** Les particuliers qui répondent à la recherche : chaque mot doit s'y trouver (un numéro se cherche par ses chiffres). */
-function pclChercher(array $liste, string $q, string $filtre = ''): array
+function pclChercher(array $liste, string $q, string $filtre = '', string $compte = ''): array
 {
     $mots = array_values(array_filter(preg_split('/\s+/', mb_strtolower(trim($q))) ?: [], static fn ($m) => $m !== ''));
     $out = [];
     foreach ($liste as $c) {
         if ($filtre === 'remise' && !(($c['remise'] ?? 0) > 0)) { continue; }
+        if ($compte !== '' && (($c['connexion'] ?? '') !== '') !== ($compte === 'en_ligne')) { continue; }
         $cle = pclCle($c);
         foreach ($mots as $m) {
             // « 0471 » trouve « +32 471 … » : un numéro se cherche sans son zéro de tête.
@@ -178,7 +189,8 @@ function pclChercher(array $liste, string $q, string $filtre = ''): array
 function pclLigneParticulier(array $c): array
 {
     return ['id' => $c['id'], 'nom' => $c['nom'], 'tel' => pclMasqueTel($c['tel']), 'email' => $c['email'] !== '', 'ville' => $c['ville'],
-        'cp' => $c['cp'], 'remise' => $c['remise'], 'cree' => $c['cree']];
+        'cp' => $c['cp'], 'remise' => $c['remise'], 'cree' => $c['cree'],
+        'enLigne' => ($c['connexion'] ?? '') !== '', 'connexion' => ($c['connexion'] ?? '') !== '' ? $c['connexion'] : null];
 }
 
 /** Le niveau d'alerte d'un crédit utilisé (les seuils du panel) : danger ≥ 100 %, attention ≥ 80 %, moyen ≥ 50 %. */
@@ -498,7 +510,7 @@ function pclListe(int $shop, string $type, bool $frais = false, ?int &$lu = null
     $garde = &$GLOBALS['pclGarde'];
     if (!$frais && isset($garde[$cle])) { $lu = $garde[$cle][0]; return $garde[$cle][1]; }
     $c = !$frais && function_exists('setting') ? setting($cle) : null;
-    if (is_array($c) && is_array($c['l'] ?? null) && (int) ($c['lu'] ?? 0) > time() - PCL_TTL_LISTE) {
+    if (is_array($c) && is_array($c['l'] ?? null) && (int) ($c['lu'] ?? 0) > time() - PCL_TTL_LISTE && (int) ($c['v'] ?? 1) === PCL_VERSION_LISTE) {
         $out = [];
         foreach ($c['l'] as $x) { if (is_array($x) && (int) ($x['id'] ?? 0) > 0) { $out[(int) $x['id']] = $x; } }
         $lu = (int) $c['lu'];
@@ -524,7 +536,7 @@ function pclListe(int $shop, string $type, bool $frais = false, ?int &$lu = null
     if (!$partiel && class_exists('Db')) {
         try {
             Db::exec('INSERT INTO ceo_app_setting (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-                [$cle, json_encode(['lu' => $lu, 'l' => array_values($out)], JSON_UNESCAPED_UNICODE)]);
+                [$cle, json_encode(['v' => PCL_VERSION_LISTE, 'lu' => $lu, 'l' => array_values($out)], JSON_UNESCAPED_UNICODE)]);
         } catch (Throwable $e) { /* sans la garde, la recherche suivante relira TF Buddy : plus lente, toujours juste */ }
     }
     return $out;
@@ -593,10 +605,12 @@ function ep_clients_particuliers(): array
     if ($l === null) { http_response_code(502); return ['error' => 'les particuliers du magasin ne se lisent pas dans TF Buddy']; }
     $q = mb_substr(pclTexte($_GET['q'] ?? ''), 0, 80);
     $f = pclTexte($_GET['filtre'] ?? '') === 'remise' ? 'remise' : '';
-    $t = pclChercher(array_values($l), $q, $f);
-    return ['shop' => $shop, 'total' => count($l), 'trouves' => count($t), 'q' => $q, 'filtre' => $f,
+    $compte = in_array(pclTexte($_GET['compte'] ?? ''), PCL_FILTRES_COMPTE, true) ? pclTexte($_GET['compte']) : '';
+    $t = pclChercher(array_values($l), $q, $f, $compte);
+    return ['shop' => $shop, 'total' => count($l), 'trouves' => count($t), 'q' => $q, 'filtre' => $f, 'compte' => $compte,
         'clients' => array_map('pclLigneParticulier', array_slice($t, 0, PCL_LIMITE)), 'limite' => PCL_LIMITE,
-        'avecRemise' => count(array_filter($l, static fn ($c) => ($c['remise'] ?? 0) > 0)), 'lu' => $lu ? date('H:i', $lu) : null];
+        'avecRemise' => count(array_filter($l, static fn ($c) => ($c['remise'] ?? 0) > 0)),
+        'enLigne' => count(array_filter($l, static fn ($c) => ($c['connexion'] ?? '') !== '')), 'lu' => $lu ? date('H:i', $lu) : null];
 }
 
 /** GET /dashboard/clients/entreprises — les entreprises du magasin (la liste riche du panel, sinon la base + le relevé). */
@@ -641,6 +655,7 @@ function ep_clients_fiche(): array
     $p = is_array($r['corps']['profile'] ?? null) ? $r['corps']['profile'] : null;
     $client = array_intersect_key(pclPropre($c), array_flip(PCL_CHAMPS_FICHE));
     $client['nom'] = pclNom($c);
+    $client['connexion'] = substr(pclTexte($c['last_login_at'] ?? ''), 0, 10) ?: null;   // le compte en ligne (28/11/2026)
     $b2b = !empty($c['is_b2b']);
     $out = ['shop' => $shop, 'id' => $id, 'b2b' => $b2b, 'client' => $client, 'manques' => $b2b ? pclManques($c) : [],
         'profil' => $p ? ['score' => pclTexte($p['score'] ?? '') ?: null, 'type' => pclTexte($p['client_type'] ?? '') ?: null, 'mode' => pclTexte($p['service_mode'] ?? '') ?: null,
