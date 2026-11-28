@@ -254,7 +254,7 @@
     });
     return `<svg class="an-svg" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(o.titre || 'courbe')}">${g}</svg>`;
   }
-  const barre = (v, max, coul = '#8D1D2C') => `<span class="an-bar"><i style="width:${(100 * Math.max(0, v || 0) / (max || 1)).toFixed(1)}%;background:${coul}"></i></span>`;
+  const barre = (v, max, coul = '#B03048') => `<span class="an-bar"><i style="width:${(100 * Math.max(0, v || 0) / (max || 1)).toFixed(1)}%;background:${coul}"></i></span>`;
   const Q = (n, question, reponse, corps, cl) => `<section class="an-carte an-qq${cl ? ' ' + cl : ''}"><div class="an-qh"><span class="an-qn">${n}</span><h4>${question}</h4></div><div class="an-rep">${reponse}</div>${corps || ''}</section>`;
   const attente = () => '<div class="an-att"><span class="db-sk" style="height:12px;width:70%"></span><span class="db-sk" style="height:12px;width:45%"></span></div>';
   /** L'état d'une lecture pour une carte : null si elle est là, sinon le message (attente ou erreur). */
@@ -316,8 +316,8 @@
         <span class="n mz ${(zoneMarge(g.margePct) || { cl: 'mu' }).cl}">${pc(g.margePct)}</span><span class="n">${fleche(g.evo && g.evo.pct)}</span></button>`).join('')}
       <p class="an-src">Évolution : la période ${esc(P.face)}, au jour · marge : CA HT − pièces × coût de la recette. ${LEGENDE_F} · ${LEGENDE_M}</p></section>`;
     const courbe = `<section class="an-carte"><h3>Le chiffre, ${parTranche(P)} <small>toutes familles, ${esc(P.lib)}</small></h3>
-      ${courbes({ w: 640, h: 300, libelles: libs, fmt: k1, titre: 'le chiffre ' + parTranche(P), series: [{ vals: P.D.total.v, coul: '#8D1D2C', ep: 2.4, points: true, aire: true }] })}
-      <div class="an-leg"><span><i style="background:#8D1D2C"></i>chiffre TTC</span>${P.D.enCours ? `<span>${esc(libs[P.n - 1])} : en cours</span>` : ''}</div></section>`;
+      ${courbes({ w: 640, h: 300, libelles: libs, fmt: k1, titre: 'le chiffre ' + parTranche(P), series: [{ vals: P.D.total.v, coul: '#B03048', ep: 2.4, points: true, aire: true }] })}
+      <div class="an-leg"><span><i style="background:#B03048"></i>chiffre TTC</span>${P.D.enCours ? `<span>${esc(libs[P.n - 1])} : en cours</span>` : ''}</div></section>`;
     const top = (titre, L, f) => `<section class="an-carte"><h3>${titre}</h3>${L.length ? `<table class="an-t an-t--top"><colgroup><col style="width:22px"><col><col style="width:80px"><col style="width:90px"></colgroup><tbody>${L.map((p, i) => `<tr data-pid="${p.id}" class="an-lien"><td class="rg">${i + 1}</td><td class="nm"><span>${esc(p.nom)}</span><small>${esc(p.cat)}</small></td><td class="n">${f(p)}</td><td class="n">${fleche(p.evo && p.evo.pct)}</td></tr>`).join('')}</tbody></table>` : '<p class="an-src">Aucun produit.</p>'}</section>`;
     const parCA = P.produits.slice().sort((a, b) => b.v13 - a.v13).slice(0, 8);
     const parMarge = P.produits.filter(p => p.marge != null).sort((a, b) => b.marge - a.marge).slice(0, 8);
@@ -342,8 +342,8 @@
     const cleR = 'res|p' + p.id + '|' + PK(), R = st.d[cleR], rp = R && R.produits ? R.produits.find(x => String(x.pid) === String(p.id)) : null;
     const evR = R && R.reseau ? R.reseau.evo : null;
     const q1 = Q(1, 'Combien j’en vends ?', `<b>${n0(p.qSem)} pièces ${P.unite}</b> ${P.sur}, ${n0(p.q13)} en tout. ${esc(P.Face)} : ${fleche(p.evo && p.evo.pct)} chez vous${R && R.reseau ? `, ${fleche(evR)} dans le réseau` : ''}.`,
-      courbes({ w: 640, h: 220, libelles: libs, titre: 'pièces ' + parTranche(P), series: (R && R.reseau ? [{ vals: R.reseau.q, coul: '#8f8778', ep: 1.6, tirets: true }] : []).concat([{ vals: p.q, coul: '#8D1D2C', ep: 2.4, points: true, aire: true }]) })
-      + `<div class="an-leg"><span><i style="background:#8D1D2C"></i>vous, pièces ${parTranche(P)}</span>${R && R.reseau ? '<span><i style="background:#8f8778"></i>les autres magasins, ramenés à votre taille</span>' : ''}${P.D.enCours ? `<span>${esc(libs[P.n - 1])} : en cours</span>` : ''}</div>`
+      courbes({ w: 640, h: 220, libelles: libs, titre: 'pièces ' + parTranche(P), series: (R && R.reseau ? [{ vals: R.reseau.q, coul: '#7a736a', ep: 1.6, tirets: true }] : []).concat([{ vals: p.q, coul: '#B03048', ep: 2.4, points: true, aire: true }]) })
+      + `<div class="an-leg"><span><i style="background:#B03048"></i>vous, pièces ${parTranche(P)}</span>${R && R.reseau ? '<span><i style="background:#7a736a"></i>les autres magasins, ramenés à votre taille</span>' : ''}${P.D.enCours ? `<span>${esc(libs[P.n - 1])} : en cours</span>` : ''}</div>`
       + (R ? '' : manque(cleR, 'Le réseau') || ''));
     // 2. Combien il me rapporte ?
     const q2 = mu == null ? Q(2, 'Combien il me rapporte ?', `Le coût de la recette n’est pas renseigné au panel${p.tauxCatalogue == null && ht == null ? ', ni le prix' : ''} : la marge ne se calcule pas. Le chiffre : <b>${k1(p.v13)} ${P.sur}</b>, ${er(rgCA)} du magasin.`)
@@ -410,7 +410,7 @@
       const ak = rp.autres.map(a => a.p10k), mx = Math.max(...mags.map(m => m.p10k));
       q6 = Q(6, 'Est-ce que je fais mieux que les autres ?', `${rgR === 1 ? 'Oui' : rgR === nR ? 'Non' : 'Dans la moyenne'} : <b>${n0(rp.p10k)} pièces pour 10 k€ de chiffre</b>, contre ${ak.length > 1 ? n0(Math.min(...ak)) + ' à ' + n0(Math.max(...ak)) : n0(ak[0])} dans ${ak.length > 1 ? 'les ' + ak.length + ' autres magasins qui le vendent' : 'l’autre magasin qui le vend'}. ${er(rgR)} sur ${nR} à taille égale.`,
         `<table class="an-t an-t--g"><thead><tr><th>Magasin</th><th>Pièces pour 10 k€ de chiffre du magasin</th><th class="n">Face à la période d’avant</th></tr></thead><tbody>
-          ${mags.map(m => `<tr class="${m.moi ? 'moi' : ''}"><td>${m.nom}</td><td><span class="an-bv">${barre(m.p10k, mx, m.moi ? '#8D1D2C' : '#b9b1a6')}<b>${n0(m.p10k)}</b></span></td><td class="n">${fleche(m.evo)}</td></tr>`).join('')}</tbody></table>
+          ${mags.map(m => `<tr class="${m.moi ? 'moi' : ''}"><td>${m.nom}</td><td><span class="an-bv">${barre(m.p10k, mx, m.moi ? '#B03048' : '#B8B2A8')}<b>${n0(m.p10k)}</b></span></td><td class="n">${fleche(m.evo)}</td></tr>`).join('')}</tbody></table>
          <p class="an-src">${esc(P.lib)} · « pour 10 k€ » : les pièces rapportées au chiffre de chaque magasin, pour comparer un grand et un petit · les autres magasins ne sont pas nommés.</p>`);
     }
     if (prixPos && rgR) {
@@ -455,8 +455,8 @@
     // 2. Monte-t-elle ?
     const evH = fam.evo && fam.evo.pct, evR = R && R.reseau ? R.reseau.evo : null;
     const q2 = Q(2, 'Est-ce qu’elle monte ou qu’elle baisse ?', `${esc(P.Face)} : <b>${fleche(evH)} chez vous</b>${R && R.reseau ? `, ${fleche(evR)} dans le réseau` : ''}.`,
-      courbes({ w: 640, h: 210, libelles: libs, fmt: k1, titre: 'le chiffre de la famille ' + parTranche(P), series: (R && R.reseau ? [{ vals: R.reseau.v, coul: '#8f8778', ep: 1.6, tirets: true }] : []).concat([{ vals: fam.v, coul: '#8D1D2C', ep: 2.4, points: true, aire: true }]) })
-      + `<div class="an-leg"><span><i style="background:#8D1D2C"></i>vous, chiffre TTC ${parTranche(P)}</span>${R && R.reseau ? '<span><i style="background:#8f8778"></i>les autres magasins, ramenés à votre taille</span>' : ''}</div>`);
+      courbes({ w: 640, h: 210, libelles: libs, fmt: k1, titre: 'le chiffre de la famille ' + parTranche(P), series: (R && R.reseau ? [{ vals: R.reseau.v, coul: '#7a736a', ep: 1.6, tirets: true }] : []).concat([{ vals: fam.v, coul: '#B03048', ep: 2.4, points: true, aire: true }]) })
+      + `<div class="an-leg"><span><i style="background:#B03048"></i>vous, chiffre TTC ${parTranche(P)}</span>${R && R.reseau ? '<span><i style="background:#7a736a"></i>les autres magasins, ramenés à votre taille</span>' : ''}</div>`);
     L.push(`${esc(fam.nom)} fait <b>${pc(partCA)} de votre chiffre</b>${partM != null ? ` et ${pc(partM)} de votre marge` : ''} ; ${fleche(evH)} ${esc(P.face)}${R && R.reseau ? `, le réseau ${fleche(evR)}` : ''}.`);
     // 3. Qui la porte ?
     let cum = 0; const par = Lp.map(x => { cum += x.v13; return { ...x, part: 100 * x.v13 / fam.v13, cum: 100 * cum / fam.v13 }; });

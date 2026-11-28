@@ -22,7 +22,7 @@
 .an-racine .an-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer; }
 .an-racine .an-btn:hover { border-color: var(--accent); color: var(--accent); }
 .an-racine .an-titre { display: grid; gap: 1px; min-width: 0; }
-.an-racine .an-titre b { font-weight: 400; font-size: 20px; color: var(--ink); line-height: 1.2; }
+.an-racine .an-titre b { font-weight: 400; font-size: 21px; color: var(--ink); line-height: 1.2; }
 .an-racine .an-titre span { font-size: 12px; color: var(--muted-2); }
 .an-racine .an-lien-t { padding: 0; border: 0; background: none; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .an-racine .an-rech { display: flex; align-items: center; gap: 8px; width: 340px; max-width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); }
@@ -96,7 +96,7 @@
 .an-racine .an-qq--l { grid-column: 1 / -1; }
 .an-racine .an-qh { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .an-racine .an-qn { flex: 0 0 auto; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--chip); color: var(--muted-2); font-size: 12px; } /* un numéro d'étape : cercle neutre (le bordeaux ne décore pas un titre, §2) */
-.an-racine .an-qh h4 { margin: 0; font-size: 17px; font-weight: 400; color: var(--ink); }
+.an-racine .an-qh h4 { margin: 0; font-size: 16px; font-weight: 400; color: var(--ink); }
 .an-racine .an-rep { margin: 0 0 12px; font-size: 14px; line-height: 1.5; color: var(--muted-2); }
 .an-racine .an-rep b, .an-racine .an-res b, .an-racine .an-lst li b { color: var(--ink); font-weight: 400; } /* pas de gras dans une phrase (§4.3) : l'encre suffit */
 .an-racine .an-rep .an-f { font-size: 13px; }
@@ -115,7 +115,7 @@
 .an-racine .an-reg--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .an-racine .an-reg > div { display: grid; gap: 2px; align-content: start; padding: 10px 12px; border-radius: 10px; background: var(--table-head); }
 .an-racine .an-reg .k { font-size: 11px; color: var(--muted-2); }
-.an-racine .an-reg .v { font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.an-racine .an-reg .v { font-size: 21px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .an-racine .an-reg .s { font-size: 11px; color: var(--muted); }
 .an-racine .an-lst { margin: 0; padding: 0; list-style: none; }
 .an-racine .an-lst li { display: flex; align-items: baseline; gap: 8px; padding: 6px 4px; border-top: 1px solid var(--row-line); font-size: 13px; }
