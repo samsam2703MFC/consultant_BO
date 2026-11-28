@@ -53,7 +53,8 @@
   /** Le serveur dit la session TF Buddy du magasin périmée : on l'oublie (le bouton « Connecter » revient). */
   function vuExpire(d) { const x = d && (d.panel || d); if (x && x.magasinExpire && window.DashTfb) { window.DashTfb.oublier(st.shop); } return d; }
   const tfbEtat = () => window.DashTfb ? window.DashTfb.etat(st.shop) : { connecte: false };
-  const tfbBouton = (lib) => window.DashTfb ? `<button type="button" class="btn btn--sm btn--primary" data-act="tfb-connecter">${lib || 'Connecter le compte TF Buddy du magasin'}</button>` : '';
+  // Une seule action principale par écran (§7.4, 28/11/2026) : « Ajouter une entreprise » ; la connexion du compte est un .btn.
+  const tfbBouton = (lib) => window.DashTfb ? `<button type="button" class="btn btn--sm" data-act="tfb-connecter">${lib || 'Connecter le compte TF Buddy du magasin'}</button>` : '';
   /** Après une connexion ou une déconnexion : tout se relit avec les nouveaux droits. */
   function toutRelire() {
     st.p.d = null; st.e.d = null; st.e.fiche = null; st.b.d = null; st.b.det = {}; st.b.options = null; st.a.d = null; st.tfbDiag = null;
@@ -820,11 +821,11 @@
     const barres = `<div class="pcl-barres">${G.map(x => `<div class="m${x.mois === A.mois ? ' is-mois' : ''}" title="${MOIS[x.mois - 1]} : ${A.annee} ${x[m][0] == null ? '—' : nf(x[m][0], m === 'part' ? 1 : 0)} · ${A.annee - 1} ${x[m][1] == null ? '—' : nf(x[m][1], m === 'part' ? 1 : 0)}">
       <i class="a" style="height:${100 * (x[m][0] || 0) / max}%"></i><i class="p" style="height:${100 * (x[m][1] || 0) / max}%"></i></div>`).join('')}</div><div class="pcl-mois12">${MC.map(x => `<span>${x}</span>`).join('')}</div>`;
     const part = K.part.v, ca = d.ca;
-    const donut = part == null ? '<div class="pcl-aide">La part du chiffre ne se calcule pas pour ce mois.</div>' : `<svg viewBox="0 0 120 120" class="pcl-donut"><circle cx="60" cy="60" r="44" fill="none" stroke="#EDE7DE" stroke-width="18"/><circle cx="60" cy="60" r="44" fill="none" stroke="#8D1D2C" stroke-width="18" stroke-dasharray="${2 * Math.PI * 44 * Math.min(100, part) / 100} 999" transform="rotate(-90 60 60)"/><text x="60" y="65" text-anchor="middle" font-family="Gotham, system-ui" font-size="16" fill="#1c1a17">${nf(part, 1)} %</text></svg>
+    const donut = part == null ? '<div class="pcl-aide">La part du chiffre ne se calcule pas pour ce mois.</div>' : `<svg viewBox="0 0 120 120" class="pcl-donut"><circle cx="60" cy="60" r="44" fill="none" stroke="#EDE7DE" stroke-width="18"/><circle cx="60" cy="60" r="44" fill="none" stroke="#B03048" stroke-width="18" stroke-dasharray="${2 * Math.PI * 44 * Math.min(100, part) / 100} 999" transform="rotate(-90 60 60)"/><text x="60" y="65" text-anchor="middle" font-family="Gotham, system-ui" font-size="16" fill="#1c1a17">${nf(part, 1)} %</text></svg>
       <div class="pcl-part-e">${ecarts('part')}</div>${ca != null && K.ventes.v != null ? ligneF('Le reste du chiffre', fE0(ca - K.ventes.v)) : ''}`;
     const notes = (d.source === 'releve' ? note(esc(d.texte) + (d.memesJours ? ` Le mois en cours se compare aux ${d.memesJours} premiers jours du mois d’avant et de ${MOIS[A.mois - 1]} ${A.annee - 1}.` : '') + (d.couverture && d.couverture.lus < d.couverture.jours ? ` ${d.couverture.lus} jours lus sur ${d.couverture.jours} : les autres seront relus par le relevé de nuit.` : '') + (d.panel ? '<br>' + esc(d.panel.texte) + (!d.panel.magasin || d.panel.magasinExpire ? '<div style="margin-top:8px">' + tfbBouton() + '</div>' : '') : ''), 'pcl-note-doux') : '');
     return barre + notes + kpis + `<div class="pcl-an2"><section class="card"><h2 class="pcl-h2">Ventes B2B, mois par mois<small>${seg('a-metrique', m, [['ventes', 'Ventes'], ['tickets', 'Tickets'], ['clients', 'Clients'], ['part', 'Part du CA']])}</small></h2>${barres}
-      <div class="pcl-leg"><span><i style="background:var(--accent)"></i>${A.annee}</span><span><i style="background:#EBD3D8"></i>${A.annee - 1}</span></div></section>
+      <div class="pcl-leg"><span><i style="background:var(--chart-real)"></i>${A.annee}</span><span><i style="background:#EBD3D8"></i>${A.annee - 1}</span></div></section>
       <section class="card"><h2 class="pcl-h2">Part B2B du chiffre</h2>${donut}<div class="pcl-aide" style="margin-top:8px">Un pro = une fiche avec une TVA valide, comme la jauge B2B de l’Opérationnel.</div></section></div>`;
   }
 

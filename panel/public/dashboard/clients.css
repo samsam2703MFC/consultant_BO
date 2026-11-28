@@ -66,7 +66,7 @@
 .pcl-fiche { padding: 0; position: sticky; top: 12px; }
 .pcl-fiche-vide { padding: 28px 22px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
 .pcl-ft { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
-.pcl-fnom { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 17px; }
+.pcl-fnom { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 18px; }
 .pcl-fmeta { margin-top: 4px; font-size: 12px; color: var(--muted); line-height: 1.45; }
 .pcl-kpis { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
 .pcl-kpis > div { padding: 11px 14px; border-left: 1px solid var(--row-line); min-width: 0; }
@@ -138,7 +138,7 @@
 /* L'analyse B2B */
 .pcl-barre { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
 .pcl-barre svg { width: 15px; height: 15px; }
-.pcl-date { font-size: 17px; }
+.pcl-date { font-size: 18px; }
 .pcl-ici { font-size: 12.5px; color: var(--muted); }
 .pcl-up { color: var(--green); }
 .pcl-down { color: var(--prize-ink); }   /* l'écart au mois d'avant, à l'an dernier : vert au-dessus, or en dessous (§7.13) */
@@ -148,8 +148,8 @@
 .pcl-barres { display: flex; align-items: flex-end; gap: 10px; height: 190px; padding: 0 4px; border-bottom: 1px solid var(--line); }
 .pcl-barres .m { flex: 1; display: flex; align-items: flex-end; gap: 3px; height: 100%; }
 .pcl-barres .m i { flex: 1; border-radius: 4px 4px 0 0; min-height: 1px; }
-.pcl-barres .m i.a { background: var(--accent); }
-.pcl-barres .m i.p { background: #EBD3D8; }
+.pcl-barres .m i.a { background: var(--chart-real); }   /* le réalisé, couleur de graphique (§3, 28/11/2026) */
+.pcl-barres .m i.p { background: var(--chart-prev); }
 .pcl-barres .m.is-mois { box-shadow: inset 0 -3px 0 var(--prize); }
 .pcl-mois12 { display: flex; gap: 10px; padding: 6px 4px 0; font-size: 10.5px; color: var(--muted); }
 .pcl-mois12 span { flex: 1; text-align: center; }
